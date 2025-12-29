@@ -314,7 +314,7 @@ export default function NewNotePage() {
                                                 <textarea
                                                     value={soapNote[section]}
                                                     onChange={(e) => handleSectionChange(section, e.target.value)}
-                                                    placeholder={template?.structure?.[section]?.placeholder || `Enter ${section.charAt(0).toUpperCase() + section.slice(1)} details...`}
+                                                    placeholder={`Enter ${section.charAt(0).toUpperCase() + section.slice(1)} details...`}
                                                     className="w-full min-h-[120px] text-base text-foreground bg-transparent leading-relaxed outline-none resize-none placeholder:text-muted-foreground/50"
                                                 />
                                             </div>

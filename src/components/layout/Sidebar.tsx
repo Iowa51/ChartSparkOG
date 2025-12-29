@@ -76,8 +76,8 @@ export function Sidebar() {
                     : "text-muted-foreground hover:bg-muted/50"
                 )}
               >
-                <Icon className="h-5 w-5" />
-                <span className="text-sm">{item.label}</span>
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
                 {item.tier && (
                   <span className={cn(
                     "ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded",
