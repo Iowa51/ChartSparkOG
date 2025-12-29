@@ -47,19 +47,16 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-60 bg-surface border-r border-border h-screen sticky top-0">
       {/* Logo & Brand */}
-      <div className="p-6">
-        <Link href="/dashboard" className="block mb-6 -ml-1">
+      <div className="pt-3 px-6 pb-6">
+        <Link href="/dashboard" className="block mb-4 -ml-1">
           <div className="relative h-14 w-full overflow-hidden">
             <img
               src="/ChartSparkLogo.png"
               alt="ChartSpark"
-              className="absolute top-0 left-0 w-[140%] h-auto max-w-none -translate-x-4 -translate-y-1"
-              style={{ clipPath: 'inset(0 0 38% 0)' }}
+              className="absolute top-0 left-0 w-[130%] h-auto max-w-none -translate-x-3 -translate-y-[12%]"
+              style={{ clipPath: 'inset(18% 5% 35% 5%)' }}
             />
           </div>
-          <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-0 ml-1 opacity-80">
-            Practitioner Portal
-          </p>
         </Link>
 
         {/* Main Navigation */}

@@ -35,14 +35,17 @@ export function AdminSidebar() {
 
     return (
         <aside className="hidden lg:flex flex-col w-60 bg-slate-900 text-white h-screen sticky top-0">
-            <div className="p-6">
+            <div className="pt-3 px-6 pb-6">
                 <Link href="/admin" className="block mb-2 -ml-1">
                     <div className="relative h-12 w-full overflow-hidden">
                         <img
                             src="/ChartSparkLogo.png"
                             alt="ChartSpark"
-                            className="absolute top-0 left-0 w-[140%] h-auto max-w-none -translate-x-4 -translate-y-1 brightness-0 invert"
-                            style={{ clipPath: 'inset(0 0 38% 0)' }}
+                            className="absolute top-0 left-0 w-[130%] h-auto max-w-none -translate-x-3 -translate-y-[12%]"
+                            style={{
+                                clipPath: 'inset(18% 5% 35% 5%)',
+                                filter: 'invert(1)'
+                            }}
                         />
                     </div>
                 </Link>
