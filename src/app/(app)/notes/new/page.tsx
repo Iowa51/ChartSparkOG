@@ -217,8 +217,8 @@ export default function NewNotePage() {
                                 <button
                                     onClick={() => setIsRecording(!isRecording)}
                                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-all ${isRecording
-                                            ? "bg-red-500 text-white animate-pulse"
-                                            : "bg-primary text-primary-foreground hover:bg-primary/90"
+                                        ? "bg-red-500 text-white animate-pulse"
+                                        : "bg-primary text-primary-foreground hover:bg-primary/90"
                                         }`}
                                 >
                                     {isRecording ? (
@@ -245,8 +245,8 @@ export default function NewNotePage() {
                                         <div className="flex justify-between items-baseline mb-1">
                                             <span
                                                 className={`text-xs font-bold px-2 py-0.5 rounded ${entry.speaker === "NP"
-                                                        ? "text-primary bg-primary/10"
-                                                        : "text-muted-foreground bg-muted"
+                                                    ? "text-primary bg-primary/10"
+                                                    : "text-muted-foreground bg-muted"
                                                     }`}
                                             >
                                                 {entry.speaker === "NP" ? "NP (You)" : "John Doe"}
@@ -314,7 +314,7 @@ export default function NewNotePage() {
                                                 <textarea
                                                     value={soapNote[section]}
                                                     onChange={(e) => handleSectionChange(section, e.target.value)}
-                                                    placeholder={template.structure[section].placeholder}
+                                                    placeholder={template?.structure?.[section]?.placeholder || `Enter ${section.charAt(0).toUpperCase() + section.slice(1)} details...`}
                                                     className="w-full min-h-[120px] text-base text-foreground bg-transparent leading-relaxed outline-none resize-none placeholder:text-muted-foreground/50"
                                                 />
                                             </div>
