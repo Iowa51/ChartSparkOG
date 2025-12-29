@@ -1,0 +1,179 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ChartSpark Design System - Teal Theme */
+@theme inline {
+  /* Core colors */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  
+  /* Semantic colors */
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  
+  /* UI components */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  
+  /* Typography */
+  --font-sans: var(--font-display);
+  --font-mono: var(--font-mono);
+  
+  /* Border radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+:root {
+  /* ChartSpark Teal Design System */
+  --radius: 0.5rem;
+  
+  /* Primary: Teal #0d968b */
+  --primary: #0d968b;
+  --primary-foreground: #ffffff;
+  
+  /* Backgrounds */
+  --background: #f6f8f8;
+  --foreground: #111817;
+  
+  /* Surface (cards, panels) */
+  --surface: #ffffff;
+  --surface-foreground: #111817;
+  
+  /* Card */
+  --card: #ffffff;
+  --card-foreground: #111817;
+  
+  /* Popover */
+  --popover: #ffffff;
+  --popover-foreground: #111817;
+  
+  /* Secondary */
+  --secondary: #f0f4f4;
+  --secondary-foreground: #618986;
+  
+  /* Muted */
+  --muted: #f0f4f4;
+  --muted-foreground: #618986;
+  
+  /* Accent */
+  --accent: rgba(13, 150, 139, 0.1);
+  --accent-foreground: #0d968b;
+  
+  /* Destructive */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  
+  /* Border & Input */
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #0d968b;
+  
+  /* Sidebar */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111817;
+  --sidebar-primary: #0d968b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(13, 150, 139, 0.1);
+  --sidebar-accent-foreground: #0d968b;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #0d968b;
+  
+  /* Charts */
+  --chart-1: #0d968b;
+  --chart-2: #06b6d4;
+  --chart-3: #8b5cf6;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+}
+
+.dark {
+  /* Dark mode adjustments */
+  --background: #102220;
+  --foreground: #f1f5f9;
+  
+  --surface: #1c2e2c;
+  --surface-foreground: #f1f5f9;
+  
+  --card: #1c2e2c;
+  --card-foreground: #f1f5f9;
+  
+  --popover: #1c2e2c;
+  --popover-foreground: #f1f5f9;
+  
+  --secondary: #233d3a;
+  --secondary-foreground: #94a3b8;
+  
+  --muted: #233d3a;
+  --muted-foreground: #94a3b8;
+  
+  --accent: rgba(13, 150, 139, 0.2);
+  --accent-foreground: #14b8a6;
+  
+  --border: #2d4a47;
+  --input: #2d4a47;
+  
+  --sidebar: #1c2e2c;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-border: #2d4a47;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 20px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #374151;
+}

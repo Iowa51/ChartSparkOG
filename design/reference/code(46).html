@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Telehealth - Post-Call Summary</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "primary-dark": "#0a756c",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1c302e",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display text-[#111817] dark:text-gray-100 overflow-x-hidden antialiased transition-colors duration-300">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full bg-surface-light dark:bg-surface-dark border-b border-[#f0f4f4] dark:border-[#2a403d] px-6 py-3 shadow-sm">
+<div class="mx-auto max-w-7xl flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center size-8 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">medical_services</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight text-[#111817] dark:text-white">NP Toolkit</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex items-center gap-4 text-sm font-medium text-gray-600 dark:text-gray-300">
+<a class="hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="hover:text-primary transition-colors" href="#">Schedule</a>
+<a class="hover:text-primary transition-colors" href="#">Patients</a>
+</div>
+<div class="h-6 w-px bg-gray-200 dark:bg-gray-700 hidden md:block"></div>
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ring-2 ring-white dark:ring-[#1c302e] shadow-sm" data-alt="Doctor profile portrait" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAJ-Cjbv9VAsahZbTtR3FjC6M8t926WaQxYIG7bDS7aRYuAcJ9Op98UtGu5ABVrscyplAaW03pXM8KApfrL5wcPZ_Qb6FDHQvCu7CCF395Y0tEqpdSHuz9JWwPNGZiptdytxMkUOzcecwKINulb2r8qMby5SNUk4yjoQlq_DRSvAj7ZygEDF03wI8uyfstS0hT3o0dSFgmLRTeoxZWs3zNfMvPKw0atReWApwB9_BfozBDqjQs3qrPVqmZtM7Jv43_36HBjdqbyg9rY");'>
+</div>
+<div class="hidden sm:block text-right">
+<p class="text-xs font-bold text-[#111817] dark:text-white">Dr. Sarah Jenning</p>
+<p class="text-[10px] text-gray-500 dark:text-gray-400">Nurse Practitioner</p>
+</div>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-grow flex flex-col items-center justify-center py-10 px-4 sm:px-6">
+<div class="w-full max-w-[800px] flex flex-col gap-8 animate-fade-in-up">
+<!-- Success Header -->
+<div class="flex flex-col items-center text-center gap-4">
+<div class="size-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2 shadow-sm ring-4 ring-primary/5">
+<span class="material-symbols-outlined text-[32px] icon-filled">check_circle</span>
+</div>
+<div>
+<h1 class="text-3xl font-bold tracking-tight text-[#111817] dark:text-white mb-2">Visit Complete</h1>
+<p class="text-gray-500 dark:text-gray-400 text-lg">The session has ended successfully.</p>
+</div>
+</div>
+<!-- Patient Summary Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-1 shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none border border-gray-100 dark:border-[#2a403d]">
+<div class="flex flex-col sm:flex-row items-center sm:items-stretch gap-6 p-6">
+<div class="relative">
+<div class="size-20 rounded-xl bg-gray-200 bg-center bg-cover shadow-inner" data-alt="Patient John Doe portrait" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC6-k4rBYUlG4rUo6LGOXx2DFIUX4dnw8EpfUnjapzZi27jugtLiBW0TpHNkNIA8qUxtoNT2m12AUYY5fk5VaiYNRvEk2QyUV5I26IUwONDc_JDQnqEJcZwhUIKbnxv5KQDxHFNEX6HYM2_pAC-XHwz6dSCE6Yu2TQgb5TTkeIi0gGPZxacv6F6X_r9pzqdoAmNRCs0WSqNkB--YRqrBPN13L3bvyytfndHm1BEUw-uGxKGdFx4wlK_xSEmQnnE2rHRLpUd1I4xjeM-");'>
+</div>
+<div class="absolute -bottom-2 -right-2 bg-green-500 border-2 border-white dark:border-[#1c302e] size-4 rounded-full"></div>
+</div>
+<div class="flex flex-col justify-center text-center sm:text-left flex-1">
+<h3 class="text-xl font-bold text-[#111817] dark:text-white mb-1">John Doe</h3>
+<div class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-sm text-gray-500 dark:text-gray-400">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                                December 14, 2025
+                            </span>
+<span class="hidden sm:inline">•</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+                                2:30 PM
+                            </span>
+</div>
+</div>
+<div class="flex flex-col justify-center items-center sm:items-end border-t sm:border-t-0 sm:border-l border-gray-100 dark:border-[#2a403d] pt-4 sm:pt-0 sm:pl-6 w-full sm:w-auto mt-2 sm:mt-0">
+<span class="text-xs uppercase tracking-wider font-semibold text-gray-400 dark:text-gray-500 mb-1">Call Duration</span>
+<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary font-bold text-sm">
+<span class="material-symbols-outlined text-[18px] icon-filled">timer</span>
+                            18m 24s
+                        </div>
+</div>
+</div>
+<!-- Draft Notes Preview (Subtle) -->
+<div class="bg-[#fafafa] dark:bg-[#152927] border-t border-gray-100 dark:border-[#2a403d] px-6 py-4 rounded-b-xl">
+<div class="flex items-center justify-between mb-2">
+<p class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">edit_note</span>
+                            Captured Notes
+                        </p>
+<button class="text-xs text-primary font-medium hover:underline">Edit</button>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-300 italic line-clamp-1 leading-relaxed">
+                        "Patient reports mild headache persisting for 3 days. BP normal. Advised hydration and rest..."
+                    </p>
+</div>
+</div>
+<!-- Actions Section -->
+<div class="flex flex-col gap-5">
+<h4 class="text-lg font-bold text-[#111817] dark:text-white px-1">What would you like to do next?</h4>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<!-- Primary Action -->
+<button class="group flex flex-col items-start justify-between p-5 h-40 rounded-xl bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/20 transition-all duration-200 transform hover:-translate-y-1 relative overflow-hidden">
+<div class="absolute right-0 top-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[80px]">clinical_notes</span>
+</div>
+<div class="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-2xl">edit_document</span>
+</div>
+<div class="text-left relative z-10">
+<span class="block font-bold text-lg mb-0.5">Complete Note</span>
+<span class="text-sm text-white/80 font-normal">Finalize documentation for this visit</span>
+</div>
+</button>
+<!-- Secondary Action 1 -->
+<button class="group flex flex-col items-start justify-between p-5 h-40 rounded-xl bg-surface-light dark:bg-surface-dark hover:border-primary/50 border border-transparent shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-all duration-200 transform hover:-translate-y-1">
+<div class="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 transition-colors">
+<span class="material-symbols-outlined text-2xl">prescriptions</span>
+</div>
+<div class="text-left">
+<span class="block font-bold text-[#111817] dark:text-white text-lg mb-0.5 group-hover:text-primary transition-colors">Prescribe Rx</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">Send e-prescription to pharmacy</span>
+</div>
+</button>
+<!-- Secondary Action 2 -->
+<button class="group flex flex-col items-start justify-between p-5 h-40 rounded-xl bg-surface-light dark:bg-surface-dark hover:border-primary/50 border border-transparent shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none transition-all duration-200 transform hover:-translate-y-1">
+<div class="p-2 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-lg group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40 transition-colors">
+<span class="material-symbols-outlined text-2xl">calendar_add_on</span>
+</div>
+<div class="text-left">
+<span class="block font-bold text-[#111817] dark:text-white text-lg mb-0.5 group-hover:text-primary transition-colors">Follow-up</span>
+<span class="text-sm text-gray-500 dark:text-gray-400 font-normal">Schedule next appointment</span>
+</div>
+</button>
+</div>
+<!-- Tertiary Action -->
+<div class="flex justify-center mt-4">
+<button class="flex items-center gap-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 font-medium text-sm transition-colors py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+                        Return to Dashboard
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

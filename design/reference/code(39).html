@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>E-Prescribe - Prescription Details</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "text-main": "#111817",
+                        "text-sub": "#618986",
+                        "border-color": "#dbe6e5",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .icon-filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main antialiased selection:bg-primary/20">
+<div class="flex min-h-screen flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 flex items-center justify-between border-b border-border-color bg-white px-4 py-3 shadow-sm lg:px-10 dark:bg-[#1A2C2A] dark:border-[#2A403D]">
+<div class="flex items-center gap-4">
+<a class="flex size-10 items-center justify-center rounded-full text-text-main hover:bg-background-light dark:text-white dark:hover:bg-white/10 transition-colors" href="#">
+<span class="material-symbols-outlined">arrow_back</span>
+</a>
+<div class="flex flex-col">
+<h1 class="text-lg font-bold leading-tight tracking-tight text-text-main dark:text-white">Prescribe Medication</h1>
+<p class="text-xs font-medium text-text-sub dark:text-gray-400">NP Toolkit</p>
+</div>
+</div>
+<div class="hidden md:flex items-center gap-6">
+<div class="flex items-center gap-3 rounded-lg bg-background-light px-4 py-2 dark:bg-white/5">
+<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-sm icon-filled">person</span>
+</div>
+<div>
+<p class="text-sm font-bold text-text-main dark:text-white">Jane Doe</p>
+<p class="text-xs text-text-sub dark:text-gray-400">DOB: 01/01/1980 (44y)</p>
+</div>
+</div>
+</div>
+<div class="md:hidden flex items-center">
+<button class="flex size-10 items-center justify-center rounded-full text-text-main hover:bg-background-light dark:text-white">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-4 py-6 md:px-8 lg:px-20 xl:px-40">
+<div class="mx-auto max-w-[1200px]">
+<!-- Mobile Patient Info (Visible only on small screens) -->
+<div class="mb-6 md:hidden">
+<div class="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm dark:bg-[#1A2C2A]">
+<div>
+<p class="text-lg font-bold text-text-main dark:text-white">Jane Doe</p>
+<p class="text-sm text-text-sub dark:text-gray-400">DOB: 01/01/1980</p>
+</div>
+<span class="material-symbols-outlined text-primary">id_card</span>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:gap-8">
+<!-- Left Column: Form Inputs -->
+<div class="lg:col-span-2 flex flex-col gap-6">
+<!-- Medication Hero Card -->
+<section class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-border-color dark:bg-[#1A2C2A] dark:ring-white/10">
+<div class="flex flex-col sm:flex-row">
+<div class="relative h-32 w-full sm:h-auto sm:w-32 bg-cover bg-center" data-alt="Close up of medical pills on a surface with soft lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDanr60PUJw-WPCYBpIvmTZKzLGKPCapNhOFSJTSjzBuCGyDkwE7hNriuX9IYk_Gs5-O_6h-43nHARbR16fxyBF1gCazUt7mwUyHbU6VIrToMB9Eu1ete4-2Hh3-XMH9t9g-F5OYCGhVksFbezGpd2hctyJmbPUTooDHZZwog3XgbElIWc8okDnPZbpTqGSbJJztYry7ml60AWq4R5Dci9mgSA1DXfO5k_modsBMWFQFJ6t-e7XX6hm0iRMCb3SSvyekFiOdJ560cdW');">
+<div class="absolute inset-0 bg-primary/10"></div>
+</div>
+<div class="flex flex-1 flex-col justify-center p-5">
+<div class="flex items-start justify-between">
+<div>
+<div class="mb-1 flex items-center gap-2">
+<span class="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">Generic</span>
+<span class="text-xs font-medium text-text-sub uppercase tracking-wider">SSRI</span>
+</div>
+<h2 class="text-xl font-bold text-text-main dark:text-white sm:text-2xl">Sertraline (Zoloft)</h2>
+<p class="text-base font-medium text-text-sub dark:text-gray-400">50mg • Tablet • Oral</p>
+</div>
+<button class="text-primary hover:text-primary/80 transition-colors p-2">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+<!-- Drug Interaction Alert Placeholder -->
+<div class="mt-4 flex items-start gap-2 rounded-lg bg-blue-50 p-3 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+<span class="material-symbols-outlined text-sm mt-0.5">info</span>
+<p class="text-xs font-medium leading-tight">No known interactions with current medication list.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Dosage & Supply -->
+<section class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-border-color dark:bg-[#1A2C2A] dark:ring-white/10">
+<h3 class="mb-4 text-lg font-bold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">medication_liquid</span>
+                                Dosage &amp; Supply
+                            </h3>
+<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+<!-- Quantity -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-text-main dark:text-white">Quantity</label>
+<div class="relative">
+<input class="w-full rounded-xl border border-border-color bg-white py-3 pl-4 pr-12 text-base text-text-main placeholder:text-text-sub focus:border-primary focus:ring-1 focus:ring-primary dark:bg-white/5 dark:border-white/10 dark:text-white" placeholder="30" type="number" value="30"/>
+<span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-text-sub">tabs</span>
+</div>
+<!-- Quick Chips -->
+<div class="flex gap-2 mt-1 flex-wrap">
+<button class="rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 transition-colors">30</button>
+<button class="rounded-lg bg-background-light px-3 py-1.5 text-xs font-medium text-text-main hover:bg-gray-200 dark:bg-white/10 dark:text-white transition-colors">60</button>
+<button class="rounded-lg bg-background-light px-3 py-1.5 text-xs font-medium text-text-main hover:bg-gray-200 dark:bg-white/10 dark:text-white transition-colors">90</button>
+</div>
+</div>
+<!-- Days Supply & Refills Row -->
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-text-main dark:text-white">Days Supply</label>
+<input class="w-full rounded-xl border border-border-color bg-white py-3 px-4 text-base text-text-main placeholder:text-text-sub focus:border-primary focus:ring-1 focus:ring-primary dark:bg-white/5 dark:border-white/10 dark:text-white" placeholder="30" type="number" value="30"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-semibold text-text-main dark:text-white">Refills</label>
+<div class="relative">
+<select class="w-full appearance-none rounded-xl border border-border-color bg-white py-3 pl-4 pr-10 text-base text-text-main focus:border-primary focus:ring-1 focus:ring-primary dark:bg-white/5 dark:border-white/10 dark:text-white">
+<option>0</option>
+<option>1</option>
+<option>2</option>
+<option selected="">3</option>
+<option>PRN</option>
+</select>
+<span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-sub">
+<span class="material-symbols-outlined">expand_more</span>
+</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Sig / Instructions -->
+<section class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-border-color dark:bg-[#1A2C2A] dark:ring-white/10">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">edit_note</span>
+                                    Sig / Directions
+                                </h3>
+<button class="text-xs font-bold text-primary hover:underline">View History</button>
+</div>
+<div class="relative">
+<textarea class="w-full resize-none rounded-xl border border-border-color bg-white p-4 text-base text-text-main placeholder:text-text-sub focus:border-primary focus:ring-1 focus:ring-primary dark:bg-white/5 dark:border-white/10 dark:text-white" placeholder="e.g. Take 1 tablet by mouth daily..." rows="3"></textarea>
+<div class="absolute bottom-3 right-3 flex gap-2">
+<button class="rounded-md bg-background-light px-2 py-1 text-xs font-medium text-text-sub hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 transition-colors" title="Suggest SIG">
+                                        Suggestion: "1 po qd"
+                                    </button>
+</div>
+</div>
+<p class="mt-2 text-xs text-text-sub dark:text-gray-400">Smart suggestions active. Try typing "1 po qd..."</p>
+</section>
+<!-- Pharmacy Selector -->
+<section class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-border-color dark:bg-[#1A2C2A] dark:ring-white/10">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">storefront</span>
+                                    Pharmacy
+                                </h3>
+<button class="flex items-center gap-1 text-sm font-bold text-primary hover:underline">
+<span class="material-symbols-outlined text-base">search</span>
+                                    Change
+                                </button>
+</div>
+<div class="group relative overflow-hidden rounded-xl border border-border-color bg-background-light dark:bg-white/5 dark:border-white/10">
+<div class="flex flex-col sm:flex-row">
+<div class="relative h-32 w-full sm:h-auto sm:w-40 bg-cover bg-center" data-alt="Map showing pharmacy location in city streets" data-location="New York City" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBI2OLNqLJNEwZgvEXCJzD1ic91ncWIzCz2-4AVf7zuc7IzRinQdwIpBd012aMsBpC2vphIJ5sqWnhZWVN1sadLy11ImnTvSZ0y9JQUGVL0U4BPPZnWRJoEJ2FsKXroPhlv9wjrZLaDQYlVEsz3gg57avRo_aWYiOC5w0u2DCn70GX63l7b46TrmRwge4vW0pNgB5zUZBtv67oLTYbyppvXcCGIkO0_aBTno2SFqAfRYwgP_GPGV6luj13LvHqoAMu8p2LUBw5TK4i7');">
+<div class="absolute inset-0 bg-black/10"></div>
+<div class="absolute bottom-2 left-2 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-black shadow-sm">0.8 mi</div>
+</div>
+<div class="flex flex-1 flex-col justify-center p-4">
+<div class="flex items-start justify-between">
+<div>
+<h4 class="font-bold text-text-main dark:text-white">CVS Pharmacy #1234</h4>
+<p class="text-sm text-text-sub dark:text-gray-400">123 Main St, Springfield, IL 62704</p>
+</div>
+<div class="rounded-full bg-green-100 p-1.5 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+<span class="material-symbols-outlined text-sm block">e911_emergency</span>
+</div>
+</div>
+<div class="mt-3 flex items-center gap-4 text-xs font-medium text-text-sub dark:text-gray-400">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">call</span>
+                                                (555) 123-4567
+                                            </div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">fax</span>
+                                                (555) 987-6543
+                                            </div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Sticky Summary & Actions -->
+<div class="lg:col-span-1">
+<div class="sticky top-24 flex flex-col gap-4">
+<!-- Summary Card -->
+<div class="rounded-xl bg-white shadow-lg ring-1 ring-border-color dark:bg-[#1A2C2A] dark:ring-white/10 overflow-hidden">
+<div class="bg-primary/5 px-5 py-3 border-b border-border-color dark:bg-white/5 dark:border-white/10">
+<h3 class="text-sm font-bold uppercase tracking-wider text-primary">Rx Summary</h3>
+</div>
+<div class="p-5 flex flex-col gap-4">
+<!-- Drug Item -->
+<div class="flex gap-3">
+<div class="mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg bg-background-light dark:bg-white/10">
+<span class="material-symbols-outlined text-text-sub text-lg">pill</span>
+</div>
+<div>
+<p class="text-sm font-bold text-text-main dark:text-white">Sertraline (Zoloft) 50mg</p>
+<p class="text-xs text-text-sub dark:text-gray-400">Oral Tablet</p>
+</div>
+</div>
+<div class="h-px bg-border-color dark:bg-white/10 w-full"></div>
+<!-- Instructions Preview -->
+<div class="flex gap-3">
+<div class="mt-1 flex size-8 shrink-0 items-center justify-center rounded-lg bg-background-light dark:bg-white/10">
+<span class="material-symbols-outlined text-text-sub text-lg">description</span>
+</div>
+<div>
+<p class="text-sm text-text-main dark:text-white leading-relaxed italic">"Take 1 tablet by mouth daily for anxiety."</p>
+</div>
+</div>
+<div class="h-px bg-border-color dark:bg-white/10 w-full"></div>
+<!-- Details Grid -->
+<div class="grid grid-cols-3 gap-2 text-center">
+<div class="rounded-lg bg-background-light p-2 dark:bg-white/5">
+<p class="text-[10px] uppercase text-text-sub">Qty</p>
+<p class="font-bold text-text-main dark:text-white">30</p>
+</div>
+<div class="rounded-lg bg-background-light p-2 dark:bg-white/5">
+<p class="text-[10px] uppercase text-text-sub">Days</p>
+<p class="font-bold text-text-main dark:text-white">30</p>
+</div>
+<div class="rounded-lg bg-background-light p-2 dark:bg-white/5">
+<p class="text-[10px] uppercase text-text-sub">Refills</p>
+<p class="font-bold text-text-main dark:text-white">3</p>
+</div>
+</div>
+<!-- Pharmacy Mini -->
+<div class="flex items-center gap-2 text-xs text-text-sub dark:text-gray-400 mt-2">
+<span class="material-symbols-outlined text-sm">store</span>
+<span class="truncate">CVS Pharmacy #1234</span>
+</div>
+</div>
+<div class="bg-background-light px-5 py-3 text-[10px] text-text-sub dark:bg-white/5 dark:text-gray-500 text-center border-t border-border-color dark:border-white/10">
+                                    Electronically signed by Jane Doe, NP
+                                </div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-3">
+<button class="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-6 py-4 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-lg focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-background-dark">
+<span class="material-symbols-outlined">send</span>
+                                    Send to Pharmacy
+                                    <div class="absolute inset-0 -z-10 bg-gradient-to-r from-white/0 via-white/10 to-white/0 opacity-0 transition-opacity duration-500 group-hover:animate-pulse group-hover:opacity-100"></div>
+</button>
+<div class="grid grid-cols-2 gap-3">
+<button class="flex w-full items-center justify-center gap-2 rounded-xl border border-border-color bg-white px-4 py-3 text-sm font-bold text-text-main shadow-sm hover:bg-background-light hover:text-primary transition-colors dark:bg-[#1A2C2A] dark:border-white/10 dark:text-white dark:hover:bg-white/5">
+<span class="material-symbols-outlined text-lg">save</span>
+                                        Draft
+                                    </button>
+<button class="flex w-full items-center justify-center gap-2 rounded-xl border border-border-color bg-white px-4 py-3 text-sm font-bold text-red-600 shadow-sm hover:bg-red-50 hover:border-red-100 transition-colors dark:bg-[#1A2C2A] dark:border-white/10 dark:text-red-400 dark:hover:bg-red-900/20">
+                                        Cancel
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Billing Advisor - Results</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#0d968b",
+              "background-light": "#f6f8f8",
+              "background-dark": "#102220",
+              "surface-light": "#ffffff",
+              "surface-dark": "#1A2C2A",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"]
+            },
+            borderRadius: {
+                "DEFAULT": "0.5rem", 
+                "lg": "0.75rem", 
+                "xl": "1rem", 
+                "2xl": "1.5rem",
+                "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display text-[#111817] dark:text-[#f0f4f4]">
+<!-- Top Navigation -->
+<header class="bg-surface-light dark:bg-surface-dark border-b border-[#e5eaea] dark:border-[#2A3E3C] sticky top-0 z-50">
+<div class="px-6 md:px-10 py-3 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">local_hospital</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight">NP Toolkit</h2>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Patients</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-4 h-9 rounded-lg hover:bg-[#f0f4f4] dark:hover:bg-[#2A3E3C] text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-[20px]">refresh</span>
+<span>Start Over</span>
+</button>
+<div class="size-9 rounded-full bg-cover bg-center border border-gray-200 dark:border-gray-700" data-alt="Profile picture of a nurse practitioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDRX-MDPsMvu500_b4cIk03trwvcWJYwavTaUzCqCNFgOK1E9K1MjPWCbI5_y9w3H15ef_QlR4e7TJ2KvPLhIxNKFSSDh9_2RVLsLJ8fiLhCowX29vDUpz7UOBpgRyzpssm1KNRTzJmQ_DlPxKp1WoYWs_vUKyzYhNtfIld-KxZjXN6HxuHX7aIhQ3_PpwdkAu7Y9bvWlxpNiv83HJ-4qkKJzAF2nlSOt9BEuBePYsq4cy6Rj1ETqZLILSZmEgZjXH6h9uEzEyQwUZh");'>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-[1400px] mx-auto px-6 md:px-10 py-8">
+<!-- Breadcrumbs & Back Button -->
+<div class="flex flex-col gap-6 mb-8">
+<div class="flex items-center gap-2 text-sm">
+<button class="flex items-center justify-center size-8 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors -ml-2">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400">arrow_back</span>
+</button>
+<div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+<a class="hover:text-primary transition-colors" href="#">Home</a>
+<span>/</span>
+<a class="hover:text-primary transition-colors" href="#">Advisor</a>
+<span>/</span>
+<span class="text-[#111817] dark:text-white font-semibold">Results</span>
+</div>
+</div>
+<!-- Page Heading & Actions -->
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+<div class="flex flex-col gap-2 max-w-2xl">
+<div class="flex items-center gap-3">
+<h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">Recommended Billing Codes</h1>
+<span class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">Finalized</span>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-lg">
+                        Based on <strong class="text-[#111817] dark:text-white">Level 4 Visit</strong> • Established Patient • 25 min encounter
+                    </p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<button class="h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-semibold flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+                        Export PDF
+                    </button>
+<button class="h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark hover:bg-gray-50 dark:hover:bg-gray-800 text-sm font-semibold flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[20px]">content_copy</span>
+                        Copy Codes
+                    </button>
+<button class="h-10 px-6 rounded-xl bg-primary hover:bg-[#0b847a] text-white shadow-lg shadow-primary/20 text-sm font-bold flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-[20px]">save</span>
+                        Save to Note
+                    </button>
+</div>
+</div>
+</div>
+<!-- Main Layout Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Results (8 cols) -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<!-- Primary Recommendation Card -->
+<div class="group relative bg-surface-light dark:bg-surface-dark rounded-2xl p-6 shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 hover:shadow-md transition-shadow">
+<div class="absolute top-0 left-0 w-1.5 h-full bg-primary rounded-l-2xl"></div>
+<div class="flex flex-col md:flex-row gap-6">
+<!-- Code Visual -->
+<div class="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-[#f0f4f4] dark:bg-[#233533] rounded-xl min-w-[120px]">
+<span class="text-4xl font-black text-[#111817] dark:text-white tracking-tight">99214</span>
+<span class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wide">CPT Code</span>
+</div>
+<!-- Content -->
+<div class="flex-1 flex flex-col gap-3">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="px-2.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-bold">High Confidence (98%)</span>
+<span class="px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium">Primary</span>
+</div>
+<div class="text-right">
+<span class="block text-xs text-gray-400 font-medium uppercase">Est. Reimbursement</span>
+<span class="text-lg font-bold text-primary">$110 - $130</span>
+</div>
+</div>
+<div>
+<h3 class="text-lg font-bold text-[#111817] dark:text-white leading-tight mb-1">Office/outpatient visit, established patient</h3>
+<p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                                    Evaluation and management requiring a medically appropriate history and/or examination and moderate level of medical decision making.
+                                </p>
+</div>
+<div class="mt-2 flex items-center gap-4">
+<button class="text-sm font-semibold text-primary hover:text-[#0b847a] flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]">info</span>
+                                    Why this code?
+                                </button>
+<div class="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>
+<span class="text-sm text-gray-500">Matches: <span class="font-medium text-gray-900 dark:text-white">Moderate Complexity</span></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Recommendation Card -->
+<div class="relative bg-surface-light dark:bg-surface-dark rounded-2xl p-6 shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 hover:shadow-md transition-shadow">
+<div class="flex flex-col md:flex-row gap-6">
+<!-- Code Visual -->
+<div class="flex-shrink-0 flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-white/5 rounded-xl min-w-[120px]">
+<span class="text-3xl font-bold text-gray-700 dark:text-gray-200 tracking-tight">G2211</span>
+<span class="text-xs font-semibold text-gray-400 mt-1 uppercase tracking-wide">HCPCS Code</span>
+</div>
+<!-- Content -->
+<div class="flex-1 flex flex-col gap-3">
+<div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 text-xs font-bold">Add-on Code</span>
+</div>
+<div class="text-right">
+<span class="block text-xs text-gray-400 font-medium uppercase">Est. Reimbursement</span>
+<span class="text-lg font-bold text-primary">$15 - $22</span>
+</div>
+</div>
+<div>
+<h3 class="text-lg font-bold text-[#111817] dark:text-white leading-tight mb-1">Visit complexity inherent to E/M</h3>
+<p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                                    Associated with medical care services that serve as the continuing focal point for all needed health care services.
+                                </p>
+</div>
+<div class="mt-2 flex items-center gap-4">
+<button class="text-sm font-semibold text-primary hover:text-[#0b847a] flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-[18px]">info</span>
+                                    Why this code?
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Alternative Recommendation Card (Collapsed/Smaller) -->
+<div class="relative bg-surface-light dark:bg-surface-dark rounded-2xl p-4 shadow-sm ring-1 ring-gray-100 dark:ring-gray-800 opacity-80 hover:opacity-100 transition-opacity">
+<div class="flex items-center justify-between gap-4">
+<div class="flex items-center gap-4">
+<div class="size-12 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center">
+<span class="text-sm font-bold text-gray-500">99213</span>
+</div>
+<div>
+<p class="font-bold text-[#111817] dark:text-white text-sm">Low Complexity Alternative</p>
+<p class="text-xs text-gray-500">If medical decision making was lower than documented.</p>
+</div>
+</div>
+<button class="size-8 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-gray-500">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Column: Insights & Summary (4 cols) -->
+<div class="lg:col-span-4 flex flex-col gap-6">
+<!-- Did You Know Box -->
+<div class="rounded-2xl bg-gradient-to-br from-[#effcfb] to-white dark:from-[#132a28] dark:to-[#1A2C2A] p-6 ring-1 ring-primary/20 shadow-sm relative overflow-hidden">
+<!-- Decorational background icon -->
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-[120px] text-primary/5 select-none">lightbulb</span>
+<div class="relative z-10 flex flex-col gap-4">
+<div class="flex items-center gap-2 text-amber-500 dark:text-amber-400">
+<span class="material-symbols-outlined fill-current">lightbulb</span>
+<span class="text-xs font-bold uppercase tracking-wider text-primary">Revenue Opportunity</span>
+</div>
+<div>
+<h4 class="text-lg font-bold text-[#111817] dark:text-white mb-2">Did You Know?</h4>
+<p class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                                You documented <strong>&gt;50% of this visit</strong> as counseling. You may qualify to bill based on <em>time</em> rather than complexity.
+                            </p>
+</div>
+<div class="p-3 bg-white/60 dark:bg-black/20 rounded-lg border border-primary/10 flex items-start gap-3">
+<span class="material-symbols-outlined text-green-600 dark:text-green-400 text-[20px] mt-0.5">trending_up</span>
+<div>
+<p class="text-xs font-bold text-gray-900 dark:text-white">Potential Impact</p>
+<p class="text-xs text-gray-500 dark:text-gray-400">Could increase reimbursement by ~15%.</p>
+</div>
+</div>
+<button class="w-full h-9 rounded-lg border border-primary/30 text-primary hover:bg-primary/5 text-sm font-bold transition-colors">
+                            Compare Time vs. Complexity
+                        </button>
+</div>
+</div>
+<!-- Documentation Quality Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl p-6 shadow-sm ring-1 ring-gray-100 dark:ring-gray-800">
+<h4 class="text-sm font-bold text-[#111817] dark:text-white uppercase tracking-wider mb-4">Documentation Strength</h4>
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-xs font-medium mb-1">
+<span class="text-gray-600 dark:text-gray-400">History (HPI)</span>
+<span class="text-green-600 dark:text-green-400">Strong</span>
+</div>
+<div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+<div class="h-full bg-green-500 w-full rounded-full"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-xs font-medium mb-1">
+<span class="text-gray-600 dark:text-gray-400">Physical Exam</span>
+<span class="text-primary">Good</span>
+</div>
+<div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[85%] rounded-full"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between text-xs font-medium mb-1">
+<span class="text-gray-600 dark:text-gray-400">MDM</span>
+<span class="text-amber-500">Needs Detail</span>
+</div>
+<div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+<div class="h-full bg-amber-400 w-[60%] rounded-full"></div>
+</div>
+<p class="text-[10px] text-gray-400 mt-1">Consider adding specific risk factors.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<footer class="mt-12 py-6 border-t border-gray-100 dark:border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+<p class="text-xs text-gray-400 max-w-lg">
+<strong>Disclaimer:</strong> This tool provides recommendations based on your input. Final coding selection is the professional responsibility of the provider. Verify all codes with payer guidelines.
+            </p>
+<div class="flex items-center gap-4">
+<a class="text-xs font-medium text-gray-500 hover:text-primary" href="#">Feedback</a>
+<a class="text-xs font-medium text-gray-500 hover:text-primary" href="#">Support</a>
+<a class="text-xs font-medium text-gray-500 hover:text-primary" href="#">Coding Guidelines</a>
+</div>
+</footer>
+</main>
+</body></html>

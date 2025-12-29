@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Appointment - Review</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "primary-dark": "#0a7d73",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "card-dark": "#162e2b",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-50 transition-colors duration-200">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Header / Navigation Placeholder -->
+<header class="w-full bg-white dark:bg-card-dark border-b border-slate-200 dark:border-slate-800 py-4 px-6 md:px-10 flex items-center justify-between sticky top-0 z-10">
+<div class="flex items-center gap-2">
+<div class="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">medical_services</span>
+</div>
+<span class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">NP Toolkit</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="h-10 w-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-300">notifications</span>
+</button>
+<div class="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center" data-alt="User avatar placeholder" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBzJ1x95aYFN36xCkqzKsxOBVT0E_0VTUjrBbFFzxaYL9trICQkhfSj1NmpyowC-T1-Luk_4h9lt7TC1uVYhNO5GsHGEWLVIexbKZ4zpqwdrIUPs3Kcu08HgIBDe9qjyab_ePuurwWB7h3ofm4pWiSwcpGQXbbknzEV7Mo3SqWxEdsZwjxqZJqNvMc2GOUQDHTpIge63JXI_RZ91fDL4la8ePs_DZK3JDGHCnySPaR56Ls38I8O116EAOO0v3k45_vxtkOXWiEpNCDV');"></div>
+</div>
+</header>
+<div class="flex flex-1 justify-center py-8 px-4 md:px-10 lg:px-20">
+<div class="flex flex-col w-full max-w-[960px] gap-6">
+<!-- Breadcrumbs -->
+<nav class="flex flex-wrap gap-2 text-sm">
+<a class="text-slate-500 hover:text-primary dark:text-slate-400 font-medium transition-colors" href="#">Calendar</a>
+<span class="text-slate-400 dark:text-slate-600">/</span>
+<a class="text-slate-500 hover:text-primary dark:text-slate-400 font-medium transition-colors" href="#">New Appointment</a>
+<span class="text-slate-400 dark:text-slate-600">/</span>
+<span class="text-primary font-bold">Review</span>
+</nav>
+<!-- Page Heading & Progress -->
+<div class="flex flex-col gap-6 md:flex-row md:justify-between md:items-end">
+<div class="flex flex-col gap-2">
+<h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">Review &amp; Confirm</h1>
+<p class="text-slate-500 dark:text-slate-400 text-base md:text-lg">Please verify the details below before scheduling.</p>
+</div>
+<!-- Progress Bar Component -->
+<div class="w-full md:w-64 flex flex-col gap-2">
+<div class="flex justify-between items-center text-sm font-medium">
+<span class="text-slate-700 dark:text-slate-200">Step 2 of 2</span>
+<span class="text-primary">100%</span>
+</div>
+<div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+</div>
+<!-- Main Content Card -->
+<div class="flex flex-col gap-8 rounded-xl bg-white dark:bg-card-dark shadow-[0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-none p-6 md:p-8 border border-slate-100 dark:border-slate-800">
+<!-- Patient Summary Section -->
+<div class="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between pb-6 border-b border-slate-100 dark:border-slate-800">
+<div class="flex gap-4 items-center">
+<div class="h-16 w-16 md:h-20 md:w-20 rounded-xl bg-cover bg-center shrink-0 border border-slate-100 dark:border-slate-700 shadow-sm" data-alt="Patient profile photo placeholder" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBKzRMRpA0J36Ffw54GMpHAS46YEPE_whT2sjEFstWiwBq91viBmAar_qSqrBVO3JykAGM-gO4DwZgxqeTM2SmvgpJtRFto09LCKCDqd8emM-otMUxcQR6dj5aPdL172KpH4WPFK0IUczjqvC_QqRFDOmajQquxuWqVFUlK1Q19FRmxFieZ3M-lVF5Rq91_wJK4Ac0SgGUvmDoPU3iMRJ2QGkR4Vg1nafc2UVF6gN0iVJ37Aoyj8_Ub0Txs4dUZeqflgsmkYxYU4qZO');"></div>
+<div class="flex flex-col gap-1">
+<h2 class="text-xl md:text-2xl font-bold text-slate-900 dark:text-white">John Doe</h2>
+<p class="text-slate-500 dark:text-slate-400 text-sm md:text-base">DOB: Jan 12, 1985 (39y) • MRN: 849201</p>
+</div>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-sm font-medium border border-slate-200 dark:border-slate-700">
+<span>View Profile</span>
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</button>
+</div>
+<!-- Appointment Details Grid (Read Only) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
+<div class="flex flex-col gap-1">
+<span class="text-xs uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">Date &amp; Time</span>
+<div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-medium text-lg">
+<span class="material-symbols-outlined text-primary">calendar_month</span>
+                                Oct 24, 2023 @ 2:30 PM
+                            </div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-xs uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">Duration</span>
+<div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-medium text-lg">
+<span class="material-symbols-outlined text-primary">schedule</span>
+                                45 Minutes
+                            </div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-xs uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">Visit Type</span>
+<div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-medium text-lg">
+<span class="material-symbols-outlined text-primary">video_camera_front</span>
+                                Initial Consultation
+                            </div>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-xs uppercase tracking-wider font-semibold text-slate-400 dark:text-slate-500">Location</span>
+<div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-medium text-lg">
+<span class="material-symbols-outlined text-primary">laptop_mac</span>
+                                Telehealth (Zoom)
+                            </div>
+</div>
+</div>
+<!-- Interactive Fields Section -->
+<div class="pt-6 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Clinician Selector -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="clinician">Assign Clinician</label>
+<div class="relative">
+<select class="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:border-primary focus:ring-primary pl-10 py-2.5 shadow-sm sm:text-sm" id="clinician" name="clinician">
+<option>Dr. Sarah Miller (You)</option>
+<option>Dr. Emily Chen</option>
+<option>NP Mark Wilson</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">stethoscope</span>
+</div>
+</div>
+</div>
+<!-- Status Selector -->
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="status">Status</label>
+<div class="relative">
+<select class="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:border-primary focus:ring-primary pl-10 py-2.5 shadow-sm sm:text-sm" id="status" name="status">
+<option value="confirmed">Confirmed</option>
+<option value="draft">Draft</option>
+<option value="waitlist">Waitlist</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">check_circle</span>
+</div>
+</div>
+</div>
+<!-- Internal Notes -->
+<div class="flex flex-col gap-2 md:col-span-2">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300" for="notes">
+                                Internal Notes <span class="text-slate-400 font-normal">(Optional)</span>
+</label>
+<textarea class="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:border-primary focus:ring-primary p-3 shadow-sm sm:text-sm resize-none" id="notes" placeholder="Add specific instructions, billing notes, or patient preferences..." rows="3"></textarea>
+</div>
+</div>
+</div>
+<!-- Action Bar -->
+<div class="flex flex-col-reverse md:flex-row justify-between items-center gap-4 pt-2 pb-10">
+<button class="w-full md:w-auto px-6 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold transition-colors flex justify-center items-center gap-2">
+<span class="material-symbols-outlined">arrow_back</span>
+                        Back to Edit
+                    </button>
+<button class="w-full md:w-auto px-8 py-3 rounded-lg bg-primary hover:bg-primary-dark text-white font-bold shadow-lg shadow-primary/20 transition-all transform active:scale-95 flex justify-center items-center gap-2">
+<span class="material-symbols-outlined">event_available</span>
+                        Create Appointment
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

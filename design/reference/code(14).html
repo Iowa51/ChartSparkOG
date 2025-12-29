@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quick Reference - NP Toolkit</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1A2C2A",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"],
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for sidebar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(13, 150, 139, 0.2);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#111817] dark:text-white font-display overflow-hidden h-screen flex flex-col">
+<!-- Top Navbar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e5e7eb] dark:border-b-[#1F3532] px-6 py-3 bg-white dark:bg-surface-dark shrink-0 z-20">
+<div class="flex items-center gap-4 text-[#111817] dark:text-white">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[20px]">medical_services</span>
+</div>
+<h2 class="text-[#111817] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">NP Toolkit</h2>
+</div>
+<div class="flex flex-1 justify-end gap-6">
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-[#64748B] hover:text-primary dark:text-[#9CA3AF] text-sm font-medium leading-normal transition-colors" href="#">Dashboard</a>
+<a class="text-[#64748B] hover:text-primary dark:text-[#9CA3AF] text-sm font-medium leading-normal transition-colors" href="#">Patients</a>
+<a class="text-primary text-sm font-bold leading-normal" href="#">Reference</a>
+<a class="text-[#64748B] hover:text-primary dark:text-[#9CA3AF] text-sm font-medium leading-normal transition-colors" href="#">Reports</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="size-10 flex items-center justify-center rounded-full hover:bg-background-light dark:hover:bg-[#1F3532] transition-colors text-[#64748B]">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-[#e5e7eb]" data-alt="Profile picture of a nurse practitioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQPhp0pDYFTbgXohqA8V_6Sqz97LMvIoFQF746zKHFtHEq_TyxAwthQ2pZ759gc0kmTQMDRmCwW9RHU-7PcwsnHOwu3sv4ww15xZgRT51_1RwiVszGWKJeKHdL-yVjO1NSTxMdStRY8osPeLlGRNzI5sFN0nDBtXOHl4YAKnxzCGwtxxsrXnngDAxGdpRNygx4qWpkTy0m-5ac2hbwzFNx1OhCqnuJ8Rl9oXTftBe-giqU5u5RlexVUZV6GEwTMLIEgkZrPXvT2zvm");'></div>
+</div>
+</div>
+</header>
+<!-- Main Layout -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-72 bg-white dark:bg-surface-dark border-r border-[#e5e7eb] dark:border-[#1F3532] flex flex-col hidden md:flex shrink-0">
+<div class="p-4 flex flex-col gap-4 h-full overflow-y-auto custom-scrollbar">
+<!-- Quick User Info/Context -->
+<div class="flex gap-3 items-center p-2 mb-2">
+<div class="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">library_books</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-[#111817] dark:text-white text-base font-bold leading-normal">Reference Library</h1>
+<p class="text-[#618986] text-xs font-normal leading-normal">Quick Access Guides</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col gap-1">
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] dark:text-[#9CA3AF] transition-colors group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">star</span>
+<p class="text-sm font-medium leading-normal">Favorites</p>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary/10 text-primary transition-colors">
+<span class="material-symbols-outlined filled">payments</span>
+<p class="text-sm font-bold leading-normal">Billing &amp; Coding</p>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] dark:text-[#9CA3AF] transition-colors group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">medication</span>
+<p class="text-sm font-medium leading-normal">Medication Reference</p>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] dark:text-[#9CA3AF] transition-colors group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">assignment</span>
+<p class="text-sm font-medium leading-normal">Screening Tools</p>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] dark:text-[#9CA3AF] transition-colors group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">gavel</span>
+<p class="text-sm font-medium leading-normal">State Regulations</p>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] dark:text-[#9CA3AF] transition-colors group">
+<span class="material-symbols-outlined group-hover:text-primary transition-colors">elderly</span>
+<p class="text-sm font-medium leading-normal">Beers Criteria</p>
+</button>
+</nav>
+<!-- Footer area of Sidebar -->
+<div class="mt-auto pt-4 border-t border-[#e5e7eb] dark:border-[#1F3532]">
+<button class="flex w-full items-center gap-3 px-3 py-2 rounded-xl hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] dark:text-[#9CA3AF]">
+<span class="material-symbols-outlined">help</span>
+<p class="text-sm font-medium">Help &amp; Feedback</p>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark relative">
+<div class="w-full max-w-[1000px] mx-auto px-6 py-8 md:px-10 md:py-10 flex flex-col gap-8">
+<!-- Back Button -->
+<a class="inline-flex items-center gap-2 text-sm font-medium text-[#64748B] hover:text-primary transition-colors w-fit" href="#">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                    Back to Dashboard
+                </a>
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="flex flex-col gap-2">
+<h1 class="text-[#111817] dark:text-white text-3xl md:text-4xl font-extrabold tracking-tight">Billing &amp; Coding</h1>
+<p class="text-[#618986] text-base font-normal max-w-xl">Access CPT, ICD-10 codes, and billing guidelines. Updated for 2024.</p>
+</div>
+<button class="flex shrink-0 items-center justify-center gap-2 rounded-xl h-10 px-4 bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#1F3532] text-[#111817] dark:text-white text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+                        Request New Code
+                    </button>
+</div>
+<!-- Search & Filters -->
+<div class="flex flex-col gap-4 sticky top-0 z-10 bg-background-light dark:bg-background-dark py-2 -my-2">
+<!-- Search Bar -->
+<label class="relative flex items-center group">
+<span class="absolute left-4 text-[#618986] group-focus-within:text-primary transition-colors material-symbols-outlined">search</span>
+<input class="w-full h-14 pl-12 pr-4 rounded-xl bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#1F3532] shadow-sm text-[#111817] dark:text-white placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-lg" placeholder="Search CPT or ICD-10 codes... (Press / to focus)" type="text"/>
+<div class="absolute right-4 hidden md:flex items-center gap-1 pointer-events-none">
+<kbd class="hidden sm:inline-block px-2 py-0.5 text-xs font-mono font-medium text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400 rounded border border-slate-200 dark:border-slate-600">/</kbd>
+</div>
+</label>
+<!-- Filter Chips -->
+<div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary text-white pl-4 pr-4 transition-colors font-medium text-sm shadow-sm border border-transparent">
+                            All Codes
+                        </button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#1F3532] hover:border-primary/50 text-[#64748B] dark:text-white pl-4 pr-4 transition-all font-medium text-sm shadow-sm">
+                            Cardiology
+                        </button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#1F3532] hover:border-primary/50 text-[#64748B] dark:text-white pl-4 pr-4 transition-all font-medium text-sm shadow-sm">
+                            Geriatrics
+                        </button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#1F3532] hover:border-primary/50 text-[#64748B] dark:text-white pl-4 pr-4 transition-all font-medium text-sm shadow-sm">
+                            Primary Care
+                        </button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#1F3532] hover:border-primary/50 text-[#64748B] dark:text-white pl-4 pr-4 transition-all font-medium text-sm shadow-sm">
+                            Pediatrics
+                        </button>
+<button class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-white dark:bg-surface-dark border border-[#e5e7eb] dark:border-[#1F3532] hover:border-primary/50 text-[#64748B] dark:text-white pl-4 pr-4 transition-all font-medium text-sm shadow-sm">
+                            Mental Health
+                        </button>
+</div>
+</div>
+<!-- Content Cards Container -->
+<div class="flex flex-col gap-4">
+<!-- Card 1: Expanded -->
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow-md border border-primary/30 dark:border-primary/30 overflow-hidden ring-2 ring-primary/5 dark:ring-primary/10 transition-all duration-200">
+<div class="p-5 flex flex-col gap-4">
+<!-- Card Header -->
+<div class="flex items-start justify-between gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<span class="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-sm font-mono font-bold text-primary ring-1 ring-inset ring-primary/20">99214</span>
+<h3 class="text-lg font-bold text-[#111817] dark:text-white">Office Visit - Established Patient</h3>
+</div>
+<p class="text-sm text-[#64748B] dark:text-[#9CA3AF] font-medium">Moderate Complexity • 30-39 Minutes</p>
+</div>
+<div class="flex items-center gap-1">
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] hover:text-primary transition-colors" title="Copy Code">
+<span class="material-symbols-outlined text-[20px]">content_copy</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-primary transition-colors" title="Remove Favorite">
+<span class="material-symbols-outlined text-[20px] filled">star</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] transition-colors">
+<span class="material-symbols-outlined text-[20px]">expand_less</span>
+</button>
+</div>
+</div>
+<!-- Divider -->
+<hr class="border-[#e5e7eb] dark:border-[#2D4542]"/>
+<!-- Expanded Content -->
+<div class="flex flex-col gap-4 text-sm text-[#111817] dark:text-[#E2E8F0]">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<h4 class="font-bold text-[#618986] mb-2 text-xs uppercase tracking-wider">Requirements</h4>
+<p class="leading-relaxed">Requires a medically appropriate history and/or examination and <strong>moderate level of medical decision making</strong>.</p>
+<ul class="list-disc pl-5 mt-2 space-y-1 text-slate-600 dark:text-slate-400 marker:text-primary">
+<li>2+ chronic stable illnesses</li>
+<li>1 acute illness with systemic symptoms</li>
+<li>Prescription drug management</li>
+</ul>
+</div>
+<div>
+<h4 class="font-bold text-[#618986] mb-2 text-xs uppercase tracking-wider">Time Guidelines</h4>
+<p class="leading-relaxed">When using time for code selection, <strong>30-39 minutes</strong> of total time is spent on the date of the encounter.</p>
+</div>
+</div>
+<div class="rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-900/50 p-3 mt-1">
+<div class="flex gap-2">
+<span class="material-symbols-outlined text-orange-600 text-[18px]">info</span>
+<p class="text-orange-800 dark:text-orange-200 text-xs font-medium">Do not report 99214 if the time spent is less than 30 minutes.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2: Collapsed -->
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-[#e5e7eb] dark:border-[#1F3532] hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group">
+<div class="p-5 flex items-center justify-between gap-4">
+<div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
+<span class="w-fit inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1 text-sm font-mono font-bold text-slate-700 dark:text-slate-300 ring-1 ring-inset ring-slate-200 dark:ring-slate-700">I10</span>
+<div>
+<h3 class="text-lg font-bold text-[#111817] dark:text-white group-hover:text-primary transition-colors">Essential (Primary) Hypertension</h3>
+<p class="text-sm text-[#64748B] dark:text-[#9CA3AF] md:hidden mt-1">ICD-10-CM Diagnosis Code</p>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-sm text-[#64748B] dark:text-[#9CA3AF] hidden md:block mr-4">ICD-10-CM</span>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy Code">
+<span class="material-symbols-outlined text-[20px]">content_copy</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Favorite">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg text-[#64748B] transition-colors">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3: Collapsed -->
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-[#e5e7eb] dark:border-[#1F3532] hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group">
+<div class="p-5 flex items-center justify-between gap-4">
+<div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
+<span class="w-fit inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1 text-sm font-mono font-bold text-slate-700 dark:text-slate-300 ring-1 ring-inset ring-slate-200 dark:ring-slate-700">99213</span>
+<div>
+<h3 class="text-lg font-bold text-[#111817] dark:text-white group-hover:text-primary transition-colors">Office Visit - Established Patient</h3>
+<p class="text-sm text-[#64748B] dark:text-[#9CA3AF] md:hidden mt-1">Low Complexity • 20-29 Minutes</p>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-sm text-[#64748B] dark:text-[#9CA3AF] hidden md:block mr-4">Low Complexity</span>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy Code">
+<span class="material-symbols-outlined text-[20px]">content_copy</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Favorite">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg text-[#64748B] transition-colors">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 4: Collapsed -->
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-[#e5e7eb] dark:border-[#1F3532] hover:border-primary/50 hover:shadow-md transition-all cursor-pointer group">
+<div class="p-5 flex items-center justify-between gap-4">
+<div class="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
+<span class="w-fit inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1 text-sm font-mono font-bold text-slate-700 dark:text-slate-300 ring-1 ring-inset ring-slate-200 dark:ring-slate-700">J01.90</span>
+<div>
+<h3 class="text-lg font-bold text-[#111817] dark:text-white group-hover:text-primary transition-colors">Acute Sinusitis, Unspecified</h3>
+<p class="text-sm text-[#64748B] dark:text-[#9CA3AF] md:hidden mt-1">ICD-10-CM Diagnosis Code</p>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<span class="text-sm text-[#64748B] dark:text-[#9CA3AF] hidden md:block mr-4">ICD-10-CM</span>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy Code">
+<span class="material-symbols-outlined text-[20px]">content_copy</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg hover:bg-background-light dark:hover:bg-[#1F3532] text-[#64748B] hover:text-primary transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Favorite">
+<span class="material-symbols-outlined text-[20px]">star</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg text-[#64748B] transition-colors">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Load More -->
+<div class="flex justify-center mt-4 pb-10">
+<button class="text-sm font-medium text-[#64748B] hover:text-primary transition-colors">Load more codes...</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

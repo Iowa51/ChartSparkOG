@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec", // Keeping the system prompt's required primary, though user asked for teal, system constraint is strict.
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "body": ["Plus Jakarta Sans", "sans-serif"], // Adding the requested font
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white antialiased transition-colors duration-200">
+<div class="min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 bg-white dark:bg-[#1A202C] border-b border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-16">
+<!-- Logo Section -->
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl">medical_services</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">NP Toolkit</h1>
+</div>
+<!-- Right Actions -->
+<div class="flex items-center gap-4">
+<button aria-label="Settings" class="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button aria-label="Help" class="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<div class="flex items-center gap-3 pl-1">
+<div class="text-right hidden sm:block">
+<p class="text-sm font-semibold text-slate-900 dark:text-white leading-none">Sarah Jenkins</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 leading-none mt-1">Nurse Practitioner</p>
+</div>
+<div class="size-9 rounded-full bg-slate-200 bg-cover bg-center ring-2 ring-white dark:ring-slate-800 shadow-sm" data-alt="Portrait of Sarah Jenkins, Nurse Practitioner" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDv2n1Ogi9Y-Cow4i5RPAvgDWveov2iZYWOSJ7zT6J0-K9wtPCJOV4q-MDC_Z1kK69NRYY0jGqg3hqfRwrxvY9jmtNxTR6xwk4JLo20eQEo8h3v9H35sVa24U6C0_DFW4cedP4WXiasKv8dUsu8G3pBMnIAh9PiI68uAVzzF1ahydcnaXRNKrg7kEwnN54Z51cJowT7V3g6QeoZH8LB5Na1P4J6q9rMjxEv8oB7pILd4OxDvZi-Pj8e4PpPzujzskL6dwUqcdxYl2Yt');">
+</div>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+<!-- Hero / Welcome Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-10">
+<div class="space-y-2">
+<h2 class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Good morning, Sarah 👋</h2>
+<p class="text-slate-500 dark:text-slate-400 text-lg">You have <span class="font-semibold text-primary">2 notes</span> pending review today.</p>
+</div>
+<!-- Primary Action Button -->
+<button class="group flex items-center justify-center gap-2 bg-primary hover:bg-blue-700 text-white px-6 py-4 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all duration-200 transform hover:-translate-y-0.5">
+<span class="material-symbols-outlined text-2xl">add_circle</span>
+<span class="text-lg font-bold">New Clinical Note</span>
+</button>
+</div>
+<!-- Quick Actions Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+<!-- Card 1: Billing Advisor -->
+<div class="group bg-white dark:bg-[#1e2532] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer">
+<div class="flex items-start justify-between mb-4">
+<div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/30 transition-colors">
+<span class="material-symbols-outlined text-2xl">request_quote</span>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Billing Advisor</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">Review CPT codes and documentation requirements.</p>
+</div>
+<!-- Card 2: Templates -->
+<div class="group bg-white dark:bg-[#1e2532] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer">
+<div class="flex items-start justify-between mb-4">
+<div class="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors">
+<span class="material-symbols-outlined text-2xl">folder_copy</span>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white mb-1">Templates</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">Manage your snippets and exam presets.</p>
+</div>
+<!-- Card 3: References -->
+<div class="group bg-white dark:bg-[#1e2532] p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer">
+<div class="flex items-start justify-between mb-4">
+<div class="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 group-hover:bg-purple-100 dark:group-hover:bg-purple-900/30 transition-colors">
+<span class="material-symbols-outlined text-2xl">menu_book</span>
+</div>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+<h3 class="text-lg font-bold text-slate-900 dark:text-white mb-1">References</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">Drug interactions and clinical guidelines.</p>
+</div>
+</div>
+<!-- Recent Notes Section -->
+<div class="bg-white dark:bg-[#1e2532] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+<div class="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/20">
+<h3 class="text-lg font-bold text-slate-900 dark:text-white">Recent Notes</h3>
+<a class="text-sm font-semibold text-primary hover:text-blue-700 flex items-center gap-1" href="#">
+                        View all
+                        <span class="material-symbols-outlined text-base">arrow_right_alt</span>
+</a>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-white dark:bg-[#1e2532] text-xs uppercase tracking-wider text-slate-500 border-b border-slate-100 dark:border-slate-700">
+<th class="px-6 py-4 font-semibold">Patient</th>
+<th class="px-6 py-4 font-semibold">Visit Type</th>
+<th class="px-6 py-4 font-semibold">Date</th>
+<th class="px-6 py-4 font-semibold">Status</th>
+<th class="px-6 py-4 font-semibold text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center text-xs font-bold">
+                                            JD
+                                        </div>
+<div>
+<p class="font-semibold text-slate-900 dark:text-white text-sm">John Doe</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">#48293</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Acute Visit</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Oct 24, 2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                        Draft
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300 flex items-center justify-center text-xs font-bold">
+                                            MR
+                                        </div>
+<div>
+<p class="font-semibold text-slate-900 dark:text-white text-sm">Maria Ross</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">#99201</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Annual Wellness</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Oct 23, 2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                                        Pending Review
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs font-bold">
+                                            AJ
+                                        </div>
+<div>
+<p class="font-semibold text-slate-900 dark:text-white text-sm">Arthur Johnson</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">#10293</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Follow-up</td>
+<td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">Oct 22, 2023</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                        Signed
+                                    </span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">download</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Footer of table -->
+<div class="bg-gray-50 dark:bg-gray-800/20 px-6 py-3 border-t border-slate-100 dark:border-slate-700">
+<p class="text-xs text-slate-500 text-center dark:text-slate-400">All patient data is encrypted and HIPAA compliant.</p>
+</div>
+</div>
+</main>
+</div>
+</body></html>

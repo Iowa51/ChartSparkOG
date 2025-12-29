@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Recording Interface</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d9688", // Teal
+                        "primary-dark": "#0a756a",
+                        "danger": "#ef4444", // Red/Coral for recording active state
+                        "background-light": "#FAFAFA",
+                        "background-dark": "#102220",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2c2a",
+                        "border-light": "#f0f4f4",
+                        "border-dark": "#2a3c3a",
+                        "text-main": "#111817",
+                        "text-muted": "#618985",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    keyframes: {
+                        pulseRing: {
+                            '0%': { transform: 'scale(0.8)', opacity: '0.5' },
+                            '100%': { transform: 'scale(1.5)', opacity: '0' },
+                        },
+                        waveform: {
+                            '0%, 100%': { height: '10%' },
+                            '50%': { height: '100%' },
+                        }
+                    },
+                    animation: {
+                        pulseRing: 'pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        wave: 'waveform 1.2s ease-in-out infinite',
+                        waveSlow: 'waveform 2s ease-in-out infinite',
+                        waveFast: 'waveform 0.8s ease-in-out infinite',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Plus Jakarta Sans", "Noto Sans", sans-serif;
+        }
+        /* Custom scrollbar for transcription area */
+        .transcription-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .transcription-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .transcription-scroll::-webkit-scrollbar-thumb {
+            background-color: #dbe6e5;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white h-screen flex flex-col overflow-hidden">
+<!-- Top Navigation -->
+<header class="flex-none flex items-center justify-between border-b border-solid border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark px-6 py-4 z-20 shadow-sm">
+<div class="flex items-center gap-4 text-text-main dark:text-white">
+<div class="flex items-center justify-center size-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-xl">mic</span>
+</div>
+<div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Recording: Patient Visit</h2>
+<p class="text-sm text-text-muted dark:text-gray-400">John Doe • ID #49201</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-text-muted hover:text-text-main dark:text-gray-400 dark:hover:text-white text-sm font-medium transition-colors">
+                Cancel Recording
+            </button>
+<button class="opacity-50 cursor-not-allowed flex items-center justify-center rounded-lg h-10 px-6 bg-primary text-white text-sm font-bold shadow-sm transition-all" disabled="">
+                Save &amp; Finish
+            </button>
+</div>
+</header>
+<!-- Main Content Grid -->
+<main class="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
+<!-- LEFT PANEL: Controls & Status -->
+<section class="flex-none w-full md:w-[400px] lg:w-[480px] flex flex-col items-center justify-center p-8 border-b md:border-b-0 md:border-r border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark relative">
+<!-- Template Selector -->
+<div class="w-full max-w-sm mb-12">
+<label class="flex flex-col gap-2">
+<span class="text-text-muted dark:text-gray-400 text-xs font-bold uppercase tracking-wider">Template Context</span>
+<div class="relative">
+<select class="w-full appearance-none rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-text-main dark:text-white px-4 py-3 pr-10 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-shadow font-medium">
+<option value="soap">SOAP Note (Standard)</option>
+<option value="psych">Psychiatric Evaluation</option>
+<option value="followup">Follow-up Visit</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-text-muted">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</label>
+</div>
+<!-- Active Recording Module -->
+<div class="flex flex-col items-center gap-8 w-full">
+<!-- Timer -->
+<div class="flex flex-col items-center gap-2">
+<div class="flex items-baseline gap-1 font-mono text-5xl font-bold text-text-main dark:text-white tracking-tighter tabular-nums">
+<span>03</span>
+<span class="animate-pulse text-danger">:</span>
+<span>42</span>
+</div>
+<div class="flex items-center gap-2 text-danger font-medium animate-pulse">
+<span class="size-2 rounded-full bg-danger"></span>
+<span class="text-sm uppercase tracking-widest">Recording Live</span>
+</div>
+</div>
+<!-- Visualizer -->
+<div class="h-16 flex items-center justify-center gap-1 w-full max-w-[240px]">
+<div class="w-1 bg-primary/40 rounded-full h-full animate-wave"></div>
+<div class="w-1 bg-primary/60 rounded-full h-3/4 animate-waveSlow"></div>
+<div class="w-1 bg-primary/80 rounded-full h-1/2 animate-waveFast"></div>
+<div class="w-1 bg-primary rounded-full h-full animate-wave"></div>
+<div class="w-1 bg-primary rounded-full h-2/3 animate-waveSlow"></div>
+<div class="w-1 bg-primary/80 rounded-full h-1/2 animate-waveFast"></div>
+<div class="w-1 bg-primary/60 rounded-full h-3/4 animate-waveSlow"></div>
+<div class="w-1 bg-primary/40 rounded-full h-full animate-wave"></div>
+<div class="w-1 bg-primary/40 rounded-full h-1/2 animate-waveFast"></div>
+<div class="w-1 bg-primary/30 rounded-full h-1/4 animate-wave"></div>
+</div>
+<!-- Giant Stop Button -->
+<div class="relative group mt-4">
+<!-- Pulsing Ring -->
+<div class="absolute inset-0 rounded-full bg-danger/20 animate-pulseRing"></div>
+<div class="absolute inset-0 rounded-full bg-danger/20 animate-pulseRing" style="animation-delay: 1s;"></div>
+<button class="relative z-10 flex flex-col items-center justify-center size-32 rounded-full bg-white dark:bg-gray-800 border-4 border-danger/10 shadow-lg hover:scale-105 transition-transform duration-200 group-hover:shadow-xl cursor-pointer">
+<div class="size-24 rounded-full bg-danger flex items-center justify-center text-white shadow-inner">
+<span class="material-symbols-outlined" style="font-size: 40px;">stop</span>
+</div>
+</button>
+</div>
+<span class="text-sm font-medium text-text-muted dark:text-gray-400 mt-2">Tap to Stop &amp; Process</span>
+</div>
+</section>
+<!-- RIGHT PANEL: Live Transcription -->
+<section class="flex-1 flex flex-col bg-background-light dark:bg-background-dark p-6 md:p-10 min-h-0">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-lg font-bold text-text-main dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">description</span>
+                    Live Transcript
+                </h3>
+<div class="flex gap-2">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-text-main dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-base">flag</span>
+                        Flag Term
+                    </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-text-main dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+<span class="material-symbols-outlined text-base">bookmark_add</span>
+                        Bookmark
+                    </button>
+</div>
+</div>
+<!-- Paper Sheet -->
+<div class="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden flex flex-col relative">
+<!-- Transcription Content -->
+<div class="transcription-scroll flex-1 overflow-y-auto p-8 space-y-6">
+<!-- Past Segment -->
+<div class="text-text-muted dark:text-gray-400 text-lg leading-relaxed">
+                        Patient reports persistent headaches for the last 3 days. Severity is described as a 6 out of 10, primarily located in the frontal region. No photophobia reported, but some sensitivity to loud noises.
+                    </div>
+<!-- Recent Segment -->
+<div class="text-text-main dark:text-gray-200 text-lg leading-relaxed">
+                        The patient also mentions occasional dizziness when standing up quickly. Blood pressure was taken earlier by the assistant and recorded as 135/85. Patient denies any history of migraines in the family.
+                    </div>
+<!-- Live Segment (Active) -->
+<div class="flex gap-1 items-baseline">
+<span class="text-text-main dark:text-white text-lg leading-relaxed font-medium">
+                            We will proceed with a basic neurological exam to rule out...
+                        </span>
+<span class="w-0.5 h-5 bg-primary animate-pulse inline-block align-middle ml-1"></span>
+</div>
+<!-- Gradient Fade at top -->
+<div class="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white dark:from-gray-800 to-transparent pointer-events-none"></div>
+</div>
+<!-- Footer of Card -->
+<div class="p-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between text-xs text-text-muted dark:text-gray-500">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">lock</span>
+                        HIPAA Compliant Encryption Active
+                    </span>
+<span>Auto-saving...</span>
+</div>
+</div>
+</section>
+</main>
+</body></html>

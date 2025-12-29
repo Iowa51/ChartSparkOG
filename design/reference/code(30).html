@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - E-Prescribe</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#0d968b",
+              "primary-dark": "#0a7a72",
+              "background-light": "#FAFAFA",
+              "background-dark": "#102220",
+              "surface-light": "#FFFFFF",
+              "surface-dark": "#1A2E2C",
+              "text-main": "#111817",
+              "text-secondary": "#618986",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main font-display min-h-screen flex flex-col overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- Side Navigation -->
+<aside class="w-64 border-r border-gray-200 dark:border-gray-800 bg-surface-light dark:bg-surface-dark hidden lg:flex flex-col flex-shrink-0 z-20">
+<div class="flex h-full flex-col justify-between p-4">
+<div class="flex flex-col gap-6">
+<!-- User Profile Snippet -->
+<div class="flex gap-3 items-center px-2">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="Profile picture of nurse practitioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCylLYlUSZoAeObFAThGpsiG5oxF2h1vJ6FevoUuCW1bUs3YYQtg5ObD5VFLM63tSkN90hAXZAyqUDUFMIG7lUob_EbqRVbPRu-GYDRp74wN0CF3x-Fm1q19NZX0XKWf15p-EO8-GGm4qYXo2ww6ppXjAGuB1tVs-NfglxesscFvFVMnK_YKRPvdIZrQG4MXk_D57F0LkJvGkbFiEGCIPCrYkOjQjUwwjLBpCKUU2UUDs6pPwX4AVclZsWnKrSQPMyD7Xji0225wzkK");'></div>
+<div class="flex flex-col overflow-hidden">
+<h1 class="text-text-main text-sm font-semibold leading-normal truncate">Jane Cooper, NP</h1>
+<p class="text-text-secondary text-xs font-normal leading-normal truncate">Family Practice</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary">grid_view</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary">group</span>
+<span class="text-sm font-medium">Patients</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined fill">prescriptions</span>
+<span class="text-sm font-bold">Prescriptions</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary">lab_profile</span>
+<span class="text-sm font-medium">Labs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-secondary hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-text-secondary group-hover:text-primary">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</nav>
+</div>
+<div class="px-2 pb-2">
+<p class="text-xs text-text-secondary text-center">NP Toolkit v2.4.1</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full relative overflow-hidden">
+<!-- Top Header -->
+<header class="bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-800 px-6 py-4 flex items-center justify-between z-10">
+<div class="flex items-center gap-4">
+<button class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-text-secondary transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div>
+<h2 class="text-xl font-bold text-text-main tracking-tight">New Prescription</h2>
+<div class="flex items-center gap-2 text-sm text-text-secondary lg:hidden">
+<span>Step 2 of 3</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="hidden sm:flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-text-main font-medium text-sm transition-colors">
+                        Cancel
+                    </button>
+<button class="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]">save</span>
+<span class="hidden sm:inline">Save Draft</span>
+</button>
+</div>
+</header>
+<!-- Patient Context Bar (Sticky) -->
+<div class="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-gray-800 px-6 py-3 shadow-sm z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-12 border-2 border-white shadow-sm shrink-0" data-alt="Patient portrait photo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA-CDDFBqUkNg2NOL6xSmfoNcKa4DuqJQW6ImHxsv5xrcyvZsIa3IjKUwkq7j1lkemDuJDtFZQRkfcMQ9vw_AfvgjCFb1EP3g-zub6yh67JnbuT-m5iSDOS7gqiFRfqL2sS1QuTXkPi5aiv2VWnE9t7EkTjIqrfD3cKhWSScagrCRsFwNuDiLZLmHDHiNhK7pBFgoLEkxLwhP3eLNlNj2RXl55hRZXNKWRKJo6daS8VhT9rkCC4iwru1-2cypQEdD9tFyHjRewTbxju");'></div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-lg font-bold text-text-main">John Doe</h3>
+<span class="text-sm font-medium text-text-secondary bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-xs">Male</span>
+</div>
+<p class="text-sm text-text-secondary">DOB: 03/15/1978 (46y)</p>
+</div>
+</div>
+<div class="flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 px-4 py-2.5 rounded-lg max-w-full sm:max-w-md animate-pulse sm:animate-none">
+<span class="material-symbols-outlined text-red-600 dark:text-red-400 mt-0.5">warning</span>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-red-800 dark:text-red-300 uppercase tracking-wide">Critical Allergies</span>
+<span class="text-sm font-medium text-red-700 dark:text-red-200">Penicillin, Sulfa Drugs</span>
+</div>
+</div>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-6 lg:px-12">
+<div class="max-w-5xl mx-auto flex flex-col gap-8 pb-20">
+<!-- Search Section -->
+<div class="flex flex-col gap-4">
+<label class="sr-only" for="medication-search">Search medications</label>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-primary text-[28px]">search</span>
+</div>
+<input autofocus="" class="block w-full pl-14 pr-4 py-4 bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-xl text-lg text-text-main placeholder-text-secondary/60 focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm transition-all hover:shadow-md" id="medication-search" placeholder="Search medications (Brand, Generic, or Class)..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+<kbd class="hidden sm:inline-block px-2 py-1 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-xs text-gray-500 font-medium font-sans">Cmd + K</kbd>
+</div>
+</div>
+<!-- Search Suggestions (Simulation) -->
+<div class="hidden flex gap-2 overflow-x-auto pb-2">
+<!-- This would appear on focus -->
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Main List Column -->
+<div class="lg:col-span-2 flex flex-col gap-8">
+<!-- Recent Prescriptions -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold text-text-main flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+                                        Recent Prescriptions
+                                    </h3>
+<button class="text-sm font-medium text-primary hover:text-primary-dark">View all</button>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Card 1 -->
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:border-primary/30 transition-all group">
+<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div>
+<div class="flex items-baseline gap-2">
+<h4 class="text-base font-bold text-text-main">Lisinopril</h4>
+<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">ACE Inhibitor</span>
+</div>
+<p class="text-sm text-text-secondary mt-1">Common for Hypertension</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">10mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">20mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">40mg</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:border-primary/30 transition-all group">
+<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div>
+<div class="flex items-baseline gap-2">
+<h4 class="text-base font-bold text-text-main">Metformin HCl</h4>
+<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300">Biguanide</span>
+</div>
+<p class="text-sm text-text-secondary mt-1">Common for Type 2 Diabetes</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">500mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">850mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">1000mg</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Favorites / Common -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold text-text-main flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-400 fill">star</span>
+                                        Favorites
+                                    </h3>
+<button class="text-sm font-medium text-primary hover:text-primary-dark">Manage</button>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Allergy Warning Card (Disabled Style) -->
+<div class="relative bg-red-50/50 dark:bg-red-900/10 p-4 rounded-xl border border-red-200 dark:border-red-900/50 opacity-90">
+<div class="absolute top-3 right-3">
+<span class="flex items-center gap-1 text-xs font-bold text-red-600 dark:text-red-400 bg-white dark:bg-surface-dark px-2 py-1 rounded-md shadow-sm border border-red-100">
+<span class="material-symbols-outlined text-[16px]">do_not_disturb</span>
+                                                CONTRAINDICATED
+                                            </span>
+</div>
+<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div>
+<div class="flex items-baseline gap-2">
+<h4 class="text-base font-bold text-gray-500 dark:text-gray-400 line-through decoration-red-400">Amoxicillin</h4>
+<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400">Antibiotic</span>
+</div>
+<div class="mt-2 flex items-center gap-2 text-red-700 dark:text-red-300 text-sm font-medium">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+                                                     Patient allergy: Penicillin
+                                                </div>
+</div>
+<!-- Disabled Interactions -->
+<div class="flex flex-wrap gap-2 opacity-50 pointer-events-none grayscale">
+<button class="px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 text-sm font-medium text-gray-400">250mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200 text-sm font-medium text-gray-400">500mg</button>
+</div>
+</div>
+</div>
+<!-- Safe Favorite -->
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:border-primary/30 transition-all group">
+<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div>
+<div class="flex items-baseline gap-2">
+<h4 class="text-base font-bold text-text-main">Ibuprofen</h4>
+<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300">NSAID</span>
+</div>
+<p class="text-sm text-text-secondary mt-1">Pain relief / Anti-inflammatory</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">400mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">600mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">800mg</button>
+</div>
+</div>
+</div>
+<!-- Safe Favorite -->
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:border-primary/30 transition-all group">
+<div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+<div>
+<div class="flex items-baseline gap-2">
+<h4 class="text-base font-bold text-text-main">Atorvastatin</h4>
+<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300">Statin</span>
+</div>
+<p class="text-sm text-text-secondary mt-1">Lipid-lowering agent</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">10mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">20mg</button>
+<button class="px-3 py-1.5 rounded-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm font-medium text-text-main hover:bg-primary hover:text-white hover:border-primary transition-colors">40mg</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Side Panel / Context -->
+<div class="lg:col-span-1">
+<div class="sticky top-6 flex flex-col gap-6">
+<!-- Current Script Draft Widget -->
+<div class="bg-white dark:bg-surface-dark p-5 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex items-center justify-between mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+<h3 class="text-base font-bold text-text-main">Current Script</h3>
+<span class="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded">Draft</span>
+</div>
+<div class="flex flex-col gap-4 min-h-[150px] items-center justify-center text-center">
+<div class="bg-gray-50 dark:bg-gray-800 rounded-full p-4 mb-2">
+<span class="material-symbols-outlined text-gray-400 text-[32px]">medication_liquid</span>
+</div>
+<p class="text-text-secondary text-sm">No medications added yet.</p>
+<p class="text-xs text-text-secondary/70">Select a dosage from the list to start building the prescription.</p>
+</div>
+</div>
+<!-- Quick Links / Help -->
+<div class="bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-900/30">
+<h4 class="text-blue-800 dark:text-blue-300 font-bold text-sm mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">lightbulb</span>
+                                        Pro Tip
+                                    </h4>
+<p class="text-sm text-blue-700 dark:text-blue-200 leading-relaxed">
+                                        Use <span class="font-bold bg-white/50 dark:bg-black/20 px-1 rounded border border-blue-200 dark:border-blue-800">Tab</span> to navigate between dosage chips quickly without using your mouse.
+                                    </p>
+</div>
+<!-- Footer Links -->
+<div class="flex gap-4 text-xs text-text-secondary justify-center">
+<a class="hover:underline" href="#">Formulary Check</a>
+<span>•</span>
+<a class="hover:underline" href="#">Drug Interactions</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

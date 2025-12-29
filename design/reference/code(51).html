@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Patient Chart</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "primary-dark": "#0a7a72",
+                        "background-light": "#FAFAFA",
+                        "background-dark": "#102220",
+                        "surface-light": "#FFFFFF",
+                        "surface-dark": "#1A2C2A",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "full": "9999px"},
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'up': '0 -4px 20px -2px rgba(0, 0, 0, 0.05)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen flex items-center justify-center font-display antialiased p-0 sm:p-4 md:p-8">
+<!-- Mobile View Container -->
+<div class="relative w-full max-w-[480px] h-[100vh] sm:h-[850px] bg-background-light dark:bg-background-dark sm:rounded-[32px] sm:border-[8px] sm:border-gray-900 overflow-hidden shadow-2xl flex flex-col">
+<!-- Top Navigation -->
+<header class="bg-surface-light dark:bg-surface-dark sticky top-0 z-20 px-4 py-3 shadow-sm flex items-center justify-between border-b border-gray-100 dark:border-gray-800/50">
+<button class="size-10 flex items-center justify-center rounded-full hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-200 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex flex-col items-center">
+<h1 class="text-base font-bold text-gray-900 dark:text-white leading-tight">Sarah Jenkins</h1>
+<span class="text-xs text-primary font-medium">34 yrs • Female</span>
+</div>
+<button class="size-10 flex items-center justify-center rounded-full hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-200 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</header>
+<!-- Main Scrollable Content -->
+<main class="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth pb-28">
+<!-- Patient Stats / Demographics -->
+<div class="px-4 py-4">
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-1">
+<span class="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider">DOB</span>
+<span class="text-gray-900 dark:text-white text-sm font-semibold">Apr 12, 1989</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-1">
+<span class="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider">MRN</span>
+<span class="text-gray-900 dark:text-white text-sm font-semibold">#99283</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-1">
+<span class="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider">Last Visit</span>
+<span class="text-gray-900 dark:text-white text-sm font-semibold">Oct 12, 2023</span>
+</div>
+<div class="bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-1">
+<span class="text-gray-500 dark:text-gray-400 text-xs font-medium uppercase tracking-wider">PCP</span>
+<span class="text-gray-900 dark:text-white text-sm font-semibold">Dr. S. Miller</span>
+</div>
+</div>
+</div>
+<!-- Allergies Section (Prominent Warning) -->
+<section class="mb-6">
+<div class="px-4 pb-2 flex items-center justify-between">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold">Allergies</h3>
+<button class="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors">
+<span class="material-symbols-outlined text-xl">add_circle</span>
+</button>
+</div>
+<div class="px-4 flex flex-col gap-3">
+<!-- Warning Card -->
+<div class="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-xl p-4 flex items-start gap-4 shadow-sm">
+<div class="size-10 rounded-full bg-red-100 dark:bg-red-800 text-red-600 dark:text-red-200 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined filled-icon">warning</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="text-red-900 dark:text-red-100 font-bold text-base">Penicillin</h4>
+<span class="bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-100 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Severe</span>
+</div>
+<p class="text-red-700 dark:text-red-200 text-sm mt-0.5">Reaction: Anaphylaxis</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Active Problems -->
+<section class="mb-6">
+<div class="px-4 pb-2 flex items-center justify-between">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold">Active Problems</h3>
+<button class="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors">
+<span class="material-symbols-outlined text-xl">add_circle</span>
+</button>
+</div>
+<div class="mx-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+<div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="size-10 rounded-lg bg-teal-50 dark:bg-teal-900/30 text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">medical_services</span>
+</div>
+<div class="flex-1">
+<h4 class="text-gray-900 dark:text-white font-semibold text-sm">Essential Hypertension</h4>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Onset: 2018</p>
+</div>
+<span class="material-symbols-outlined text-gray-400">chevron_right</span>
+</div>
+<div class="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="size-10 rounded-lg bg-teal-50 dark:bg-teal-900/30 text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">medical_services</span>
+</div>
+<div class="flex-1">
+<h4 class="text-gray-900 dark:text-white font-semibold text-sm">Type 2 Diabetes Mellitus</h4>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Onset: 2020</p>
+</div>
+<span class="material-symbols-outlined text-gray-400">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Medications -->
+<section class="mb-6">
+<div class="px-4 pb-2 flex items-center justify-between">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold">Medications</h3>
+<button class="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors">
+<span class="material-symbols-outlined text-xl">add_circle</span>
+</button>
+</div>
+<div class="mx-4 bg-surface-light dark:bg-surface-dark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+<div class="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="size-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">pill</span>
+</div>
+<div class="flex-1">
+<h4 class="text-gray-900 dark:text-white font-semibold text-sm">Lisinopril</h4>
+<p class="text-gray-500 dark:text-gray-400 text-xs">10mg Daily • Oral</p>
+</div>
+<div class="flex items-center justify-center size-6 rounded-full bg-green-100 dark:bg-green-900/40">
+<div class="size-2 rounded-full bg-green-600 dark:bg-green-400"></div>
+</div>
+</div>
+<div class="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<div class="size-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">pill</span>
+</div>
+<div class="flex-1">
+<h4 class="text-gray-900 dark:text-white font-semibold text-sm">Metformin</h4>
+<p class="text-gray-500 dark:text-gray-400 text-xs">500mg BID • Oral</p>
+</div>
+<div class="flex items-center justify-center size-6 rounded-full bg-green-100 dark:bg-green-900/40">
+<div class="size-2 rounded-full bg-green-600 dark:bg-green-400"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Past Notes / Timeline -->
+<section class="mb-4">
+<div class="px-4 pb-2 flex items-center justify-between">
+<h3 class="text-gray-900 dark:text-white text-lg font-bold">Recent History</h3>
+<button class="text-primary hover:bg-primary/10 rounded-full p-1 transition-colors">
+<span class="text-primary text-xs font-bold">View All</span>
+</button>
+</div>
+<div class="px-4 relative">
+<!-- Vertical Line -->
+<div class="absolute left-8 top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+<!-- Item 1 -->
+<div class="relative flex items-start gap-4 mb-6">
+<div class="z-10 bg-background-light dark:bg-background-dark py-1">
+<div class="size-3 rounded-full bg-primary border-[3px] border-white dark:border-background-dark shadow-sm"></div>
+</div>
+<div class="flex-1 bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-1">
+<div class="flex justify-between items-center">
+<span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">Oct 12, 2023</span>
+<span class="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">Signed</span>
+</div>
+<h4 class="text-gray-900 dark:text-white text-sm font-semibold">Follow Up Visit</h4>
+<p class="text-gray-500 dark:text-gray-400 text-xs line-clamp-2">Patient reports BP logs have been stable. No side effects from Lisinopril reported.</p>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="relative flex items-start gap-4 mb-2">
+<div class="z-10 bg-background-light dark:bg-background-dark py-1">
+<div class="size-3 rounded-full bg-gray-300 dark:bg-gray-600 border-[3px] border-white dark:border-background-dark"></div>
+</div>
+<div class="flex-1 bg-surface-light dark:bg-surface-dark p-3 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col gap-1 opacity-75">
+<div class="flex justify-between items-center">
+<span class="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase">Aug 04, 2023</span>
+<span class="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded">Signed</span>
+</div>
+<h4 class="text-gray-900 dark:text-white text-sm font-semibold">Annual Physical</h4>
+<p class="text-gray-500 dark:text-gray-400 text-xs line-clamp-1">Routine checkup. Labs ordered.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Actions Bar -->
+<div class="absolute bottom-0 w-full bg-surface-light dark:bg-surface-dark border-t border-gray-100 dark:border-gray-800/50 p-4 shadow-up z-20">
+<div class="flex gap-3">
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary dark:text-primary-light h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[20px]">prescriptions</span>
+                    Prescribe
+                </button>
+<button class="flex-[1.5] bg-primary hover:bg-primary-dark text-white h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/30 transition-colors">
+<span class="material-symbols-outlined text-[20px]">edit_note</span>
+                    Start New Note
+                </button>
+</div>
+<!-- Bottom Navigation Bar Indicator (for aesthetic) -->
+<div class="w-full flex justify-center mt-5 sm:hidden">
+<div class="w-32 h-1 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+            extend: {
+                colors: {
+                "primary": "#135bec",
+                "background-light": "#f6f6f8",
+                "background-dark": "#101622",
+                },
+                fontFamily: {
+                "display": ["Inter", "sans-serif"]
+                },
+                borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen flex flex-col transition-colors duration-300">
+<!-- Navbar -->
+<nav class="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between h-16">
+<!-- Logo & Brand -->
+<div class="flex items-center">
+<div class="flex-shrink-0 flex items-center gap-2">
+<div class="bg-primary/10 p-2 rounded-lg">
+<span class="material-icons text-primary">medical_services</span>
+</div>
+<span class="font-bold text-xl tracking-tight text-slate-900 dark:text-white">NP Toolkit</span>
+</div>
+<!-- Desktop Nav Links -->
+<div class="hidden md:ml-10 md:flex md:space-x-8">
+<a class="border-primary text-slate-900 dark:text-white inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" href="#">Dashboard</a>
+<a class="border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 hover:text-slate-700 dark:hover:text-slate-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" href="#">Patients</a>
+<a class="border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 hover:text-slate-700 dark:hover:text-slate-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" href="#">Billing</a>
+<a class="border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 hover:text-slate-700 dark:hover:text-slate-200 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium" href="#">Resources</a>
+</div>
+</div>
+<!-- Right Side Actions -->
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 focus:outline-none relative">
+<span class="sr-only">View notifications</span>
+<span class="material-icons">notifications</span>
+<span class="absolute top-2 right-2 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-900"></span>
+</button>
+<div class="hidden sm:flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-700">
+<div class="text-right hidden lg:block">
+<p class="text-sm font-medium text-slate-900 dark:text-white">Sarah Jenkins, NP</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Primary Care</p>
+</div>
+<img alt="Profile picture of Sarah Jenkins, a nurse practitioner" class="h-10 w-10 rounded-full object-cover border-2 border-white dark:border-slate-800 shadow-sm" data-alt="Professional headshot of a female nurse practitioner" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlZpriUs7c78gvHZfjRl6zPCq2UGJsnMIGqIeBa3Zzkz_uuJ8LGhsBGMChjP0zsSwmaRx-R1SEXEIE9i243QYznUoc7TuQszgJIdZhEH84j2J__-jhD3Doth67kq7HAJ-MedDAbF8IPwHSqTpqWz0rXkXtWaRiC1M1aLpzNIns2YprXrcQZ3zDh7CcORVpswrHBtFOflycRabh3dFXshNI54J1aOjc7VQ3EBLouyMITHI607bhaSfSrBf9L3xpLBN43eXz-d9ccsy6"/>
+</div>
+<!-- Mobile menu button -->
+<div class="flex items-center md:hidden">
+<button aria-controls="mobile-menu" aria-expanded="false" class="inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary" type="button">
+<span class="sr-only">Open main menu</span>
+<span class="material-icons">menu</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-1 py-8">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<!-- Hero / Welcome Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+<!-- Welcome Message & Primary Action -->
+<div class="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl p-8 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col justify-between relative overflow-hidden">
+<div class="relative z-10">
+<div class="flex items-start justify-between">
+<div>
+<h1 class="text-3xl font-bold text-slate-900 dark:text-white mb-2">Good morning, Sarah 👋</h1>
+<p class="text-slate-500 dark:text-slate-400 text-lg">You have <span class="text-primary font-semibold">3 notes</span> pending review and 2 billing tasks for today.</p>
+</div>
+</div>
+<div class="mt-8 flex flex-wrap gap-4">
+<button class="bg-primary hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium shadow-lg shadow-blue-500/30 flex items-center gap-2 transition-transform active:scale-95">
+<span class="material-icons text-xl">add_circle</span>
+                                Start New Note
+                            </button>
+<button class="bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 px-6 py-3 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-600 flex items-center gap-2 transition-colors">
+<span class="material-icons text-xl text-slate-500 dark:text-slate-400">schedule</span>
+                                View Schedule
+                            </button>
+</div>
+</div>
+<!-- Decorative background element -->
+<div class="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-primary/5 to-transparent pointer-events-none"></div>
+</div>
+<!-- Stats Widget -->
+<div class="lg:col-span-1 grid grid-rows-2 gap-4">
+<div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-between">
+<div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">Notes Completed</p>
+<p class="text-3xl font-bold text-slate-900 dark:text-white mt-1">12</p>
+<p class="text-xs text-green-600 mt-1 flex items-center">
+<span class="material-icons text-xs mr-1">trending_up</span> +2 from yesterday
+                            </p>
+</div>
+<div class="bg-green-100 dark:bg-green-900/30 p-3 rounded-full">
+<span class="material-icons text-green-600 dark:text-green-400">check_circle</span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-between">
+<div>
+<p class="text-sm font-medium text-slate-500 dark:text-slate-400">Pending Billing</p>
+<p class="text-3xl font-bold text-slate-900 dark:text-white mt-1">5</p>
+<p class="text-xs text-orange-600 mt-1 flex items-center">
+<span class="material-icons text-xs mr-1">priority_high</span> Needs attention
+                            </p>
+</div>
+<div class="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-full">
+<span class="material-icons text-orange-600 dark:text-orange-400">receipt_long</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Access Cards -->
+<div class="mb-8">
+<h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Quick Tools</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Billing Advisor -->
+<div class="group bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-primary/30 transition-all cursor-pointer">
+<div class="flex items-center justify-between mb-4">
+<div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg group-hover:bg-primary/10 transition-colors">
+<span class="material-icons text-primary text-2xl">attach_money</span>
+</div>
+<span class="material-icons text-slate-300 group-hover:text-primary transition-colors">arrow_forward</span>
+</div>
+<h3 class="font-bold text-slate-900 dark:text-white mb-1">Billing Advisor</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">Check ICD-10 codes and CPT compliance instantly.</p>
+</div>
+<!-- Templates -->
+<div class="group bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-primary/30 transition-all cursor-pointer">
+<div class="flex items-center justify-between mb-4">
+<div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40 transition-colors">
+<span class="material-icons text-purple-600 dark:text-purple-400 text-2xl">content_copy</span>
+</div>
+<span class="material-icons text-slate-300 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">arrow_forward</span>
+</div>
+<h3 class="font-bold text-slate-900 dark:text-white mb-1">Smart Templates</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">Access your saved SOAP note templates.</p>
+</div>
+<!-- References -->
+<div class="group bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-primary/30 transition-all cursor-pointer">
+<div class="flex items-center justify-between mb-4">
+<div class="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg group-hover:bg-teal-100 dark:group-hover:bg-teal-900/40 transition-colors">
+<span class="material-icons text-teal-600 dark:text-teal-400 text-2xl">menu_book</span>
+</div>
+<span class="material-icons text-slate-300 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">arrow_forward</span>
+</div>
+<h3 class="font-bold text-slate-900 dark:text-white mb-1">Clinical References</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400">Look up drug interactions and guidelines.</p>
+</div>
+</div>
+</div>
+<!-- Recent Notes Section -->
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+<div class="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800">
+<h2 class="text-lg font-semibold text-slate-900 dark:text-white">Recent Notes</h2>
+<a class="text-sm text-primary hover:text-blue-700 font-medium flex items-center" href="#">
+                        View all history <span class="material-icons text-sm ml-1">chevron_right</span>
+</a>
+</div>
+<div class="overflow-x-auto">
+<table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+<thead class="bg-slate-50 dark:bg-slate-900/50">
+<tr>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" scope="col">Patient</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" scope="col">Diagnosis</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" scope="col">Last Edited</th>
+<th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider" scope="col">Status</th>
+<th class="relative px-6 py-3" scope="col">
+<span class="sr-only">Actions</span>
+</th>
+</tr>
+</thead>
+<tbody class="bg-white dark:bg-slate-800 divide-y divide-slate-100 dark:divide-slate-700">
+<!-- Item 1 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-200">
+                                            JD
+                                        </div>
+<div class="ml-4">
+<div class="text-sm font-medium text-slate-900 dark:text-white">John Doe</div>
+<div class="text-xs text-slate-500 dark:text-slate-400">DOB: 04/12/1985</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="text-sm text-slate-900 dark:text-white">Acute Pharyngitis</div>
+<div class="text-xs text-slate-500 dark:text-slate-400">J02.9</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="text-sm text-slate-500 dark:text-slate-400">Today, 9:41 AM</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                        Draft
+                                    </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+<a class="text-primary hover:text-blue-700 bg-primary/10 hover:bg-primary/20 px-3 py-1 rounded transition-colors" href="#">Edit</a>
+</td>
+</tr>
+<!-- Item 2 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-200">
+                                            MR
+                                        </div>
+<div class="ml-4">
+<div class="text-sm font-medium text-slate-900 dark:text-white">Maria Rodriguez</div>
+<div class="text-xs text-slate-500 dark:text-slate-400">DOB: 11/22/1972</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="text-sm text-slate-900 dark:text-white">Hypertension F/U</div>
+<div class="text-xs text-slate-500 dark:text-slate-400">I10</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="text-sm text-slate-500 dark:text-slate-400">Yesterday, 3:15 PM</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                        Signed
+                                    </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+<a class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300" href="#">View</a>
+</td>
+</tr>
+<!-- Item 3 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="flex items-center">
+<div class="flex-shrink-0 h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-200">
+                                            AS
+                                        </div>
+<div class="ml-4">
+<div class="text-sm font-medium text-slate-900 dark:text-white">Arthur Smith</div>
+<div class="text-xs text-slate-500 dark:text-slate-400">DOB: 02/08/1954</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="text-sm text-slate-900 dark:text-white">T2DM Management</div>
+<div class="text-xs text-slate-500 dark:text-slate-400">E11.9</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<div class="text-sm text-slate-500 dark:text-slate-400">Oct 24, 10:30 AM</div>
+</td>
+<td class="px-6 py-4 whitespace-nowrap">
+<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+                                        Pending Review
+                                    </span>
+</td>
+<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+<a class="text-primary hover:text-blue-700 bg-primary/10 hover:bg-primary/20 px-3 py-1 rounded transition-colors" href="#">Review</a>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom Navigation (Visible on Small Screens) -->
+<div class="md:hidden fixed bottom-0 w-full bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-around py-3 z-50 safe-area-bottom">
+<a class="flex flex-col items-center text-primary" href="#">
+<span class="material-icons text-2xl">dashboard</span>
+<span class="text-[10px] mt-1 font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" href="#">
+<span class="material-icons text-2xl">people</span>
+<span class="text-[10px] mt-1 font-medium">Patients</span>
+</a>
+<div class="relative -top-5">
+<button class="bg-primary text-white rounded-full p-3 shadow-lg shadow-blue-500/40">
+<span class="material-icons text-2xl">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" href="#">
+<span class="material-icons text-2xl">receipt_long</span>
+<span class="text-[10px] mt-1 font-medium">Billing</span>
+</a>
+<a class="flex flex-col items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" href="#">
+<span class="material-icons text-2xl">person</span>
+<span class="text-[10px] mt-1 font-medium">Profile</span>
+</a>
+</div>
+</body></html>

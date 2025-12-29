@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Note Review - NP Toolkit</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .filled-icon { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body class="bg-slate-200 dark:bg-zinc-950 flex justify-center min-h-screen font-display antialiased selection:bg-primary/20 py-0 sm:py-8">
+<!-- Mobile Device Simulator Container -->
+<div class="w-full sm:max-w-[420px] md:max-w-[480px] bg-background-light dark:bg-background-dark flex flex-col h-screen sm:h-[850px] sm:rounded-[2.5rem] overflow-hidden sm:shadow-2xl sm:border-[8px] sm:border-slate-900 relative ring-1 ring-black/5">
+<!-- Header -->
+<header class="flex items-center justify-between px-5 pt-6 pb-4 bg-white dark:bg-[#152826] border-b border-slate-100 dark:border-slate-800 shrink-0 z-10 sticky top-0">
+<button class="flex items-center justify-center p-2 -ml-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors group">
+<span class="material-symbols-outlined group-hover:-translate-x-0.5 transition-transform">arrow_back_ios_new</span>
+</button>
+<h1 class="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Note Review</h1>
+<button class="text-sm font-bold text-primary hover:text-teal-700 transition-colors px-2 py-1 rounded-md hover:bg-primary/5">
+                Save Draft
+            </button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto scrollbar-hide pb-24 relative bg-background-light dark:bg-background-dark">
+<!-- Context Bar & Controls -->
+<div class="bg-white dark:bg-[#152826] pb-6 px-5 rounded-b-[2rem] shadow-[0_4px_20px_-12px_rgba(0,0,0,0.1)] mb-6 z-0">
+<!-- Patient Info Row -->
+<div class="flex items-center justify-between py-4">
+<div class="flex flex-col">
+<span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Patient ID</span>
+<span class="text-lg font-bold text-slate-900 dark:text-white leading-tight">JD-4492</span>
+</div>
+<div class="h-8 w-px bg-slate-100 dark:bg-slate-700 mx-4"></div>
+<div class="flex flex-col items-end">
+<span class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Duration</span>
+<div class="flex items-center gap-1 text-slate-900 dark:text-white">
+<span class="material-symbols-outlined text-base text-primary">timer</span>
+<span class="text-lg font-bold leading-tight">12m 05s</span>
+</div>
+</div>
+</div>
+<!-- View Toggle (Segmented Control) -->
+<div class="flex p-1.5 bg-slate-100 dark:bg-[#1f3532] rounded-xl relative mt-1">
+<button class="flex-1 py-2.5 px-4 rounded-[0.6rem] bg-white dark:bg-[#2C3E3C] shadow-sm text-primary dark:text-primary font-bold text-sm transition-all text-center border border-slate-200/50 dark:border-transparent">
+                        Generated Note
+                    </button>
+<button class="flex-1 py-2.5 px-4 rounded-[0.6rem] text-slate-500 dark:text-slate-400 font-semibold text-sm hover:text-slate-700 dark:hover:text-slate-200 transition-all text-center">
+                        Transcript
+                    </button>
+</div>
+</div>
+<!-- SOAP Note Sections -->
+<div class="px-5 space-y-5">
+<!-- Subjective Section -->
+<section class="group transition-all">
+<div class="flex items-center justify-between mb-2 px-1">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span>
+<label class="text-slate-900 dark:text-white font-bold text-sm">Subjective</label>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-lg hover:border-primary/30 hover:bg-primary/5">
+<span class="material-symbols-outlined text-[16px]">autorenew</span>
+                            Regenerate
+                        </button>
+</div>
+<div class="bg-white dark:bg-[#1a2e2c] p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+<textarea class="w-full text-slate-700 dark:text-slate-300 bg-transparent border-0 p-0 focus:ring-0 resize-none text-[15px] leading-relaxed min-h-[110px]" spellcheck="false">Patient reports distinct sharp pain in left shoulder radiating to the upper arm. States pain level is 6/10 at rest, exacerbated to 8/10 by lifting arm above head. Mentions onset was 3 days ago following gardening work.</textarea>
+</div>
+</section>
+<!-- Objective Section -->
+<section class="group transition-all">
+<div class="flex items-center justify-between mb-2 px-1">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span>
+<label class="text-slate-900 dark:text-white font-bold text-sm">Objective</label>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-lg hover:border-primary/30 hover:bg-primary/5">
+<span class="material-symbols-outlined text-[16px]">autorenew</span>
+                            Regenerate
+                        </button>
+</div>
+<div class="bg-white dark:bg-[#1a2e2c] p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+<textarea class="w-full text-slate-700 dark:text-slate-300 bg-transparent border-0 p-0 focus:ring-0 resize-none text-[15px] leading-relaxed min-h-[90px]" spellcheck="false">BP 120/80. Pulse 72. 
+Left shoulder: Mild swelling noted over anterior aspect. Range of motion limited in abduction (active to 90 degrees). Positive Neer's test. Palpation tenderness over supraspinatus insertion.</textarea>
+</div>
+</section>
+<!-- Assessment Section -->
+<section class="group transition-all">
+<div class="flex items-center justify-between mb-2 px-1">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span>
+<label class="text-slate-900 dark:text-white font-bold text-sm">Assessment</label>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-lg hover:border-primary/30 hover:bg-primary/5">
+<span class="material-symbols-outlined text-[16px]">autorenew</span>
+                            Regenerate
+                        </button>
+</div>
+<div class="bg-white dark:bg-[#1a2e2c] p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+<textarea class="w-full text-slate-700 dark:text-slate-300 bg-transparent border-0 p-0 focus:ring-0 resize-none text-[15px] leading-relaxed min-h-[60px]" spellcheck="false">1. Rotator cuff tendinitis, likely supraspinatus.
+2. Differential diagnosis includes subacromial bursitis.</textarea>
+</div>
+</section>
+<!-- Plan Section -->
+<section class="group transition-all">
+<div class="flex items-center justify-between mb-2 px-1">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary/40"></span>
+<label class="text-slate-900 dark:text-white font-bold text-sm">Plan</label>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors flex items-center gap-1.5 text-xs font-semibold bg-white dark:bg-[#1a2e2c] border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-lg hover:border-primary/30 hover:bg-primary/5">
+<span class="material-symbols-outlined text-[16px]">autorenew</span>
+                            Regenerate
+                        </button>
+</div>
+<div class="bg-white dark:bg-[#1a2e2c] p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+<textarea class="w-full text-slate-700 dark:text-slate-300 bg-transparent border-0 p-0 focus:ring-0 resize-none text-[15px] leading-relaxed min-h-[90px]" spellcheck="false">1. Pharmacologic: Ibuprofen 600mg TID with food x 7 days.
+2. Referrals: Physical Therapy for shoulder strengthening and ROM exercises.
+3. Follow up: Return in 2 weeks if no improvement.</textarea>
+</div>
+</section>
+<!-- Billing Codes Card -->
+<div class="bg-gradient-to-br from-primary/10 to-transparent dark:from-primary/20 dark:to-[#152826] border border-primary/20 p-5 rounded-2xl mt-8 mb-4 relative overflow-hidden">
+<!-- Decorative background element -->
+<div class="absolute -right-4 -top-4 text-primary/10 dark:text-primary/5 pointer-events-none">
+<span class="material-symbols-outlined text-[80px] filled-icon">receipt_long</span>
+</div>
+<div class="flex items-center gap-2 mb-4 relative z-10">
+<div class="p-1.5 bg-primary/20 rounded-lg text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">medical_services</span>
+</div>
+<h3 class="text-primary font-bold text-sm tracking-wide">Suggested Billing</h3>
+</div>
+<div class="flex flex-col gap-3 relative z-10">
+<!-- Code Item -->
+<div class="bg-white dark:bg-[#1f3532] p-3 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between group cursor-pointer hover:border-primary/40 transition-colors">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="text-slate-900 dark:text-white font-bold text-sm">99213</span>
+<span class="text-[10px] uppercase font-bold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-2 py-0.5 rounded-full">High Conf.</span>
+</div>
+<span class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Est. Patient, Level 3</span>
+</div>
+<div class="h-6 w-6 rounded-full border border-slate-200 dark:border-slate-600 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-sm text-white opacity-0 group-hover:opacity-100">check</span>
+</div>
+</div>
+<!-- Code Item -->
+<div class="bg-white dark:bg-[#1f3532] p-3 rounded-xl border border-primary/10 shadow-sm flex items-center justify-between group cursor-pointer hover:border-primary/40 transition-colors">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="text-slate-900 dark:text-white font-bold text-sm">M75.10</span>
+</div>
+<span class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Unspecified Rotator Cuff Syndrome</span>
+</div>
+<div class="h-6 w-6 rounded-full border border-slate-200 dark:border-slate-600 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-sm text-white opacity-0 group-hover:opacity-100">check</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Spacer for sticky footer -->
+<div class="h-8"></div>
+</div>
+</main>
+<!-- Sticky Footer -->
+<div class="bg-white/90 dark:bg-[#152826]/90 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 p-4 absolute bottom-0 left-0 right-0 z-50 flex gap-3 shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
+<button class="flex-1 flex items-center justify-center gap-2 bg-white dark:bg-transparent border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-bold py-3.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-[20px]">content_copy</span>
+                Copy
+            </button>
+<button class="flex-[2] flex items-center justify-center gap-2 bg-primary text-white font-bold py-3.5 rounded-xl hover:bg-[#0b857a] active:scale-[0.98] transition-all shadow-lg shadow-primary/25">
+<span class="material-symbols-outlined text-[20px] filled-icon">check_circle</span>
+                Mark Complete
+            </button>
+</div>
+</div>
+</body></html>

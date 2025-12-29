@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Note Editor</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for transcript */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #374151;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#111817] dark:text-gray-100 flex flex-col h-screen overflow-hidden">
+<!-- Top Navigation -->
+<header class="flex-none flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e5e7eb] dark:border-b-gray-700 bg-white dark:bg-[#1a2e2c] px-6 py-3 shadow-sm z-20">
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center text-[#618986] hover:text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex items-center gap-2 text-[#111817] dark:text-white">
+<div class="size-6 text-primary">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">NP Toolkit</h2>
+</div>
+<!-- Breadcrumb separator -->
+<span class="text-gray-300 dark:text-gray-600">/</span>
+<span class="text-sm font-medium text-gray-500 dark:text-gray-400">Note Editor</span>
+</div>
+<div class="flex flex-1 justify-end gap-4 items-center">
+<div class="hidden md:flex gap-2">
+<button class="flex cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-white border border-[#dbe6e5] hover:bg-gray-50 dark:bg-transparent dark:border-gray-600 dark:hover:bg-gray-800 text-[#111817] dark:text-white text-sm font-bold transition-all">
+<span class="truncate">Save Draft</span>
+</button>
+<button class="flex cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-primary hover:bg-primary/90 text-white text-sm font-bold shadow-sm transition-all">
+<span class="truncate">Mark Complete</span>
+</button>
+</div>
+<div class="h-8 w-px bg-gray-200 dark:bg-gray-700 mx-2"></div>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border border-gray-200 dark:border-gray-700" data-alt="Profile picture of the nurse practitioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDHxoM8X0W9ux6k3TArd1lePdCDgep8bHlLTXSEzlC6x4TjeqA4I_DURFB7kTuuV3aBpD8_qTLyrcmEG01Weo7ghr6K6Pdz-Hhi9XYLC4N3WP1-F2TMLkA-kn2msNG1qK67VHsA8fr3prhqvOC8d7oxTLXiXsIOOiT0YA2nooPAyrgjWdDS3zNS8YBpu1kYo2aLr4oyOHJqjWrFo2J7GlIM2pUc1DkDD5_v9WDzqZa4AqFkFcxlRrBbXPHoWSiXb4SY0AV7158s18b3");'></div>
+</div>
+</header>
+<!-- Sub-header / Patient Info -->
+<div class="flex-none bg-white dark:bg-[#1a2e2c] border-b border-[#e5e7eb] dark:border-b-gray-700 px-6 py-4">
+<div class="max-w-[1600px] mx-auto flex flex-wrap justify-between items-center gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-3">
+<h1 class="text-2xl font-bold text-[#111817] dark:text-white tracking-tight">John Doe - Follow Up</h1>
+<span class="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 ring-1 ring-inset ring-blue-700/10">
+                        Est. Patient
+                    </span>
+</div>
+<div class="flex items-center gap-4 text-sm text-[#618986] dark:text-gray-400">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                        Oct 24, 2023
+                    </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+                        14m 30s
+                    </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">mic</span>
+                        Recorded via Mobile
+                    </span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-gray-500 dark:text-gray-400">Auto-saved 2m ago</span>
+</div>
+</div>
+</div>
+<!-- Main Workspace -->
+<main class="flex-1 overflow-hidden relative w-full flex justify-center bg-background-light dark:bg-background-dark">
+<div class="w-full max-w-[1600px] h-full flex flex-col md:flex-row gap-6 p-4 md:p-6 overflow-hidden">
+<!-- Left Pane: Transcript (Collapsible) -->
+<aside class="flex flex-col w-full md:w-[380px] lg:w-[420px] bg-white dark:bg-[#1e293b] rounded-xl border border-[#dbe6e5] dark:border-gray-700 shadow-sm overflow-hidden shrink-0 flex-none h-full transition-all duration-300 group/sidebar">
+<!-- Transcript Header -->
+<div class="flex items-center justify-between px-4 py-3 border-b border-[#f0f4f4] dark:border-gray-700 bg-white dark:bg-[#1e293b] sticky top-0 z-10">
+<h3 class="text-base font-bold text-[#111817] dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">description</span>
+                        Transcript
+                    </h3>
+<div class="flex gap-2">
+<button class="p-1.5 rounded-lg hover:bg-[#f0f4f4] dark:hover:bg-gray-700 text-[#618986] transition-colors" title="Download Transcript">
+<span class="material-symbols-outlined text-[20px]">download</span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-[#f0f4f4] dark:hover:bg-gray-700 text-[#618986] transition-colors" title="Collapse">
+<span class="material-symbols-outlined text-[20px]">first_page</span>
+</button>
+</div>
+</div>
+<!-- Search -->
+<div class="px-4 py-3 border-b border-[#f0f4f4] dark:border-gray-700 bg-[#fafcfc] dark:bg-[#1e293b]">
+<div class="relative">
+<div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[#618986]">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="block w-full p-2.5 pl-10 text-sm text-[#111817] dark:text-white bg-[#f0f4f4] dark:bg-gray-800 border-none rounded-lg focus:ring-1 focus:ring-primary placeholder:text-[#618986]" placeholder="Search in transcript..." type="text"/>
+</div>
+</div>
+<!-- Transcript Content -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6 bg-white dark:bg-[#1e293b]">
+<!-- Entry 1 -->
+<div class="group relative pl-4 border-l-2 border-transparent hover:border-primary transition-colors">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">NP (You)</span>
+<span class="text-xs text-gray-400 font-mono">00:01</span>
+</div>
+<p class="text-sm text-[#3a4d4b] dark:text-gray-300 leading-relaxed">
+                            Hello John, good to see you again. How are you feeling today since our last visit?
+                        </p>
+</div>
+<!-- Entry 2 -->
+<div class="group relative pl-4 border-l-2 border-transparent hover:border-primary transition-colors">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-xs font-bold text-[#618986] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">John Doe</span>
+<span class="text-xs text-gray-400 font-mono">00:05</span>
+</div>
+<p class="text-sm text-[#3a4d4b] dark:text-gray-300 leading-relaxed">
+                            Well, honestly, I've had this nagging headache for about three days now. It just won't go away with Tylenol.
+                        </p>
+<div class="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 bg-white dark:bg-gray-800 shadow rounded border border-gray-100 dark:border-gray-600" title="Copy text">
+<span class="material-symbols-outlined text-[14px]">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Entry 3 -->
+<div class="group relative pl-4 border-l-2 border-transparent hover:border-primary transition-colors">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">NP (You)</span>
+<span class="text-xs text-gray-400 font-mono">00:12</span>
+</div>
+<p class="text-sm text-[#3a4d4b] dark:text-gray-300 leading-relaxed">
+                            I'm sorry to hear that. Can you describe the pain? Is it throbbing, sharp, or more of a pressure?
+                        </p>
+</div>
+<!-- Entry 4 -->
+<div class="group relative pl-4 border-l-2 border-transparent hover:border-primary transition-colors">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-xs font-bold text-[#618986] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">John Doe</span>
+<span class="text-xs text-gray-400 font-mono">00:18</span>
+</div>
+<p class="text-sm text-[#3a4d4b] dark:text-gray-300 leading-relaxed">
+                            It feels like a tight band around my forehead. Definitely pressure. And I'm a bit sensitive to light.
+                        </p>
+</div>
+<!-- Entry 5 -->
+<div class="group relative pl-4 border-l-2 border-transparent hover:border-primary transition-colors">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">NP (You)</span>
+<span class="text-xs text-gray-400 font-mono">00:25</span>
+</div>
+<p class="text-sm text-[#3a4d4b] dark:text-gray-300 leading-relaxed">
+                           Okay, noted. Have you noticed any visual disturbances, like an aura or flashing lights before it starts?
+                        </p>
+</div>
+<!-- Entry 6 -->
+<div class="group relative pl-4 border-l-2 border-transparent hover:border-primary transition-colors">
+<div class="flex justify-between items-baseline mb-1">
+<span class="text-xs font-bold text-[#618986] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">John Doe</span>
+<span class="text-xs text-gray-400 font-mono">00:32</span>
+</div>
+<p class="text-sm text-[#3a4d4b] dark:text-gray-300 leading-relaxed">
+                            No, nothing like that. Just the pain and the light sensitivity.
+                        </p>
+</div>
+</div>
+</aside>
+<!-- Right Pane: Note Editor -->
+<section class="flex flex-col flex-1 h-full overflow-hidden min-w-0">
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto custom-scrollbar pr-1 pb-20 space-y-6">
+<!-- SOAP Note Container -->
+<div class="bg-white dark:bg-[#1e293b] rounded-xl border border-[#dbe6e5] dark:border-gray-700 shadow-sm overflow-hidden">
+<!-- Header for Note -->
+<div class="px-6 py-4 border-b border-[#f0f4f4] dark:border-gray-700 flex justify-between items-center bg-gradient-to-r from-white to-[#fcfdfd] dark:from-[#1e293b] dark:to-[#1e293b]">
+<h2 class="text-lg font-bold text-[#111817] dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">edit_note</span>
+                                Clinical Note (SOAP)
+                            </h2>
+<div class="flex gap-2">
+<button class="flex items-center gap-1 text-xs font-bold text-primary px-3 py-1.5 bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+                                    Regenerate All
+                                </button>
+<button class="flex items-center gap-1 text-xs font-medium text-[#618986] px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                    Copy Full Note
+                                </button>
+</div>
+</div>
+<!-- Editor Sections -->
+<div class="divide-y divide-[#f0f4f4] dark:divide-gray-700">
+<!-- Subjective -->
+<div class="p-6 hover:bg-[#fafcfc] dark:hover:bg-[#233042] transition-colors group">
+<div class="flex justify-between items-center mb-3">
+<label class="text-sm font-bold text-[#111817] dark:text-gray-200 uppercase tracking-wider flex items-center gap-2">
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+                                        Subjective
+                                    </label>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-gray-400 hover:text-primary rounded-md hover:bg-white shadow-sm" title="Regenerate Section">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+</div>
+</div>
+<div class="w-full text-base text-[#3a4d4b] dark:text-gray-300 leading-relaxed outline-none min-h-[80px]" contenteditable="true">
+                                    Patient is a 45-year-old male presenting for follow-up. Reports persistent headache for 3 days, described as a "tight band" around forehead (pressure-like). Denies throbbing or sharp pain. Notes photophobia. Denies aura, visual disturbances, nausea, or vomiting. Reports OTC Tylenol provided no relief.
+                                </div>
+</div>
+<!-- Objective -->
+<div class="p-6 hover:bg-[#fafcfc] dark:hover:bg-[#233042] transition-colors group">
+<div class="flex justify-between items-center mb-3">
+<label class="text-sm font-bold text-[#111817] dark:text-gray-200 uppercase tracking-wider flex items-center gap-2">
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+                                        Objective
+                                    </label>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-gray-400 hover:text-primary rounded-md hover:bg-white shadow-sm" title="Regenerate Section">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+</div>
+</div>
+<div class="w-full text-base text-[#3a4d4b] dark:text-gray-300 leading-relaxed outline-none min-h-[80px]" contenteditable="true">
+<p class="mb-2"><strong>Vitals:</strong> BP 120/80 mmHg, HR 72 bpm, RR 16, Temp 98.6°F.</p>
+<p><strong>General:</strong> Alert and oriented x3. No acute distress, though appears uncomfortable due to light.</p>
+<p><strong>HEENT:</strong> PERRLA. EOM intact. Fundoscopic exam normal. No sinus tenderness to palpation. Neck supple, no nuchal rigidity.</p>
+<p><strong>Neuro:</strong> CN II-XII grossly intact. Strength 5/5 upper and lower extremities. Gait normal.</p>
+</div>
+</div>
+<!-- Assessment -->
+<div class="p-6 hover:bg-[#fafcfc] dark:hover:bg-[#233042] transition-colors group">
+<div class="flex justify-between items-center mb-3">
+<label class="text-sm font-bold text-[#111817] dark:text-gray-200 uppercase tracking-wider flex items-center gap-2">
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+                                        Assessment
+                                    </label>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-gray-400 hover:text-primary rounded-md hover:bg-white shadow-sm" title="Regenerate Section">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+</div>
+</div>
+<div class="w-full text-base text-[#3a4d4b] dark:text-gray-300 leading-relaxed outline-none min-h-[80px]" contenteditable="true">
+<ul class="list-disc pl-5 space-y-1">
+<li>Tension-type headache (Primary), likely exacerbated by stress.</li>
+<li>Rule out Migraine without aura (less likely given description, but photophobia present).</li>
+</ul>
+</div>
+</div>
+<!-- Plan -->
+<div class="p-6 hover:bg-[#fafcfc] dark:hover:bg-[#233042] transition-colors group">
+<div class="flex justify-between items-center mb-3">
+<label class="text-sm font-bold text-[#111817] dark:text-gray-200 uppercase tracking-wider flex items-center gap-2">
+<div class="w-1 h-4 bg-primary rounded-full"></div>
+                                        Plan
+                                    </label>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-gray-400 hover:text-primary rounded-md hover:bg-white shadow-sm" title="Regenerate Section">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+</div>
+</div>
+<div class="w-full text-base text-[#3a4d4b] dark:text-gray-300 leading-relaxed outline-none min-h-[80px]" contenteditable="true">
+<ol class="list-decimal pl-5 space-y-1">
+<li>Initiate Naproxen 500mg BID with food for 5 days.</li>
+<li>Advise rest in a dark, quiet room.</li>
+<li>Encourage hydration and regular sleep schedule.</li>
+<li>Patient education on tension headache triggers.</li>
+<li>Follow up in 2 weeks if symptoms persist or worsen. Seek ED if sudden severe headache ("thunderclap") or neurological changes occur.</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<!-- Billing Card -->
+<div class="bg-white dark:bg-[#1e293b] rounded-xl border border-[#dbe6e5] dark:border-gray-700 shadow-sm p-6 mb-8">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-base font-bold text-[#111817] dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-[#618986]">receipt_long</span>
+                                Suggested Coding
+                            </h3>
+<button class="text-xs font-bold text-primary hover:underline">Edit Codes</button>
+</div>
+<div class="flex flex-col gap-4">
+<!-- CPT Codes -->
+<div class="flex flex-col sm:flex-row sm:items-center gap-3">
+<span class="text-xs font-semibold text-gray-500 uppercase w-16">CPT</span>
+<div class="flex flex-wrap gap-2">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#f0f4f4] dark:bg-gray-800 border border-[#dbe6e5] dark:border-gray-600">
+<span class="text-sm font-bold text-[#111817] dark:text-white">99213</span>
+<span class="text-xs text-[#618986]">Level 3 Est. Patient</span>
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 ml-1" title="High Confidence"></span>
+</div>
+</div>
+</div>
+<!-- ICD-10 Codes -->
+<div class="flex flex-col sm:flex-row sm:items-center gap-3">
+<span class="text-xs font-semibold text-gray-500 uppercase w-16">ICD-10</span>
+<div class="flex flex-wrap gap-2">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#f0f4f4] dark:bg-gray-800 border border-[#dbe6e5] dark:border-gray-600">
+<span class="text-sm font-bold text-[#111817] dark:text-white">G44.209</span>
+<span class="text-xs text-[#618986]">Tension-type headache, unspec.</span>
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 ml-1" title="High Confidence"></span>
+</div>
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-dashed border-gray-300 dark:bg-gray-800/50 dark:border-gray-600 hover:border-primary cursor-pointer text-gray-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span class="text-xs font-bold">Add Code</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Floating Action Footer (Mobile/Tablet friendly, though design is desktop first) -->
+<!-- Not strictly needed if header actions are sufficient, but good for long scroll contexts -->
+<!-- Keeping clean as per desktop request, heavily relying on Top Nav actions -->
+</body></html>

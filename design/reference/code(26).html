@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Recent Notes Empty State</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "primary-dark": "#0a756c",
+                        "background-light": "#FAFAFA",
+                        "background-dark": "#102220",
+                        "surface-light": "#FFFFFF",
+                        "surface-dark": "#1A2E2C",
+                        "text-primary-light": "#111817",
+                        "text-secondary-light": "#618986",
+                        "text-primary-dark": "#E0EAE9",
+                        "text-secondary-dark": "#8FAFAc",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "0.75rem",
+                        "xl": "1rem",
+                        "2xl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(13, 150, 139, 0.08)',
+                        'card': '0 2px 8px rgba(0,0,0,0.04)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: "Plus Jakarta Sans", sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings:
+            'FILL' 1,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark transition-colors duration-200">
+<div class="flex h-screen w-full overflow-hidden">
+<!-- Side Navigation (Desktop Visible) -->
+<aside class="hidden lg:flex w-64 flex-col border-r border-gray-100 dark:border-gray-800 bg-surface-light dark:bg-surface-dark h-full">
+<div class="flex h-full flex-col justify-between p-6">
+<div class="flex flex-col gap-8">
+<!-- Logo -->
+<div class="flex items-center gap-3 text-primary">
+<div class="flex items-center justify-center size-10 rounded-xl bg-primary/10">
+<span class="material-symbols-outlined text-primary text-2xl">medical_services</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight text-text-primary-light dark:text-white">NP Toolkit</h2>
+</div>
+<!-- Navigation Links -->
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary transition-colors" href="#">
+<span class="material-symbols-outlined fill">grid_view</span>
+<span class="text-sm font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Patients</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-sm font-medium">Billing</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-sm font-medium">Schedule</span>
+</a>
+</nav>
+</div>
+<!-- Bottom Links -->
+<div class="flex flex-col gap-2 border-t border-gray-100 dark:border-gray-800 pt-6">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-50 dark:hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-sm font-medium">Help Center</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full overflow-y-auto relative bg-background-light dark:bg-background-dark">
+<!-- Mobile Header -->
+<header class="sticky top-0 z-20 flex lg:hidden items-center justify-between px-6 py-4 bg-surface-light dark:bg-surface-dark border-b border-gray-100 dark:border-gray-800">
+<div class="flex items-center gap-3 text-primary">
+<span class="material-symbols-outlined text-3xl">medical_services</span>
+<h2 class="text-lg font-bold text-text-primary-light dark:text-white">NP Toolkit</h2>
+</div>
+<button class="text-text-primary-light dark:text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</header>
+<!-- Desktop Header & Profile -->
+<header class="hidden lg:flex items-center justify-between px-10 py-6 bg-transparent">
+<div class="flex-1"></div> <!-- Spacer -->
+<div class="flex items-center gap-6">
+<button class="relative p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-text-secondary-light dark:text-text-secondary-dark transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+</button>
+<div class="flex items-center gap-3 pl-6 border-l border-gray-200 dark:border-gray-700">
+<div class="text-right hidden xl:block">
+<p class="text-sm font-bold text-text-primary-light dark:text-white leading-tight">Sarah Jenkins</p>
+<p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Nurse Practitioner</p>
+</div>
+<div class="size-10 rounded-full bg-cover bg-center border-2 border-white dark:border-gray-700 shadow-sm" data-alt="Portrait of Sarah Jenkins, Nurse Practitioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDlbiC4R6I95z4MUIJBJsFWMP8bJf9xP3mKnNhT_KBXbBeffN8Sg1tF0f7SfAcVGF_zVMU_V-5JGfgW-bBCE754iLO5ahbcAj8e-zWC9_WdMMMp8rgZhCdBdpfpseOgfadHxJBWZhz7pzlAoD9xLOxkzqvX08BOog3CqCpQDEQ-xsQ6QaJjCc-Kw7Ax7UDL3LwCWud8OsjbSv5Gf0HkiNstbRBVimVHRkOwB4kyuYXmkE7JfmgKI6ayocR5Xp9_nVLJbpu3kdp3aCPq");'></div>
+</div>
+</div>
+</header>
+<!-- Dashboard Content -->
+<div class="flex-1 w-full max-w-[1200px] mx-auto px-6 lg:px-10 pb-24 lg:pb-10">
+<!-- Welcome Section -->
+<div class="mb-8 mt-2 lg:mt-0">
+<h1 class="text-2xl lg:text-3xl font-bold tracking-tight text-text-primary-light dark:text-white mb-2">Good morning, Sarah</h1>
+<p class="text-text-secondary-light dark:text-text-secondary-dark">Here's what's happening with your patients today.</p>
+</div>
+<!-- Stats/Quick Actions Row (Contextual) -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+<div class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark shadow-card border border-gray-100 dark:border-gray-800 flex flex-col gap-2">
+<div class="p-2 w-fit rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+</div>
+<span class="text-2xl font-bold text-text-primary-light dark:text-white">12</span>
+<span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">New Patients</span>
+</div>
+<div class="p-4 rounded-xl bg-surface-light dark:bg-surface-dark shadow-card border border-gray-100 dark:border-gray-800 flex flex-col gap-2">
+<div class="p-2 w-fit rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400">
+<span class="material-symbols-outlined text-[20px]">schedule</span>
+</div>
+<span class="text-2xl font-bold text-text-primary-light dark:text-white">4</span>
+<span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark">Pending Reviews</span>
+</div>
+<!-- Empty slots for layout balance on larger screens -->
+<div class="hidden md:block col-span-2"></div>
+</div>
+<!-- Main Section: Recent Notes (Empty State Focus) -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-bold text-text-primary-light dark:text-white tracking-tight">Recent Notes</h3>
+<button class="text-sm font-semibold text-primary hover:text-primary-dark transition-colors hidden sm:block">View All History</button>
+</div>
+<!-- Empty State Card -->
+<div class="flex flex-col items-center justify-center w-full min-h-[400px] bg-surface-light dark:bg-surface-dark rounded-2xl shadow-soft border border-dashed border-gray-200 dark:border-gray-700 p-8 text-center relative overflow-hidden group">
+<!-- Decorative Background Blob -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 group-hover:bg-primary/10 transition-all duration-500"></div>
+<div class="flex flex-col items-center gap-6 max-w-md mx-auto z-10">
+<!-- Illustration Icon -->
+<div class="relative">
+<div class="size-20 rounded-2xl bg-primary/10 flex items-center justify-center transform rotate-3 transition-transform group-hover:rotate-6 duration-300">
+<span class="material-symbols-outlined text-primary text-4xl">description</span>
+</div>
+<div class="absolute -bottom-2 -right-2 size-10 rounded-xl bg-white dark:bg-surface-dark shadow-sm border border-gray-100 dark:border-gray-700 flex items-center justify-center transform -rotate-6">
+<span class="material-symbols-outlined text-primary text-xl">edit</span>
+</div>
+</div>
+<div class="space-y-2">
+<h4 class="text-xl font-bold text-text-primary-light dark:text-white">No recent notes yet</h4>
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-base leading-relaxed">
+                                    Start documentation for your first patient today. It only takes a moment to create a comprehensive record.
+                                </p>
+</div>
+<div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
+<button class="flex items-center justify-center gap-2 h-12 px-8 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold shadow-lg shadow-primary/20 transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span>Create New Note</span>
+</button>
+<button class="flex items-center justify-center gap-2 h-12 px-6 bg-transparent hover:bg-gray-50 dark:hover:bg-white/5 text-text-secondary-light dark:text-text-secondary-dark rounded-xl font-medium border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all">
+<span>Import Data</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Mobile Bottom Nav -->
+<div class="lg:hidden fixed bottom-0 left-0 right-0 bg-surface-light dark:bg-surface-dark border-t border-gray-100 dark:border-gray-800 px-6 py-3 flex justify-between items-center z-30 shadow-lg">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill text-2xl">grid_view</span>
+<span class="text-[10px] font-bold">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-text-secondary-light dark:text-text-secondary-dark hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">group</span>
+<span class="text-[10px] font-medium">Patients</span>
+</a>
+<div class="relative -top-8">
+<button class="flex items-center justify-center size-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center gap-1 text-text-secondary-light dark:text-text-secondary-dark hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">payments</span>
+<span class="text-[10px] font-medium">Billing</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-text-secondary-light dark:text-text-secondary-dark hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</div>
+</main>
+</div>
+</body></html>

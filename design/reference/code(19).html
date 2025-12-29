@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding Success - NP Toolkit</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-[#111817] dark:text-white min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-[#e6e8e8] dark:border-[#2a3c3a] bg-white dark:bg-[#1a2c2a] px-6 lg:px-10 py-3">
+<div class="flex items-center gap-3 text-[#111817] dark:text-white">
+<div class="size-8 flex items-center justify-center rounded bg-primary/10 text-primary">
+<span class="material-symbols-outlined">local_hospital</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">NP Toolkit</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="size-8 rounded-full bg-gray-200 dark:bg-gray-700 bg-center bg-cover border border-gray-100 dark:border-gray-600" data-alt="User profile avatar placeholder" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCwvqsW8T01bNGPjm8jWiY9Hon3bDM02tBQTYKmGXDOA8d50tWIXHV9h65YZgnkf1_P5w8tHGOeuEU0cifaCQN5LT4HmSLrig8S1Cndm7cQxKrpUgtW9j8KIkb1pZccDN2DhCWTbMY4haYgNqVNcuNqpCjrjXp0_wLNBOFZTh64-VPIog5roApiguHWmJisDelfUKFiUAz6GCp8R9_a9_ZlZRuOzUPfery2S8xjMhHmtRov_0sPy67V9jmobfIWavrdTgoQwZ42zOU5");'></div>
+</div>
+</header>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+<!-- Central Success Card -->
+<div class="w-full max-w-[580px] flex flex-col bg-white dark:bg-[#1a2c2a] rounded-xl shadow-sm border border-[#e6e8e8] dark:border-[#2a3c3a] overflow-hidden group/design-root">
+<!-- Progress Bar Section (Card Header) -->
+<div class="flex flex-col gap-3 p-6 border-b border-[#f0f4f4] dark:border-[#2a3c3a]">
+<div class="flex gap-6 justify-between items-center">
+<p class="text-[#111817] dark:text-white text-sm font-semibold leading-normal uppercase tracking-wide text-primary">Onboarding Complete</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+<p class="text-[#111817] dark:text-white text-sm font-bold leading-normal">100%</p>
+</div>
+</div>
+<div class="rounded-full bg-[#dbe6e5] dark:bg-[#2f403e] overflow-hidden">
+<div class="h-2 rounded-full bg-primary transition-all duration-1000 ease-out" style="width: 100%;"></div>
+</div>
+</div>
+<!-- Hero Image / Illustration -->
+<div class="px-6 pt-6">
+<!-- Using container query wrapper for responsiveness if needed -->
+<div class="@container">
+<div class="w-full bg-center bg-no-repeat bg-cover flex flex-col items-center justify-center overflow-hidden bg-primary/5 rounded-xl min-h-[180px] relative group" data-alt="Abstract soft teal medical background pattern evoking calmness and trust" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAkh1haCZFzzBo-TT9l0tQ_uH4bIfdgQMLYQnUxg8izwobJ1e24S_tOneVBderzs6clEt1mXvJePPQNDCce5MkSC3GHQtnP_0OxarEyA4y1U_TXetwNA_Qnlk94-WWLV4wq_lVEO22-7AnyTmOwokbzZLEm-ZcGUJmqC2IWW-gaopdrbDTHHMpxaNswSnpHcSZBG6BMrQA5KgO31VUYNb_CpT2LVdro63NYVAj-Td2GIuwSPF__DbH6CKVTkj-3HF-zFnoByzi831iU");'>
+<!-- Overlay for better text/icon contrast -->
+<div class="absolute inset-0 bg-white/60 dark:bg-[#1a2c2a]/60 backdrop-blur-[2px]"></div>
+<!-- Success Icon Animation Wrapper -->
+<div class="relative z-10 animate-bounce-slow">
+<div class="size-20 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30 ring-4 ring-white dark:ring-[#1a2c2a]">
+<span class="material-symbols-outlined text-white text-[48px]">check</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Content Body -->
+<div class="flex flex-col px-6 sm:px-10 pb-8 pt-6 items-center text-center">
+<!-- Headline -->
+<h1 class="text-[#111817] dark:text-white tracking-tight text-[28px] sm:text-[32px] font-bold leading-tight pb-3">
+                    You're all set!
+                </h1>
+<!-- Body Text -->
+<p class="text-[#4f6361] dark:text-[#9ca3af] text-base font-normal leading-relaxed pb-8 max-w-md">
+                    Your practice details and billing preferences have been saved securely. You are now ready to simplify your documentation workflow.
+                </p>
+<!-- Primary Action -->
+<button class="w-full max-w-sm bg-primary hover:bg-primary/90 text-white text-base font-bold py-3.5 px-6 rounded-lg transition-all duration-200 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">dashboard</span>
+                    Go to Dashboard
+                </button>
+<!-- Secondary Actions -->
+<div class="mt-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-8 text-sm font-medium text-[#4f6361] dark:text-[#9ca3af]">
+<a class="hover:text-primary transition-colors flex items-center gap-1.5 group" href="#">
+<span class="material-symbols-outlined text-lg group-hover:scale-110 transition-transform">article</span>
+                        View Documentation
+                    </a>
+<a class="hover:text-primary transition-colors flex items-center gap-1.5 group" href="#">
+<span class="material-symbols-outlined text-lg group-hover:scale-110 transition-transform">play_circle</span>
+                        Watch Tutorial
+                    </a>
+</div>
+</div>
+<!-- Subtle Footer within Card -->
+<div class="bg-[#fafbfc] dark:bg-[#152322] border-t border-[#f0f4f4] dark:border-[#2a3c3a] py-4 text-center">
+<p class="text-xs text-[#8c9e9d] dark:text-[#6b7280]">
+                    Need assistance? <a class="text-primary hover:underline" href="#">Contact Support</a>
+</p>
+</div>
+</div>
+</div>
+<style>
+        /* Custom subtle bounce animation for the checkmark */
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(-5%); }
+            50% { transform: translateY(5%); }
+        }
+        .animate-bounce-slow {
+            animation: bounce-slow 3s infinite ease-in-out;
+        }
+    </style>
+</body></html>

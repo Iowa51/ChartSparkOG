@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - New Note Recording</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "3xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display flex items-center justify-center min-h-screen p-4 sm:p-8">
+<!-- Mobile Container Simulation -->
+<main class="w-full max-w-[420px] h-[800px] max-h-[90vh] bg-white dark:bg-[#1a2e2c] rounded-3xl shadow-2xl overflow-hidden flex flex-col relative border border-slate-100 dark:border-slate-800">
+<!-- Header -->
+<header class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-[#1a2e2c] z-10">
+<button class="flex items-center justify-center w-10 h-10 -ml-2 rounded-full hover:bg-slate-50 dark:hover:bg-white/5 text-slate-800 dark:text-white transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<h1 class="text-lg font-bold text-slate-900 dark:text-white">New Note</h1>
+<button class="text-sm font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors">
+                Cancel
+            </button>
+</header>
+<!-- Content Scrollable Area -->
+<div class="flex-1 overflow-y-auto flex flex-col relative">
+<!-- Template Selector Section -->
+<div class="px-6 pt-8 pb-4">
+<label class="block mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    Template
+                </label>
+<div class="relative">
+<select class="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#253836] px-4 py-3.5 pr-10 text-base font-medium text-slate-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-shadow cursor-pointer">
+<option value="soap">General Practice - SOAP Note</option>
+<option value="psych">Psychiatric Evaluation</option>
+<option value="cardio">Cardiology Follow-up</option>
+<option value="pediatric">Pediatric Annual</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Spacer for visual balance -->
+<div class="flex-1 flex flex-col items-center justify-center min-h-[300px] gap-8 pb-12">
+<!-- Timer Display -->
+<div class="flex flex-col items-center gap-1">
+<div class="font-display font-bold text-6xl text-slate-900 dark:text-white tracking-tight tabular-nums">
+                        00:00
+                    </div>
+<span class="text-sm font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">Idle</span>
+</div>
+<!-- Giant Mic Button (Idle State) -->
+<div class="relative group">
+<!-- Ripple effect placeholder (invisible in idle) -->
+<div class="absolute inset-0 bg-primary/10 rounded-full scale-100 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-500"></div>
+<button class="relative z-10 flex items-center justify-center w-36 h-36 rounded-full bg-white dark:bg-[#1a2e2c] border-[6px] border-slate-100 dark:border-[#253836] shadow-sm group-hover:border-primary/20 group-hover:shadow-md transition-all duration-300 active:scale-95 cursor-pointer">
+<span class="material-symbols-outlined text-5xl text-primary" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+</div>
+<!-- Instructions -->
+<div class="text-center px-8 space-y-1">
+<p class="text-slate-900 dark:text-white font-semibold text-lg">Tap to start recording</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Capture your patient encounter notes securely.</p>
+</div>
+</div>
+</div>
+<!-- Bottom Actions -->
+<div class="p-6 bg-white dark:bg-[#1a2e2c] border-t border-slate-100 dark:border-slate-800">
+<div class="flex items-center justify-center gap-4 py-2">
+<span class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></span>
+<span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Or</span>
+<span class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></span>
+</div>
+<button class="mt-4 w-full flex items-center justify-center gap-2 rounded-xl bg-slate-50 dark:bg-[#253836] hover:bg-slate-100 dark:hover:bg-[#2f4542] px-4 py-3.5 text-slate-700 dark:text-slate-200 font-bold transition-colors">
+<span class="material-symbols-outlined text-[20px]">keyboard</span>
+<span>Type note manually</span>
+</button>
+</div>
+</main>
+</body></html>

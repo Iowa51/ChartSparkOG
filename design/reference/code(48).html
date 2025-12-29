@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Patient List</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1c2e2c",
+                        "text-main": "#111817",
+                        "text-secondary": "#618986",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for table if needed */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-gray-100 font-display min-h-screen overflow-hidden flex">
+<!-- Sidebar -->
+<aside class="w-72 bg-surface-light dark:bg-surface-dark border-r border-gray-200 dark:border-gray-800 flex-col hidden lg:flex h-screen sticky top-0">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="bg-primary/10 rounded-full p-2">
+<span class="material-symbols-outlined text-primary text-3xl">medical_services</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-text-main dark:text-white text-lg font-bold leading-tight">NP Toolkit</h1>
+<p class="text-text-secondary dark:text-gray-400 text-xs font-medium">Practitioner Portal</p>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-bold">Patients</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span class="text-sm font-medium">Schedule</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">credit_card</span>
+<span class="text-sm font-medium">Billing</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-medium">Documents</span>
+</a>
+</div>
+</div>
+<div class="mt-auto p-6 border-t border-gray-100 dark:border-gray-800">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<div class="flex items-center gap-3 mt-4 px-4">
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-10 w-10 border-2 border-white shadow-sm" data-alt="Profile picture of the nurse practitioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAgxhG-fzpUIfYFViauMfLG6uNYjuJEc1YB_oKhd2WkmUeWXlVRnm9WYtp8eD-DojTsD76fAF5PVmxXUOIzMKu78snPXAYguzEOjDp6vt_pVsKBlnOoCVNckV2SzXaJ0rv9lQYcBeS-PON5I9QdFE6D5TYh6h3Co9jLbkb5LcTgFaPL6Eje2nVbWeoJw41BLNr1SDnXkHVtxC4d7IODj2UtZSuZOuLSHe0nzBw_I0t0fBzFMM4TRfHc4xQCdIWnlFHBMSY36Vz22_Cg");'></div>
+<div class="flex flex-col">
+<p class="text-text-main dark:text-white text-sm font-semibold">Dr. Sarah K.</p>
+<p class="text-text-secondary dark:text-gray-400 text-xs">View Profile</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col h-screen overflow-y-auto relative w-full">
+<!-- Top Navigation / Header area -->
+<header class="bg-surface-light dark:bg-surface-dark sticky top-0 z-20 border-b border-gray-200 dark:border-gray-800 px-6 py-4 lg:px-10">
+<div class="max-w-7xl mx-auto w-full">
+<!-- Breadcrumbs -->
+<div class="flex items-center gap-2 mb-2 text-sm">
+<a class="text-text-secondary dark:text-gray-400 hover:text-primary transition-colors" href="#">Dashboard</a>
+<span class="text-gray-300 dark:text-gray-600">/</span>
+<span class="text-primary font-medium">Patients</span>
+</div>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-text-main dark:text-white text-3xl font-bold tracking-tight">Patients</h1>
+<p class="text-text-secondary dark:text-gray-400 text-base mt-1">Manage, search, and update patient records.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center justify-center h-10 w-10 rounded-xl border border-gray-200 bg-white text-text-secondary hover:bg-gray-50 dark:bg-surface-dark dark:border-gray-700 dark:text-gray-300 transition-colors lg:hidden">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Workspace -->
+<div class="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
+<!-- Controls Toolbar -->
+<div class="flex flex-col md:flex-row gap-4 mb-6 justify-between items-stretch md:items-center">
+<!-- Search -->
+<div class="relative flex-1 max-w-lg">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-secondary dark:text-gray-500">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-white dark:bg-surface-dark dark:text-white shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm sm:leading-6 transition-shadow" placeholder="Search by Name, MRN, or DOB..." type="text"/>
+</div>
+<!-- Actions Right -->
+<div class="flex items-center gap-3">
+<!-- Filter Dropdown Trigger -->
+<button class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-text-main dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+<span>Filter</span>
+</button>
+<!-- Add Patient Button -->
+<button class="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-teal-700 text-white rounded-xl text-sm font-bold shadow-md shadow-teal-900/10 transition-all hover:shadow-lg hover:shadow-teal-900/20">
+<span class="material-symbols-outlined text-xl">add</span>
+<span>Add Patient</span>
+</button>
+</div>
+</div>
+<!-- Patient Table Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+<div class="overflow-x-auto custom-scrollbar">
+<table class="min-w-full whitespace-nowrap text-left">
+<thead>
+<tr class="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-gray-700">
+<th class="px-6 py-4 text-xs font-bold text-text-secondary dark:text-gray-400 uppercase tracking-wider" scope="col">Patient Name</th>
+<th class="px-6 py-4 text-xs font-bold text-text-secondary dark:text-gray-400 uppercase tracking-wider" scope="col">MRN / ID</th>
+<th class="px-6 py-4 text-xs font-bold text-text-secondary dark:text-gray-400 uppercase tracking-wider" scope="col">Date of Birth</th>
+<th class="px-6 py-4 text-xs font-bold text-text-secondary dark:text-gray-400 uppercase tracking-wider" scope="col">Status</th>
+<th class="px-6 py-4 text-xs font-bold text-text-secondary dark:text-gray-400 uppercase tracking-wider" scope="col">Last Visit</th>
+<th class="px-6 py-4 text-xs font-bold text-text-secondary dark:text-gray-400 uppercase tracking-wider text-right" scope="col">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+<!-- Row 1 -->
+<tr class="group hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300 flex items-center justify-center text-sm font-bold">SC</div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">Sarah Connor</p>
+<p class="text-xs text-text-secondary dark:text-gray-500">Female</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-mono text-text-secondary dark:text-gray-400">#883-921</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-main dark:text-gray-300">Jan 14, 1984</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                        Active
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-secondary dark:text-gray-400">Oct 22, 2023</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="View Chart">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Edit Patient">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300 flex items-center justify-center text-sm font-bold">MR</div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">Michael Reese</p>
+<p class="text-xs text-text-secondary dark:text-gray-500">Male</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-mono text-text-secondary dark:text-gray-400">#442-109</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-main dark:text-gray-300">May 02, 1990</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+<span class="h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+                                        Inactive
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-secondary dark:text-gray-400">Sep 15, 2023</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<!-- Using image for avatar -->
+<div class="h-10 w-10 rounded-full bg-gray-200 bg-cover bg-center" data-alt="Portrait of patient Elena Fisher" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA-npw-Cj2TOz7bDvhAkTyDuP42POcsj8oZ781a1ittYLmHhcJkpV959OLnzkPg663AO8M34J40sxUHCMQEYe1Uk4caVKGt93uOKVBt9c5BIKjeXwKAdq1G7pAvAuRFpQNgxwLfyHB90IiV6GKenlzfSdEoaos5umnFMqvv8imHSifsqtbtOGtzEEjP5H1UL0imJF-ImNvrEgM5SqkDGK6mzbQmOCxQ62SOEipKMg-Uw1qE7J6VfX0cRKHg2dgDtouCbSsC1AJdy0gD");'></div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">Elena Fisher</p>
+<p class="text-xs text-text-secondary dark:text-gray-500">Female</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-mono text-text-secondary dark:text-gray-400">#992-441</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-main dark:text-gray-300">Nov 12, 1988</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                        Active
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-secondary dark:text-gray-400">Today, 9:00 AM</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-300 flex items-center justify-center text-sm font-bold">ND</div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">Nathan Drake</p>
+<p class="text-xs text-text-secondary dark:text-gray-500">Male</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-mono text-text-secondary dark:text-gray-400">#771-002</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-main dark:text-gray-300">Feb 14, 1980</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800">
+<span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                        Active
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-secondary dark:text-gray-400">Aug 10, 2023</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="group hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-teal-100 text-teal-600 dark:bg-teal-900 dark:text-teal-300 flex items-center justify-center text-sm font-bold">VJ</div>
+<div>
+<p class="text-sm font-semibold text-text-main dark:text-white group-hover:text-primary transition-colors">Victor Jones</p>
+<p class="text-xs text-text-secondary dark:text-gray-500">Male</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-mono text-text-secondary dark:text-gray-400">#112-998</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-main dark:text-gray-300">Mar 22, 1965</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800">
+<span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                                        Pending
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-text-secondary dark:text-gray-400">--</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+</button>
+<button class="p-2 text-text-secondary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="bg-surface-light dark:bg-surface-dark px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+<p class="text-sm text-text-secondary dark:text-gray-400">
+                        Showing <span class="font-medium text-text-main dark:text-white">1</span> to <span class="font-medium text-text-main dark:text-white">10</span> of <span class="font-medium text-text-main dark:text-white">50</span> patients
+                    </p>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-text-secondary dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 text-text-secondary dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Empty State Illustration Placeholder (Hidden by default, shown if search fails conceptually) -->
+<!-- 
+            <div class="flex flex-col items-center justify-center py-20 text-center hidden">
+                <div class="bg-gray-50 rounded-full p-6 mb-4">
+                    <span class="material-symbols-outlined text-4xl text-gray-400">search_off</span>
+                </div>
+                <h3 class="text-lg font-bold text-text-main">No patients found</h3>
+                <p class="text-text-secondary">Try adjusting your search or filter criteria.</p>
+            </div>
+             -->
+</div>
+</main>
+</body></html>

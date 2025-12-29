@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Post-Call Summary</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#0d968b",
+              "background-light": "#f6f8f8",
+              "background-dark": "#102220",
+              "surface-light": "#ffffff",
+              "surface-dark": "#1a2c2a",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"],
+              "body": ["Noto Sans", "sans-serif"],
+            },
+            borderRadius: {
+              "DEFAULT": "0.5rem",
+              "lg": "1rem", 
+              "xl": "1.5rem",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white h-screen overflow-hidden flex">
+<!-- Sidebar Navigation -->
+<aside class="hidden md:flex flex-col w-[280px] h-full bg-surface-light dark:bg-surface-dark border-r border-slate-200 dark:border-slate-800 p-6 justify-between flex-shrink-0 z-20">
+<div class="flex flex-col gap-8">
+<!-- User Profile Snippet -->
+<div class="flex items-center gap-3 pb-6 border-b border-slate-100 dark:border-slate-700">
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-12 w-12 shadow-sm" data-alt="Nurse practitioner avatar portrait" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCVqDQA9vpUtKlDHEtbWZ1kJB-bRi1JShIqBdG4dy0Cmz3jWaOf34JIiLUaaWzJMGLmpAhQbvcbww-Myr01GUadWM4d5L4nSiBivQ0iA8zkOpY2m3RM9DmU3mFhuU7tZUsEvEDOVfy3B6XvL-qjumEz47e_P0mXJzFkachSJ-B0jpA9MBMlqf9CeIHclFzFNWhUS52jGLPkNgI4XzyZvMod76laIgHKWYx4Q0KxR4qV44lCkFs4QCC2vV05e8eSov4YUQbaKZeb6rmc");'></div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-white text-base font-bold leading-tight">NP Toolkit</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Logged in as NP Sarah</p>
+</div>
+</div>
+<!-- Nav Links -->
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">grid_view</span>
+<span class="text-slate-600 dark:text-slate-300 text-sm font-medium group-hover:text-primary transition-colors">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">group</span>
+<span class="text-slate-600 dark:text-slate-300 text-sm font-medium group-hover:text-primary transition-colors">Patients</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary" href="#">
+<span class="material-symbols-outlined text-primary font-bold">calendar_month</span>
+<span class="text-primary text-sm font-bold">Schedule</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">settings</span>
+<span class="text-slate-600 dark:text-slate-300 text-sm font-medium group-hover:text-primary transition-colors">Settings</span>
+</a>
+</nav>
+</div>
+<!-- Logout / Bottom -->
+<div class="pt-4">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 group transition-colors" href="#">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-red-500 transition-colors">logout</span>
+<span class="text-slate-500 dark:text-slate-400 text-sm font-medium group-hover:text-red-500 transition-colors">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 h-full overflow-y-auto relative scroll-smooth">
+<!-- Mobile Header (Visible only on small screens) -->
+<div class="md:hidden flex items-center justify-between p-4 bg-surface-light dark:bg-surface-dark border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
+<h1 class="text-lg font-bold text-slate-900 dark:text-white">Post-Call Summary</h1>
+<button class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+<!-- Central Content Container -->
+<div class="w-full h-full flex flex-col items-center justify-start py-8 px-4 md:py-12">
+<div class="w-full max-w-[640px] flex flex-col gap-6">
+<!-- 1. Success Banner (Customized EmptyState) -->
+<div class="flex flex-col items-center gap-4 py-4 animate-fade-in-up">
+<div class="rounded-full bg-primary/10 p-5 ring-8 ring-primary/5">
+<span class="material-symbols-outlined text-primary text-5xl">check_circle</span>
+</div>
+<div class="text-center space-y-1">
+<h2 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Visit Complete</h2>
+<p class="text-slate-500 dark:text-slate-400">The consultation has been successfully recorded.</p>
+</div>
+</div>
+<!-- 2. Patient Summary Card (Customized ProfileHeader + Card) -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+<!-- Patient Details Header -->
+<div class="p-5 flex flex-col sm:flex-row items-center sm:items-start gap-4 border-b border-slate-100 dark:border-slate-700/50">
+<div class="bg-center bg-no-repeat bg-cover rounded-full w-16 h-16 shadow-inner flex-shrink-0" data-alt="Patient profile photo" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDwz9qV5JhInCLHnyzcXHwOM6_8Y0cbpE7kYEtPB-tEwVgYzMTi_cx_4GMThIZ5RQZ80qOJ06fA8-Lji2rdjtdVNxHhLsG-ONQ3PEjRpztis_ldBlzvbnSRppFjYdofKokNYVoPRaRtwQ0w_PWNiKYVMQnAvhf3kMKX7bfBQi1vub5_rGfqHOOr-qJb2phMcosbuwto1y1MStbdNshNVd_bdQZWMwyiPvHf9T8xz4jAA_YtWzUkwSVVXcRZPJQfOlq3qty3QgDF-kjy");'></div>
+<div class="flex flex-col items-center sm:items-start flex-grow text-center sm:text-left">
+<h3 class="text-xl font-bold text-slate-900 dark:text-white">Jane Doe</h3>
+<div class="flex flex-wrap justify-center sm:justify-start gap-3 mt-1 text-sm text-slate-500 dark:text-slate-400">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                                    Oct 24, 2023
+                                </span>
+<span class="hidden sm:inline">•</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+                                    10:00 AM
+                                </span>
+</div>
+</div>
+<div class="bg-primary/10 text-primary px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] filled">timer</span>
+                            14m 32s
+                        </div>
+</div>
+<!-- Draft Notes Preview (Customized Card) -->
+<div class="p-5 bg-slate-50 dark:bg-slate-800/50">
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<p class="text-slate-900 dark:text-white text-sm font-bold uppercase tracking-wide flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">description</span>
+                                    Session Notes (Draft)
+                                </p>
+<span class="text-xs font-medium text-slate-400 uppercase bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2 py-0.5 rounded">Auto-Saved</span>
+</div>
+<div class="relative">
+<p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+                                    Patient reported mild headaches continuing for 3 days. BP 120/80. Recommended hydration and monitoring. Patient expressed concern about sleep patterns...
+                                </p>
+<!-- Fade out effect for text -->
+<div class="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-slate-50 dark:from-[#152321] to-transparent"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- 3. Actions Section (Customized HeadlineText + New Grid) -->
+<div class="flex flex-col gap-4 mt-2">
+<h2 class="text-slate-900 dark:text-white text-lg font-bold text-center sm:text-left">What would you like to do next?</h2>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<!-- Primary Action: Complete Note -->
+<button class="sm:col-span-2 flex items-center justify-between p-4 bg-primary hover:bg-teal-700 text-white rounded-xl shadow-md transition-all group active:scale-[0.99]">
+<div class="flex flex-col items-start gap-0.5">
+<span class="text-base font-bold">Complete Documentation</span>
+<span class="text-xs text-white/80 font-normal">Review and sign off on today's visit note</span>
+</div>
+<div class="bg-white/20 p-2 rounded-lg group-hover:bg-white/30 transition-colors">
+<span class="material-symbols-outlined text-white">arrow_forward</span>
+</div>
+</button>
+<!-- Secondary Action: Prescribe -->
+<button class="flex flex-col items-start gap-3 p-5 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl hover:border-primary/50 hover:shadow-md transition-all group text-left">
+<div class="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-2.5 rounded-lg group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined">prescriptions</span>
+</div>
+<div>
+<span class="block text-slate-900 dark:text-white font-bold text-sm">Prescribe Medication</span>
+<span class="block text-slate-500 dark:text-slate-400 text-xs mt-0.5">Send eRx to pharmacy</span>
+</div>
+</button>
+<!-- Secondary Action: Schedule -->
+<button class="flex flex-col items-start gap-3 p-5 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 rounded-xl hover:border-primary/50 hover:shadow-md transition-all group text-left">
+<div class="bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 p-2.5 rounded-lg group-hover:scale-110 transition-transform duration-300">
+<span class="material-symbols-outlined">event</span>
+</div>
+<div>
+<span class="block text-slate-900 dark:text-white font-bold text-sm">Schedule Follow-up</span>
+<span class="block text-slate-500 dark:text-slate-400 text-xs mt-0.5">Book next appointment</span>
+</div>
+</button>
+</div>
+<!-- Tertiary Action: Back to Dashboard -->
+<div class="flex justify-center mt-2">
+<button class="flex items-center gap-2 px-6 py-3 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-medium text-sm transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+                            Return to Dashboard
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Simple Animation for entry -->
+<style>
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-up {
+            animation: fade-in-up 0.6s ease-out forwards;
+        }
+    </style>
+</body></html>

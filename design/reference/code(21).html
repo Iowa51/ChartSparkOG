@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Onboarding Specialty</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0d968b",
+            "background-light": "#f6f8f8",
+            "background-dark": "#102220",
+          },
+          fontFamily: {
+            "display": ["Plus Jakarta Sans", "sans-serif"]
+          },
+          borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    /* Custom radio styling to match design */
+    .specialty-radio:checked + div {
+        border-color: #0d968b;
+        background-color: #f0fdfc;
+    }
+    .specialty-radio:checked + div .radio-circle {
+        border-color: #0d968b;
+        border-width: 6px;
+    }
+    .radio-circle {
+        transition: all 0.2s ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display text-[#111817]">
+<!-- Top Navigation (Simplified for Onboarding) -->
+<header class="w-full border-b border-[#e5e7eb] bg-white dark:bg-[#1a2e2c] dark:border-[#2a403d]">
+<div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+<div class="flex items-center gap-2">
+<div class="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">medical_services</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-[#111817] dark:text-white">NP Toolkit</h1>
+</div>
+<a class="text-sm font-medium text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors" href="#">Help</a>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
+<!-- Mobile-width Centered Container -->
+<div class="w-full max-w-[480px] flex flex-col gap-6">
+<!-- Progress Bar Section -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between text-sm font-medium text-gray-500 dark:text-gray-400">
+<span>Step 2 of 4</span>
+<span>50%</span>
+</div>
+<div class="h-2 w-full overflow-hidden rounded-full bg-[#dbe6e5] dark:bg-[#2a403d]">
+<div class="h-full bg-primary transition-all duration-500 ease-out" style="width: 50%"></div>
+</div>
+</div>
+<!-- Heading Section -->
+<div class="flex flex-col gap-2 py-2">
+<h2 class="text-3xl font-bold leading-tight tracking-tight text-[#111817] dark:text-white">Which specialty describes you best?</h2>
+<p class="text-base text-gray-500 dark:text-gray-400">Personalize your workspace for better recommendations.</p>
+</div>
+<!-- Selection List -->
+<form class="flex flex-col gap-3">
+<!-- Option 1 -->
+<label class="relative cursor-pointer group">
+<input checked="" class="specialty-radio peer sr-only" name="specialty" type="radio" value="pmhnp"/>
+<div class="flex items-center gap-4 rounded-xl border-2 border-transparent bg-white p-4 shadow-sm ring-1 ring-gray-200 transition-all hover:ring-primary/50 dark:bg-[#1a2e2c] dark:ring-gray-700 dark:hover:ring-primary/50 peer-focus:ring-2 peer-focus:ring-primary">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-[#f0f4f4] text-[#111817] dark:bg-[#2a403d] dark:text-white">
+<span class="material-symbols-outlined text-[24px]">psychology</span>
+</div>
+<div class="flex flex-1 flex-col">
+<span class="font-semibold text-[#111817] dark:text-white">Psychiatric-Mental Health</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">PMHNP</span>
+</div>
+<div class="radio-circle h-6 w-6 rounded-full border-2 border-gray-300 bg-white dark:border-gray-600 dark:bg-transparent"></div>
+</div>
+</label>
+<!-- Option 2 -->
+<label class="relative cursor-pointer group">
+<input class="specialty-radio peer sr-only" name="specialty" type="radio" value="agnp"/>
+<div class="flex items-center gap-4 rounded-xl border-2 border-transparent bg-white p-4 shadow-sm ring-1 ring-gray-200 transition-all hover:ring-primary/50 dark:bg-[#1a2e2c] dark:ring-gray-700 dark:hover:ring-primary/50 peer-focus:ring-2 peer-focus:ring-primary">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-[#f0f4f4] text-[#111817] dark:bg-[#2a403d] dark:text-white">
+<span class="material-symbols-outlined text-[24px]">elderly</span>
+</div>
+<div class="flex flex-1 flex-col">
+<span class="font-semibold text-[#111817] dark:text-white">Adult-Gerontology</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">AGNP</span>
+</div>
+<div class="radio-circle h-6 w-6 rounded-full border-2 border-gray-300 bg-white dark:border-gray-600 dark:bg-transparent"></div>
+</div>
+</label>
+<!-- Option 3 -->
+<label class="relative cursor-pointer group">
+<input class="specialty-radio peer sr-only" name="specialty" type="radio" value="fnp"/>
+<div class="flex items-center gap-4 rounded-xl border-2 border-transparent bg-white p-4 shadow-sm ring-1 ring-gray-200 transition-all hover:ring-primary/50 dark:bg-[#1a2e2c] dark:ring-gray-700 dark:hover:ring-primary/50 peer-focus:ring-2 peer-focus:ring-primary">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-[#f0f4f4] text-[#111817] dark:bg-[#2a403d] dark:text-white">
+<span class="material-symbols-outlined text-[24px]">family_restroom</span>
+</div>
+<div class="flex flex-1 flex-col">
+<span class="font-semibold text-[#111817] dark:text-white">Family Nurse Practitioner</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">FNP</span>
+</div>
+<div class="radio-circle h-6 w-6 rounded-full border-2 border-gray-300 bg-white dark:border-gray-600 dark:bg-transparent"></div>
+</div>
+</label>
+<!-- Option 4 -->
+<label class="relative cursor-pointer group">
+<input class="specialty-radio peer sr-only" name="specialty" type="radio" value="other"/>
+<div class="flex items-center gap-4 rounded-xl border-2 border-transparent bg-white p-4 shadow-sm ring-1 ring-gray-200 transition-all hover:ring-primary/50 dark:bg-[#1a2e2c] dark:ring-gray-700 dark:hover:ring-primary/50 peer-focus:ring-2 peer-focus:ring-primary">
+<div class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-[#f0f4f4] text-[#111817] dark:bg-[#2a403d] dark:text-white">
+<span class="material-symbols-outlined text-[24px]">edit_note</span>
+</div>
+<div class="flex flex-1 flex-col">
+<span class="font-semibold text-[#111817] dark:text-white">Other / Student</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">Custom setup</span>
+</div>
+<div class="radio-circle h-6 w-6 rounded-full border-2 border-gray-300 bg-white dark:border-gray-600 dark:bg-transparent"></div>
+</div>
+</label>
+</form>
+<!-- Actions -->
+<div class="mt-4 flex flex-col gap-4">
+<button class="flex w-full items-center justify-center rounded-lg bg-primary py-3.5 text-base font-bold text-white transition-colors hover:bg-[#0b857b] focus:outline-none focus:ring-4 focus:ring-primary/30">
+          Continue
+        </button>
+<button class="w-full text-center text-sm font-medium text-gray-500 transition-colors hover:text-[#111817] dark:text-gray-400 dark:hover:text-white">
+          I'll do this later
+        </button>
+</div>
+</div>
+</main>
+<div class="h-8"></div> <!-- Spacer for bottom -->
+</body></html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Telehealth - Waiting Room</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(13, 150, 139, 0.2);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col font-display antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141e1d] px-6 lg:px-10 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-4 text-slate-900 dark:text-white">
+<div class="size-8 flex items-center justify-center bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">medical_services</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight">NP Toolkit</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<div class="hidden md:flex items-center gap-9">
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium" href="#">Dashboard</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium" href="#">Schedule</a>
+<a class="text-primary text-sm font-bold" href="#">Patients</a>
+<a class="text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium" href="#">Billing</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border border-white dark:border-black"></span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 border-2 border-slate-100 dark:border-slate-700 shadow-sm" data-alt="Profile picture of nurse practitioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB9Hfqxqf_adw1jqAuNJMdPUzZjK39Wef87wCV7kCLoRHNkogZEdlX99x14oL1Irs5UOmkoPMUuqoUXzS7VIMVgdH9zmh9TUlId5IwnNQ9IGeHwnXB1OYuXdGggEaDdwb4jvum6oTuKgmnvw0oO4znWXJu4kvuhtPLW3gm1SMC6kRDijMaCgzzk3uPXpjMfxMlXos6lgwPbnO79O923VL7OptCoJoWfd3ojU4By9wKnTiGQkt8gb5cj0mr90JiPiYtYzGH9j2G5-0OL");'></div>
+</div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-6 lg:px-8">
+<!-- Breadcrumbs -->
+<div class="flex flex-wrap gap-2 mb-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium" href="#">Schedule</a>
+<span class="text-slate-400 text-sm font-medium">/</span>
+<span class="text-slate-800 dark:text-slate-200 text-sm font-semibold">Telehealth Visit</span>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+<!-- Left Column: Media Preview -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<!-- Page Heading -->
+<div class="flex flex-col gap-2">
+<h1 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Telehealth Visit</h1>
+<p class="text-slate-500 dark:text-slate-400 text-base">Waiting Room &amp; Pre-Call Check</p>
+</div>
+<!-- Video Preview Card -->
+<div class="flex flex-col gap-4 bg-white dark:bg-[#141e1d] rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-800">
+<div class="flex items-center justify-between px-2">
+<h3 class="text-lg font-bold text-slate-800 dark:text-slate-200">Your Video Preview</h3>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[18px]">volume_up</span>
+                                Test Speaker
+                            </button>
+</div>
+</div>
+<div class="relative w-full aspect-video bg-slate-900 rounded-lg overflow-hidden group shadow-inner">
+<!-- Video Feed Placeholder -->
+<div class="absolute inset-0 w-full h-full bg-cover bg-center opacity-90" data-alt="Webcam preview of a doctor in a modern office" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC0khHgDk58RlLJRKwGNAAFkE6OFbTpdP3foY5zPHgIfeE7HcVGRCxpN51S4d7cgNdKVW6B7yS9mWbW6ONM-0oJfucge-mw3xfGTlImtLHY5YIYSdV0ZX07mQmcQBpXvb0I1GfnkDeZuaCOnIRBo_XgG7M7KQlDu_LxVoihT_Ix2kqWAiqCEGkoE-SWyDDPkZkC1VbTTRmmNJJVM5VbDXJChVxh2AIi63xYP1f7FjUanLgdEvSPrJlq2BTDr0g4jEoIQpGpQuLDTSAO");'></div>
+<!-- Overlay Gradient -->
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+<!-- Status Badge Overlay -->
+<div class="absolute top-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-2">
+<div class="size-2 rounded-full bg-green-500 animate-pulse"></div>
+<span class="text-xs font-medium text-white">Camera &amp; Mic Active</span>
+</div>
+<!-- Main Controls Overlay -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 backdrop-blur-md px-6 py-3 rounded-full border border-white/10 shadow-lg z-10">
+<button class="flex flex-col items-center justify-center gap-1 group/btn">
+<div class="size-12 flex items-center justify-center rounded-full bg-primary text-white hover:bg-teal-600 transition-colors shadow-lg hover:scale-105 active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[24px]">mic</span>
+</div>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 group/btn">
+<div class="size-12 flex items-center justify-center rounded-full bg-primary text-white hover:bg-teal-600 transition-colors shadow-lg hover:scale-105 active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[24px]">videocam</span>
+</div>
+</button>
+<div class="w-px h-8 bg-white/20 mx-1"></div>
+<button class="flex flex-col items-center justify-center gap-1 group/btn">
+<div class="size-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</div>
+</button>
+</div>
+</div>
+<div class="flex justify-between items-center text-sm text-slate-500 dark:text-slate-400 px-2 pt-2">
+<span>Microphone: Default - MacBook Pro Mic</span>
+<span class="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+                            Connection Excellent
+                        </span>
+</div>
+</div>
+</div>
+<!-- Right Column: Patient Context & Actions -->
+<div class="lg:col-span-4 flex flex-col gap-6">
+<!-- Patient Status Banner -->
+<div class="flex items-start gap-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50">
+<div class="p-2 bg-amber-100 dark:bg-amber-800/40 text-amber-600 dark:text-amber-400 rounded-full shrink-0">
+<span class="material-symbols-outlined">hourglass_empty</span>
+</div>
+<div>
+<h3 class="font-bold text-amber-900 dark:text-amber-100">Waiting for patient...</h3>
+<p class="text-sm text-amber-700 dark:text-amber-300/80 mt-1">John Doe has not joined the room yet. A notification will appear when they arrive.</p>
+</div>
+</div>
+<!-- Patient Card -->
+<div class="bg-white dark:bg-[#141e1d] rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div class="p-4 border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/20 flex justify-between items-center">
+<h4 class="font-bold text-slate-700 dark:text-slate-200">Patient Information</h4>
+<button class="text-primary hover:text-teal-700 text-sm font-bold">Edit</button>
+</div>
+<div class="p-6 flex flex-col gap-6">
+<div class="flex items-center gap-4">
+<div class="size-16 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center shadow-inner" data-alt="Portrait of patient John Doe" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC8k0ZePIaOyHWt9VI9wMZnaR_-kJPC1pHmmhZrBYqypVAjW2rwTU6O8bjHM0xAIbr2GDjFYP1P8P8sA18rYHfbiAIYkub7PCvMkGLObgJKFjhqsebKaCRuwGAVeq3rMdZ9oDHnFJlh0cTyiS0_pbic2EKNOmkOnhj7A_IM9a_U1BZaVLGuLGvefbjhygk7ka0PXgmWGHFZ0qhaCOFs782d-CwQlhl7XbTQ1xN39SAdQjQ_Mf4Sywnx5OP40_kGAnWA42qcGZYHN1Dr");'></div>
+<div>
+<h3 class="text-xl font-bold text-slate-900 dark:text-white">John Doe</h3>
+<div class="flex items-center gap-2 mt-1 text-sm text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-[16px] text-slate-400">cake</span>
+<span>Mar 15, 1978 (46y)</span>
+</div>
+</div>
+</div>
+<div class="space-y-3">
+<div class="p-3 bg-background-light dark:bg-background-dark rounded-lg">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Reason for Visit</span>
+<p class="text-slate-800 dark:text-slate-200 font-medium">Medication Follow-up</p>
+</div>
+<div class="p-3 bg-background-light dark:bg-background-dark rounded-lg">
+<span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">Chief Complaint</span>
+<p class="text-slate-800 dark:text-slate-200 font-medium line-clamp-2">"Feeling a bit dizzy after taking the new dosage in the mornings."</p>
+</div>
+</div>
+<!-- Quick Actions Grid -->
+<div class="grid grid-cols-2 gap-3">
+<button class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all group">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">description</span>
+<span class="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">View Chart</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all group">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-primary transition-colors">edit_note</span>
+<span class="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">Start Note</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Primary Action -->
+<div class="bg-white dark:bg-[#141e1d] rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 sticky bottom-4 lg:static">
+<button class="w-full flex items-center justify-center gap-3 bg-primary hover:bg-teal-700 text-white font-bold text-lg py-4 rounded-xl shadow-lg shadow-primary/20 transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+<span class="material-symbols-outlined">video_call</span>
+                        Start Visit Now
+                    </button>
+<p class="text-center text-xs text-slate-400 mt-3">
+                        By clicking start, you will enter the secure video room.
+                    </p>
+</div>
+</div>
+</div>
+</main>
+</body></html>

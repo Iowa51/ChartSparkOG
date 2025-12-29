@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Dashboard Empty State</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d9618",
+                        "primary-dark": "#0a7d14",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102212",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2e1d", // Slightly lighter than bg-dark for cards
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem", 
+                        "lg": "1rem", 
+                        "xl": "1.5rem", 
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom Scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #334155; 
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display transition-colors duration-200 antialiased overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- Side Navigation -->
+<aside class="hidden lg:flex w-72 flex-col border-r border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-surface-dark h-full shrink-0 transition-colors duration-200">
+<div class="p-6 flex items-center gap-3">
+<div class="flex items-center justify-center size-10 rounded-xl bg-primary text-white shadow-lg shadow-primary/30">
+<span class="material-symbols-outlined text-[24px]">medical_services</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-slate-900 dark:text-white text-lg font-bold leading-tight">NP Toolkit</h1>
+<p class="text-primary text-xs font-medium">Documentation Assistant</p>
+</div>
+</div>
+<nav class="flex-1 px-4 py-4 flex flex-col gap-2 overflow-y-auto">
+<!-- Active Item -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary dark:bg-primary/20 transition-all" href="#">
+<span class="material-symbols-outlined fill-1">dashboard</span>
+<span class="text-sm font-semibold">Dashboard</span>
+</a>
+<!-- Inactive Items -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">group</span>
+<span class="text-sm font-medium">Patients</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">receipt_long</span>
+<span class="text-sm font-medium">Billing</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">analytics</span>
+<span class="text-sm font-medium">Reports</span>
+</a>
+<div class="my-2 border-t border-slate-100 dark:border-slate-800/50"></div>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 transition-all group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">help</span>
+<span class="text-sm font-medium">Help &amp; Support</span>
+</a>
+</nav>
+<div class="p-4 mt-auto">
+<div class="rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 p-4 border border-primary/10">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary">verified</span>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Pro Plan</p>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Your subscription renews on Oct 24, 2023.</p>
+<button class="text-xs font-semibold text-primary hover:text-primary-dark transition-colors">Manage Plan</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="flex-1 flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark relative">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between px-8 py-5 bg-surface-light/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-20 border-b border-slate-200/50 dark:border-slate-800/50">
+<div class="flex items-center gap-4 lg:hidden">
+<button class="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="text-lg font-bold text-slate-900 dark:text-white">Dashboard</span>
+</div>
+<div class="hidden lg:flex items-center gap-2">
+<!-- Breadcrumb or Title placeholder if needed, purposely left clean -->
+</div>
+<div class="flex flex-1 justify-end items-center gap-6">
+<!-- Search -->
+<div class="relative hidden sm:block max-w-md w-full">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-slate-100 dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-shadow" placeholder="Search patients, notes, or codes..." type="text"/>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-4">
+<button class="relative p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
+</button>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
+<button class="flex items-center gap-3 pl-1 pr-2 py-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<div class="size-9 rounded-full bg-slate-200 bg-cover bg-center border-2 border-white dark:border-slate-700 shadow-sm" data-alt="Portrait of a female nurse practitioner" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBUBvytjZaVaZzZbaUdR95QPaIW10PFfNZ9jDt8fYnxGrxK1A9cByk4LYTrohpNu3lSOoDjoQ2Pb6EfDpWeinI7QjPjLrlndCfm4GZz8SCrmmst1UF-vFJCMSqYszyPXEu8BySu4PAqDFLHfIANI6ESjbJBJJnD8icxmfEv3gDiREnLh6eg8iAwECeN-w0Wgrt5Z_Off-MtUy43QSK7QSw6S-i1Ra_XLT_terivFwQXoqetyHx7QwWZa8KCCXQ8XiiWuvILV4XlRygh');"></div>
+<div class="hidden md:flex flex-col items-start">
+<span class="text-sm font-semibold text-slate-900 dark:text-white leading-none">Jane Doe, NP</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 mt-1">Family Practice</span>
+</div>
+<span class="material-symbols-outlined text-slate-400 text-[20px] hidden md:block">expand_more</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto p-4 sm:p-8 lg:px-12 lg:py-10 pb-20">
+<div class="max-w-6xl mx-auto flex flex-col gap-10">
+<!-- Page Heading -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="flex flex-col gap-2">
+<h2 class="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Welcome back, Jane</h2>
+<p class="text-slate-500 dark:text-slate-400 text-base md:text-lg">Here is what's happening with your patients today.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-dark text-slate-700 dark:text-slate-200 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
+                                View Schedule
+                            </button>
+<button class="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-medium text-sm transition-all shadow-md shadow-primary/20 flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                                Quick Note
+                            </button>
+</div>
+</div>
+<!-- Stats Row (Context) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="p-6 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-100 dark:border-slate-800 shadow-sm flex items-start justify-between">
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Total Patients</p>
+<h3 class="text-2xl font-bold text-slate-900 dark:text-white">1,284</h3>
+<p class="text-primary text-xs font-medium mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span>
+                                    +12% this month
+                                </p>
+</div>
+<div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl text-blue-600 dark:text-blue-400">
+<span class="material-symbols-outlined">groups</span>
+</div>
+</div>
+<div class="p-6 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-100 dark:border-slate-800 shadow-sm flex items-start justify-between">
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Pending Signatures</p>
+<h3 class="text-2xl font-bold text-slate-900 dark:text-white">3</h3>
+<p class="text-orange-600 dark:text-orange-400 text-xs font-medium mt-2 flex items-center gap-1">
+                                    Needs attention
+                                </p>
+</div>
+<div class="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl text-orange-600 dark:text-orange-400">
+<span class="material-symbols-outlined">ink_pen</span>
+</div>
+</div>
+<div class="p-6 rounded-2xl bg-surface-light dark:bg-surface-dark border border-slate-100 dark:border-slate-800 shadow-sm flex items-start justify-between">
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium mb-1">Claims Processed</p>
+<h3 class="text-2xl font-bold text-slate-900 dark:text-white">98%</h3>
+<p class="text-slate-400 text-xs font-medium mt-2">
+                                    Last 30 days
+                                </p>
+</div>
+<div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-green-600 dark:text-green-400">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+</div>
+</div>
+<!-- Main Section: Recent Notes (Empty State) -->
+<section class="flex flex-col gap-6">
+<div class="flex items-center justify-between px-2">
+<h3 class="text-xl font-bold text-slate-900 dark:text-white">Recent Notes</h3>
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">sort</span>
+</button>
+</div>
+</div>
+<!-- Empty State Card -->
+<div class="w-full bg-surface-light dark:bg-surface-dark rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 md:p-16 flex flex-col items-center justify-center text-center animate-fade-in relative overflow-hidden group">
+<!-- Decorative gradient background blob -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors duration-500"></div>
+<div class="relative z-10 flex flex-col items-center max-w-lg">
+<!-- Illustration/Icon -->
+<div class="mb-8 relative">
+<div class="size-24 rounded-full bg-gradient-to-b from-primary/10 to-primary/5 flex items-center justify-center ring-8 ring-primary/5 dark:ring-primary/10">
+<span class="material-symbols-outlined text-primary text-[48px]">clinical_notes</span>
+</div>
+<!-- Decorative elements floating around icon -->
+<div class="absolute -right-2 -top-2 size-8 bg-white dark:bg-surface-dark rounded-full shadow-md flex items-center justify-center border border-slate-100 dark:border-slate-700 animate-bounce" style="animation-duration: 3s;">
+<span class="material-symbols-outlined text-orange-400 text-[18px]">edit</span>
+</div>
+<div class="absolute -left-2 bottom-0 size-8 bg-white dark:bg-surface-dark rounded-full shadow-md flex items-center justify-center border border-slate-100 dark:border-slate-700 animate-bounce" style="animation-duration: 4s; animation-delay: 1s;">
+<span class="material-symbols-outlined text-blue-400 text-[18px]">add</span>
+</div>
+</div>
+<h4 class="text-2xl font-bold text-slate-900 dark:text-white mb-3">No recent notes yet</h4>
+<p class="text-slate-500 dark:text-slate-400 text-base leading-relaxed mb-8">
+                                    Your documentation history will appear here. Start your first patient encounter note today to generate billing codes and clinical summaries instantly.
+                                </p>
+<div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+<button class="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-semibold text-sm transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 transform hover:-translate-y-0.5">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+                                        Create New Note
+                                    </button>
+<button class="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                        Import Data
+                                    </button>
+</div>
+<!-- Helper Links -->
+<div class="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 w-full flex justify-center gap-6">
+<a class="text-sm font-medium text-primary hover:text-primary-dark hover:underline flex items-center gap-1" href="#">
+                                        Browse Templates
+                                        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+<a class="text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center gap-1" href="#">
+                                        Watch Tutorial
+                                        <span class="material-symbols-outlined text-[16px]">play_circle</span>
+</a>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</body></html>

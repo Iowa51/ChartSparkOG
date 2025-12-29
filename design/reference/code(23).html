@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Settings</title>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom Scrollbar for inner container */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #d1d5db;
+            border-radius: 20px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #374151;
+        }
+    </style>
+</head>
+<body class="bg-[#e0e8e8] dark:bg-[#081211] font-display flex items-center justify-center min-h-screen py-4 md:py-8 antialiased selection:bg-primary/30 selection:text-primary">
+<!-- Desktop Container simulating Mobile App View -->
+<main class="relative flex flex-col w-full max-w-[440px] h-[90vh] max-h-[850px] bg-background-light dark:bg-background-dark rounded-[2.5rem] shadow-2xl overflow-hidden border-[8px] border-white dark:border-[#1a2e2c] ring-1 ring-gray-900/5">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between px-6 pt-6 pb-4 bg-background-light dark:bg-background-dark sticky top-0 z-20">
+<button aria-label="Go Back" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-200 dark:hover:bg-white/5 transition-colors text-gray-800 dark:text-white">
+<span class="material-symbols-outlined font-medium">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold text-[#111817] dark:text-white tracking-tight">Settings</h1>
+<div class="w-10"></div> <!-- Spacer for optical centering -->
+</header>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-4 pb-20">
+<!-- Profile Card -->
+<div class="mb-6 px-2">
+<div class="flex flex-col items-center p-6 bg-white dark:bg-[#1a2e2c] rounded-2xl shadow-sm border border-gray-100 dark:border-white/5">
+<div class="relative mb-4 group cursor-pointer">
+<div class="w-24 h-24 rounded-full bg-cover bg-center ring-4 ring-background-light dark:ring-background-dark" data-alt="Profile portrait of Nurse Practitioner Sarah Jenkins" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAglwSGtL1tIzuwaXI8Ws1D6PeP11CNI8yE0ALBkh2qPxZk7rZDXkftpxE7frNYZ29iaRJmQXHLnjKrNFp04vahv7kLXwobL9H8uaJS2UamZ7ywiq9H0ZjwcnU58Kbto0tnq_Nsfs-DAV4NuKyWQ9KsL5w3vxzMXNuBuL6yFJEMOdizntuoMbMuVM0YT2USCxGSjxFpDFa4wIy_cCCLtRggekIZRN0oke477pJZQ2HF6rKZwxc_7owIfBKPU8CRCHpzL6nb5FWNX0AV');"></div>
+<div class="absolute bottom-1 right-1 bg-primary text-white p-1.5 rounded-full border-2 border-white dark:border-[#1a2e2c] flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] leading-none">edit</span>
+</div>
+</div>
+<h2 class="text-xl font-bold text-[#111817] dark:text-white mb-1">Sarah Jenkins, NP</h2>
+<p class="text-[#618986] dark:text-gray-400 text-sm font-medium mb-4">Family Practice | FNP-BC</p>
+<button class="px-4 py-2 text-sm font-bold text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors">
+                        Edit Profile
+                    </button>
+</div>
+</div>
+<!-- Preferences Section -->
+<div class="mb-6">
+<h3 class="px-4 pb-2 text-xs font-bold text-[#618986] uppercase tracking-wider">Preferences</h3>
+<div class="flex flex-col gap-3">
+<!-- Default Template Item -->
+<div class="flex items-center justify-between p-3 pl-4 bg-white dark:bg-[#1a2e2c] rounded-xl shadow-sm border border-transparent hover:border-gray-100 dark:hover:border-white/5 transition-all cursor-pointer group">
+<div class="flex items-center gap-4 overflow-hidden">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-[#f0f4f4] dark:bg-white/10 text-[#111817] dark:text-white shrink-0 group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">note_alt</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<p class="text-[#111817] dark:text-white text-sm font-bold truncate">Default Template</p>
+<p class="text-[#618986] text-xs truncate">SOAP - General</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-gray-400 text-xl pr-1">chevron_right</span>
+</div>
+<!-- Dark Mode Item -->
+<div class="flex items-center justify-between p-3 pl-4 bg-white dark:bg-[#1a2e2c] rounded-xl shadow-sm border border-transparent">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-[#f0f4f4] dark:bg-white/10 text-[#111817] dark:text-white shrink-0">
+<span class="material-symbols-outlined">dark_mode</span>
+</div>
+<p class="text-[#111817] dark:text-white text-sm font-bold">Dark Mode</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer mr-1">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Notifications Item -->
+<div class="flex items-center justify-between p-3 pl-4 bg-white dark:bg-[#1a2e2c] rounded-xl shadow-sm border border-transparent hover:border-gray-100 dark:hover:border-white/5 transition-all cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-[#f0f4f4] dark:bg-white/10 text-[#111817] dark:text-white shrink-0 group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</div>
+<p class="text-[#111817] dark:text-white text-sm font-bold">Notifications</p>
+</div>
+<span class="material-symbols-outlined text-gray-400 text-xl pr-1">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Subscription Section -->
+<div class="mb-6">
+<h3 class="px-4 pb-2 text-xs font-bold text-[#618986] uppercase tracking-wider">Subscription</h3>
+<div class="bg-gradient-to-br from-primary/10 to-transparent p-4 rounded-xl border border-primary/20 flex flex-col gap-3">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-3">
+<div class="p-2 bg-primary text-white rounded-lg shadow-md">
+<span class="material-symbols-outlined text-xl block">verified</span>
+</div>
+<div>
+<p class="text-[#111817] dark:text-white font-bold text-sm">Professional Plan</p>
+<p class="text-xs text-[#618986] dark:text-gray-400">Renews on Oct 24, 2024</p>
+</div>
+</div>
+<span class="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Active</span>
+</div>
+<button class="w-full mt-1 bg-white dark:bg-[#1a2e2c] text-primary text-sm font-bold py-2.5 rounded-lg shadow-sm hover:shadow transition-all border border-transparent hover:border-primary/30">
+                        Manage Plan
+                    </button>
+</div>
+</div>
+<!-- Help & Support Section -->
+<div class="mb-8">
+<h3 class="px-4 pb-2 text-xs font-bold text-[#618986] uppercase tracking-wider">Support</h3>
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between p-3 pl-4 bg-white dark:bg-[#1a2e2c] rounded-xl shadow-sm border border-transparent hover:border-gray-100 dark:hover:border-white/5 transition-all cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-[#f0f4f4] dark:bg-white/10 text-[#111817] dark:text-white shrink-0 group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">help</span>
+</div>
+<p class="text-[#111817] dark:text-white text-sm font-bold">Help Center</p>
+</div>
+<span class="material-symbols-outlined text-gray-400 text-xl pr-1">open_in_new</span>
+</div>
+<div class="flex items-center justify-between p-3 pl-4 bg-white dark:bg-[#1a2e2c] rounded-xl shadow-sm border border-transparent hover:border-gray-100 dark:hover:border-white/5 transition-all cursor-pointer group">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-[#f0f4f4] dark:bg-white/10 text-[#111817] dark:text-white shrink-0 group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">support_agent</span>
+</div>
+<p class="text-[#111817] dark:text-white text-sm font-bold">Contact Support</p>
+</div>
+<span class="material-symbols-outlined text-gray-400 text-xl pr-1">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Sign Out Button -->
+<button class="w-full flex items-center justify-center gap-2 p-3.5 mb-6 rounded-xl border border-red-100 bg-red-50 hover:bg-red-100 dark:bg-red-900/10 dark:border-red-900/20 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors">
+<span class="material-symbols-outlined text-xl">logout</span>
+<span class="font-bold text-sm">Sign Out</span>
+</button>
+<p class="text-center text-[10px] text-gray-400 uppercase tracking-widest font-semibold">NP Toolkit v2.4.1</p>
+</div>
+<!-- Simulated Bottom Tabs (Optional for context) -->
+<div class="absolute bottom-0 left-0 w-full h-[72px] bg-white dark:bg-[#152321] border-t border-gray-100 dark:border-[#2a3f3c] flex items-center justify-around px-2 z-10 rounded-b-[2rem]">
+<div class="flex flex-col items-center justify-center w-16 h-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer">
+<span class="material-symbols-outlined text-[26px] mb-1">home</span>
+<span class="text-[10px] font-medium">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center w-16 h-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer">
+<span class="material-symbols-outlined text-[26px] mb-1">folder_open</span>
+<span class="text-[10px] font-medium">Files</span>
+</div>
+<div class="flex flex-col items-center justify-center w-16 h-full text-primary cursor-pointer relative">
+<div class="absolute -top-[1px] w-8 h-[3px] bg-primary rounded-b-full"></div>
+<span class="material-symbols-outlined text-[26px] mb-1 filled">settings</span>
+<span class="text-[10px] font-bold">Settings</span>
+</div>
+<div class="flex flex-col items-center justify-center w-16 h-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer">
+<span class="material-symbols-outlined text-[26px] mb-1">calendar_month</span>
+<span class="text-[10px] font-medium">Calendar</span>
+</div>
+</div>
+</main>
+</body></html>

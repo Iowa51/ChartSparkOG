@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Onboarding</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="relative flex min-h-screen w-full flex-col items-center justify-center bg-background-light dark:bg-background-dark overflow-x-hidden font-display py-8 px-4">
+<!-- Mobile Card Container -->
+<main class="w-full max-w-[400px] bg-white dark:bg-[#152a28] rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none overflow-hidden flex flex-col h-auto min-h-[700px] border border-slate-100 dark:border-slate-800/50">
+<!-- Header -->
+<header class="flex items-center justify-between px-6 py-6">
+<div class="flex items-center gap-2.5">
+<div class="flex items-center justify-center text-primary bg-primary/10 rounded-lg p-1.5">
+<span class="material-symbols-outlined text-2xl">medical_services</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold tracking-tight">NP Toolkit</h2>
+</div>
+<button class="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors">
+<span class="material-symbols-outlined text-xl">help</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<div class="flex flex-col flex-1 px-6 pb-8">
+<!-- Hero Illustration -->
+<div class="w-full aspect-[4/3] rounded-2xl mb-8 overflow-hidden relative bg-slate-50 dark:bg-slate-800/50">
+<div class="w-full h-full bg-cover bg-center" data-alt="Clean medical workspace with stethoscope and digital tablet" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBuwuOluCAgCH4I_FPDIoujFd6IJtDsEhqfBi7ZTe0aLWOM1_4W_m-DDwODzA78sU6oaqD4kOM7e_LX0ov8WeMH9BDgKf6x939O9p7FzYVqYOqoHjvl1Z9ZfpHIPpjeg-GXm58Xx39rcpag-ItuP27_HcGVffjqVE5Q7Eg9NnxzRAmBYbKBOBSp4DtW72ca3Xlt7pA29hHuh3jDaK39prEURR_IQGgvbRORrwyscLP7bRXTlq_JixhE03z6Ad4o9nQeBPM_yDmB8LtY');">
+</div>
+<!-- Gradient overlay for better text readability if needed or just style -->
+<div class="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent dark:from-[#152a28]/10"></div>
+</div>
+<!-- Text Content -->
+<div class="flex flex-col gap-4 mb-6">
+<h1 class="text-3xl font-extrabold text-slate-900 dark:text-white leading-[1.15] tracking-tight">
+                    Let's get you set up.
+                </h1>
+<p class="text-slate-500 dark:text-slate-400 text-[15px] leading-relaxed font-normal">
+                    Join thousands of Nurse Practitioners saving 10+ hours a week. We just need a few details to personalize your toolkit.
+                </p>
+<!-- Meta Text / Time Indicator -->
+<div class="inline-flex items-center gap-2 mt-2 bg-background-light dark:bg-background-dark self-start px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-primary text-[18px]">timer</span>
+<span class="text-slate-600 dark:text-slate-300 text-xs font-semibold uppercase tracking-wide">Setup time: ~2 min</span>
+</div>
+</div>
+<!-- Spacer to push actions to bottom -->
+<div class="flex-1"></div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-3 mt-6">
+<button class="group w-full bg-primary hover:bg-[#0b857a] active:bg-[#09756b] text-white font-bold h-14 rounded-xl text-base transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-primary/25">
+                    Start Setup
+                    <span class="material-symbols-outlined text-xl group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</button>
+<button class="w-full bg-transparent hover:bg-slate-50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 font-semibold h-12 rounded-xl text-sm transition-colors">
+                    I have an account
+                </button>
+</div>
+<!-- Progress Dots -->
+<div class="flex justify-center gap-2 mt-8 mb-2">
+<div class="w-2 h-2 rounded-full bg-primary ring-2 ring-primary/20"></div>
+<div class="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+<div class="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+<div class="w-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+</div>
+</div>
+</main>
+<!-- Background Decoration (Optional subtle patterns) -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none z-[-1] opacity-40 overflow-hidden">
+<div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[100px]"></div>
+<div class="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] rounded-full bg-blue-400/5 blur-[80px]"></div>
+</div>
+</body></html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Recording Interface</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#0d968b",
+              "primary-dark": "#0a756c",
+              "background-light": "#f6f8f8",
+              "background-dark": "#102220",
+              "surface-light": "#ffffff",
+              "surface-dark": "#162e2b",
+              "alert": "#f43f5e", // Rose-500 for the stop button
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+            animation: {
+              'wave': 'wave 1.2s ease-in-out infinite',
+            },
+            keyframes: {
+              wave: {
+                '0%, 100%': { height: '20%' },
+                '50%': { height: '100%' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        /* Hide scrollbar for clean mobile look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Custom delay for wave bars to create organic movement */
+        .wave-bar:nth-child(1) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.0s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(6) { animation-delay: 0.5s; }
+        .wave-bar:nth-child(7) { animation-delay: 0.1s; }
+    </style>
+</head>
+<body class="bg-gray-200 dark:bg-gray-900 font-display min-h-screen w-full flex items-center justify-center p-4 sm:p-8">
+<!-- Desktop Wrapper for Mobile Interface -->
+<!-- Simulating a mobile device on desktop -->
+<div class="relative w-full max-w-[400px] h-[800px] bg-background-light dark:bg-background-dark rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border-[8px] border-white dark:border-gray-800 ring-1 ring-black/5">
+<!-- Top Status Bar (Simulated) -->
+<div class="h-6 w-full flex justify-between items-center px-6 pt-2">
+<div class="text-[10px] font-bold text-[#111817] dark:text-white/80">9:41</div>
+<div class="flex gap-1">
+<div class="h-2.5 w-2.5 rounded-full bg-[#111817] dark:bg-white/80"></div>
+<div class="h-2.5 w-2.5 rounded-full bg-[#111817] dark:bg-white/80"></div>
+</div>
+</div>
+<!-- App Header -->
+<header class="flex items-center justify-between px-5 py-4 z-10">
+<!-- Back Button -->
+<button class="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-surface-dark text-[#111817] dark:text-white shadow-sm border border-gray-100 dark:border-gray-700">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<!-- Status -->
+<div class="flex items-center gap-2">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-alert opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-alert"></span>
+</span>
+<h2 class="text-[#111817] dark:text-white text-base font-bold tracking-tight">Recording...</h2>
+</div>
+<!-- Cancel Button -->
+<button class="text-slate-500 hover:text-alert dark:text-slate-400 text-sm font-bold px-2 py-1 rounded-lg transition-colors">
+                Cancel
+            </button>
+</header>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col px-5 overflow-hidden relative">
+<!-- Template Selector Dropdown -->
+<div class="mt-2 mb-6">
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+<span class="material-symbols-outlined text-primary text-[20px]">description</span>
+</div>
+<select class="form-select w-full pl-10 pr-10 py-3.5 bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold text-[#111817] dark:text-white shadow-sm focus:ring-2 focus:ring-primary focus:border-primary appearance-none cursor-pointer transition-shadow">
+<option value="acute">Template: Acute Care Visit</option>
+<option value="psych">Template: Psych Eval</option>
+<option value="soap">Template: SOAP Note</option>
+<option value="cardio">Template: Cardiology Consult</option>
+</select>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Timer & Visualization Section -->
+<div class="flex flex-col items-center justify-center py-6 gap-6 shrink-0">
+<!-- Large Timer -->
+<div class="relative">
+<h1 class="text-6xl font-extrabold text-[#111817] dark:text-white tracking-tight tabular-nums">
+                        03:42
+                    </h1>
+</div>
+<!-- Audio Waveform Visualization -->
+<!-- Simulating active voice input -->
+<div class="h-16 flex items-center justify-center gap-1.5 w-full max-w-[240px]">
+<div class="w-2 bg-primary/30 dark:bg-primary/20 rounded-full h-[30%] animate-wave wave-bar"></div>
+<div class="w-2 bg-primary/60 dark:bg-primary/40 rounded-full h-[60%] animate-wave wave-bar"></div>
+<div class="w-2 bg-primary rounded-full h-[90%] animate-wave wave-bar"></div>
+<div class="w-2 bg-primary rounded-full h-[100%] animate-wave wave-bar"></div>
+<div class="w-2 bg-primary rounded-full h-[80%] animate-wave wave-bar"></div>
+<div class="w-2 bg-primary/60 dark:bg-primary/40 rounded-full h-[50%] animate-wave wave-bar"></div>
+<div class="w-2 bg-primary/30 dark:bg-primary/20 rounded-full h-[25%] animate-wave wave-bar"></div>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-medium flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">mic</span>
+                    Microphone is active
+                </p>
+</div>
+<!-- Live Transcription Card -->
+<div class="flex-1 min-h-0 bg-white dark:bg-surface-dark rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.02)] dark:shadow-none border-x border-t border-gray-100 dark:border-gray-700/50 relative overflow-hidden flex flex-col mt-4">
+<div class="absolute top-0 inset-x-0 h-6 bg-gradient-to-b from-white dark:from-surface-dark to-transparent z-10 pointer-events-none"></div>
+<div class="p-5 overflow-y-auto no-scrollbar flex-1">
+<div class="space-y-1">
+<span class="text-gray-400 dark:text-gray-500 text-lg leading-relaxed">
+                            Patient is a 45-year-old male presenting with complaints of persistent lower back pain for the past 2 weeks. Pain radiates to the left leg. He denies any recent trauma or injury. 
+                        </span>
+<span class="text-[#111817] dark:text-white text-lg leading-relaxed font-medium">
+                            Pain worsens with prolonged sitting and improves with walking. He has been taking OTC ibuprofen with minimal relief. Vitals are stable. Plan to order an X-ray of the lumbar spine and start physical therapy referral...
+                            <span class="inline-block w-[2px] h-5 bg-primary animate-pulse align-middle ml-0.5 mb-1"></span>
+</span>
+</div>
+</div>
+<!-- Fade out at bottom of text area -->
+<div class="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-white dark:from-surface-dark to-transparent pointer-events-none"></div>
+</div>
+</div>
+<!-- Bottom Action Bar (Floating) -->
+<div class="bg-white dark:bg-surface-dark pb-8 pt-4 px-6 rounded-b-[2.2rem] shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] z-20 relative">
+<div class="flex flex-col items-center justify-center gap-3">
+<!-- Giant Pulsing Stop Button -->
+<button aria-label="Stop Recording" class="group relative flex items-center justify-center transition-all duration-300 active:scale-95">
+<!-- Outer Pulse Animation -->
+<div class="absolute inset-0 bg-alert rounded-full opacity-20 animate-[ping_2s_ease-in-out_infinite]"></div>
+<div class="absolute -inset-1 bg-alert rounded-full opacity-10 animate-pulse"></div>
+<!-- Button Core -->
+<div class="relative w-20 h-20 bg-gradient-to-br from-alert to-rose-600 rounded-full flex items-center justify-center shadow-lg shadow-alert/40 ring-4 ring-white dark:ring-background-dark">
+<!-- Inner Icon -->
+<span class="material-symbols-outlined text-white text-[40px] font-variation-settings-'FILL'1">stop_circle</span>
+</div>
+</button>
+<span class="text-gray-500 dark:text-gray-400 text-sm font-semibold tracking-wide uppercase">Tap to Stop</span>
+</div>
+</div>
+</div>
+</body></html>

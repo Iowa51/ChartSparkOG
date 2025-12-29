@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - New Appointment</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "primary-dark": "#0a7a72",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2c2a",
+                        "text-main": "#111817",
+                        "text-secondary": "#618986",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for calendar/lists if needed */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #dbe6e5;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-text-main dark:text-white flex flex-col overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-[#dbe6e5] dark:border-[#2a3c3a] bg-surface-light dark:bg-surface-dark px-10 py-3 shadow-sm">
+<div class="flex items-center gap-4 text-text-main dark:text-white">
+<button class="flex items-center justify-center p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark transition-colors text-text-secondary dark:text-gray-400">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div class="flex items-center gap-2">
+<div class="size-6 text-primary">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-text-main dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">NP Toolkit</h2>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-8 items-center">
+<div class="hidden md:flex items-center gap-9">
+<a class="text-text-secondary dark:text-gray-400 hover:text-primary dark:hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Dashboard</a>
+<a class="text-text-secondary dark:text-gray-400 hover:text-primary dark:hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Patients</a>
+<a class="text-primary text-sm font-bold leading-normal border-b-2 border-primary pb-0.5" href="#">Calendar</a>
+<a class="text-text-secondary dark:text-gray-400 hover:text-primary dark:hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Billing</a>
+</div>
+<div class="h-8 w-[1px] bg-[#dbe6e5] dark:bg-[#2a3c3a] hidden md:block"></div>
+<button class="flex cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-background-light dark:bg-background-dark text-text-main dark:text-white border border-[#dbe6e5] dark:border-[#2a3c3a] hover:bg-[#e0e8e8] dark:hover:bg-[#1a2c2a] transition-colors">
+<span class="material-symbols-outlined text-xl">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 w-full max-w-[1200px] mx-auto px-6 py-8 md:px-12 md:py-12 flex flex-col items-center">
+<!-- Page Header & Progress -->
+<div class="w-full max-w-[800px] mb-8">
+<div class="flex flex-wrap justify-between items-end gap-4 mb-6">
+<div class="flex flex-col gap-2">
+<h1 class="text-text-main dark:text-white text-3xl md:text-4xl font-extrabold leading-tight tracking-[-0.033em]">New Appointment</h1>
+<p class="text-text-secondary dark:text-gray-400 text-base font-normal leading-normal">Select a patient and schedule their visit.</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="text-sm font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">Step 1 of 3</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="flex flex-col gap-2">
+<div class="flex gap-6 justify-between text-xs font-semibold text-text-secondary dark:text-gray-400 uppercase tracking-wide">
+<span class="text-primary">Details</span>
+<span>Notes</span>
+<span>Review</span>
+</div>
+<div class="rounded-full bg-[#dbe6e5] dark:bg-[#2a3c3a] h-2 overflow-hidden w-full">
+<div class="h-full rounded-full bg-primary w-[33%] transition-all duration-500 ease-out"></div>
+</div>
+</div>
+</div>
+<!-- Card Container -->
+<div class="w-full max-w-[800px] bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg border border-[#f0f4f4] dark:border-[#2a3c3a] p-6 md:p-8">
+<form action="#" class="flex flex-col gap-8" onsubmit="event.preventDefault();">
+<!-- Patient Search Section -->
+<div class="flex flex-col gap-4">
+<label class="text-text-main dark:text-white text-base font-bold leading-normal">Patient Name</label>
+<div class="flex flex-wrap md:flex-nowrap gap-4">
+<div class="flex-1 relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-secondary">search</span>
+</div>
+<input class="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-[#152321] border border-[#dbe6e5] dark:border-[#2a3c3a] rounded-xl text-text-main dark:text-white placeholder:text-text-secondary dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-shadow" placeholder="Search by name, DOB, or ID..." type="text"/>
+</div>
+<button class="shrink-0 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary font-bold text-sm transition-colors border border-transparent">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+<span>Add New Patient</span>
+</button>
+</div>
+</div>
+<div class="h-[1px] bg-[#f0f4f4] dark:bg-[#2a3c3a] w-full"></div>
+<!-- Date & Time Picker Layout -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- Date Picker (Visual Mockup) -->
+<div class="flex flex-col gap-4">
+<label class="text-text-main dark:text-white text-base font-bold leading-normal">Date</label>
+<div class="border border-[#dbe6e5] dark:border-[#2a3c3a] rounded-xl p-4 bg-white dark:bg-[#152321]">
+<div class="flex justify-between items-center mb-4">
+<button class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-text-secondary"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<span class="font-bold text-text-main dark:text-white">October 2023</span>
+<button class="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-text-secondary"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+<div class="grid grid-cols-7 gap-1 text-center text-xs text-text-secondary mb-2">
+<div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+</div>
+<div class="grid grid-cols-7 gap-1 text-center text-sm">
+<div class="py-2 text-gray-300 dark:text-gray-700">29</div>
+<div class="py-2 text-gray-300 dark:text-gray-700">30</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">1</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">2</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">3</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">4</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">5</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">6</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">7</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">8</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">9</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">10</div>
+<div class="py-2 bg-primary text-white rounded-lg shadow-md font-semibold cursor-pointer">11</div>
+<div class="py-2 hover:bg-primary/10 rounded-lg cursor-pointer dark:text-gray-300">12</div>
+</div>
+</div>
+</div>
+<!-- Time & Duration -->
+<div class="flex flex-col gap-6">
+<!-- Time -->
+<div class="flex flex-col gap-4">
+<label class="text-text-main dark:text-white text-base font-bold leading-normal">Time</label>
+<div class="relative">
+<select class="w-full appearance-none bg-white dark:bg-[#152321] border border-[#dbe6e5] dark:border-[#2a3c3a] text-text-main dark:text-white py-3.5 px-4 rounded-xl pr-10 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary cursor-pointer">
+<option>09:00 AM</option>
+<option>09:30 AM</option>
+<option selected="">10:00 AM</option>
+<option>10:30 AM</option>
+<option>11:00 AM</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-text-secondary">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+</div>
+</div>
+<!-- Duration -->
+<div class="flex flex-col gap-4">
+<label class="text-text-main dark:text-white text-base font-bold leading-normal">Duration</label>
+<div class="flex gap-3">
+<label class="cursor-pointer">
+<input class="peer sr-only" name="duration" type="radio"/>
+<div class="px-4 py-2 rounded-lg border border-[#dbe6e5] dark:border-[#2a3c3a] text-sm font-medium text-text-secondary peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary transition-all bg-white dark:bg-[#152321] hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        15m
+                                    </div>
+</label>
+<label class="cursor-pointer">
+<input checked="" class="peer sr-only" name="duration" type="radio"/>
+<div class="px-4 py-2 rounded-lg border border-[#dbe6e5] dark:border-[#2a3c3a] text-sm font-medium text-text-secondary peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary transition-all bg-white dark:bg-[#152321] hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        30m
+                                    </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="duration" type="radio"/>
+<div class="px-4 py-2 rounded-lg border border-[#dbe6e5] dark:border-[#2a3c3a] text-sm font-medium text-text-secondary peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary transition-all bg-white dark:bg-[#152321] hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        45m
+                                    </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="duration" type="radio"/>
+<div class="px-4 py-2 rounded-lg border border-[#dbe6e5] dark:border-[#2a3c3a] text-sm font-medium text-text-secondary peer-checked:bg-primary peer-checked:text-white peer-checked:border-primary transition-all bg-white dark:bg-[#152321] hover:bg-gray-50 dark:hover:bg-gray-800">
+                                        60m
+                                    </div>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Visit Type -->
+<div class="flex flex-col gap-4">
+<label class="text-text-main dark:text-white text-base font-bold leading-normal">Visit Type</label>
+<div class="relative">
+<select class="w-full appearance-none bg-white dark:bg-[#152321] border border-[#dbe6e5] dark:border-[#2a3c3a] text-text-main dark:text-white py-3.5 px-4 rounded-xl pr-10 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary cursor-pointer">
+<option disabled="" selected="" value="">Select type...</option>
+<option value="psych-followup">Psychiatry Follow-up</option>
+<option value="initial-eval">Initial Evaluation</option>
+<option value="therapy-session">Therapy Session</option>
+<option value="med-management">Medication Management</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-text-secondary">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Action Footer -->
+<div class="flex justify-end gap-4 mt-6 pt-6 border-t border-[#f0f4f4] dark:border-[#2a3c3a]">
+<button class="px-6 py-3 rounded-xl border border-transparent text-text-secondary hover:text-text-main dark:hover:text-white font-bold text-sm transition-colors" type="button">
+                        Cancel
+                    </button>
+<button class="flex items-center gap-2 px-8 py-3 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-sm shadow-md hover:shadow-lg transition-all transform active:scale-95" type="submit">
+                        Next
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</form>
+</div>
+</main>
+</body></html>

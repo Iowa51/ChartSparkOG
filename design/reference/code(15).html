@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Quick Reference</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#0d968b",
+              "background-light": "#f6f8f8",
+              "background-dark": "#102220",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        /* Custom scrollbar for sidebar if needed */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #e2e8f0;
+            border-radius: 20px;
+        }
+        
+        /* Details summary marker hidden */
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-600 dark:text-slate-300 antialiased min-h-screen flex flex-col">
+<!-- Top Navbar -->
+<header class="sticky top-0 z-50 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3">
+<div class="max-w-7xl mx-auto flex items-center justify-between">
+<div class="flex items-center gap-4 text-slate-900 dark:text-white">
+<div class="size-8 text-primary">
+<span class="material-symbols-outlined !text-4xl">medical_services</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight">NP Toolkit</h2>
+</div>
+<!-- Desktop Nav Links -->
+<nav class="hidden md:flex items-center gap-8 ml-12 mr-auto">
+<a class="text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary text-sm font-semibold transition-colors" href="#">Dashboard</a>
+<a class="text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary text-sm font-semibold transition-colors" href="#">Patients</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary py-1" href="#">Reference</a>
+<a class="text-slate-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary text-sm font-semibold transition-colors" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex gap-2">
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+</button>
+<button class="flex items-center justify-center size-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-600 dark:text-slate-300">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<button class="flex items-center gap-3 group">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-10 ring-2 ring-slate-100 dark:ring-slate-700 group-hover:ring-primary transition-all" data-alt="Profile picture of a nurse practitioner" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDnNebweIPeGt1W9fjBaK5k32vfEtELyZOI2kJ5LRQfNA9qovoh4yE1_1vm3qV8B1ql15dWRi2UtIOgBLPGCUXSEb8Va1GUwIVZ3IO2DAsooJjyTDlzCFNFEGyNPE33TXDrf6uVqC0aMuVSh897zDsVM1LBEITAehO4Y2f5m16iWAZWXZAkl1dXJ9h6UsTFJps1JM1la5hXyOctigmaLetYIQi3Lzey13vpVHDxp2XSXmDHY8pVJQkJG7GGbz_Cwcvx7uiKfSTC2jOa");'></div>
+<div class="hidden lg:flex flex-col items-start">
+<span class="text-sm font-bold text-slate-900 dark:text-white leading-none">Sarah Jenkins, NP</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 mt-1">Primary Care</span>
+</div>
+</button>
+</div>
+</div>
+</header>
+<div class="flex-1 max-w-7xl mx-auto w-full flex flex-col lg:flex-row gap-6 p-4 lg:p-8">
+<!-- Sidebar Navigation -->
+<aside class="w-full lg:w-64 flex-shrink-0">
+<div class="lg:sticky lg:top-24 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-4">
+<div class="flex items-center gap-3 mb-6 px-2">
+<div class="bg-primary/10 p-2 rounded-lg text-primary">
+<span class="material-symbols-outlined">library_books</span>
+</div>
+<div>
+<h1 class="text-slate-900 dark:text-white text-sm font-bold">Library</h1>
+<p class="text-xs text-slate-500">v2.4.0 Updated</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-primary text-white font-medium shadow-md shadow-primary/20 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+<span class="text-sm">All Categories</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">receipt_long</span>
+<span class="text-sm">ICD-10 Codes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">pill</span>
+<span class="text-sm">Common Rx</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">science</span>
+<span class="text-sm">Lab Values</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">assignment_ind</span>
+<span class="text-sm">E/M Coding</span>
+</a>
+<div class="h-px bg-slate-100 dark:bg-slate-800 my-2"></div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] text-amber-400 group-hover:text-amber-500 transition-colors">star</span>
+<span class="text-sm">My Favorites</span>
+</a>
+</nav>
+<div class="mt-6 bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
+<p class="text-xs font-semibold text-slate-900 dark:text-white mb-2">Need help?</p>
+<p class="text-xs text-slate-500 mb-3 leading-relaxed">Contact support for coding questions or guideline updates.</p>
+<button class="w-full py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-200 shadow-sm hover:shadow transition-shadow">Contact Support</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0">
+<!-- Breadcrumbs -->
+<div class="flex items-center gap-2 mb-4 text-sm">
+<a class="text-slate-400 hover:text-primary transition-colors" href="#">Dashboard</a>
+<span class="text-slate-300">/</span>
+<span class="text-primary font-medium">Quick Reference</span>
+</div>
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+<div>
+<h1 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-2">Quick Reference</h1>
+<p class="text-slate-500 dark:text-slate-400 max-w-xl">Fast access to clinical guidelines, billing codes, and medication dosages.</p>
+</div>
+<!-- Action Buttons (Mobile Hidden/Collapsed usually, but shown here for utility) -->
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-[18px]">print</span>
+                        Print Guide
+                   </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-sm hover:bg-teal-700 transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        Add Note
+                   </button>
+</div>
+</div>
+<!-- Search & Filters -->
+<div class="flex flex-col gap-4 mb-8">
+<!-- Search Bar -->
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+</div>
+<input class="block w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm text-base" placeholder="Search for diagnoses, CPT codes, or meds... (Cmd+K)" type="text"/>
+<div class="absolute inset-y-0 right-3 flex items-center">
+<kbd class="hidden sm:inline-block px-2 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md text-xs text-slate-500 font-sans">Cmd+K</kbd>
+</div>
+</div>
+<!-- Quick Filters -->
+<div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold shadow-md">
+                        All Items
+                    </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:border-primary hover:text-primary transition-colors">
+                        Favorites
+                    </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:border-primary hover:text-primary transition-colors">
+                        Recently Viewed
+                    </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:border-primary hover:text-primary transition-colors">
+                        Pediatrics
+                    </button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:border-primary hover:text-primary transition-colors">
+                        Cardiology
+                    </button>
+</div>
+</div>
+<!-- Content Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
+<!-- Card 1: Expanded (Example) -->
+<details class="group bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300" open="">
+<summary class="flex items-center justify-between p-5 cursor-pointer select-none bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center bg-primary/10 dark:bg-primary/20 text-primary h-8 px-2.5 rounded-lg text-sm font-bold font-mono tracking-wide">J02.9</span>
+<span class="font-bold text-slate-900 dark:text-white text-lg">Acute Pharyngitis</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="size-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-amber-400 transition-colors">
+<span class="material-symbols-outlined fill-current" style="font-variation-settings: 'FILL' 1;">star</span>
+</button>
+<span class="material-symbols-outlined text-slate-400 group-open:rotate-180 transition-transform duration-300">expand_more</span>
+</div>
+</summary>
+<div class="p-5 pt-2 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+<div class="grid gap-6">
+<div>
+<h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Symptoms</h4>
+<p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                                    Sore throat, fever (&gt;100.4°F), tonsillar exudates, tender anterior cervical adenopathy. Absence of cough.
+                                </p>
+</div>
+<div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-[20px] mt-0.5">medication</span>
+<div>
+<h4 class="text-xs uppercase tracking-wider font-bold text-blue-700 dark:text-blue-300 mb-1">First Line Treatment</h4>
+<p class="text-sm font-medium text-slate-900 dark:text-white">Amoxicillin 500mg PO BID x 10 days</p>
+<p class="text-xs text-slate-500 mt-1">Alt: Penicillin V 500mg PO BID x 10 days</p>
+</div>
+</div>
+</div>
+<div>
+<h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Clinical Notes</h4>
+<ul class="list-disc list-inside text-sm text-slate-700 dark:text-slate-300 space-y-1">
+<li>Use Centor Criteria to determine need for Strep testing.</li>
+<li>Score 0-1: No testing needed. Score 2-3: Rapid test. Score 4: Treat empirically.</li>
+</ul>
+</div>
+</div>
+<div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-50 dark:border-slate-800">
+<button class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-primary transition-colors rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-[16px]">share</span>
+                                Share
+                            </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-sm hover:bg-teal-700 transition-colors">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                Copy to Note
+                            </button>
+</div>
+</div>
+</details>
+<!-- Card 2: Collapsed -->
+<details class="group bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-all duration-300">
+<summary class="flex items-center justify-between p-5 cursor-pointer select-none">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 h-8 px-2.5 rounded-lg text-sm font-bold font-mono tracking-wide">I10</span>
+<span class="font-bold text-slate-900 dark:text-white text-lg">Essential Hypertension</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-300 hover:text-amber-400 transition-colors">
+<span class="material-symbols-outlined">star</span>
+</button>
+<span class="material-symbols-outlined text-slate-400 group-open:rotate-180 transition-transform duration-300">expand_more</span>
+</div>
+</summary>
+<div class="p-5 pt-0 border-t border-slate-100 dark:border-slate-800">
+<p class="text-sm text-slate-500 py-4">Content for Hypertension would appear here...</p>
+</div>
+</details>
+<!-- Card 3: Collapsed -->
+<details class="group bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-all duration-300">
+<summary class="flex items-center justify-between p-5 cursor-pointer select-none">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 h-8 px-2.5 rounded-lg text-sm font-bold font-mono tracking-wide">E11.9</span>
+<span class="font-bold text-slate-900 dark:text-white text-lg">Type 2 Diabetes (Uncomplicated)</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-300 hover:text-amber-400 transition-colors">
+<span class="material-symbols-outlined">star</span>
+</button>
+<span class="material-symbols-outlined text-slate-400 group-open:rotate-180 transition-transform duration-300">expand_more</span>
+</div>
+</summary>
+<div class="p-5 pt-0 border-t border-slate-100 dark:border-slate-800">
+<p class="text-sm text-slate-500 py-4">Content for Diabetes would appear here...</p>
+</div>
+</details>
+<!-- Card 4: Expanded (Another example) -->
+<details class="group bg-white dark:bg-slate-900 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300" open="">
+<summary class="flex items-center justify-between p-5 cursor-pointer select-none bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300 h-8 px-2.5 rounded-lg text-sm font-bold font-mono tracking-wide">LAB</span>
+<span class="font-bold text-slate-900 dark:text-white text-lg">Thyroid Panel (TSH, T4)</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="size-8 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-300 hover:text-amber-400 transition-colors">
+<span class="material-symbols-outlined">star</span>
+</button>
+<span class="material-symbols-outlined text-slate-400 group-open:rotate-180 transition-transform duration-300">expand_more</span>
+</div>
+</summary>
+<div class="p-5 pt-2 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+<div class="grid gap-4">
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+<h4 class="text-xs uppercase font-bold text-slate-500 mb-1">TSH Range</h4>
+<p class="text-lg font-mono font-bold text-slate-900 dark:text-white">0.4 - 4.0 <span class="text-sm font-sans font-normal text-slate-500">mIU/L</span></p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+<h4 class="text-xs uppercase font-bold text-slate-500 mb-1">Free T4 Range</h4>
+<p class="text-lg font-mono font-bold text-slate-900 dark:text-white">0.8 - 1.8 <span class="text-sm font-sans font-normal text-slate-500">ng/dL</span></p>
+</div>
+</div>
+<div>
+<h4 class="text-xs uppercase tracking-wider font-bold text-slate-400 mb-2">Interpretation</h4>
+<ul class="list-none text-sm text-slate-700 dark:text-slate-300 space-y-2">
+<li class="flex items-start gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5"></span>
+<span>High TSH, Low T4: <strong>Hypothyroidism</strong> (Primary)</span>
+</li>
+<li class="flex items-start gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5"></span>
+<span>Low TSH, High T4: <strong>Hyperthyroidism</strong> (Primary)</span>
+</li>
+</ul>
+</div>
+</div>
+<div class="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-50 dark:border-slate-800">
+<button class="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-primary transition-colors rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-[16px]">share</span>
+                                Share
+                            </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg shadow-sm hover:bg-teal-700 transition-colors">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                Copy Values
+                            </button>
+</div>
+</div>
+</details>
+<!-- Card 5: Collapsed -->
+<details class="group bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-md transition-all duration-300">
+<summary class="flex items-center justify-between p-5 cursor-pointer select-none">
+<div class="flex items-center gap-4">
+<span class="flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 h-8 px-2.5 rounded-lg text-sm font-bold font-mono tracking-wide">R05</span>
+<span class="font-bold text-slate-900 dark:text-white text-lg">Cough (Unspecified)</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="size-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-300 hover:text-amber-400 transition-colors">
+<span class="material-symbols-outlined">star</span>
+</button>
+<span class="material-symbols-outlined text-slate-400 group-open:rotate-180 transition-transform duration-300">expand_more</span>
+</div>
+</summary>
+<div class="p-5 pt-0 border-t border-slate-100 dark:border-slate-800">
+<p class="text-sm text-slate-500 py-4">Content for Cough would appear here...</p>
+</div>
+</details>
+</div>
+<!-- Load More Trigger -->
+<div class="flex justify-center mt-8 mb-12">
+<button class="text-sm font-semibold text-slate-500 hover:text-primary transition-colors flex items-center gap-2">
+                    Load More Items
+                    <span class="material-symbols-outlined text-[18px]">arrow_downward</span>
+</button>
+</div>
+</main>
+</div>
+</body></html>

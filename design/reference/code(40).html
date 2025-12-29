@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>E-Prescribe - Confirmation</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b77f",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#10221c",
+                        "text-main": "#111816",
+                        "text-muted": "#637588",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main dark:text-white antialiased transition-colors duration-200">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A2C26] px-8 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-4 text-text-main dark:text-white">
+<div class="flex items-center justify-center size-8 bg-primary/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">medication_liquid</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight">NP Toolkit</h2>
+</div>
+<div class="flex items-center gap-6">
+<nav class="hidden md:flex gap-6 text-sm font-medium text-text-muted dark:text-gray-400">
+<a class="hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="hover:text-primary transition-colors" href="#">Patients</a>
+<a class="hover:text-primary transition-colors" href="#">Messages</a>
+</nav>
+<div class="flex items-center gap-3 pl-6 border-l border-gray-100 dark:border-gray-700">
+<div class="text-right hidden sm:block">
+<p class="text-sm font-bold text-text-main dark:text-white leading-none">Dr. Emily Chen</p>
+<p class="text-xs text-text-muted dark:text-gray-400 leading-none mt-1">Nurse Practitioner</p>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ring-2 ring-gray-100 dark:ring-gray-700" data-alt="Profile picture of Dr. Emily Chen" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBgDXRIMtnr9rl44hMEApQK1bAzcKP2BSEYKZFRZfrJ8MADp4eleHxOQz9ljwS-SNC27Uz30Zd9YJPqlY4HPTiv0ZHoBF_rBr5so_ws6wqMYRHX_dCxsDgKdZWJumj9n_mmromftLF_P74XsrtD0wXvf_L1ojEH36fpaIoa80m3qwnbZecKPke2unMs3JrzlTM1Dlh0iPX7FgxzapN0oqIuYp8znHVvW2U1N-7ozpkGPGz4ttt730q4BTVdgCBZl_M1gvvzeri2SJJp");'></div>
+</div>
+</div>
+</header>
+<!-- Patient Context Bar -->
+<div class="bg-white dark:bg-[#15231F] border-b border-gray-200 dark:border-gray-800 px-8 py-3">
+<div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm border border-blue-100 dark:border-blue-800">SJ</div>
+<div>
+<p class="text-text-main dark:text-white font-bold text-sm leading-tight">Sarah Jones</p>
+<div class="flex gap-2 text-xs text-text-muted dark:text-gray-400">
+<span>DOB: 01/12/1980 (44y)</span>
+<span class="text-gray-300 dark:text-gray-600">•</span>
+<span>Female</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30">
+<span class="material-symbols-outlined text-red-600 text-[18px]">warning</span>
+<span class="text-xs font-medium text-red-700 dark:text-red-400">Allergy: Penicillin (Mild Rash)</span>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col items-center justify-start py-10 px-4 sm:px-6">
+<div class="w-full max-w-3xl flex flex-col gap-6">
+<!-- Success Card -->
+<div class="bg-white dark:bg-[#1A2C26] rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100 dark:border-gray-800 overflow-hidden relative">
+<!-- Decorative Top Accent -->
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<div class="p-8 pb-10 flex flex-col items-center text-center">
+<!-- Success Icon -->
+<div class="mb-6 rounded-full bg-emerald-50 dark:bg-emerald-900/20 p-4 ring-8 ring-emerald-50/50 dark:ring-emerald-900/10">
+<span class="material-symbols-outlined text-primary text-5xl">check_circle</span>
+</div>
+<!-- Headline -->
+<h1 class="text-text-main dark:text-white tracking-tight text-3xl font-bold leading-tight mb-2">Prescription Sent Successfully!</h1>
+<!-- Subheadline -->
+<p class="text-text-muted dark:text-gray-400 text-base font-normal max-w-lg">
+                            Sent to <span class="font-medium text-text-main dark:text-gray-200">CVS Pharmacy #4212</span> at 10:42 AM today.
+                        </p>
+<!-- Divider -->
+<div class="w-full h-px bg-gray-100 dark:bg-gray-700 my-8"></div>
+<!-- Summary Grid -->
+<div class="w-full grid md:grid-cols-2 gap-8 text-left">
+<!-- Medication Summary -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-2 text-primary font-semibold uppercase tracking-wider text-xs">
+<span class="material-symbols-outlined text-sm">prescriptions</span>
+<span>Prescription Summary</span>
+</div>
+<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5 border border-gray-100 dark:border-gray-700">
+<h3 class="text-lg font-bold text-text-main dark:text-white mb-1">Amoxicillin 500mg Capsule</h3>
+<p class="text-sm text-text-muted dark:text-gray-400 mb-4 italic">Generic for Amoxil</p>
+<div class="space-y-3">
+<div class="flex gap-3">
+<div class="mt-0.5 text-gray-400"><span class="material-symbols-outlined text-[18px]">edit_note</span></div>
+<div>
+<p class="text-xs text-text-muted dark:text-gray-500 uppercase font-bold tracking-wide">Sig / Instructions</p>
+<p class="text-sm text-text-main dark:text-gray-200 font-medium">1 capsule by mouth every 8 hours for 10 days.</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="mt-0.5 text-gray-400"><span class="material-symbols-outlined text-[18px]">inventory_2</span></div>
+<div>
+<p class="text-xs text-text-muted dark:text-gray-500 uppercase font-bold tracking-wide">Dispense</p>
+<p class="text-sm text-text-main dark:text-gray-200 font-medium">Qty: 30 (Thirty)  |  Refills: 0</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Pharmacy Info -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-2 text-primary font-semibold uppercase tracking-wider text-xs">
+<span class="material-symbols-outlined text-sm">storefront</span>
+<span>Destination Pharmacy</span>
+</div>
+<div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-0 border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col h-full">
+<!-- Map Placeholder -->
+<div class="h-24 w-full bg-gray-200 dark:bg-gray-700 relative bg-cover bg-center" data-alt="Map showing location of CVS Pharmacy in Springfield" data-location="Springfield" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD4_3vxdvLaEeK2F-KBE6ZFUHJBS4p0udeFlhJ2238vYEnChvDMPGh27Yd1hgBNxrMFy-YdP4xqP0bgO8NJ9AM06g6reCywt57HA9pXcbb7lc9yciu5aMk1D6uAVor5tgyanL1pqYToDSwHZns6y68wtifpGDh_BjtWD5KW-g1KIpuFDZ9xwmakp495tof9qtFeA7mmish0Js-d8Rj9egrtjw_wtyt9LEbzIImzPGoYe9dudkCeO-w2pyBdjLJ2ktt71bj6LLwxJnu2");'>
+<div class="absolute inset-0 bg-black/10"></div>
+</div>
+<div class="p-5 flex-1 flex flex-col justify-center">
+<h3 class="text-base font-bold text-text-main dark:text-white">CVS Pharmacy #4212</h3>
+<div class="mt-3 space-y-2">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-gray-400 text-[16px] mt-0.5">location_on</span>
+<p class="text-sm text-text-muted dark:text-gray-400">123 Main St,<br/>Springfield, IL 62704</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-gray-400 text-[16px]">call</span>
+<p class="text-sm text-text-muted dark:text-gray-400">(555) 123-4567</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Utility Action -->
+<div class="w-full flex justify-center mt-6">
+<button class="flex items-center gap-2 text-sm text-text-muted hover:text-primary transition-colors py-2 px-4 rounded hover:bg-gray-50 dark:hover:bg-gray-800">
+<span class="material-symbols-outlined text-[18px]">print</span>
+<span>Print Receipt / Download PDF</span>
+</button>
+</div>
+</div>
+<!-- Action Bar Footer -->
+<div class="bg-gray-50 dark:bg-[#15231F] border-t border-gray-100 dark:border-gray-800 px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+<button class="text-sm font-medium text-text-muted hover:text-text-main dark:text-gray-400 dark:hover:text-white transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                            Return to Patient
+                        </button>
+<div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+<button class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-transparent text-text-main dark:text-white text-sm font-semibold shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+                                Prescribe Another
+                            </button>
+<button class="flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold shadow-md shadow-primary/20 hover:bg-primary/90 transition-all transform active:scale-95">
+<span class="material-symbols-outlined text-[20px]">clinical_notes</span>
+                                Start Note for Visit
+                            </button>
+</div>
+</div>
+</div>
+<!-- Footer / Legal -->
+<p class="text-center text-xs text-gray-400 dark:text-gray-600">
+                    Secure transmission ID: #TXN-89234-XJ • NP Toolkit ePrescribe v2.4
+                </p>
+</div>
+</main>
+</div>
+</body></html>

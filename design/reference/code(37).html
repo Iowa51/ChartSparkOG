@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>New Appointment - Review</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "primary-dark": "#0a756c",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2c2a",
+                        "text-main": "#111817",
+                        "text-muted": "#618986",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for the modal content if needed */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #e5e7eb;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex items-center justify-center p-4">
+<!-- Modal / Card Wrapper -->
+<div class="w-full max-w-[480px] h-[800px] max-h-[90vh] bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-100 dark:border-slate-800 relative">
+<!-- Header -->
+<header class="flex items-center justify-between px-6 py-4 border-b border-[#f0f4f4] dark:border-slate-700 shrink-0 bg-white dark:bg-surface-dark z-10">
+<div class="flex items-center gap-3">
+<button class="text-text-main dark:text-white hover:bg-[#f0f4f4] dark:hover:bg-slate-700 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h2 class="text-text-main dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Review &amp; Confirm</h2>
+</div>
+<button class="text-text-muted hover:text-text-main dark:hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[24px]">close</span>
+</button>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-surface-dark">
+<!-- Patient Profile Card -->
+<div class="p-6 pb-2">
+<div class="bg-background-light dark:bg-background-dark rounded-xl p-4 flex items-center gap-4 border border-[#eff3f3] dark:border-slate-700">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat bg-cover rounded-full h-16 w-16 border-2 border-white dark:border-slate-600 shadow-sm" data-alt="Portrait of patient Sarah Jenkins smiling" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB3AYv7hG80u8cxSoYGvDlZlajYCFFAqFSkYh03Q7Mab-6ZoGLQqZUE7RWksj8VnkHLgXjc4VrlWQnxtj7ckOCNbM0UpPLVjsIQUgwg505RtDDUmOuDTtaO1bD9WcWrv9BUl2UnvPGePXZdzQ4ukJ-VDIv9scb80gfTGcKUqTa_e2jgrGz76NFDq_-BCrM1Y_dl87WO1mviCIkK9o9R8UKfYzTprgbypBQAJZhyokPI9U97uA51DrhsiicSrSPFs78Hk_yxiFWkfvy4");'>
+</div>
+<div class="absolute bottom-0 right-0 h-4 w-4 bg-primary rounded-full border-2 border-white dark:border-slate-800" title="Active Patient"></div>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-text-main dark:text-white text-lg font-bold leading-tight">Sarah Jenkins</p>
+<p class="text-text-muted text-sm font-medium mt-1">DOB: 10/12/1985 • MRN: 948210</p>
+</div>
+</div>
+</div>
+<!-- Appointment Details Section -->
+<div class="px-6 pt-2 pb-4">
+<h3 class="text-text-main dark:text-white text-base font-bold leading-tight px-1 py-3">Appointment Details</h3>
+<div class="flex flex-col gap-3">
+<!-- Date & Time -->
+<div class="flex items-start gap-4 p-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark transition-colors group">
+<div class="text-primary bg-primary/10 dark:bg-primary/20 flex items-center justify-center rounded-lg shrink-0 size-10 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+</div>
+<div class="flex flex-col justify-center flex-1">
+<p class="text-text-muted text-xs font-semibold uppercase tracking-wider mb-0.5">Date &amp; Time</p>
+<p class="text-text-main dark:text-white text-sm font-semibold leading-normal">Mon, Oct 24 • 10:00 AM</p>
+<p class="text-text-muted text-xs leading-normal mt-0.5">30 min duration</p>
+</div>
+<button class="text-primary text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity">Edit</button>
+</div>
+<!-- Visit Type -->
+<div class="flex items-start gap-4 p-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark transition-colors group">
+<div class="text-primary bg-primary/10 dark:bg-primary/20 flex items-center justify-center rounded-lg shrink-0 size-10 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">stethoscope</span>
+</div>
+<div class="flex flex-col justify-center flex-1">
+<p class="text-text-muted text-xs font-semibold uppercase tracking-wider mb-0.5">Visit Type</p>
+<p class="text-text-main dark:text-white text-sm font-semibold leading-normal">Follow-up Visit</p>
+</div>
+</div>
+<!-- Provider -->
+<div class="flex items-start gap-4 p-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark transition-colors group">
+<div class="text-primary bg-primary/10 dark:bg-primary/20 flex items-center justify-center rounded-lg shrink-0 size-10 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">badge</span>
+</div>
+<div class="flex flex-col justify-center flex-1">
+<p class="text-text-muted text-xs font-semibold uppercase tracking-wider mb-0.5">Provider</p>
+<p class="text-text-main dark:text-white text-sm font-semibold leading-normal">NP. Jane Doe</p>
+</div>
+</div>
+<!-- Location -->
+<div class="flex items-start gap-4 p-3 rounded-xl hover:bg-background-light dark:hover:bg-background-dark transition-colors group">
+<div class="text-primary bg-primary/10 dark:bg-primary/20 flex items-center justify-center rounded-lg shrink-0 size-10 group-hover:bg-white dark:group-hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">location_on</span>
+</div>
+<div class="flex flex-col justify-center flex-1">
+<p class="text-text-muted text-xs font-semibold uppercase tracking-wider mb-0.5">Location</p>
+<p class="text-text-main dark:text-white text-sm font-semibold leading-normal">Main Clinic, Room 302</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Notes Section -->
+<div class="px-6 pb-8">
+<h3 class="text-text-main dark:text-white text-base font-bold leading-tight px-1 py-3 flex justify-between items-center">
+                    Internal Notes
+                    <span class="text-xs font-normal text-text-muted bg-background-light dark:bg-background-dark px-2 py-1 rounded-md">Optional</span>
+</h3>
+<div class="relative">
+<textarea class="w-full min-h-[100px] p-4 text-sm text-text-main dark:text-white bg-background-light dark:bg-background-dark border-0 rounded-xl focus:ring-2 focus:ring-primary placeholder:text-gray-400 resize-none" placeholder="Add notes for the front desk or billing team..."></textarea>
+</div>
+</div>
+</div>
+<!-- Sticky Footer -->
+<div class="p-6 border-t border-[#f0f4f4] dark:border-slate-700 bg-white dark:bg-surface-dark shrink-0">
+<div class="flex flex-col gap-3">
+<button class="flex w-full cursor-pointer items-center justify-center rounded-xl h-12 bg-primary hover:bg-primary-dark text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] transition-all shadow-md hover:shadow-lg active:scale-[0.98]">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+                    Create Appointment
+                </button>
+<button class="flex w-full cursor-pointer items-center justify-center rounded-xl h-12 bg-transparent hover:bg-background-light dark:hover:bg-background-dark text-text-muted hover:text-text-main dark:hover:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] transition-all">
+                    Back to Edit
+                </button>
+</div>
+</div>
+</div>
+</body></html>

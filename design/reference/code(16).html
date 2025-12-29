@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NP Toolkit - Welcome Onboarding</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;family=Noto+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d968b",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102220",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#162e2b",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display overflow-x-hidden transition-colors duration-200">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Navbar -->
+<div class="w-full flex justify-center border-b border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-surface-dark">
+<div class="layout-content-container flex flex-col w-full max-w-[960px]">
+<header class="flex items-center justify-between whitespace-nowrap px-4 py-4 md:px-10">
+<div class="flex items-center gap-3">
+<div class="size-8 text-primary">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 4H42V17.3333V30.6667H24V44H6V30.6667V17.3333H24V4Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">NP Toolkit</h2>
+</div>
+<div class="flex gap-4 items-center">
+<!-- Optional User Profile or Help could go here -->
+</div>
+</header>
+</div>
+</div>
+<!-- Main Content -->
+<div class="px-4 md:px-40 flex flex-1 justify-center py-5">
+<div class="layout-content-container flex flex-col max-w-[960px] flex-1 gap-8">
+<!-- Progress Bar -->
+<div class="flex flex-col gap-3 pt-6 px-4">
+<div class="flex gap-6 justify-between items-end">
+<div class="flex flex-col gap-1">
+<h3 class="text-slate-900 dark:text-white text-lg font-bold">Account Setup</h3>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium leading-normal">Step 1 of 4</p>
+</div>
+<p class="text-primary text-sm font-bold leading-normal">25%</p>
+</div>
+<div class="h-2 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+<div class="h-full rounded-full bg-primary transition-all duration-500" style="width: 25%;"></div>
+</div>
+</div>
+<!-- Hero Section -->
+<div class="@container">
+<div class="flex flex-col gap-8 px-4 py-6 @[864px]:flex-row @[864px]:items-center">
+<!-- Hero Image -->
+<div class="w-full @[864px]:w-1/2">
+<div class="w-full aspect-[4/3] bg-center bg-no-repeat bg-cover rounded-xl shadow-sm border border-slate-100 dark:border-slate-800" data-alt="Abstract minimalist illustration of organized medical documents and digital tablet in teal and white" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDL84BUcBLTMRNaZlZSuicXAf8JkYhzhZ2erV1VtXwxYpWRjDkUVcjaarxUXQkdHn80YQbgn4dY0uHpJ9Wi1YUun4Ob0PvtAXFMFtxah-d7X3MhFleM836-hyoANsA5fXz1O_L36_JGC7oOsOvUrkSRJXShdy34P0OFDawYQfAL0GMiTmi9BZy3w0OFhMaZ3gVR7ey5ab0TTx_ehsARzne2FKdudZEW8eG1qUjMyiPSRIp499dRyVPCCk7f8GFH63vi01Om9TOx9FwD");'>
+</div>
+</div>
+<!-- Hero Content -->
+<div class="flex flex-col gap-6 w-full @[864px]:w-1/2 justify-center">
+<div class="flex flex-col gap-3 text-left">
+<h1 class="text-slate-900 dark:text-white text-4xl font-black leading-tight tracking-[-0.033em] @[480px]:text-5xl">
+                                        Welcome to NP Toolkit
+                                    </h1>
+<h2 class="text-slate-600 dark:text-slate-300 text-base font-normal leading-relaxed">
+                                        Streamline your documentation and billing. Let's customize your workspace to fit your specialty in just 2 minutes.
+                                    </h2>
+</div>
+<div class="flex flex-wrap gap-3 mt-2">
+<button class="flex min-w-[140px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-6 bg-primary hover:bg-teal-700 transition-colors text-white text-base font-bold leading-normal tracking-[0.015em] shadow-md shadow-primary/20">
+<span class="truncate">Start Setup</span>
+</button>
+<button class="flex min-w-[120px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-6 bg-surface-light dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 text-base font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Skip for now</span>
+</button>
+</div>
+<!-- Trust Badge -->
+<div class="flex items-center gap-2 mt-2">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-white dark:border-background-dark bg-gray-200 bg-cover bg-center" data-alt="User avatar 1" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCvHXUDtdPEtzN7Ibujx2d5G_6j68sswYXKXnRWQdwrnmFMiucoWVFVSk334ATsLboRKqtyggZzPM_9P80QlO9YAp6QOQF2dgz1KnLpc2NlnE56t9FFdq8n70s4u6wlgqE7HHFEXI2LZTMtYHRRcBCszh0_3MyiGl-tlCPmccssLFLACDasg1HvIRciHOBk3m86ZNB3mSiKx5AKEQ4CtMPIPjrMddi3dioE1Em3cjBGGTjxrFFAeM08B9keowEg2G7J1k-TiVRkGA2r')"></div>
+<div class="w-8 h-8 rounded-full border-2 border-white dark:border-background-dark bg-gray-200 bg-cover bg-center" data-alt="User avatar 2" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCMInm3N6hDljzinfViHYNBBHRcNdKtOOFKhVTwfdqEWZxoHONtLXPKCJ01MmJ4Tq2-n3gIgHmVV5OLGw0VgSL2h78PimyW_OYwPBtxfwMF8MGCznYafysFdCMlub-gtFH7Vh8l3KlWUOZE1_S5Z_4OxkhM3Rdd8mnFXtsXyqxLlabYdXHLJEQ9zG-gT5SZUyGmrITYlR9ThLiMnZMItO1kL7Vdj9lPMt6c9DPfC--wT-evjIhi_3pGqBzZxhgfJMsKZ40jUqmIa70Y')"></div>
+<div class="w-8 h-8 rounded-full border-2 border-white dark:border-background-dark bg-gray-200 bg-cover bg-center" data-alt="User avatar 3" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCZoDDb4e3y_tT45fRI_Hunrrbear53ZaNuvR6InJmzFO3UxMSvyQv3ni9p9TxTGuFr1L2rAPoNoemYQfOFdGZqGHg6xEcU2H-gf9X7eHcbT4JB0VRjDJe7jk5MwhUvaHSaH96SOiPuilEJdi19DfhNcx3TLws2ODlj2WCYwq_h7Rw3vccxUhPZKYtCUOE8LZV16pwq9SQPS2ioO5r6KXbyaKgzrafB-Tx16vTXJ5IWMlwChu6DnRx3yc0kOiJSLPMYYe3DND4r0C32')"></div>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Trusted by 5,000+ Nurse Practitioners</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Feature Section -->
+<div class="flex flex-col gap-6 px-4 py-6 @container">
+<div class="flex flex-col gap-2">
+<h3 class="text-slate-900 dark:text-white text-2xl font-bold leading-tight">
+                                Why NP Toolkit?
+                            </h3>
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal">
+                                Designed specifically for the modern Nurse Practitioner workflow.
+                            </p>
+</div>
+<div class="grid grid-cols-1 @[600px]:grid-cols-3 gap-4">
+<!-- Card 1 -->
+<div class="flex flex-col gap-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark p-6 transition-all hover:shadow-lg hover:border-primary/30">
+<div class="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]">schedule</span>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Save Time</h4>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">Save 5+ hours a week on charting documentation.</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex flex-col gap-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark p-6 transition-all hover:shadow-lg hover:border-primary/30">
+<div class="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]">verified_user</span>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Stay Compliant</h4>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">Ensure 100% compliant billing automatically.</p>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="flex flex-col gap-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-surface-light dark:bg-surface-dark p-6 transition-all hover:shadow-lg hover:border-primary/30">
+<div class="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]">tune</span>
+</div>
+<div class="flex flex-col gap-1">
+<h4 class="text-slate-900 dark:text-white text-lg font-bold leading-tight">Tailored Workflow</h4>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">Customized templates to fit your specific specialty.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="flex justify-center border-t border-slate-200 dark:border-slate-800 bg-surface-light dark:bg-surface-dark py-10 px-4">
+<div class="flex flex-col gap-6 text-center w-full max-w-[960px]">
+<div class="flex flex-wrap items-center justify-center gap-8">
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium" href="#">Privacy Policy</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium" href="#">Terms of Service</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-primary transition-colors text-sm font-medium" href="#">Help Center</a>
+</div>
+<p class="text-slate-400 dark:text-slate-500 text-sm">© 2023 NP Toolkit. All rights reserved.</p>
+</div>
+</footer>
+</div>
+</div>
+</body></html>
