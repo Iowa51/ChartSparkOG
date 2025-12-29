@@ -12,60 +12,9 @@ import {
     CheckCircle,
     AlertCircle,
 } from "lucide-react";
+import { encounters } from "@/lib/demo-data/encounters";
+import { patients } from "@/lib/demo-data/patients";
 
-// Demo encounter data
-const encounters = [
-    {
-        id: "e1",
-        patient: { name: "Sarah Connor", initials: "SC", id: "p1" },
-        type: "Follow-up Visit",
-        date: "Oct 28, 2023",
-        time: "10:30 AM",
-        status: "In Progress" as const,
-        provider: "Dr. Sarah K.",
-        chiefComplaint: "Blood pressure review",
-    },
-    {
-        id: "e2",
-        patient: { name: "John Doe", initials: "JD", id: "p6" },
-        type: "Initial Consultation",
-        date: "Oct 28, 2023",
-        time: "11:00 AM",
-        status: "Scheduled" as const,
-        provider: "Dr. Sarah K.",
-        chiefComplaint: "New patient evaluation",
-    },
-    {
-        id: "e3",
-        patient: { name: "Elena Fisher", initials: "EF", id: "p3" },
-        type: "Medication Review",
-        date: "Oct 27, 2023",
-        time: "2:30 PM",
-        status: "Completed" as const,
-        provider: "Dr. Sarah K.",
-        chiefComplaint: "Anxiety medication adjustment",
-    },
-    {
-        id: "e4",
-        patient: { name: "Michael Reese", initials: "MR", id: "p2" },
-        type: "Follow-up Visit",
-        date: "Oct 27, 2023",
-        time: "9:00 AM",
-        status: "Completed" as const,
-        provider: "Dr. Sarah K.",
-        chiefComplaint: "Diabetes management",
-    },
-    {
-        id: "e5",
-        patient: { name: "Victor Jones", initials: "VJ", id: "p5" },
-        type: "Initial Consultation",
-        date: "Oct 29, 2023",
-        time: "3:00 PM",
-        status: "Scheduled" as const,
-        provider: "Dr. Sarah K.",
-        chiefComplaint: "Depression screening",
-    },
-];
 
 const statusStyles = {
     "In Progress": {
@@ -165,14 +114,14 @@ export default function EncountersPage() {
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold">
-                                                        {encounter.patient.initials}
+                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${patients.find(p => p.id === encounter.patientId)?.avatarColor || "bg-primary/10 text-primary"}`}>
+                                                        {patients.find(p => p.id === encounter.patientId)?.initials || "??"}
                                                     </div>
                                                     <Link
-                                                        href={`/patients/${encounter.patient.id}`}
+                                                        href={`/patients/${encounter.patientId}`}
                                                         className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors"
                                                     >
-                                                        {encounter.patient.name}
+                                                        {patients.find(p => p.id === encounter.patientId)?.name || "Unknown Patient"}
                                                     </Link>
                                                 </div>
                                             </td>

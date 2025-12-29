@@ -9,65 +9,8 @@ import {
     ChevronLeft,
     ChevronRight,
 } from "lucide-react";
+import { patients } from "@/lib/demo-data/patients";
 
-// Demo patient data
-const patients = [
-    {
-        id: "p1",
-        name: "Sarah Connor",
-        initials: "SC",
-        gender: "Female",
-        mrn: "#883-921",
-        dob: "Jan 14, 1984",
-        status: "Active" as const,
-        lastVisit: "Oct 22, 2023",
-        avatarColor: "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300",
-    },
-    {
-        id: "p2",
-        name: "Michael Reese",
-        initials: "MR",
-        gender: "Male",
-        mrn: "#442-109",
-        dob: "May 02, 1990",
-        status: "Inactive" as const,
-        lastVisit: "Sep 15, 2023",
-        avatarColor: "bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300",
-    },
-    {
-        id: "p3",
-        name: "Elena Fisher",
-        initials: "EF",
-        gender: "Female",
-        mrn: "#992-441",
-        dob: "Nov 12, 1988",
-        status: "Active" as const,
-        lastVisit: "Today, 9:00 AM",
-        avatarColor: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-300",
-    },
-    {
-        id: "p4",
-        name: "Nathan Drake",
-        initials: "ND",
-        gender: "Male",
-        mrn: "#771-002",
-        dob: "Feb 14, 1980",
-        status: "Active" as const,
-        lastVisit: "Aug 10, 2023",
-        avatarColor: "bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-300",
-    },
-    {
-        id: "p5",
-        name: "Victor Jones",
-        initials: "VJ",
-        gender: "Male",
-        mrn: "#112-998",
-        dob: "Mar 22, 1965",
-        status: "Pending" as const,
-        lastVisit: "--",
-        avatarColor: "bg-teal-100 text-teal-600 dark:bg-teal-900 dark:text-teal-300",
-    },
-];
 
 const statusStyles = {
     Active: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
