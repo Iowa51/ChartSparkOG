@@ -8,7 +8,7 @@ export const demoUsers: (User & {
 })[] = [
         {
             id: "u1",
-            email: "sarah.k@wellness-psychiatry.com",
+            email: "demo@chartspark.com",
             first_name: "Sarah",
             last_name: "Kim",
             role: "ADMIN",

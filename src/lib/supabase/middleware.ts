@@ -9,8 +9,10 @@ export async function updateSession(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-        // In demo mode without Supabase keys, allow all traffic
+    const demoMode = request.cookies.get("demoMode")?.value === "true";
+
+    if (!supabaseUrl || !supabaseAnonKey || demoMode) {
+        // In demo mode or without Supabase keys, allow traffic
         return supabaseResponse;
     }
 

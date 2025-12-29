@@ -28,33 +28,52 @@ export default function LoginPage() {
     const [isDemoMode, setIsDemoMode] = useState(false);
 
     const supabase = createBrowserClient();
-
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Simplified Demo Login Fix
+        if (email === "demo@chartspark.com" || isDemoMode) {
+            setIsLoading(true); // Set loading state for demo as well
+            localStorage.setItem('demoMode', 'true');
+            // Set cookie for middleware bypass
+            document.cookie = "demoMode=true; path=/";
+
+            setTimeout(() => {
+                setIsLoading(false);
+                router.push(redirectPath);
+            }, 500);
+            return;
+        }
+
         setIsLoading(true);
         setError(null);
 
         // In a real app with configured Supabase:
         if (supabase) {
-            /*
-            const { error } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-        
-            if (error) {
-              setError(error.message);
-              setIsLoading(false);
-              return;
+            try {
+                const { error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (error) {
+                    setError(error.message);
+                    setIsLoading(false);
+                    return;
+                }
+
+                router.push(redirectPath);
+                return;
+            } catch (err) {
+                console.error("Auth error:", err);
             }
-            */
         }
 
-        // Demo simulation for verification
+        // Fallback or failed login for non-demo items
         setTimeout(() => {
             setIsLoading(false);
-            router.push(redirectPath);
-        }, 1500);
+            setError("Invalid credentials for this demo environment.");
+        }, 1200);
     };
 
     return (
@@ -131,7 +150,7 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors z-10"
                                 >
                                     {showPassword ? (
                                         <EyeOff className="h-5 w-5" />
@@ -182,8 +201,9 @@ export default function LoginPage() {
                     <button
                         type="button"
                         onClick={() => {
-                            setEmail("sarah.k@wellness-psychiatry.com");
-                            setPassword("password123");
+                            setEmail("demo@chartspark.com");
+                            setPassword("demo123");
+                            setIsDemoMode(true);
                         }}
                         className="text-xs text-primary hover:underline font-bold"
                     >
