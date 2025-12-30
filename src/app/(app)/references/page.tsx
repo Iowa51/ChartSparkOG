@@ -3,7 +3,45 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Header } from "@/components/layout";
-import { Search, BookOpen, Pill, AlertTriangle, FileText, ExternalLink, X, ChevronRight, Info, Sparkles } from "lucide-react";
+import { Search, BookOpen, Pill, AlertTriangle, FileText, ExternalLink, X, ChevronRight, Info, Sparkles, Bell, ClipboardList } from "lucide-react";
+
+const referenceData = {
+    drugInteractions: `Common Psychiatric Medication Interactions:
+
+- Sertraline + MAOIs: SEVERE - Risk of serotonin syndrome. Contraindicated.
+- Lithium + NSAIDs: Moderate - May increase lithium levels. Monitor closely.
+- Benzodiazepines + Alcohol: SEVERE - Respiratory depression risk.
+- SSRIs + Triptans: Moderate - Serotonin syndrome risk. Use with caution.
+- Antipsychotics + Anticholinergics: Moderate - May increase side effects.`,
+
+    safetyAlerts: `FDA Safety Alerts:
+
+- Antidepressants: Black box warning for increased suicide risk in adolescents and young adults under 25.
+- Antipsychotics: Increased mortality risk in elderly patients with dementia-related psychosis.
+- Benzodiazepines: Risk of dependence and withdrawal. Use caution with long-term prescribing.
+- Stimulants: Cardiovascular screening recommended before initiation.`,
+
+    guidelines: `APA Practice Guidelines:
+
+- Major Depressive Disorder: First-line treatments include SSRIs, SNRIs, and evidence-based psychotherapy (CBT, IPT).
+- Assessment should include suicide risk screening at every visit using validated tools (PHQ-9, C-SSRS).
+- Monitor treatment response every 2-4 weeks during acute phase.
+- Consider medication changes if no response after 4-6 weeks.`,
+
+    diagnostic: `DSM-5 Criteria - Major Depressive Episode:
+
+Requires 5+ of the following symptoms for 2+ weeks, with at least one being (1) or (2):
+
+1. Depressed mood most of the day
+2. Markedly diminished interest or pleasure
+3. Significant weight change or appetite disturbance
+4. Sleep disturbance (insomnia or hypersomnia)
+5. Psychomotor agitation or retardation
+6. Fatigue or loss of energy
+7. Feelings of worthlessness or excessive guilt
+8. Diminished ability to concentrate
+9. Recurrent thoughts of death or suicidal ideation`
+};
 
 const referenceCategories = [
     {
@@ -56,8 +94,21 @@ const referenceCategories = [
     },
 ];
 
+const quickLinks = [
+    { name: "DSM-5 Online", url: "https://dsm.psychiatryonline.org", external: true },
+    { name: "Epocrates Drug Reference", url: "https://online.epocrates.com", external: true },
+    { name: "UpToDate", url: "https://www.uptodate.com", external: true },
+    { name: "Medscape", url: "https://www.medscape.com", external: true },
+    { name: "PubMed", url: "https://pubmed.ncbi.nlm.nih.gov", external: true },
+    { name: "CDC Mental Health", url: "https://www.cdc.gov/mentalhealth", external: true },
+    { name: "SAMHSA", url: "https://www.samhsa.gov", external: true },
+    { name: "NIMH", url: "https://www.nimh.nih.gov", external: true },
+    { name: "Crisis Resources", href: "/references/crisis", external: false },
+];
+
 export default function ReferencesPage() {
     const [selectedItem, setSelectedItem] = useState<{ category: string, item: string, details: string } | null>(null);
+    const [selectedReference, setSelectedReference] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
 
     const filteredCategories = referenceCategories.map(cat => ({
@@ -122,6 +173,61 @@ export default function ReferencesPage() {
                     </div>
                 </div>
 
+                {/* Reference Bubbles Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                    <button
+                        onClick={() => setSelectedReference('drugInteractions')}
+                        className="flex flex-col items-center justify-center gap-3 p-6 bg-card border border-border rounded-3xl hover:border-orange-500/50 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 transition-all group active:scale-95"
+                    >
+                        <div className="h-12 w-12 rounded-2xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
+                            <AlertTriangle className="h-6 w-6" />
+                        </div>
+                        <div className="text-center">
+                            <p className="font-bold text-foreground">Drug Interactions</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Common psychiatric meds</p>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => setSelectedReference('safetyAlerts')}
+                        className="flex flex-col items-center justify-center gap-3 p-6 bg-card border border-border rounded-3xl hover:border-red-500/50 hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all group active:scale-95"
+                    >
+                        <div className="h-12 w-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                            <Bell className="h-6 w-6" />
+                        </div>
+                        <div className="text-center">
+                            <p className="font-bold text-foreground">Safety Alerts</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">FDA Warnings & Updates</p>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => setSelectedReference('guidelines')}
+                        className="flex flex-col items-center justify-center gap-3 p-6 bg-card border border-border rounded-3xl hover:border-blue-500/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all group active:scale-95"
+                    >
+                        <div className="h-12 w-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                            <FileText className="h-6 w-6" />
+                        </div>
+                        <div className="text-center">
+                            <p className="font-bold text-foreground">Clinical Guidelines</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">APA Practice Standards</p>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => setSelectedReference('diagnostic')}
+                        className="flex flex-col items-center justify-center gap-3 p-6 bg-card border border-border rounded-3xl hover:border-green-500/50 hover:bg-green-50/50 dark:hover:bg-green-950/20 transition-all group active:scale-95"
+                    >
+                        <div className="h-12 w-12 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-500 group-hover:scale-110 transition-transform">
+                            <ClipboardList className="h-6 w-6" />
+                        </div>
+                        <div className="text-center">
+                            <p className="font-bold text-foreground">Diagnostic Criteria</p>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">DSM-5 Reference</p>
+                        </div>
+                    </button>
+                </div>
+
                 {/* Reference Categories */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {filteredCategories.map((category) => {
@@ -163,7 +269,6 @@ export default function ReferencesPage() {
                     })}
                 </div>
 
-                {/* Quick Links */}
                 <div className="p-8 bg-slate-900 rounded-[2rem] border border-slate-800 shadow-2xl overflow-hidden relative group">
                     <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
                         <BookOpen className="h-24 w-24 text-white" />
@@ -174,14 +279,7 @@ export default function ReferencesPage() {
                             <h4 className="font-black text-white uppercase tracking-[0.2em] text-xs">Essential Clinical Shortcuts</h4>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[
-                                { name: "Drug Interactions (Lexicomp)", url: "https://www.wolterskluwer.com/en/solutions/lexicomp", external: true },
-                                { name: "APA Practice Guidelines", url: "https://www.psychiatry.org/psychiatrists/practice/clinical-practice-guidelines", external: true },
-                                { name: "FDA Black Box Search", url: "https://www.accessdata.fda.gov/scripts/cder/daf/", external: true },
-                                { name: "Clozapine REMS Portal", url: "https://www.clozapinerems.com/", external: true },
-                                { name: "ICD-10 Browser", url: "https://icd10cmtool.cdc.gov/", external: true },
-                                { name: "Lab Reference Ranges", href: "/references/labs", external: false }
-                            ].map((link) => (
+                            {quickLinks.map((link) => (
                                 link.external ? (
                                     <a
                                         key={link.name}
@@ -235,6 +333,53 @@ export default function ReferencesPage() {
                                 </button>
                                 <button className="flex-1 bg-muted font-bold py-3 rounded-xl hover:bg-muted/80 transition-all">
                                     Full Reference
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal for Featured References */}
+            {selectedReference && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setSelectedReference(null)}
+                >
+                    <div
+                        className="bg-card w-full max-w-2xl rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6 border-b border-border flex justify-between items-center bg-muted/30">
+                            <div>
+                                <h3 className="text-xl font-bold text-foreground">
+                                    {selectedReference === 'drugInteractions' && "Drug Interactions Database"}
+                                    {selectedReference === 'safetyAlerts' && "FDA Safety Alerts"}
+                                    {selectedReference === 'guidelines' && "Clinical Practice Guidelines"}
+                                    {selectedReference === 'diagnostic' && "DSM-5 Diagnostic Criteria"}
+                                </h3>
+                            </div>
+                            <button
+                                onClick={() => setSelectedReference(null)}
+                                className="p-2 rounded-full hover:bg-muted text-muted-foreground transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="p-8 overflow-y-auto">
+                            <div className="whitespace-pre-line text-sm leading-relaxed text-foreground/90 bg-muted/30 p-6 rounded-2xl border border-border/50">
+                                {referenceData[selectedReference as keyof typeof referenceData]}
+                            </div>
+                            <div className="flex gap-3 mt-8">
+                                <button
+                                    onClick={() => setSelectedReference(null)}
+                                    className="flex-1 bg-primary text-primary-foreground font-bold py-3 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                                >
+                                    Done Resolving
+                                </button>
+                                <button className="flex-1 bg-muted font-bold py-3 rounded-xl hover:bg-muted/80 transition-all flex items-center justify-center gap-2">
+                                    <ExternalLink className="h-4 w-4" />
+                                    View Source
                                 </button>
                             </div>
                         </div>

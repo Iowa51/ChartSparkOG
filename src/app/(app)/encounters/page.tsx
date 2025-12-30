@@ -14,6 +14,7 @@ import {
     Clock,
     CheckCircle,
     AlertCircle,
+    X,
 } from "lucide-react";
 import { encounters } from "@/lib/demo-data/encounters";
 import { patients } from "@/lib/demo-data/patients";
@@ -40,14 +41,22 @@ const statusStyles = {
 export default function EncountersPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
     const filteredEncounters = encounters.filter(e => {
         const patient = patients.find(p => p.id === e.patientId);
         const matchesSearch = patient?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             e.chiefComplaint.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = !statusFilter || e.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesType = !typeFilter || e.type.toLowerCase().includes(typeFilter.toLowerCase());
+        return matchesSearch && matchesStatus && matchesType;
     });
+
+    const resetFilters = () => {
+        setSearchQuery("");
+        setStatusFilter(null);
+        setTypeFilter(null);
+    };
 
     return (
         <>
@@ -60,47 +69,84 @@ export default function EncountersPage() {
                 ]}
             />
 
-            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
+            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* Controls Toolbar */}
-                <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-stretch md:items-center">
-                    {/* Search */}
-                    <div className="relative flex-1 max-w-lg text-sm">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-muted-foreground" />
+                <div className="flex flex-col gap-4 mb-6 bg-card/40 p-4 rounded-2xl border border-border/50 backdrop-blur-sm shadow-sm ring-1 ring-border/5">
+                    <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+                        {/* Search */}
+                        <div className="relative flex-1 max-w-lg text-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search by patient or concern..."
+                                className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-card text-foreground shadow-sm ring-1 ring-inset ring-border placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-primary transition-all focus:shadow-md"
+                            />
                         </div>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search by patient or concern..."
-                            className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-card text-foreground shadow-sm ring-1 ring-inset ring-border placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-primary transition-shadow"
-                        />
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center bg-muted/50 rounded-xl p-1 border border-border/50">
+                                {["Scheduled", "In Progress", "Completed"].map((s) => (
+                                    <button
+                                        key={s}
+                                        onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
+                                            ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-border/10"
+                                            : "text-muted-foreground hover:text-foreground"
+                                            }`}
+                                    >
+                                        {s}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <Link
+                                href="/encounters/new"
+                                className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg whitespace-nowrap"
+                            >
+                                <Plus className="h-5 w-5" />
+                                <span>New Encounter</span>
+                            </Link>
+                        </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center bg-muted/50 rounded-xl p-1">
-                            {["Scheduled", "In Progress", "Completed"].map((s) => (
-                                <button
-                                    key={s}
-                                    onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
-                                        ? "bg-white dark:bg-slate-800 text-primary shadow-sm"
-                                        : "text-muted-foreground hover:text-foreground"
-                                        }`}
-                                >
-                                    {s}
-                                </button>
-                            ))}
+                    {/* Secondary Filters */}
+                    <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-border/50">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Type:</span>
+                            <select
+                                value={typeFilter || ""}
+                                onChange={(e) => setTypeFilter(e.target.value || null)}
+                                className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer hover:text-primary transition-colors"
+                            >
+                                <option value="">All Types</option>
+                                <option value="Initial">Initial Consultation</option>
+                                <option value="Follow-up">Follow-up Visit</option>
+                                <option value="Medication">Medication Review</option>
+                                <option value="Therapy">Therapy Session</option>
+                            </select>
                         </div>
 
-                        <Link
-                            href="/encounters/new"
-                            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg whitespace-nowrap"
-                        >
-                            <Plus className="h-5 w-5" />
-                            <span>New Encounter</span>
-                        </Link>
+                        <div className="h-4 w-px bg-border" />
+
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Provider:</span>
+                            <span className="text-xs font-bold text-foreground">Dr. Sarah K.</span>
+                        </div>
+
+                        {(searchQuery || statusFilter || typeFilter) && (
+                            <button
+                                onClick={resetFilters}
+                                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-red-500 transition-colors bg-muted/30 rounded-lg border border-border/50"
+                            >
+                                <X className="h-3 w-3" />
+                                Clear Filters
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -131,7 +177,7 @@ export default function EncountersPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {encounters.map((encounter) => {
+                                {filteredEncounters.map((encounter) => {
                                     const statusConfig = statusStyles[encounter.status];
                                     return (
                                         <tr

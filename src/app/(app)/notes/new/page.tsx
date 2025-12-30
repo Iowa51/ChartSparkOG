@@ -30,6 +30,7 @@ export default function NewNotePage() {
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+    const [isRecordingVisible, setIsRecordingVisible] = useState(true);
     const [showTranscript, setShowTranscript] = useState(true);
     const [autoSaved, setAutoSaved] = useState<string | null>(null);
 
@@ -220,58 +221,107 @@ export default function NewNotePage() {
                     {showTranscript && (
                         <aside className="flex flex-col w-full md:w-[400px] lg:w-[460px] gap-6 shrink-0 flex-none h-full overflow-hidden">
                             {/* Input Clinical Hub */}
-                            <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0 transition-all">
+                            <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0 transition-all duration-500">
                                 <div className="px-5 py-3 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
                                     <h3 className="text-[10px] font-black text-foreground flex items-center gap-2 uppercase tracking-[0.2em] opacity-70">
                                         <Sparkles className="h-3.5 w-3.5 text-primary" />
                                         Intelligence Input Hub
                                     </h3>
-                                    <button
-                                        onClick={() => setShowTranscript(false)}
-                                        className="group p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all flex items-center gap-2"
-                                        title="Collapse Sidebar"
-                                    >
-                                        <span className="text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Collapse</span>
-                                        <ArrowLeft className="h-4 w-4" />
-                                    </button>
-                                </div>
-                                <div className="p-5 space-y-4">
-                                    <div className="relative group">
-                                        <textarea
-                                            value={clinicianInput}
-                                            onChange={(e) => setClinicianInput(e.target.value)}
-                                            placeholder="Type session highlights, patient quotes, or clinical observations here..."
-                                            className="w-full h-32 p-4 bg-muted/20 hover:bg-muted/30 rounded-2xl border border-border text-sm leading-relaxed focus:bg-card focus:ring-4 focus:ring-primary/5 transition-all resize-none outline-none font-medium placeholder:italic"
-                                        />
-                                        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <span className="text-[10px] font-bold text-muted-foreground bg-card/80 backdrop-blur px-2 py-1 rounded-lg border border-border">
-                                                {clinicianInput.length} chars
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1">
+                                        {isRecordingVisible && (
+                                            <button
+                                                onClick={() => setIsRecordingVisible(false)}
+                                                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
+                                                title="Collapse Hub"
+                                            >
+                                                Hide
+                                                <ArrowLeft className="h-4 w-4 rotate-90" />
+                                            </button>
+                                        )}
                                         <button
-                                            onClick={() => setIsRecording(!isRecording)}
-                                            className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
-                                                ? "bg-red-500 text-white shadow-red-500/20 animate-pulse ring-4 ring-red-500/10"
-                                                : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
-                                                }`}
+                                            onClick={() => setShowTranscript(false)}
+                                            className="group p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all flex items-center gap-2"
+                                            title="Collapse Sidebar"
                                         >
-                                            {isRecording ? (
-                                                <>
-                                                    <MicOff className="h-4 w-4" />
-                                                    Stop Scribe
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Mic className="h-4 w-4" />
-                                                    Start AI Scribe
-                                                </>
-                                            )}
+                                            <span className="text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Full Collapse</span>
+                                            <ArrowLeft className="h-4 w-4" />
                                         </button>
                                     </div>
                                 </div>
+
+                                {isRecordingVisible ? (
+                                    <div className="p-5 space-y-6 animate-in slide-in-from-top-4 duration-300">
+                                        {/* Manual Input Section */}
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between ml-1">
+                                                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                                                    Manual Observation Input
+                                                </label>
+                                                <span className="text-[10px] font-bold text-muted-foreground opacity-50">
+                                                    {clinicianInput.length} characters
+                                                </span>
+                                            </div>
+                                            <div className="relative group">
+                                                <textarea
+                                                    value={clinicianInput}
+                                                    onChange={(e) => setClinicianInput(e.target.value)}
+                                                    placeholder="Type session highlights, patient quotes, or clinical observations here..."
+                                                    className="w-full h-32 p-4 bg-muted/20 hover:bg-muted/30 rounded-2xl border border-border text-sm leading-relaxed focus:bg-card focus:ring-4 focus:ring-primary/5 transition-all resize-none outline-none font-medium placeholder:italic"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={handleGenerateNote}
+                                                disabled={isGenerating || !clinicianInput}
+                                                className="w-full py-2 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-border flex items-center justify-center gap-2"
+                                            >
+                                                <Sparkles className="h-3.5 w-3.5" />
+                                                Process Typed History
+                                            </button>
+                                        </div>
+
+                                        <div className="relative flex items-center gap-4 py-2">
+                                            <div className="flex-1 h-px bg-border" />
+                                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-30">OR</span>
+                                            <div className="flex-1 h-px bg-border" />
+                                        </div>
+
+                                        {/* Voice Section */}
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">
+                                                Voice Scribe
+                                            </label>
+                                            <button
+                                                onClick={() => setIsRecording(!isRecording)}
+                                                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
+                                                    ? "bg-red-500 text-white shadow-red-500/20 animate-pulse ring-4 ring-red-500/10"
+                                                    : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
+                                                    }`}
+                                            >
+                                                {isRecording ? (
+                                                    <>
+                                                        <MicOff className="h-4 w-4" />
+                                                        Stop Scribe
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Mic className="h-4 w-4" />
+                                                        Start AI Scribe
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-4 flex items-center justify-center animate-in fade-in duration-300">
+                                        <button
+                                            onClick={() => setIsRecordingVisible(true)}
+                                            className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-primary/40 bg-primary/5 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all"
+                                        >
+                                            <Mic className="h-4 w-4" />
+                                            Show Recording Panel
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
 

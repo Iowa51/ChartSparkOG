@@ -72,41 +72,49 @@ export function Header({ title, description, breadcrumbs, actions }: HeaderProps
                         {/* Notifications */}
                         <div className="relative" id="notifications-menu" ref={notificationRef}>
                             <button
-                                onClick={() => setShowNotifications(!showNotifications)}
-                                className={`relative flex items-center justify-center h-10 w-10 rounded-xl transition-colors ${showNotifications ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowNotifications(!showNotifications);
+                                }}
+                                className={`relative flex items-center justify-center h-10 w-10 rounded-xl transition-all shadow-sm ${showNotifications ? 'bg-primary text-primary-foreground scale-105' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border/50'}`}
                             >
                                 <Bell className="h-5 w-5" />
-                                <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-surface" />
+                                <span className={`absolute top-2.5 right-2.5 h-2 w-2 rounded-full ring-2 ring-surface transition-colors ${showNotifications ? 'bg-white' : 'bg-red-500'}`} />
                             </button>
 
                             {showNotifications && (
-                                <div className="absolute right-0 mt-2 w-80 bg-card rounded-2xl border border-border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                                    <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between">
-                                        <h3 className="text-sm font-bold">Notifications</h3>
-                                        <button className="text-[10px] text-primary font-bold hover:underline">Mark all as read</button>
+                                <div className="absolute right-0 mt-3 w-80 bg-card rounded-2xl border border-border shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300 ring-1 ring-black/5">
+                                    <div className="px-5 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
+                                        <h3 className="text-sm font-black uppercase tracking-widest text-foreground/70">Notifications</h3>
+                                        <button className="text-[10px] text-primary font-black uppercase tracking-wider hover:underline">Mark all as read</button>
                                     </div>
-                                    <div className="max-h-[320px] overflow-y-auto divide-y divide-border">
+                                    <div className="max-h-[380px] overflow-y-auto divide-y divide-border custom-scrollbar">
                                         {[
-                                            { id: 1, title: "New Lab Results", desc: "John Doe's metabolic panel is ready for review.", time: "10m ago", icon: AlertCircle, color: "text-amber-500 bg-amber-50" },
-                                            { id: 2, title: "Note Signed", desc: "Your note for Maria Rodriguez has been electronically signed.", time: "1h ago", icon: CheckCircle, color: "text-emerald-500 bg-emerald-50" },
-                                            { id: 3, title: "New Message", desc: "You have a new secure message from Sarah (Admin).", time: "3h ago", icon: MessageSquare, color: "text-blue-500 bg-blue-50" },
+                                            { id: 1, title: "New Patient Registered", desc: "Sarah Johnson", time: "5 min ago", icon: AlertCircle, color: "text-blue-500 bg-blue-50" },
+                                            { id: 2, title: "Appointment Reminder", desc: "Michael Chen at 2:00 PM today", time: "1h ago", icon: CheckCircle, color: "text-emerald-500 bg-emerald-50" },
+                                            { id: 3, title: "Billing Payment Received", desc: "$450.00 - Coastal Mental Health", time: "3h ago", icon: MessageSquare, color: "text-amber-500 bg-amber-50" },
+                                            { id: 4, title: "System Update", desc: "AI Engine upgraded to v2.4 (Clinical Compliance focus)", time: "5h ago", icon: Bell, color: "text-primary bg-primary/5" },
                                         ].map((n) => (
                                             <div key={n.id} className="p-4 hover:bg-muted/30 transition-colors cursor-pointer group">
-                                                <div className="flex gap-3">
-                                                    <div className={`p-2 rounded-lg shrink-0 ${n.color} dark:bg-opacity-10`}>
+                                                <div className="flex gap-4">
+                                                    <div className={`p-2.5 rounded-xl shrink-0 ${n.color} dark:bg-opacity-10 border border-current/10 shadow-sm`}>
                                                         <n.icon className="h-4 w-4" />
                                                     </div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{n.title}</p>
-                                                        <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{n.desc}</p>
-                                                        <p className="text-[10px] text-muted-foreground mt-1 font-medium">{n.time}</p>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <p className="text-xs font-black text-foreground group-hover:text-primary transition-colors truncate uppercase tracking-tight">{n.title}</p>
+                                                            <span className="text-[9px] font-bold text-muted-foreground whitespace-nowrap">{n.time}</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 font-medium">{n.desc}</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="px-4 py-3 border-t border-border bg-muted/10 text-center">
-                                        <Link href="/notifications" className="text-xs font-bold text-primary hover:underline">View all notifications</Link>
+                                    <div className="px-4 py-3 border-t border-border bg-muted/10">
+                                        <Link href="/notifications" className="block w-full py-2 text-[10px] font-black uppercase tracking-[0.2em] text-center text-primary hover:bg-primary/5 transition-colors rounded-lg">
+                                            View all activity
+                                        </Link>
                                     </div>
                                 </div>
                             )}

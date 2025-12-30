@@ -11,8 +11,10 @@ import {
     Edit,
     ChevronLeft,
     ChevronRight,
+    X,
+    CheckCircle2
 } from "lucide-react";
-import { patients } from "@/lib/demo-data/patients";
+import { patients as initialPatients, Patient } from "@/lib/demo-data/patients";
 
 
 const statusStyles = {
@@ -28,15 +30,39 @@ const statusDots = {
 };
 
 export default function PatientsPage() {
+    const [localPatients, setLocalPatients] = useState<Patient[]>(initialPatients);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
 
-    const filteredPatients = patients.filter(p => {
+    const filteredPatients = localPatients.filter(p => {
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.mrn.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = !statusFilter || p.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
+
+    const handleUpdatePatient = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        if (!editingPatient) return;
+
+        const updatedPatient = {
+            ...editingPatient,
+            name: formData.get("name") as string,
+            email: formData.get("email") as string,
+            phone: formData.get("phone") as string,
+            dob: formData.get("dob") as string,
+        };
+
+        setLocalPatients(prev => prev.map(p => p.id === updatedPatient.id ? updatedPatient : p));
+
+        setEditingPatient(null);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+    };
 
     return (
         <>
@@ -67,14 +93,14 @@ export default function PatientsPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center bg-muted/50 rounded-xl p-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center bg-muted/50 rounded-xl p-1 border border-border/50">
                             {["Active", "Pending", "Inactive"].map((s) => (
                                 <button
                                     key={s}
                                     onClick={() => setStatusFilter(statusFilter === s ? null : s)}
                                     className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
-                                        ? "bg-white dark:bg-slate-800 text-primary shadow-sm"
+                                        ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-border/10"
                                         : "text-muted-foreground hover:text-foreground"
                                         }`}
                                 >
@@ -82,6 +108,19 @@ export default function PatientsPage() {
                                 </button>
                             ))}
                         </div>
+
+                        {(searchQuery || statusFilter) && (
+                            <button
+                                onClick={() => {
+                                    setSearchQuery("");
+                                    setStatusFilter(null);
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-red-500 transition-colors bg-muted/30 rounded-xl border border-border/50"
+                            >
+                                <X className="h-3 w-3" />
+                                Clear
+                            </button>
+                        )}
 
                         <Link
                             href="/patients/new"
@@ -120,7 +159,7 @@ export default function PatientsPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {patients.map((patient) => (
+                                {filteredPatients.map((patient) => (
                                     <tr
                                         key={patient.id}
                                         className="group hover:bg-accent/50 transition-colors cursor-pointer"
@@ -179,13 +218,16 @@ export default function PatientsPage() {
                                                 >
                                                     <Eye className="h-5 w-5" />
                                                 </Link>
-                                                <Link
-                                                    href={`/patients/${patient.id}/edit`}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingPatient(patient);
+                                                    }}
                                                     className="p-2 text-muted-foreground hover:text-primary hover:bg-accent rounded-lg transition-colors"
                                                     title="Edit Patient"
                                                 >
                                                     <Edit className="h-5 w-5" />
-                                                </Link>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -198,7 +240,7 @@ export default function PatientsPage() {
                     <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-card">
                         <p className="text-sm text-muted-foreground">
                             Showing <span className="font-medium text-foreground">{filteredPatients.length}</span> of{" "}
-                            <span className="font-medium text-foreground">{patients.length}</span> patients
+                            <span className="font-medium text-foreground">{localPatients.length}</span> patients
                         </p>
                         <div className="flex items-center gap-2">
                             <button
@@ -214,6 +256,109 @@ export default function PatientsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Edit Patient Modal */}
+            {editingPatient && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-card w-full max-w-lg rounded-3xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+                        {/* Modal Header */}
+                        <div className="px-8 py-6 border-b border-border flex items-center justify-between bg-muted/30">
+                            <div>
+                                <h2 className="text-xl font-bold text-foreground">Edit Patient Profile</h2>
+                                <p className="text-sm text-muted-foreground mt-1">Update demographic and contact information.</p>
+                            </div>
+                            <button
+                                onClick={() => setEditingPatient(null)}
+                                className="p-2 hover:bg-muted rounded-xl transition-colors text-muted-foreground hover:text-foreground"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <form onSubmit={handleUpdatePatient} className="p-8 space-y-6">
+                            <div className="grid grid-cols-1 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+                                    <input
+                                        name="name"
+                                        defaultValue={editingPatient.name}
+                                        required
+                                        className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Date of Birth</label>
+                                        <input
+                                            name="dob"
+                                            type="text"
+                                            defaultValue={editingPatient.dob}
+                                            required
+                                            className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">MRN</label>
+                                        <input
+                                            value={editingPatient.mrn}
+                                            disabled
+                                            className="w-full px-4 py-3 bg-muted/10 border border-border rounded-xl text-muted-foreground cursor-not-allowed font-mono text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
+                                    <input
+                                        name="email"
+                                        type="email"
+                                        defaultValue={editingPatient.email}
+                                        className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Phone Number</label>
+                                    <input
+                                        name="phone"
+                                        defaultValue={editingPatient.phone}
+                                        className="w-full px-4 py-3 bg-muted/20 border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingPatient(null)}
+                                    className="flex-1 px-6 py-3 border border-border hover:bg-muted text-foreground rounded-xl font-bold transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-[2] px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Success Toast */}
+            {showSuccess && (
+                <div className="fixed bottom-8 right-8 z-[60] animate-in slide-in-from-right-10 fade-in duration-500">
+                    <div className="bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span className="font-bold">Patient updated successfully!</span>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

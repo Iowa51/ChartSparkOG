@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout";
 import {
     Search,
@@ -16,6 +17,7 @@ import {
     Download,
     BarChart3,
     Percent,
+    X,
 } from "lucide-react";
 import {
     currentUserBillingStats,
@@ -36,11 +38,54 @@ function formatCurrency(amount: number): string {
 }
 
 // USER View Component
-function UserBillingView() {
+function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
     const stats = currentUserBillingStats;
     const topCodes = Object.entries(stats.codes_used)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5);
+
+    const [statusFilter, setStatusFilter] = useState<string | null>(isPendingOnly ? "Pending" : null);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const allClaims = [
+        { id: "C-1004", patient: "Arthur Smith", service: "T2DM Management", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
+        { id: "C-1005", patient: "John Doe", service: "Acute Pharyngitis", date: "Today", amount: 165.00, status: "Missing ICD-10", type: "Pending" },
+        { id: "C-1001", patient: "Maria Rodriguez", service: "Hypertension F/U", date: "Oct 20, 2023", amount: 150.00, status: "Paid", type: "Paid" },
+        { id: "C-1002", patient: "James Wilson", service: "Mental Health Session", date: "Oct 15, 2023", amount: 200.00, status: "Overdue", type: "Overdue" },
+        { id: "C-1003", patient: "Linda Blane", service: "Initial Consultation", date: "Oct 12, 2023", amount: 250.00, status: "Paid", type: "Paid" },
+    ];
+
+    const filteredClaims = allClaims.filter(c => {
+        const matchesStatus = !statusFilter || c.type === statusFilter;
+        const matchesSearch = c.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.id.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesStatus && matchesSearch;
+    });
+
+    const exportToCSV = () => {
+        const headers = ["Invoice ID", "Patient", "Service", "Date", "Amount", "Status"];
+        const rows = filteredClaims.map(c => [
+            c.id,
+            c.patient,
+            c.service,
+            c.date,
+            c.amount,
+            c.status
+        ]);
+
+        const csv = [
+            headers.join(","),
+            ...rows.map(row => row.join(","))
+        ].join("\n");
+
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `billing_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
 
     return (
         <div className="space-y-6">
@@ -83,25 +128,118 @@ function UserBillingView() {
                 </div>
             </div>
 
-            {/* CPT Codes Used */}
-            <div className="bg-card rounded-xl p-6 border border-border">
-                <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    Most Used Billing Codes
-                </h3>
-                <div className="space-y-3">
-                    {topCodes.map(([code, count]) => (
-                        <div key={code} className="flex items-center gap-4">
-                            <span className="font-mono text-sm font-semibold text-foreground w-16">{code}</span>
-                            <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-primary rounded-full transition-all"
-                                    style={{ width: `${(count / Math.max(...Object.values(stats.codes_used))) * 100}%` }}
-                                />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* CPT Codes Used */}
+                <div className="bg-card rounded-xl p-6 border border-border h-full">
+                    <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-primary" />
+                        Top Codes
+                    </h3>
+                    <div className="space-y-4">
+                        {topCodes.map(([code, count]) => (
+                            <div key={code} className="space-y-1">
+                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                    <span>{code}</span>
+                                    <span>{count} uses</span>
+                                </div>
+                                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-primary rounded-full"
+                                        style={{ width: `${(count / Math.max(...Object.values(stats.codes_used))) * 100}%` }}
+                                    />
+                                </div>
                             </div>
-                            <span className="text-sm text-muted-foreground w-12 text-right">{count}</span>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Claims Filter & List */}
+                <div className="lg:col-span-2 space-y-4">
+                    <div className="bg-card rounded-xl border border-border p-4 flex flex-col md:flex-row gap-4 justify-between items-center shadow-sm">
+                        <div className="relative flex-1 w-full">
+                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Search claims or patients..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 bg-muted/20 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                            />
                         </div>
-                    ))}
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center bg-muted/50 rounded-xl p-1 border border-border/50">
+                                {["Pending", "Paid", "Overdue"].map((s) => (
+                                    <button
+                                        key={s}
+                                        onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
+                                            ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-border/10"
+                                            : "text-muted-foreground hover:text-foreground"
+                                            }`}
+                                    >
+                                        {s}
+                                    </button>
+                                ))}
+                            </div>
+                            {(statusFilter || searchQuery) && (
+                                <button
+                                    onClick={() => { setStatusFilter(null); setSearchQuery(""); }}
+                                    className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
+                                    title="Reset filters"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
+                            <button
+                                onClick={exportToCSV}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                            >
+                                <Download className="h-3.5 w-3.5" />
+                                Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className={`bg-card rounded-xl border border-border overflow-hidden shadow-sm`}>
+                        <div className="overflow-x-auto text-sm">
+                            <table className="min-w-full text-left">
+                                <thead className="bg-muted/50 border-b border-border">
+                                    <tr>
+                                        <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">ID</th>
+                                        <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Patient</th>
+                                        <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-right">Amount</th>
+                                        <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {filteredClaims.length > 0 ? filteredClaims.map((claim) => (
+                                        <tr key={claim.id} className="hover:bg-muted/30 transition-colors group">
+                                            <td className="px-6 py-4 font-mono text-xs text-muted-foreground">{claim.id}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-foreground">{claim.patient}</div>
+                                                <div className="text-[10px] text-muted-foreground uppercase">{claim.service}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-black text-foreground">{formatCurrency(claim.amount)}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${claim.type === "Pending" ? "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800" :
+                                                    claim.type === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800" :
+                                                        "bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+                                                    }`}>
+                                                    {claim.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground italic">
+                                                No claims found matching these filters.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -111,12 +249,15 @@ function UserBillingView() {
 // ADMIN View Component
 function AdminBillingView() {
     const [stats, setStats] = useState(orgBillingStats);
-    const [filterQuery, setFilterQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: "asc" | "desc" } | null>(null);
 
-    const filteredUsers = stats.users.filter(u =>
-        u.user_name.toLowerCase().includes(filterQuery.toLowerCase())
-    );
+    const filteredUsers = stats.users.filter(u => {
+        const matchesSearch = u.user_name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? u.notes_generated > 0 : u.notes_generated === 0);
+        return matchesSearch && matchesStatus;
+    });
 
     const sortedUsers = [...filteredUsers].sort((a, b) => {
         if (!sortConfig) return 0;
@@ -139,14 +280,26 @@ function AdminBillingView() {
     };
 
     const handleExport = () => {
-        alert("Exporting billing data to CSV...");
-        // Mock download
-        const blob = new Blob(["Name,Notes,Billing,Fees\n" + sortedUsers.map(u => `${u.user_name},${u.notes_generated},${u.billing_amount},${u.fee_amount}`).join("\n")], { type: 'text/csv' });
+        const headers = ["Provider", "Notes", "Billing Amount", "Fee Amount"];
+        const rows = sortedUsers.map(u => [
+            u.user_name,
+            u.notes_generated,
+            formatCurrency(u.billing_amount).replace('$', ''),
+            formatCurrency(u.fee_amount).replace('$', '')
+        ]);
+
+        const csv = [
+            headers.join(","),
+            ...rows.map(row => row.join(","))
+        ].join("\n");
+
+        const blob = new Blob([csv], { type: "text/csv" });
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        a.download = `billing-export-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `admin_billing_export_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
+        window.URL.revokeObjectURL(url);
     };
 
     return (
@@ -201,24 +354,46 @@ function AdminBillingView() {
 
             {/* User Breakdown Table */}
             <div className="bg-card rounded-xl border border-border overflow-hidden">
-                <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
-                    <h3 className="font-bold text-foreground">Team Billing Breakdown</h3>
-                    <div className="flex gap-2">
+                <div className="px-6 py-4 border-b border-border flex flex-wrap items-center justify-between gap-4 bg-muted/30">
+                    <h3 className="font-black uppercase tracking-widest text-xs text-muted-foreground mr-auto">Team Billing Breakdown</h3>
+                    <div className="flex flex-wrap items-center gap-3">
                         <div className="relative">
                             <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder="Search provider..."
-                                value={filterQuery}
-                                onChange={(e) => setFilterQuery(e.target.value)}
-                                className="pl-9 pr-3 py-1.5 text-sm bg-card border border-border rounded-lg focus:ring-1 focus:ring-primary outline-none"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-3 py-1.5 text-xs bg-card border border-border rounded-lg focus:ring-1 focus:ring-primary outline-none w-48"
                             />
                         </div>
+                        <div className="flex items-center gap-1 bg-muted p-1 rounded-lg border border-border">
+                            {["all", "active"].map((s) => (
+                                <button
+                                    key={s}
+                                    onClick={() => setStatusFilter(s)}
+                                    className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
+                                        ? "bg-card text-primary shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
+                                        }`}
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+                        {(searchQuery || statusFilter !== "all") && (
+                            <button
+                                onClick={() => { setSearchQuery(""); setStatusFilter("all"); }}
+                                className="p-1.5 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-red-50 transition-all"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
                         <button
                             onClick={handleExport}
-                            className="px-3 py-1.5 text-sm bg-card border border-border rounded-lg flex items-center gap-1 hover:bg-muted"
+                            className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest bg-primary text-primary-foreground rounded-lg flex items-center gap-2 hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
                         >
-                            <Download className="h-4 w-4" /> Export
+                            <Download className="h-3.5 w-3.5" /> Export CSV
                         </button>
                     </div>
                 </div>
@@ -252,8 +427,16 @@ function AdminBillingView() {
 // SUPER_ADMIN View Component
 function SuperAdminBillingView() {
     const [stats, setStats] = useState(platformBillingStats);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [orgStatusFilter, setOrgStatusFilter] = useState("all");
     const [editingFee, setEditingFee] = useState<string | null>(null);
     const [newFee, setNewFee] = useState<number>(0);
+
+    const filteredOrgs = stats.organizations.filter(org => {
+        const matchesSearch = org.organization_name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = orgStatusFilter === "all" || (orgStatusFilter === "high_volume" ? org.total_notes > 300 : org.total_notes <= 300);
+        return matchesSearch && matchesStatus;
+    });
 
     const handleEditFee = (orgId: string, currentFee: number) => {
         setEditingFee(orgId);
@@ -263,6 +446,30 @@ function SuperAdminBillingView() {
     const handleSaveFee = (orgId: string) => {
         alert(`Fee for org ${orgId} updated to ${newFee}%`);
         setEditingFee(null);
+    };
+
+    const handleExport = () => {
+        const headers = ["Organization", "Users", "Notes", "Billing", "Fees"];
+        const rows = filteredOrgs.map(org => [
+            org.organization_name,
+            org.total_users,
+            org.total_notes,
+            formatCurrency(org.total_billing).replace('$', ''),
+            formatCurrency(org.total_fees).replace('$', '')
+        ]);
+
+        const csv = [
+            headers.join(","),
+            ...rows.map(row => row.join(","))
+        ].join("\n");
+
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `platform_billing_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
     };
 
     return (
@@ -292,17 +499,49 @@ function SuperAdminBillingView() {
             </div>
 
             {/* Organizations Table */}
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
-                <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
-                    <h3 className="font-bold text-foreground flex items-center gap-2">
-                        <Building2 className="h-5 w-5" /> Organization Billing
+            <div className="bg-card rounded-xl border border-border overflow-hidden shardow-sm">
+                <div className="px-6 py-4 border-b border-border flex flex-wrap items-center justify-between gap-4 bg-muted/30">
+                    <h3 className="font-black uppercase tracking-widest text-xs text-muted-foreground mr-auto flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-primary" /> Organization Billing
                     </h3>
-                    <div className="flex gap-2">
-                        <button className="px-3 py-1.5 text-sm bg-card border border-border rounded-lg flex items-center gap-1">
-                            <Filter className="h-4 w-4" /> Filter
-                        </button>
-                        <button className="px-3 py-1.5 text-sm bg-card border border-border rounded-lg flex items-center gap-1">
-                            <Download className="h-4 w-4" /> Export
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="relative">
+                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Filter organizations..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-3 py-1.5 text-sm bg-card border border-border rounded-lg focus:ring-1 focus:ring-primary outline-none w-48"
+                            />
+                        </div>
+                        <div className="flex items-center gap-1 bg-muted p-1 rounded-lg border border-border">
+                            {["all", "high_volume"].map((s) => (
+                                <button
+                                    key={s}
+                                    onClick={() => setOrgStatusFilter(s)}
+                                    className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest transition-all ${orgStatusFilter === s
+                                        ? "bg-card text-primary shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
+                                        }`}
+                                >
+                                    {s === "all" ? "All" : "High Vol"}
+                                </button>
+                            ))}
+                        </div>
+                        {(searchQuery || orgStatusFilter !== "all") && (
+                            <button
+                                onClick={() => { setSearchQuery(""); setOrgStatusFilter("all"); }}
+                                className="p-1.5 text-muted-foreground hover:text-red-500 rounded-lg hover:bg-red-50 transition-all"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        )}
+                        <button
+                            onClick={handleExport}
+                            className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white rounded-lg flex items-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+                        >
+                            <Download className="h-3.5 w-3.5" /> Export CSV
                         </button>
                     </div>
                 </div>
@@ -317,15 +556,21 @@ function SuperAdminBillingView() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                        {stats.organizations.map((org) => (
-                            <tr key={org.organization_id} className="hover:bg-muted/30 cursor-pointer">
-                                <td className="px-6 py-4 font-medium text-foreground">{org.organization_name}</td>
+                        {filteredOrgs.length > 0 ? filteredOrgs.map((org) => (
+                            <tr key={org.organization_id} className="hover:bg-muted/30 cursor-pointer group transition-colors">
+                                <td className="px-6 py-4 font-bold text-foreground group-hover:text-primary transition-colors">{org.organization_name}</td>
                                 <td className="px-6 py-4 text-muted-foreground">{org.total_users}</td>
                                 <td className="px-6 py-4 text-muted-foreground">{org.total_notes}</td>
-                                <td className="px-6 py-4 font-semibold text-foreground">{formatCurrency(org.total_billing)}</td>
-                                <td className="px-6 py-4 text-emerald-600 font-medium">{formatCurrency(org.total_fees)}</td>
+                                <td className="px-6 py-4 font-black text-foreground">{formatCurrency(org.total_billing)}</td>
+                                <td className="px-6 py-4 text-emerald-600 font-black">{formatCurrency(org.total_fees)}</td>
                             </tr>
-                        ))}
+                        )) : (
+                            <tr>
+                                <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground italic">
+                                    No organizations matching your criteria.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -424,13 +669,13 @@ function SuperAdminBillingView() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                        {stats.organizations.map((org) => (
+                        {filteredOrgs.map((org) => (
                             <tr key={org.organization_id} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-6 py-4 font-medium text-foreground">{org.organization_name}</td>
+                                <td className="px-6 py-4 font-bold text-foreground">{org.organization_name}</td>
                                 <td className="px-6 py-4 text-muted-foreground">{org.total_users}</td>
                                 <td className="px-6 py-4 text-muted-foreground">{org.total_notes}</td>
-                                <td className="px-6 py-4 font-semibold text-foreground">{formatCurrency(org.total_billing)}</td>
-                                <td className="px-6 py-4 text-emerald-600 font-medium">{formatCurrency(org.total_fees)}</td>
+                                <td className="px-6 py-4 font-black text-foreground">{formatCurrency(org.total_billing)}</td>
+                                <td className="px-6 py-4 text-emerald-600 font-black">{formatCurrency(org.total_fees)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -440,7 +685,10 @@ function SuperAdminBillingView() {
     );
 }
 
-export default function BillingPage() {
+function BillingContent() {
+    const searchParams = useSearchParams();
+    const statusFilter = searchParams.get("status");
+    const isPendingOnly = statusFilter === "pending";
     const [currentRole, setCurrentRole] = useState<Role>(DEMO_ROLE);
 
     return (
@@ -484,11 +732,19 @@ export default function BillingPage() {
 
                 {/* Role-based Content */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    {currentRole === "USER" && <UserBillingView />}
+                    {currentRole === "USER" && <UserBillingView isPendingOnly={isPendingOnly} />}
                     {currentRole === "ADMIN" && <AdminBillingView />}
                     {currentRole === "SUPER_ADMIN" && <SuperAdminBillingView />}
                 </div>
             </div>
         </>
+    );
+}
+
+export default function BillingPage() {
+    return (
+        <Suspense fallback={<div>Loading billing...</div>}>
+            <BillingContent />
+        </Suspense>
     );
 }

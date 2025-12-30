@@ -41,10 +41,11 @@ export function DemoAuthGuard({ children }: { children: React.ReactNode }) {
             }
 
             // If neither, and we've given it a moment to stabilize
+            // Increased to 800ms to allow for session recovery on back button
             const timer = setTimeout(() => {
                 setIsAuthorized(false);
                 router.push("/login");
-            }, 200);
+            }, 800);
 
             return () => clearTimeout(timer);
         };

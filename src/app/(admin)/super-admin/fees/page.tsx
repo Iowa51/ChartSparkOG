@@ -23,6 +23,34 @@ export default function SuperAdminFeesPage() {
     const [editingOrg, setEditingOrg] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Platform Fee States
+    const [platformFee, setPlatformFee] = useState(1.0);
+    const [lastSavedFee, setLastSavedFee] = useState(1.0);
+    const [isEditingPlatform, setIsEditingPlatform] = useState(false);
+    const [isSavingPlatform, setIsSavingPlatform] = useState(false);
+
+    const handleSavePlatformFee = () => {
+        if (platformFee < 0 || platformFee > 100) {
+            alert("Fee must be between 0 and 100%");
+            return;
+        }
+
+        setIsSavingPlatform(true);
+
+        // Simulating DB Update
+        setTimeout(() => {
+            setLastSavedFee(platformFee);
+            setIsSavingPlatform(false);
+            setIsEditingPlatform(false);
+            alert("Global platform fee updated successfully!");
+        }, 800);
+    };
+
+    const handleCancelPlatformFee = () => {
+        setPlatformFee(lastSavedFee);
+        setIsEditingPlatform(false);
+    };
+
     const filteredConfigs = feeConfigurations.filter((c) =>
         c.org_name.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -98,43 +126,77 @@ export default function SuperAdminFeesPage() {
                     </div>
 
                     {/* Default Fee Settings */}
-                    <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 p-8 shadow-sm">
-                        <h2 className="text-xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">
-                            Global Revenue Policy
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                                    Default Service Fee
-                                </label>
-                                <div className="flex items-center gap-4">
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            defaultValue="1.0"
-                                            step="0.1"
-                                            min="0"
-                                            max="10"
-                                            className="w-32 px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white text-2xl font-black outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                        />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-400">%</span>
-                                    </div>
-                                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                                        <TrendingUp className="h-4 w-4" />
-                                        MAXIMIZING YIELD
-                                    </div>
+                    <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                        <div className="px-8 py-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 flex items-center justify-between">
+                            <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                Global Revenue Policy
+                            </h2>
+                            {!isEditingPlatform ? (
+                                <button
+                                    onClick={() => setIsEditingPlatform(true)}
+                                    className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                >
+                                    Edit Configuration
+                                </button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleCancelPlatformFee}
+                                        disabled={isSavingPlatform}
+                                        className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSavePlatformFee}
+                                        disabled={isSavingPlatform}
+                                        className="px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        {isSavingPlatform ? "Saving..." : "Save Changes"}
+                                    </button>
                                 </div>
-                                <p className="text-xs text-slate-400 font-medium">This rate is automatically inherited by all clinical organizations upon registration.</p>
-                            </div>
-                            <div className="space-y-4">
-                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
-                                    Default Collection Protocol
-                                </label>
-                                <select className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-bold appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all">
-                                    <option value="charge_separately">Invoice-based (Monthly Cycle)</option>
-                                    <option value="deduct_from_billing">Direct Ledger Deduction (Real-time)</option>
-                                </select>
-                                <p className="text-xs text-slate-400 font-medium">Determines how the platform captures its share of clinical revenue.</p>
+                            )}
+                        </div>
+                        <div className="p-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                        Default Service Fee
+                                    </label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={platformFee}
+                                                onChange={(e) => setPlatformFee(Number(e.target.value))}
+                                                disabled={!isEditingPlatform || isSavingPlatform}
+                                                step="0.1"
+                                                min="0"
+                                                max="100"
+                                                className={`w-32 px-5 py-4 bg-slate-50 dark:bg-slate-800 border ${isEditingPlatform ? 'border-primary ring-4 ring-primary/10 shadow-inner' : 'border-slate-200 dark:border-slate-700'} rounded-2xl text-slate-900 dark:text-white text-2xl font-black outline-none transition-all disabled:opacity-80`}
+                                            />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-400">%</span>
+                                        </div>
+                                        <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-xl text-[10px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+                                            <TrendingUp className="h-4 w-4" />
+                                            MAXIMIZING YIELD
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-slate-400 font-medium">This rate is automatically inherited by all clinical organizations upon registration.</p>
+                                </div>
+                                <div className="space-y-4">
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                                        Default Collection Protocol
+                                    </label>
+                                    <select
+                                        disabled={!isEditingPlatform || isSavingPlatform}
+                                        className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-bold appearance-none outline-none focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-80 cursor-not-allowed disabled:cursor-default"
+                                    >
+                                        <option value="charge_separately">Invoice-based (Monthly Cycle)</option>
+                                        <option value="deduct_from_billing">Direct Ledger Deduction (Real-time)</option>
+                                    </select>
+                                    <p className="text-xs text-slate-400 font-medium">Determines how the platform captures its share of clinical revenue.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
