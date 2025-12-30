@@ -70,6 +70,25 @@ Psychotherapy add-on: 16 minutes spent on supportive therapy and cognitive restr
             icd10: ["F32.1", "F41.1"],
         },
     },
+    "tpl-intake-eval": {
+        subjective: `Patient is a new referral presenting for a comprehensive bio-psychosocial assessment. John reports a long history of intermittent mood fluctuations, characterized by periods of low energy, social withdrawal, and lack of motivation. He notes these symptoms have worsened over the last 6 months following a significant career transition.
+
+John identifies as a cisgender male, currently living with his partner of 4 years. He describes his childhood as relatively stable but notes a distant relationship with his father. Family history is significant for maternal depression.
+
+Clinically, John appears well-groomed but exhibits a restricted affect. He is articulate and cooperative. No evidence of psychosis or active suicidal ideation is noted today. Insight is fair, and he is motivated to engage in both medication management and psychotherapy.`,
+        objective: `Detailed mental status exam performed. Speech is normal in rate and volume. Thought processes are linear and goal-directed. Insight and judgment appear intact for age and situation. Physical exam deferred to primary care.`,
+        assessment: `1. Major Depressive Disorder, recurrent, moderate (F33.1)
+2. Adjustment Disorder with depressed mood (F43.21)
+3. Occupational stress (Z56.9)`,
+        plan: `1. Initiate Sertraline 25mg daily for 7 days, then increase to 50mg daily.
+2. Refer for CBT focusing on career transition and cognitive restructuring.
+3. Schedule follow-up in 2 weeks for med check.
+4. Patient provided with crisis resources and emergency contacts.`,
+        suggestedCodes: {
+            cpt: ["90792"],
+            icd10: ["F33.1", "F43.21"],
+        },
+    },
 };
 
 export function generateDemoNote(templateId: string): typeof demoSOAPNotes[string] {

@@ -1,4 +1,7 @@
+"use client";
+
 import { Header } from "@/components/layout";
+import { useState } from "react";
 import Link from "next/link";
 import {
     Search,
@@ -25,6 +28,16 @@ const statusDots = {
 };
 
 export default function PatientsPage() {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+    const filteredPatients = patients.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.mrn.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = !statusFilter || p.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
     return (
         <>
             <Header
@@ -46,6 +59,8 @@ export default function PatientsPage() {
                         </div>
                         <input
                             type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search by Name, MRN, or DOB..."
                             className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-card text-foreground shadow-sm ring-1 ring-inset ring-border placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-primary text-sm transition-all focus:shadow-md"
                         />
@@ -53,14 +68,24 @@ export default function PatientsPage() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-colors shadow-sm">
-                            <Filter className="h-4 w-4" />
-                            <span>Filter</span>
-                        </button>
+                        <div className="flex items-center bg-muted/50 rounded-xl p-1">
+                            {["Active", "Pending", "Inactive"].map((s) => (
+                                <button
+                                    key={s}
+                                    onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
+                                        ? "bg-white dark:bg-slate-800 text-primary shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
+                                        }`}
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
 
                         <Link
                             href="/patients/new"
-                            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg"
+                            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg whitespace-nowrap"
                         >
                             <Plus className="h-5 w-5" />
                             <span>Add Patient</span>
@@ -172,9 +197,8 @@ export default function PatientsPage() {
                     {/* Pagination Footer */}
                     <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-card">
                         <p className="text-sm text-muted-foreground">
-                            Showing <span className="font-medium text-foreground">1</span> to{" "}
-                            <span className="font-medium text-foreground">5</span> of{" "}
-                            <span className="font-medium text-foreground">50</span> patients
+                            Showing <span className="font-medium text-foreground">{filteredPatients.length}</span> of{" "}
+                            <span className="font-medium text-foreground">{patients.length}</span> patients
                         </p>
                         <div className="flex items-center gap-2">
                             <button

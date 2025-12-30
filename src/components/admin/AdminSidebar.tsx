@@ -22,12 +22,12 @@ interface NavItem {
 }
 
 const adminNavItems: NavItem[] = [
-    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Organizations", href: "/admin/organizations", icon: Building2 },
-    { label: "Users", href: "/admin/users", icon: Users },
-    { label: "Templates", href: "/admin/templates", icon: FileText },
-    { label: "Platform Fees", href: "/admin/fees", icon: Percent },
-    { label: "Settings", href: "/admin/settings", icon: Settings },
+    { label: "Dashboard", href: "/super-admin", icon: LayoutDashboard },
+    { label: "Organizations", href: "/super-admin/organizations", icon: Building2 },
+    { label: "Users", href: "/super-admin/users", icon: Users },
+    { label: "Templates", href: "/super-admin/templates", icon: FileText },
+    { label: "Platform Fees", href: "/super-admin/fees", icon: Percent },
+    { label: "Settings", href: "/super-admin/settings", icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -35,17 +35,14 @@ export function AdminSidebar() {
 
     return (
         <aside className="hidden lg:flex flex-col w-60 bg-slate-900 text-white h-screen sticky top-0">
-            <div className="pt-3 px-6 pb-6">
-                <Link href="/admin" className="block mb-2 -ml-1">
-                    <div className="relative h-12 w-full overflow-hidden">
+            <div className="pt-6 px-6 pb-6">
+                <Link href="/super-admin" className="block mb-6 -ml-1">
+                    <div className="relative h-14 w-full flex items-center">
                         <img
                             src="/ChartSparkLogo.png"
                             alt="ChartSpark"
-                            className="absolute top-0 left-0 w-[130%] h-auto max-w-none -translate-x-3 -translate-y-[12%]"
-                            style={{
-                                clipPath: 'inset(18% 5% 35% 5%)',
-                                filter: 'invert(1)'
-                            }}
+                            className="w-[140%] h-auto max-w-none -translate-x-4 -translate-y-2"
+                            style={{ filter: "brightness(0) invert(1)" }}
                         />
                     </div>
                 </Link>

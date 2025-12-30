@@ -15,6 +15,7 @@ export interface Template {
     is_system?: boolean; // Legacy support
     is_default?: boolean; // Legacy support
     cpt_suggestions: string[]; // Required for billing flow
+    format: "soap" | "paragraph";
 }
 
 export const templates: Template[] = [
@@ -27,6 +28,7 @@ export const templates: Template[] = [
         is_system: true,
         is_default: true,
         cpt_suggestions: ["99213", "99214", "99215"],
+        format: "soap",
         sections: [
             { id: "s1", label: "Subjective", placeholder: "Chief complaint, HPI, ROS, current medications...", required: true },
             { id: "s2", label: "Objective", placeholder: "Vitals, physical exam, mental status exam...", required: true },
@@ -43,6 +45,7 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["99214", "90833"],
+        format: "soap",
         sections: [
             { id: "m1", label: "Current Medications", placeholder: "List all active meds and dosages...", required: true },
             { id: "m2", label: "Effectiveness & Side Effects", placeholder: "How is the patient tolerating the regime?", required: true },
@@ -59,6 +62,7 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["90834", "90837"],
+        format: "soap",
         sections: [
             { id: "c1", label: "Agenda & Objective", placeholder: "Topics covered, CBT techniques applied...", required: true },
             { id: "c2", label: "Interventions", placeholder: "Cognitive restructuring, behavioral activation...", required: true },
@@ -75,12 +79,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["90792", "90791"],
+        format: "paragraph",
         sections: [
-            { id: "i1", label: "History of Present Illness", placeholder: "Detailed onset, duration, and severity of symptoms...", required: true },
-            { id: "i2", label: "Psychiatric History", placeholder: "Past hospitalizations, medications, and treatments...", required: true },
-            { id: "i3", label: "Social & Family History", placeholder: "Support systems, employment, family medical history...", required: true },
-            { id: "i4", label: "Mental Status Exam", placeholder: "Appearance, affect, thought process...", required: true },
-            { id: "i5", label: "Formulation & Plan", placeholder: "Holistic treatment recommendations...", required: true },
+            { id: "full", label: "Assessment Details", placeholder: "Enter complete bio-psychosocial assessment details...", required: true }
         ]
     },
     {
@@ -92,6 +93,7 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["99204", "99205"],
+        format: "soap",
         sections: [
             { id: "v1", label: "Medical History", placeholder: "Relevant medical conditions, allergies, labs...", required: true },
             { id: "v2", label: "Current Symptoms", placeholder: "Primary complaints and symptom severity...", required: true },

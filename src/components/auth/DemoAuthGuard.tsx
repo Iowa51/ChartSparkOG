@@ -10,26 +10,43 @@ export function DemoAuthGuard({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
 
     useEffect(() => {
-        const checkAuth = async () => {
-            // Priority 1: Check Demo Mode
-            const isDemo = localStorage.getItem("demoMode") === "true";
-            if (isDemo) {
+        // Priority 1: Synchronous check for immediate authorization in demo mode
+        // This prevents loading flickers and race conditions during rapid navigation
+        if (typeof window !== "undefined") {
+            const isDemoLocal = localStorage.getItem("demoMode") === "true";
+            const isDemoCookie = document.cookie.includes("demoMode=true");
+
+            if (isDemoLocal || isDemoCookie) {
+                // Background sync
+                if (isDemoLocal && !isDemoCookie) document.cookie = "demoMode=true; path=/";
+                if (!isDemoLocal && isDemoCookie) localStorage.setItem("demoMode", "true");
+
                 setIsAuthorized(true);
                 return;
             }
+        }
 
+        const checkAuth = async () => {
             // Priority 2: Check Real Supabase Session
             if (supabase) {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                    setIsAuthorized(true);
-                    return;
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        setIsAuthorized(true);
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Auth check failed", e);
                 }
             }
 
-            // If neither, send to login
-            setIsAuthorized(false);
-            router.push("/login");
+            // If neither, and we've given it a moment to stabilize
+            const timer = setTimeout(() => {
+                setIsAuthorized(false);
+                router.push("/login");
+            }, 200);
+
+            return () => clearTimeout(timer);
         };
 
         checkAuth();

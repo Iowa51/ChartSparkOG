@@ -50,6 +50,33 @@
 - [x] CPT code suggestions
 - [ ] Billing amount + fee calculation
 
+## Final Polish
+- [x] 19. Super Admin Fee/Organization editing
+- [x] 20. New Super Admin Dashboard (`/super-admin` UI ready)
+- [x] 18. Fix Billing Admin View (Filter/Export)
+- [ ] 24. Fix Session Persistence (back button logout issue)
+
+## UI Fixes
+- [x] 7. Logo Padding (pt-6) in Sidebar (Partially done in AdminSidebar, need in layout Sidebar)
+- [ ] 8. Notification Bell Dropdown
+- [x] 9. Filter Buttons implementation (Patients, Encounters, Billing - partially)
+- [x] 10. Billing Export to CSV functionality
+- [/] 25. Final Super Admin Directory Migration (/admin -> /super-admin)
+
+## Templates & Notes Page
+- [/] 11. Fix Recording Collapse Toggle
+- [x] 12. Add Text Input for clinician notes
+- [x] 13. Fix "Manage Templates" button
+- [x] 14. Fix "Create Custom Template" button
+- [x] 15. Support non-SOAP note formats (Paragraph format)
+
+## Clinical References & Content
+- [ ] 16. Reference Bubbles interactivity
+- [ ] 17. Clinical Quick Links navigation
+- [x] 21. Basic Calendar page
+- [ ] 22. Telehealth placeholder page
+- [ ] 23. E-Prescribe placeholder page
+
 ## Phase 5: Platform Fee System (NEW)
 - [x] Database: platform_fee_percentage, fee_collection_method
 - [x] Database: custom_fee_percentage per user

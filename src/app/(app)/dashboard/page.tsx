@@ -135,13 +135,15 @@ export default function DashboardPage() {
                     <div className="grid grid-rows-2 gap-4">
                         {stats.map((stat) => {
                             const Icon = stat.icon;
+                            const href = stat.label === "Notes Completed" ? "/notes?status=completed" : "/billing?status=pending";
                             return (
-                                <div
+                                <Link
                                     key={stat.label}
-                                    className="bg-card rounded-xl p-5 border border-border flex items-center justify-between hover:shadow-lg hover:border-primary/20 transition-all cursor-default"
+                                    href={href}
+                                    className="bg-card rounded-xl p-5 border border-border flex items-center justify-between hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group"
                                 >
                                     <div>
-                                        <p className="text-sm font-medium text-muted-foreground">
+                                        <p className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">
                                             {stat.label}
                                         </p>
                                         <p className="text-3xl font-bold text-foreground mt-1">
@@ -161,10 +163,10 @@ export default function DashboardPage() {
                                             {stat.change}
                                         </p>
                                     </div>
-                                    <div className={`p-3 rounded-full ${stat.iconBg}`}>
+                                    <div className={`p-3 rounded-full ${stat.iconBg} group-hover:scale-110 transition-transform`}>
                                         <Icon className={`h-6 w-6 ${stat.iconColor}`} />
                                     </div>
-                                </div>
+                                </Link>
                             );
                         })}
                     </div>

@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Template, TemplateSection } from "@/lib/demo-data/templates";
 
-export default function TemplateEditorPage() {
+export default function SuperAdminTemplateEditorPage() {
     const params = useParams();
     const router = useRouter();
     const templateId = params.id as string;
@@ -48,21 +48,21 @@ export default function TemplateEditorPage() {
                         <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                     </button>
                     <div>
-                        <h1 className="text-xl font-bold text-foreground leading-none">{template.name}</h1>
-                        <p className="text-xs text-muted-foreground mt-1 uppercase font-bold tracking-widest">Template Editor</p>
+                        <h1 className="text-xl font-black text-foreground leading-none tracking-tight">{template.name}</h1>
+                        <p className="text-[10px] text-muted-foreground mt-1 uppercase font-black tracking-[0.2em] opacity-70">Global Protocol Editor</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
                     <button className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-foreground hover:bg-muted rounded-xl transition-colors">
                         <Eye className="h-4 w-4" />
-                        Preview
+                        Live Preview
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={isSaving}
-                        className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all disabled:opacity-50"
+                        className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all disabled:opacity-50"
                     >
-                        {isSaving ? "Saving..." : "Save Changes"}
+                        {isSaving ? "Syncing..." : "Sync Global"}
                         {!isSaving && <Save className="h-4 w-4" />}
                     </button>
                 </div>
@@ -72,11 +72,11 @@ export default function TemplateEditorPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     {/* Main Structure Column */}
                     <div className="lg:col-span-2 space-y-8">
-                        <section className="bg-card rounded-2xl border border-border shadow-sm p-8">
+                        <section className="bg-card rounded-[2rem] border border-border shadow-sm p-8">
                             <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/50">
                                 <div>
-                                    <h3 className="text-lg font-bold text-foreground">Note Structure</h3>
-                                    <p className="text-sm text-muted-foreground mt-1">Configure the sections and AI prompts for this template.</p>
+                                    <h3 className="text-lg font-black text-foreground tracking-tight">Clinical Schema</h3>
+                                    <p className="text-sm text-muted-foreground mt-1 font-medium">Define sections and AI prompts for this global standard.</p>
                                 </div>
                                 <Layout className="h-6 w-6 text-primary/40" />
                             </div>
@@ -96,7 +96,7 @@ export default function TemplateEditorPage() {
                                                     <input
                                                         type="text"
                                                         defaultValue={section.label}
-                                                        className="text-lg font-bold bg-transparent border-none outline-none focus:text-primary transition-colors w-full"
+                                                        className="text-lg font-black bg-transparent border-none outline-none focus:text-primary transition-colors w-full tracking-tight"
                                                     />
                                                     <button className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
                                                         <Trash2 className="h-4 w-4" />
@@ -105,19 +105,19 @@ export default function TemplateEditorPage() {
 
                                                 <div className="grid grid-cols-1 gap-4">
                                                     <div>
-                                                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Default Placeholder</label>
+                                                        <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-2 opacity-70">Default Logic</label>
                                                         <textarea
                                                             defaultValue={section.placeholder}
-                                                            className="w-full h-20 p-4 bg-background border border-border rounded-xl text-sm focus:ring-1 focus:ring-primary outline-none resize-none"
+                                                            className="w-full h-20 p-4 bg-background border border-border rounded-xl text-sm focus:ring-1 focus:ring-primary outline-none resize-none font-medium"
                                                         />
                                                     </div>
                                                     <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
                                                         <div className="flex items-center gap-2 mb-2">
                                                             <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                                            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">AI Intelligence</span>
+                                                            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">AI Intelligence Prompt</span>
                                                         </div>
-                                                        <p className="text-xs text-foreground/70 leading-relaxed italic">
-                                                            "Analyze the medical transcript and extract {section.label.toLowerCase()} details, prioritizing insurance-required terminology."
+                                                        <p className="text-xs text-foreground/70 leading-relaxed italic font-medium">
+                                                            "Analyze the medical transcript and extract {section.label.toLowerCase()} details, prioritizing insurance-required terminology and clinical coding standards."
                                                         </p>
                                                     </div>
                                                 </div>
@@ -126,9 +126,9 @@ export default function TemplateEditorPage() {
                                     </div>
                                 ))}
 
-                                <button className="w-full py-4 border-2 border-dashed border-border rounded-2xl flex items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all font-bold">
+                                <button className="w-full py-4 border-2 border-dashed border-border rounded-2xl flex items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all font-black uppercase tracking-widest text-xs">
                                     <Plus className="h-5 w-5" />
-                                    Add New Section
+                                    Append Section
                                 </button>
                             </div>
                         </section>
@@ -139,24 +139,24 @@ export default function TemplateEditorPage() {
                         <section className="bg-card rounded-2xl border border-border shadow-sm p-6 sticky top-28">
                             <div className="flex items-center gap-2 mb-6">
                                 <Settings2 className="h-5 w-5 text-primary" />
-                                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Properties</h3>
+                                <h3 className="text-[10px] font-black text-foreground uppercase tracking-[0.2em]">Global Rules</h3>
                             </div>
 
                             <div className="space-y-6">
                                 <div>
-                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Visibility</label>
-                                    <select className="w-full p-2.5 bg-muted/50 border border-border rounded-xl text-sm font-medium">
-                                        <option>Public (All Orgs)</option>
-                                        <option>Private (Internal Only)</option>
-                                        <option>Draft</option>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-2 opacity-70">Distribution</label>
+                                    <select className="w-full p-3 bg-muted/50 border border-border rounded-xl text-sm font-bold appearance-none">
+                                        <option>Public (Standard)</option>
+                                        <option>Enterprise Exclusive</option>
+                                        <option>Staging/Draft</option>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block mb-2">Specialties</label>
+                                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] block mb-2 opacity-70">Taxonomies</label>
                                     <div className="flex flex-wrap gap-2">
                                         {template.specialties.map((spec: string) => (
-                                            <span key={spec} className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-full border border-primary/20">
+                                            <span key={spec} className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black uppercase rounded-full border border-primary/20">
                                                 {spec}
                                             </span>
                                         ))}
@@ -167,23 +167,23 @@ export default function TemplateEditorPage() {
                                 </div>
 
                                 <div className="pt-6 border-t border-border">
-                                    <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground uppercase mb-4">
-                                        <span>Version History</span>
-                                        <button className="text-primary hover:underline">View All</button>
+                                    <div className="flex items-center justify-between text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">
+                                        <span>Schema Version</span>
+                                        <button className="text-primary hover:underline">History</button>
                                     </div>
                                     <div className="space-y-3">
                                         <div className="flex items-start gap-3">
                                             <div className="h-2 w-2 rounded-full bg-emerald-500 mt-1" />
                                             <div>
-                                                <p className="text-xs font-bold text-foreground">v2.4.1 (Current)</p>
-                                                <p className="text-[10px] text-muted-foreground">Today by Admin</p>
+                                                <p className="text-xs font-black text-foreground">v2.4.1 (Active)</p>
+                                                <p className="text-[10px] text-muted-foreground font-medium">Synced today by Root</p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3 opacity-50">
                                             <div className="h-2 w-2 rounded-full bg-slate-300 mt-1" />
                                             <div>
-                                                <p className="text-xs font-bold text-foreground">v2.4.0</p>
-                                                <p className="text-[10px] text-muted-foreground">Oct 24, 2023</p>
+                                                <p className="text-xs font-bold text-foreground">v2.4.0 (Legacy)</p>
+                                                <p className="text-[10px] text-muted-foreground font-medium">Oct 24 by Root</p>
                                             </div>
                                         </div>
                                     </div>

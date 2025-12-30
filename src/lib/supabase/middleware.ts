@@ -45,7 +45,7 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     // Protect routes that require authentication
-    const protectedPaths = ["/dashboard", "/patients", "/encounters", "/notes", "/templates", "/billing", "/references", "/admin"];
+    const protectedPaths = ["/dashboard", "/patients", "/encounters", "/notes", "/templates", "/billing", "/references", "/super-admin"];
     const isProtectedPath = protectedPaths.some((path) =>
         request.nextUrl.pathname.startsWith(path)
     );
@@ -59,7 +59,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Protect admin routes - require SUPER_ADMIN role
-    if (request.nextUrl.pathname.startsWith("/admin") && user) {
+    if (request.nextUrl.pathname.startsWith("/super-admin") && user) {
         // In a real app, you'd check the user's role from the database
         // For now, we'll allow access (demo mode)
     }

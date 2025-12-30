@@ -48,13 +48,12 @@ export function Sidebar() {
     <aside className="hidden lg:flex flex-col w-60 bg-surface border-r border-border h-screen sticky top-0">
       {/* Logo & Brand */}
       <div className="pt-6 px-6 pb-6">
-        <Link href="/dashboard" className="block mb-4 -ml-1">
-          <div className="relative h-14 w-full overflow-hidden">
+        <Link href="/dashboard" className="block mb-6 -ml-1">
+          <div className="relative h-14 w-full flex items-center">
             <img
               src="/ChartSparkLogo.png"
               alt="ChartSpark"
-              className="absolute top-0 left-0 w-[130%] h-auto max-w-none -translate-x-3 -translate-y-[12%]"
-              style={{ clipPath: 'inset(18% 5% 35% 5%)' }}
+              className="w-[140%] h-auto max-w-none -translate-x-4 -translate-y-2"
             />
           </div>
         </Link>

@@ -1,4 +1,7 @@
+"use client";
+
 import { Header } from "@/components/layout";
+import { useState } from "react";
 import Link from "next/link";
 import {
     Search,
@@ -35,6 +38,17 @@ const statusStyles = {
 };
 
 export default function EncountersPage() {
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+    const filteredEncounters = encounters.filter(e => {
+        const patient = patients.find(p => p.id === e.patientId);
+        const matchesSearch = patient?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            e.chiefComplaint.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = !statusFilter || e.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    });
+
     return (
         <>
             <Header
@@ -50,27 +64,39 @@ export default function EncountersPage() {
                 {/* Controls Toolbar */}
                 <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-stretch md:items-center">
                     {/* Search */}
-                    <div className="relative flex-1 max-w-lg">
+                    <div className="relative flex-1 max-w-lg text-sm">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <Search className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <input
                             type="text"
-                            placeholder="Search encounters..."
-                            className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-card text-foreground shadow-sm ring-1 ring-inset ring-border placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-primary text-sm transition-shadow"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search by patient or concern..."
+                            className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-card text-foreground shadow-sm ring-1 ring-inset ring-border placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-primary transition-shadow"
                         />
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-colors shadow-sm">
-                            <Filter className="h-4 w-4" />
-                            <span>Filter</span>
-                        </button>
+                        <div className="flex items-center bg-muted/50 rounded-xl p-1">
+                            {["Scheduled", "In Progress", "Completed"].map((s) => (
+                                <button
+                                    key={s}
+                                    onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s
+                                        ? "bg-white dark:bg-slate-800 text-primary shadow-sm"
+                                        : "text-muted-foreground hover:text-foreground"
+                                        }`}
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
 
                         <Link
                             href="/encounters/new"
-                            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg"
+                            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-md shadow-primary/20 transition-all hover:shadow-lg whitespace-nowrap"
                         >
                             <Plus className="h-5 w-5" />
                             <span>New Encounter</span>
@@ -175,11 +201,10 @@ export default function EncountersPage() {
                     </div>
 
                     {/* Pagination Footer */}
-                    <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-card">
-                        <p className="text-sm text-muted-foreground">
-                            Showing <span className="font-medium text-foreground">1</span> to{" "}
-                            <span className="font-medium text-foreground">5</span> of{" "}
-                            <span className="font-medium text-foreground">24</span> encounters
+                    <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-card text-sm">
+                        <p className="text-muted-foreground">
+                            Showing <span className="font-medium text-foreground">{filteredEncounters.length}</span> of{" "}
+                            <span className="font-medium text-foreground">{encounters.length}</span> encounters
                         </p>
                         <div className="flex items-center gap-2">
                             <button

@@ -110,7 +110,44 @@ function UserBillingView() {
 
 // ADMIN View Component
 function AdminBillingView() {
-    const stats = orgBillingStats;
+    const [stats, setStats] = useState(orgBillingStats);
+    const [filterQuery, setFilterQuery] = useState("");
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: "asc" | "desc" } | null>(null);
+
+    const filteredUsers = stats.users.filter(u =>
+        u.user_name.toLowerCase().includes(filterQuery.toLowerCase())
+    );
+
+    const sortedUsers = [...filteredUsers].sort((a, b) => {
+        if (!sortConfig) return 0;
+        const { key, direction } = sortConfig;
+        const valA = a[key as keyof typeof a];
+        const valB = b[key as keyof typeof b];
+
+        if (typeof valA === "string" && typeof valB === "string") {
+            return direction === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        return direction === "asc" ? (valA as number) - (valB as number) : (valB as number) - (valA as number);
+    });
+
+    const handleSort = (key: string) => {
+        let direction: "asc" | "desc" = "asc";
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+            direction = "desc";
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const handleExport = () => {
+        alert("Exporting billing data to CSV...");
+        // Mock download
+        const blob = new Blob(["Name,Notes,Billing,Fees\n" + sortedUsers.map(u => `${u.user_name},${u.notes_generated},${u.billing_amount},${u.fee_amount}`).join("\n")], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `billing-export-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+    };
 
     return (
         <div className="space-y-6">
@@ -167,34 +204,46 @@ function AdminBillingView() {
                 <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
                     <h3 className="font-bold text-foreground">Team Billing Breakdown</h3>
                     <div className="flex gap-2">
-                        <button className="px-3 py-1.5 text-sm bg-card border border-border rounded-lg flex items-center gap-1">
-                            <Filter className="h-4 w-4" /> Filter
-                        </button>
-                        <button className="px-3 py-1.5 text-sm bg-card border border-border rounded-lg flex items-center gap-1">
+                        <div className="relative">
+                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Search provider..."
+                                value={filterQuery}
+                                onChange={(e) => setFilterQuery(e.target.value)}
+                                className="pl-9 pr-3 py-1.5 text-sm bg-card border border-border rounded-lg focus:ring-1 focus:ring-primary outline-none"
+                            />
+                        </div>
+                        <button
+                            onClick={handleExport}
+                            className="px-3 py-1.5 text-sm bg-card border border-border rounded-lg flex items-center gap-1 hover:bg-muted"
+                        >
                             <Download className="h-4 w-4" /> Export
                         </button>
                     </div>
                 </div>
-                <table className="min-w-full text-left">
-                    <thead className="bg-muted/50">
-                        <tr>
-                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Provider</th>
-                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Notes</th>
-                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Billing</th>
-                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Fees</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                        {stats.users.map((user) => (
-                            <tr key={user.user_id} className="hover:bg-muted/30">
-                                <td className="px-6 py-4 font-medium text-foreground">{user.user_name}</td>
-                                <td className="px-6 py-4 text-muted-foreground">{user.notes_generated}</td>
-                                <td className="px-6 py-4 font-semibold text-foreground">{formatCurrency(user.billing_amount)}</td>
-                                <td className="px-6 py-4 text-muted-foreground">{formatCurrency(user.fee_amount)}</td>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full text-left">
+                        <thead className="bg-muted/50">
+                            <tr>
+                                <th onClick={() => handleSort("user_name")} className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase cursor-pointer hover:text-primary">Provider</th>
+                                <th onClick={() => handleSort("notes_generated")} className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase cursor-pointer hover:text-primary">Notes</th>
+                                <th onClick={() => handleSort("billing_amount")} className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase cursor-pointer hover:text-primary">Billing</th>
+                                <th onClick={() => handleSort("fee_amount")} className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase cursor-pointer hover:text-primary">Fees</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {sortedUsers.map((user) => (
+                                <tr key={user.user_id} className="hover:bg-muted/30">
+                                    <td className="px-6 py-4 font-medium text-foreground">{user.user_name}</td>
+                                    <td className="px-6 py-4 text-muted-foreground">{user.notes_generated}</td>
+                                    <td className="px-6 py-4 font-semibold text-foreground">{formatCurrency(user.billing_amount)}</td>
+                                    <td className="px-6 py-4 text-muted-foreground">{formatCurrency(user.fee_amount)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
@@ -202,7 +251,19 @@ function AdminBillingView() {
 
 // SUPER_ADMIN View Component
 function SuperAdminBillingView() {
-    const stats = platformBillingStats;
+    const [stats, setStats] = useState(platformBillingStats);
+    const [editingFee, setEditingFee] = useState<string | null>(null);
+    const [newFee, setNewFee] = useState<number>(0);
+
+    const handleEditFee = (orgId: string, currentFee: number) => {
+        setEditingFee(orgId);
+        setNewFee(currentFee);
+    };
+
+    const handleSaveFee = (orgId: string) => {
+        alert(`Fee for org ${orgId} updated to ${newFee}%`);
+        setEditingFee(null);
+    };
 
     return (
         <div className="space-y-6">
@@ -290,21 +351,86 @@ function SuperAdminBillingView() {
                             <tr key={config.org_id} className="hover:bg-muted/30">
                                 <td className="px-6 py-4 font-medium text-foreground">{config.org_name}</td>
                                 <td className="px-6 py-4">
-                                    <span className="px-2 py-1 bg-primary/10 text-primary font-mono font-bold rounded">
-                                        {config.fee_percentage}%
-                                    </span>
+                                    {editingFee === config.org_id ? (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                value={newFee}
+                                                onChange={(e) => setNewFee(Number(e.target.value))}
+                                                className="w-16 px-2 py-1 bg-card border border-border rounded text-sm"
+                                            />
+                                            <span className="text-sm">%</span>
+                                        </div>
+                                    ) : (
+                                        <span className="px-2 py-1 bg-primary/10 text-primary font-mono font-bold rounded">
+                                            {config.fee_percentage}%
+                                        </span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${config.method === "deduct_from_billing"
-                                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                            : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                        : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                         }`}>
                                         {config.method === "deduct_from_billing" ? "Deduct from Billing" : "Charge Separately"}
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                    <button className="text-primary hover:underline text-sm font-medium">Edit</button>
+                                    {editingFee === config.org_id ? (
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => handleSaveFee(config.org_id)}
+                                                className="text-emerald-600 font-bold text-xs"
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingFee(null)}
+                                                className="text-muted-foreground font-medium text-xs"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleEditFee(config.org_id, config.fee_percentage)}
+                                            className="text-primary hover:underline text-sm font-medium"
+                                        >
+                                            Edit
+                                        </button>
+                                    )}
                                 </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Organizations Table (Secondary for Super Admin) */}
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
+                <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
+                    <h3 className="font-bold text-foreground flex items-center gap-2">
+                        <Building2 className="h-5 w-5" /> Detailed Org Revenue
+                    </h3>
+                </div>
+                <table className="min-w-full text-left">
+                    <thead className="bg-muted/50">
+                        <tr>
+                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Organization</th>
+                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Users</th>
+                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Notes</th>
+                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Billing</th>
+                            <th className="px-6 py-3 text-xs font-bold text-muted-foreground uppercase">Fees</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                        {stats.organizations.map((org) => (
+                            <tr key={org.organization_id} className="hover:bg-muted/30 transition-colors">
+                                <td className="px-6 py-4 font-medium text-foreground">{org.organization_name}</td>
+                                <td className="px-6 py-4 text-muted-foreground">{org.total_users}</td>
+                                <td className="px-6 py-4 text-muted-foreground">{org.total_notes}</td>
+                                <td className="px-6 py-4 font-semibold text-foreground">{formatCurrency(org.total_billing)}</td>
+                                <td className="px-6 py-4 text-emerald-600 font-medium">{formatCurrency(org.total_fees)}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -320,8 +446,8 @@ export default function BillingPage() {
     return (
         <>
             <Header
-                title="Billing Dashboard"
-                description="Track revenue, billing codes, and platform fees."
+                title="Financial Governance Hub"
+                description="Manage billing cycles, verify CPT compliance, and oversee revenue distributions."
                 breadcrumbs={[
                     { label: "Dashboard", href: "/dashboard" },
                     { label: "Billing" },
@@ -330,32 +456,38 @@ export default function BillingPage() {
 
             <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
                 {/* Demo Role Switcher */}
-                <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Demo Mode - View as:</span>
+                <div className="mb-6 p-4 rounded-xl bg-slate-900 text-white shadow-xl shadow-slate-200 dark:shadow-none">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-sm font-black uppercase tracking-[0.2em] opacity-80">Demo Simulation Environment</span>
                         </div>
-                        <div className="flex gap-2">
-                            {(["USER", "ADMIN", "SUPER_ADMIN"] as Role[]).map((role) => (
-                                <button
-                                    key={role}
-                                    onClick={() => setCurrentRole(role)}
-                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${currentRole === role
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-white text-blue-600 border border-blue-200 hover:bg-blue-50 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700"
-                                        }`}
-                                >
-                                    {role}
-                                </button>
-                            ))}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold mr-2 text-slate-400">IMPERSONATE ROLE:</span>
+                            <div className="flex gap-1 bg-slate-800 p-1 rounded-lg">
+                                {(["USER", "ADMIN", "SUPER_ADMIN"] as Role[]).map((role) => (
+                                    <button
+                                        key={role}
+                                        onClick={() => setCurrentRole(role)}
+                                        className={`px-4 py-1.5 rounded-md text-[10px] font-black tracking-widest uppercase transition-all ${currentRole === role
+                                            ? "bg-primary text-primary-foreground shadow-lg"
+                                            : "text-slate-400 hover:text-white hover:bg-slate-700"
+                                            }`}
+                                    >
+                                        {role}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Role-based Content */}
-                {currentRole === "USER" && <UserBillingView />}
-                {currentRole === "ADMIN" && <AdminBillingView />}
-                {currentRole === "SUPER_ADMIN" && <SuperAdminBillingView />}
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    {currentRole === "USER" && <UserBillingView />}
+                    {currentRole === "ADMIN" && <AdminBillingView />}
+                    {currentRole === "SUPER_ADMIN" && <SuperAdminBillingView />}
+                </div>
             </div>
         </>
     );
