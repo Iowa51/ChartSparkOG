@@ -26,7 +26,9 @@ export default async function SuperAdminLayout({
         .single();
 
     // If profiles table exists and has role
-    if (profile && profile.role !== "SUPER_ADMIN") {
+    if (profile && profile.role === "ADMIN") {
+        redirect("/admin");
+    } else if (profile && profile.role !== "SUPER_ADMIN") {
         redirect("/dashboard");
     }
 

@@ -15,6 +15,7 @@ import {
   Video,
   Pill,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,10 +36,16 @@ const mainNavItems: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: Calendar, tier: "pro" },
   { label: "Telehealth", href: "/telehealth", icon: Video, tier: "pro" },
   { label: "E-Prescribe", href: "/e-prescribe", icon: Pill, tier: "complete" },
+  { label: "Clinical AI", href: "/ai-assistant", icon: Stethoscope, tier: "complete" },
+  { label: "Treatment Plan", href: "/treatment-planner", icon: ClipboardList, tier: "complete" },
+  { label: "Analytics", href: "/analytics/relapse", icon: LayoutDashboard, tier: "complete" },
+  { label: "Integration", href: "/integrations", icon: Settings, tier: "complete" },
 ];
 
 const bottomNavItems: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
+  { label: "Admin Console", href: "/admin", icon: Shield },
+  { label: "Super Admin", href: "/super-admin", icon: LayoutDashboard },
 ];
 
 export function Sidebar() {

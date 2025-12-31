@@ -25,6 +25,66 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip as RechartsTooltip,
+    Legend,
+    ResponsiveContainer
+} from 'recharts';
+import {
+    TrendingDown,
+    TrendingUp,
+    Shield,
+    CheckCircle2
+} from "lucide-react";
+
+// Local Component Definitions for Consistency
+const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden ${className}`}>{children}</div>
+);
+const CardHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={`p-6 ${className}`}>{children}</div>
+);
+const CardTitle = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <h3 className={`text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2 ${className}`}>{children}</h3>
+);
+const CardDescription = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <p className={`text-xs text-muted-foreground mt-1 ${className}`}>{children}</p>
+);
+const CardContent = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={`px-6 pb-6 ${className}`}>{children}</div>
+);
+const Badge = ({ children, variant = "outline", className = "" }: { children: React.ReactNode; variant?: "outline"; className?: string }) => (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${className}`}>
+        {children}
+    </span>
+);
+
+const progressData = [
+    { date: '2023-08-01', phq9: 22, gad7: 18, month: 'Aug' },
+    { date: '2023-09-01', phq9: 20, gad7: 16, month: 'Sep' },
+    { date: '2023-10-01', phq9: 17, gad7: 14, month: 'Oct' },
+    { date: '2023-11-01', phq9: 15, gad7: 12, month: 'Nov' },
+    { date: '2023-12-01', phq9: 12, gad7: 10, month: 'Dec' },
+    { date: '2024-01-01', phq9: 9, gad7: 8, month: 'Jan' },
+];
+
+const baselineScores = { phq9: 22, gad7: 18 };
+const currentScores = { phq9: 9, gad7: 8 };
+
+const phq9Improvement = {
+    change: baselineScores.phq9 - currentScores.phq9,
+    percentage: (((baselineScores.phq9 - currentScores.phq9) / baselineScores.phq9) * 100).toFixed(0)
+};
+
+const gad7Improvement = {
+    change: baselineScores.gad7 - currentScores.gad7,
+    percentage: (((baselineScores.gad7 - currentScores.gad7) / baselineScores.gad7) * 100).toFixed(0)
+};
 
 export default function PatientDetailPage() {
     const params = useParams();
@@ -154,8 +214,8 @@ export default function PatientDetailPage() {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
-                                        ? "bg-card text-primary shadow-sm"
-                                        : "text-muted-foreground hover:text-foreground"
+                                    ? "bg-card text-primary shadow-sm"
+                                    : "text-muted-foreground hover:text-foreground"
                                     }`}
                             >
                                 <Icon className="h-4 w-4" />
@@ -170,6 +230,140 @@ export default function PatientDetailPage() {
                     <div className="lg:col-span-2 space-y-6">
                         {activeTab === "overview" && (
                             <>
+                                {/* Treatment Progress & Outcomes Chart */}
+                                <Card className="mb-6">
+                                    <CardHeader className="border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
+                                        <div>
+                                            <CardTitle>
+                                                <TrendingDown className="h-4 w-4 text-emerald-500" />
+                                                Treatment Progress & Outcomes
+                                            </CardTitle>
+                                            <CardDescription>
+                                                Symptom severity trends over 6 months - Demonstrating treatment efficacy
+                                            </CardDescription>
+                                        </div>
+                                        <Badge className="text-emerald-600 border-emerald-600 bg-emerald-50 dark:bg-emerald-950">
+                                            <TrendingDown className="mr-2 h-3 w-3" />
+                                            Improving
+                                        </Badge>
+                                    </CardHeader>
+                                    <CardContent className="pt-6 space-y-8">
+                                        {/* Line Chart */}
+                                        <div className="h-[300px] w-full">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={progressData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                                                    <XAxis
+                                                        dataKey="month"
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fontSize: 12, fill: '#64748B' }}
+                                                    />
+                                                    <YAxis
+                                                        domain={[0, 27]}
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        tick={{ fontSize: 12, fill: '#64748B' }}
+                                                    />
+                                                    <RechartsTooltip
+                                                        content={({ active, payload }) => {
+                                                            if (active && payload && payload.length) {
+                                                                return (
+                                                                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xl animation-in fade-in zoom-in duration-200">
+                                                                        <p className="font-bold text-xs mb-2 text-slate-500">{payload[0].payload.month} 2023</p>
+                                                                        <div className="space-y-1">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="h-2 w-2 rounded-full bg-red-500" />
+                                                                                <p className="text-xs font-bold">PHQ-9: <span className="text-red-500">{payload[0].value}</span></p>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="h-2 w-2 rounded-full bg-orange-500" />
+                                                                                <p className="text-xs font-bold">GAD-7: <span className="text-orange-500">{payload[1].value}</span></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }}
+                                                    />
+                                                    <Legend
+                                                        verticalAlign="top"
+                                                        align="right"
+                                                        iconType="circle"
+                                                        wrapperStyle={{ paddingTop: '0px', paddingBottom: '20px', fontSize: '11px', fontWeight: 'bold' }}
+                                                    />
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="phq9"
+                                                        stroke="#ef4444"
+                                                        strokeWidth={3}
+                                                        name="PHQ-9 (Depression)"
+                                                        dot={{ fill: '#ef4444', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                                                        activeDot={{ r: 6, strokeWidth: 0 }}
+                                                    />
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="gad7"
+                                                        stroke="#f59e0b"
+                                                        strokeWidth={3}
+                                                        name="GAD-7 (Anxiety)"
+                                                        dot={{ fill: '#f59e0b', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                                                        activeDot={{ r: 6, strokeWidth: 0 }}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </div>
+
+                                        {/* Improvement Metrics Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2 text-emerald-600">
+                                                    <TrendingDown className="h-4 w-4" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">PHQ-9 Improvement</span>
+                                                </div>
+                                                <div className="text-2xl font-black text-emerald-600">-{phq9Improvement.change} <span className="text-xs font-bold opacity-60">pts</span></div>
+                                                <p className="text-[10px] font-bold text-emerald-700/70 mt-1">{phq9Improvement.percentage}% reduction from baseline</p>
+                                            </div>
+
+                                            <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2 text-emerald-600">
+                                                    <TrendingDown className="h-4 w-4" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">GAD-7 Improvement</span>
+                                                </div>
+                                                <div className="text-2xl font-black text-emerald-600">-{gad7Improvement.change} <span className="text-xs font-bold opacity-60">pts</span></div>
+                                                <p className="text-[10px] font-bold text-emerald-700/70 mt-1">{gad7Improvement.percentage}% reduction from baseline</p>
+                                            </div>
+
+                                            <div className="p-4 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-2xl text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2 text-blue-600">
+                                                    <Calendar className="h-4 w-4" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">Treatment Tenure</span>
+                                                </div>
+                                                <div className="text-2xl font-black text-blue-600">6 <span className="text-xs font-bold opacity-60">months</span></div>
+                                                <p className="text-[10px] font-bold text-blue-700/70 mt-1">24 completed sessions</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Clinical Insights */}
+                                        <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                            <h4 className="text-xs font-black uppercase tracking-wider text-foreground mb-4 flex items-center gap-2">
+                                                <CheckCircle2 className="h-4 w-4 text-primary" />
+                                                Clinical Interpretation
+                                            </h4>
+                                            <div className="space-y-3">
+                                                <p className="text-xs text-foreground/80 leading-relaxed">
+                                                    <strong>Positive Response:</strong> Patient demonstrated a <span className="text-emerald-600 font-bold">{phq9Improvement.percentage}% reduction</span> in depressive symptoms and <span className="text-emerald-600 font-bold">{gad7Improvement.percentage}% reduction</span> in anxiety. PHQ-9 score transition from 22 (Severe) to 9 (Mild) indicates significant clinical response.
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground flex items-center gap-2 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-100 dark:border-slate-800">
+                                                    <Shield className="h-3 w-3 text-purple-500" />
+                                                    <strong>Value-Based Care:</strong> Data supports treatment efficacy for HEDIS/Quality reporting.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
                                 <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
                                         <div className="flex items-center gap-2 mb-4">
@@ -224,8 +418,8 @@ export default function PatientDetailPage() {
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${encounter.status === "Completed"
-                                                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                                            : "bg-blue-50 text-blue-700 border-blue-100"
+                                                        ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                                        : "bg-blue-50 text-blue-700 border-blue-100"
                                                         }`}>
                                                         {encounter.status}
                                                     </span>
