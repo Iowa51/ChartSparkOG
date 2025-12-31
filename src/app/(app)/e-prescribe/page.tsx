@@ -330,49 +330,23 @@ export default function EPrescribePage() {
                                     </div>
                                 )}
                             </div>
-                            <div className="flex items-start justify-between mb-3">
-                                <div className="h-10 w-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
-                                    <Pill className="h-5 w-5" />
-                                </div>
-                                <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${rx.status === "filled"
-                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                    : "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                                    }`}>
-                                    {rx.status}
-                                </span>
-                            </div>
-                            <div className="space-y-1">
-                                <h4 className="font-black text-lg text-slate-900 dark:text-white leading-tight">{rx.medication}</h4>
-                                <p className="text-xs font-bold text-slate-500 tracking-tight uppercase">{rx.patient}</p>
-                            </div>
-                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-                                <div className="text-[10px] font-bold text-slate-400">
-                                    {rx.date}
-                                </div>
-                                <button className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
-                                    Full Details
-                                    <ArrowRight className="h-3 w-3" />
-                                </button>
-                            </div>
-                        </div>
-                                ))}
-                    </div>
-                    <button className="w-full py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:bg-slate-50 dark:hover:bg-slate-900 transition-all border-t border-slate-200 dark:border-slate-800">
-                        Archive Ledger
-                    </button>
-                </div>
 
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-8">
-                    <div className="flex items-center gap-3 mb-4">
-                        <CheckCircle className="h-6 w-6 text-emerald-500" />
-                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Surescripts Certified</span>
+                            <button className="w-full py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:bg-slate-50 dark:hover:bg-slate-900 transition-all border-t border-slate-200 dark:border-slate-800">
+                                Archive Ledger
+                            </button>
+                        </div>
+
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-8">
+                            <div className="flex items-center gap-3 mb-4">
+                                <CheckCircle className="h-6 w-6 text-emerald-500" />
+                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Surescripts Certified</span>
+                            </div>
+                            <p className="text-xs text-emerald-700/80 font-medium leading-relaxed">
+                                Authorized prescriber credentials active. 2FA required for scheduled narcotics.
+                            </p>
+                        </div>
                     </div>
-                    <p className="text-xs text-emerald-700/80 font-medium leading-relaxed">
-                        Authorized prescriber credentials active. 2FA required for scheduled narcotics.
-                    </p>
                 </div>
-            </div>
-        </div>
             </div >
         </div >
     );
