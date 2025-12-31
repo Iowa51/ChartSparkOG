@@ -2,8 +2,26 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function RootNotFound() {
+    const [returnPath, setReturnPath] = useState("/dashboard");
+    const [returnLabel, setReturnLabel] = useState("Return to Dashboard");
+
+    useEffect(() => {
+        const path = window.location.pathname;
+        if (path.includes('/super-admin')) {
+            setReturnPath('/super-admin');
+            setReturnLabel('Return to Super Admin');
+        } else if (path.includes('/admin')) {
+            setReturnPath('/admin');
+            setReturnLabel('Return to Admin Console');
+        } else {
+            setReturnPath('/dashboard');
+            setReturnLabel('Return to Dashboard');
+        }
+    }, []);
+
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 text-center">
             {/* Background decorative element */}
@@ -29,10 +47,10 @@ export default function RootNotFound() {
 
                 <div className="flex flex-col gap-3">
                     <Link
-                        href="/dashboard"
+                        href={returnPath}
                         className="inline-flex w-full items-center justify-center bg-primary text-white py-4 rounded-xl font-bold shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all text-sm"
                     >
-                        Return to Dashboard
+                        {returnLabel}
                     </Link>
                     <button
                         onClick={() => window.history.back()}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Header } from "@/components/layout";
 import {
     Video,
@@ -85,6 +86,15 @@ const sessionHistory = [
 
 export default function TelehealthPage() {
     const [activeCall, setActiveCall] = useState(false);
+    const [isCameraStarting, setIsCameraStarting] = useState(false);
+
+    const handleStartCall = () => {
+        setIsCameraStarting(true);
+        setTimeout(() => {
+            setIsCameraStarting(false);
+            setActiveCall(true);
+        }, 1500);
+    };
 
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
@@ -95,6 +105,15 @@ export default function TelehealthPage() {
                     { label: "Dashboard", href: "/dashboard" },
                     { label: "Telehealth" },
                 ]}
+                actions={
+                    <Link
+                        href="/telehealth/setup"
+                        className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-xs font-bold text-muted-foreground hover:text-primary transition-all shadow-sm"
+                    >
+                        <Settings className="h-4 w-4" />
+                        Setup & Hardware
+                    </Link>
+                }
             />
 
             <div className="flex-1 overflow-y-auto p-6 lg:px-10 lg:py-8 space-y-8 max-w-7xl mx-auto w-full">
@@ -162,15 +181,15 @@ export default function TelehealthPage() {
                                         <p className="text-xs font-medium text-slate-400 italic">{apt.type}</p>
                                     </div>
                                     <button
-                                        disabled={apt.status !== "ready" || activeCall}
-                                        onClick={() => setActiveCall(true)}
+                                        disabled={apt.status !== "ready" || activeCall || isCameraStarting}
+                                        onClick={handleStartCall}
                                         className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${apt.status === "ready"
-                                                ? "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20"
-                                                : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
-                                            }`}
+                                            ? "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20"
+                                            : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                                            } ${isCameraStarting && apt.status === "ready" ? "animate-pulse" : ""}`}
                                     >
-                                        <Video className="h-4 w-4" />
-                                        {apt.status === "ready" ? "Start Session" : "Scheduled"}
+                                        <Video className={`h-4 w-4 ${isCameraStarting ? "animate-spin" : ""}`} />
+                                        {isCameraStarting ? "Connecting..." : apt.status === "ready" ? "Start Session" : "Scheduled"}
                                     </button>
                                 </div>
                             ))}
@@ -192,7 +211,13 @@ export default function TelehealthPage() {
                             )}
                         </div>
                         <div className="flex-1 p-8">
-                            {activeCall ? (
+                            {isCameraStarting ? (
+                                <div className="h-full min-h-[300px] bg-slate-900 rounded-3xl flex flex-col items-center justify-center text-center p-8 border border-white/5 animate-pulse">
+                                    <div className="h-16 w-16 rounded-full border-4 border-primary border-t-transparent animate-spin mb-4" />
+                                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Initializing Camera</h3>
+                                    <p className="text-xs text-slate-500 font-medium">Securing HIPAA-compliant connection...</p>
+                                </div>
+                            ) : activeCall ? (
                                 <div className="h-full min-h-[300px] bg-slate-950 rounded-3xl relative overflow-hidden group border border-white/5 ring-1 ring-white/10 shadow-2xl">
                                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                                         <div className="h-24 w-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 mb-4">
@@ -277,9 +302,12 @@ export default function TelehealthPage() {
                                             <span className="text-xs font-bold text-slate-500">{session.duration}</span>
                                         </td>
                                         <td className="px-8 py-4 text-right">
-                                            <button className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                                            <Link
+                                                href="/notes"
+                                                className="px-4 py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all inline-block"
+                                            >
                                                 Open Notes
-                                            </button>
+                                            </Link>
                                         </td>
                                     </tr>
                                 ))}

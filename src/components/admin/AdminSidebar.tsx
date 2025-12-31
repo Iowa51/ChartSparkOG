@@ -12,6 +12,8 @@ import {
     ChevronLeft,
     Stethoscope,
     Shield,
+    TrendingUp,
+    DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,10 +21,17 @@ const adminNavItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Organizations", href: "/admin/organizations", icon: Building2 },
     { label: "Users", href: "/admin/users", icon: Users },
-    { label: "Billing Admin", href: "/super-admin/revenue", icon: FileText },
-    { label: "Platform Fees", href: "/super-admin/fees", icon: Percent },
-    { label: "System Health", href: "/super-admin/health", icon: Stethoscope },
+    { label: "Billing", href: "/admin/billing", icon: FileText },
+    { label: "System Health", href: "/admin/system-health", icon: Stethoscope },
     { label: "Settings", href: "/admin/settings", icon: Settings },
+];
+
+// Super Admin uses anchor links since it's a single-page dashboard
+const superAdminNavItems = [
+    { label: "Overview", href: "#overview", icon: LayoutDashboard },
+    { label: "Organizations", href: "#organizations", icon: Building2 },
+    { label: "Users", href: "#users", icon: Users },
+    { label: "Revenue", href: "#revenue", icon: DollarSign },
 ];
 
 interface AdminSidebarProps {
@@ -33,24 +42,18 @@ interface AdminSidebarProps {
 export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebarProps) {
     const pathname = usePathname();
 
-    const navItems = adminNavItems.filter(item => {
-        // Hide Platform Fees and Dashboard (super-admin) if not Super Admin
-        if (role !== "SUPER_ADMIN" && (item.label === "Platform Fees" || item.href === "/super-admin")) return false;
+    // Use different nav items based on context
+    const navItems = context === "super-admin" ? superAdminNavItems : adminNavItems;
 
-        // Custom logic for Dashboard link based on context
-        if (item.label === "Dashboard") {
-            if (context === "admin" && item.href === "/super-admin") return false;
-            if (context === "super-admin" && item.href === "/admin") return false;
+    const handleAnchorClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        if (href.startsWith("#")) {
+            e.preventDefault();
+            const element = document.querySelector(href);
+            if (element) {
+                element.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
         }
-
-        return true;
-    });
-
-    // Add Admin Dashboard link if not present and context is admin
-    const finalNavItems = [...navItems];
-    if (context === "admin" && !finalNavItems.some(i => i.href === "/admin")) {
-        finalNavItems.unshift({ label: "Dashboard", href: "/admin", icon: LayoutDashboard });
-    }
+    };
 
     return (
         <aside className={cn(
@@ -76,9 +79,31 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
 
             {/* Main Navigation */}
             <nav className="flex-1 px-4 space-y-1">
-                {finalNavItems.map((item) => {
-                    const isActive = pathname === item.href || (item.href !== "/admin" && item.href !== "/super-admin" && pathname.startsWith(item.href));
+                {navItems.map((item, index) => {
+                    const isActive = context === "super-admin"
+                        ? index === 0 // First item is always "active" for super-admin since it's single page
+                        : (pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href)));
                     const Icon = item.icon;
+
+                    if (context === "super-admin") {
+                        // Use regular anchor for super-admin (smooth scroll)
+                        return (
+                            <a
+                                key={item.href}
+                                href={item.href}
+                                onClick={(e) => handleAnchorClick(e, item.href)}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm cursor-pointer",
+                                    index === 0
+                                        ? "bg-purple-600 text-white font-bold"
+                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                )}
+                            >
+                                <Icon className="h-5 w-5" />
+                                <span>{item.label}</span>
+                            </a>
+                        );
+                    }
 
                     return (
                         <Link
@@ -87,7 +112,7 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
                             className={cn(
                                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm",
                                 isActive
-                                    ? (context === "super-admin" ? "bg-purple-600 text-white font-bold" : "bg-primary text-white font-bold")
+                                    ? "bg-primary text-white font-bold"
                                     : "text-slate-300 hover:bg-slate-800 hover:text-white"
                             )}
                         >

@@ -305,7 +305,7 @@ export default function SuperAdminDashboardPage() {
                 <div className="max-w-7xl mx-auto space-y-8">
 
                     {/* Platform Overview Cards with Sparklines */}
-                    <div className="grid gap-4 md:grid-cols-4">
+                    <div id="overview" className="grid gap-4 md:grid-cols-4 scroll-mt-24">
                         {/* Total Organizations */}
                         <Card className="hover:shadow-md transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -420,7 +420,7 @@ export default function SuperAdminDashboardPage() {
                     </div>
 
                     {/* Organization Management Section */}
-                    <Card className="mt-6 border-slate-200 dark:border-slate-800">
+                    <Card id="organizations" className="mt-6 border-slate-200 dark:border-slate-800 scroll-mt-24">
                         <CardHeader className="border-b border-slate-100 dark:border-slate-800">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -499,8 +499,8 @@ export default function SuperAdminDashboardPage() {
                                                 <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">${org.revenue.toLocaleString()}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${org.status === "active"
-                                                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400"
-                                                            : "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400"
+                                                        ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400"
+                                                        : "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400"
                                                         }`}>
                                                         {org.status}
                                                     </span>
@@ -513,8 +513,8 @@ export default function SuperAdminDashboardPage() {
                                                         <button
                                                             onClick={() => toggleStatus(org.id)}
                                                             className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${org.status === "active"
-                                                                    ? "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
-                                                                    : "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                                                                ? "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
+                                                                : "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
                                                                 }`}
                                                         >
                                                             {org.status === "active" ? "Deactivate" : "Activate"}
@@ -530,7 +530,7 @@ export default function SuperAdminDashboardPage() {
                     </Card>
 
                     {/* User Management Section */}
-                    <Card className="mt-6 border-slate-200 dark:border-slate-800">
+                    <Card id="users" className="mt-6 border-slate-200 dark:border-slate-800 scroll-mt-24">
                         <CardHeader className="border-b border-slate-100 dark:border-slate-800">
                             <div className="flex items-center justify-between">
                                 <div>
@@ -617,8 +617,8 @@ export default function SuperAdminDashboardPage() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${user.status === "active"
-                                                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400"
-                                                            : "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400"
+                                                        ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400"
+                                                        : "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400"
                                                         }`}>
                                                         {user.status}
                                                     </span>
@@ -638,8 +638,8 @@ export default function SuperAdminDashboardPage() {
                                                         <button
                                                             onClick={() => toggleUserStatus(user.id)}
                                                             className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition-all ${user.status === "active"
-                                                                    ? "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
-                                                                    : "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                                                                ? "border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
+                                                                : "border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
                                                                 }`}
                                                         >
                                                             {user.status === "active" ? "Deactivate" : "Activate"}
@@ -655,7 +655,7 @@ export default function SuperAdminDashboardPage() {
                     </Card>
 
                     {/* Revenue Analytics Section */}
-                    <Card className="mt-6 border-slate-200 dark:border-slate-800">
+                    <Card id="revenue" className="mt-6 border-slate-200 dark:border-slate-800 scroll-mt-24">
                         <CardHeader className="border-b border-slate-100 dark:border-slate-800">
                             <div className="flex items-center justify-between">
                                 <div>

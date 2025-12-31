@@ -67,11 +67,17 @@ const recentPrescriptions = [
 export default function EPrescribePage() {
     const [selectedPatient, setSelectedPatient] = useState("");
     const [medication, setMedication] = useState("");
+    const [activeTab, setActiveTab] = useState("all");
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         alert("Prescription sent successfully! Transmission complete via Surescripts network.");
     };
+
+    const filteredPrescriptions = recentPrescriptions.filter(rx => {
+        if (activeTab === "all") return true;
+        return rx.status === activeTab;
+    });
 
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
@@ -87,7 +93,10 @@ export default function EPrescribePage() {
             <div className="flex-1 overflow-y-auto p-6 lg:px-10 lg:py-8 space-y-8 max-w-7xl mx-auto w-full">
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
+                    <button
+                        onClick={() => setActiveTab("all")}
+                        className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border transition-all text-left shadow-sm flex items-center gap-5 ${activeTab === "all" ? "border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10" : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"}`}
+                    >
                         <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                             <Pill className="h-7 w-7" />
                         </div>
@@ -95,8 +104,11 @@ export default function EPrescribePage() {
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">MTD Orders</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white">127</p>
                         </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("sent")}
+                        className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border transition-all text-left shadow-sm flex items-center gap-5 ${activeTab === "sent" ? "border-amber-500 ring-2 ring-amber-500/20 shadow-lg shadow-amber-500/10" : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"}`}
+                    >
                         <div className="h-14 w-14 rounded-2xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
                             <Clock className="h-7 w-7" />
                         </div>
@@ -104,8 +116,11 @@ export default function EPrescribePage() {
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">In Transit</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white">8</p>
                         </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("filled")}
+                        className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border transition-all text-left shadow-sm flex items-center gap-5 ${activeTab === "filled" ? "border-emerald-500 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-500/10" : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"}`}
+                    >
                         <div className="h-14 w-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                             <CheckCircle className="h-7 w-7" />
                         </div>
@@ -113,8 +128,8 @@ export default function EPrescribePage() {
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Fulfilled</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white">112</p>
                         </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
+                    </button>
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5 opacity-60">
                         <div className="h-14 w-14 rounded-2xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
                             <AlertCircle className="h-7 w-7" />
                         </div>
@@ -258,53 +273,107 @@ export default function EPrescribePage() {
                                     <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Recent Orders</h2>
                                 </div>
                             </div>
-                            <div className="p-6 space-y-4 overflow-y-auto">
-                                {recentPrescriptions.map(rx => (
-                                    <div key={rx.id} className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:border-primary transition-all group">
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="h-10 w-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
-                                                <Pill className="h-5 w-5" />
-                                            </div>
-                                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${rx.status === "filled"
-                                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                                    : "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                                                }`}>
-                                                {rx.status}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h4 className="font-black text-lg text-slate-900 dark:text-white leading-tight">{rx.medication}</h4>
-                                            <p className="text-xs font-bold text-slate-500 tracking-tight uppercase">{rx.patient}</p>
-                                        </div>
-                                        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-                                            <div className="text-[10px] font-bold text-slate-400">
-                                                {rx.date}
-                                            </div>
-                                            <button className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
-                                                Full Details
-                                                <ArrowRight className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    </div>
+
+                            {/* Status Filter Tabs */}
+                            <div className="px-8 pt-4 flex items-center gap-1">
+                                {["all", "sent", "filled"].map((t) => (
+                                    <button
+                                        key={t}
+                                        onClick={() => setActiveTab(t)}
+                                        className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t
+                                            ? "bg-primary/10 text-primary border border-primary/20"
+                                            : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                                            }`}
+                                    >
+                                        {t}
+                                    </button>
                                 ))}
                             </div>
-                            <button className="w-full py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:bg-slate-50 dark:hover:bg-slate-900 transition-all border-t border-slate-200 dark:border-slate-800">
-                                Archive Ledger
-                            </button>
-                        </div>
 
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-8">
-                            <div className="flex items-center gap-3 mb-4">
-                                <CheckCircle className="h-6 w-6 text-emerald-500" />
-                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Surescripts Certified</span>
+                            <div className="p-6 space-y-4 overflow-y-auto min-h-[400px]">
+                                {filteredPrescriptions.length > 0 ? (
+                                    filteredPrescriptions.map(rx => (
+                                        <div key={rx.id} className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:border-primary transition-all group animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="h-10 w-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+                                                    <Pill className="h-5 w-5" />
+                                                </div>
+                                                <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${rx.status === "filled"
+                                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                                    : "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                                                    }`}>
+                                                    {rx.status}
+                                                </span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <h4 className="font-black text-lg text-slate-900 dark:text-white leading-tight">{rx.medication}</h4>
+                                                <p className="text-xs font-bold text-slate-500 tracking-tight uppercase">{rx.patient}</p>
+                                            </div>
+                                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
+                                                <div className="text-[10px] font-bold text-slate-400">
+                                                    {rx.date}
+                                                </div>
+                                                <button className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
+                                                    Full Details
+                                                    <ArrowRight className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-64 text-center p-8">
+                                        <div className="h-16 w-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                                            <Clipboard className="h-8 w-8" />
+                                        </div>
+                                        <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">No matching orders</h3>
+                                        <p className="text-xs text-slate-400 mt-2">Try selecting a different status filter.</p>
+                                    </div>
+                                )}
                             </div>
-                            <p className="text-xs text-emerald-700/80 font-medium leading-relaxed">
-                                Authorized prescriber credentials active. 2FA required for scheduled narcotics.
-                            </p>
+                            <div className="flex items-start justify-between mb-3">
+                                <div className="h-10 w-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+                                    <Pill className="h-5 w-5" />
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${rx.status === "filled"
+                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                    : "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                                    }`}>
+                                    {rx.status}
+                                </span>
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="font-black text-lg text-slate-900 dark:text-white leading-tight">{rx.medication}</h4>
+                                <p className="text-xs font-bold text-slate-500 tracking-tight uppercase">{rx.patient}</p>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
+                                <div className="text-[10px] font-bold text-slate-400">
+                                    {rx.date}
+                                </div>
+                                <button className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest hover:underline">
+                                    Full Details
+                                    <ArrowRight className="h-3 w-3" />
+                                </button>
+                            </div>
                         </div>
+                                ))}
                     </div>
+                    <button className="w-full py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] hover:bg-slate-50 dark:hover:bg-slate-900 transition-all border-t border-slate-200 dark:border-slate-800">
+                        Archive Ledger
+                    </button>
+                </div>
+
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-8">
+                    <div className="flex items-center gap-3 mb-4">
+                        <CheckCircle className="h-6 w-6 text-emerald-500" />
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Surescripts Certified</span>
+                    </div>
+                    <p className="text-xs text-emerald-700/80 font-medium leading-relaxed">
+                        Authorized prescriber credentials active. 2FA required for scheduled narcotics.
+                    </p>
                 </div>
             </div>
         </div>
+            </div >
+        </div >
     );
 }

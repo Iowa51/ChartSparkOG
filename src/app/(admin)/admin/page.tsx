@@ -9,6 +9,8 @@ import {
     Search,
     MoreHorizontal,
     UserCircle,
+    X,
+    Shield,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -45,6 +47,10 @@ export default function AdminDashboardPage() {
     const [organizations, setOrganizations] = useState(initialOrganizations);
     const [searchTerm, setSearchTerm] = useState("");
     const [userSearchTerm, setUserSearchTerm] = useState("");
+    const [showAddStaff, setShowAddStaff] = useState(false);
+    const [showManageAccess, setShowManageAccess] = useState<number | null>(null);
+
+    const selectedUser = initialUsers.find(u => u.id === showManageAccess);
 
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
@@ -131,7 +137,11 @@ export default function AdminDashboardPage() {
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <CardTitle>Staff Management</CardTitle>
-                                <button className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg shadow-lg shadow-primary/20">
+                                <button
+                                    onClick={() => setShowAddStaff(true)}
+                                    className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2"
+                                >
+                                    <Plus className="h-4 w-4" />
                                     Add New Staff
                                 </button>
                             </div>
@@ -149,7 +159,11 @@ export default function AdminDashboardPage() {
                                                 <p className="text-xs text-muted-foreground">{user.organization} • {user.role}</p>
                                             </div>
                                         </div>
-                                        <button className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
+                                        <button
+                                            onClick={() => setShowManageAccess(user.id)}
+                                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                                        >
+                                            <Shield className="h-3 w-3" />
                                             Manage Access
                                         </button>
                                     </div>
@@ -159,6 +173,95 @@ export default function AdminDashboardPage() {
                     </Card>
                 </div>
             </div>
+
+            {/* Add Staff Modal */}
+            {showAddStaff && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddStaff(false)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold">Add New Staff</h2>
+                            <button onClick={() => setShowAddStaff(false)} className="text-slate-400 hover:text-slate-600">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={(e) => { e.preventDefault(); alert("Staff member added successfully!"); setShowAddStaff(false); }} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Full Name</label>
+                                <input type="text" required className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700" placeholder="Dr. Jane Smith" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Email</label>
+                                <input type="email" required className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700" placeholder="jane@clinic.com" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Role</label>
+                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
+                                    <option value="USER">User</option>
+                                    <option value="ADMIN">Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Organization</label>
+                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
+                                    {organizations.map(org => (
+                                        <option key={org.id} value={org.id}>{org.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex gap-2 pt-4">
+                                <button type="button" onClick={() => setShowAddStaff(false)} className="flex-1 px-4 py-2 border rounded-lg font-medium">Cancel</button>
+                                <button type="submit" className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-bold">Add Staff</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Manage Access Modal */}
+            {showManageAccess && selectedUser && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowManageAccess(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <Shield className="h-5 w-5 text-primary" />
+                                Manage Access
+                            </h2>
+                            <button onClick={() => setShowManageAccess(null)} className="text-slate-400 hover:text-slate-600">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                            <p className="font-bold">{selectedUser.name}</p>
+                            <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Role</label>
+                                <select defaultValue={selectedUser.role} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
+                                    <option value="USER">User</option>
+                                    <option value="ADMIN">Admin</option>
+                                    <option value="SUPER_ADMIN">Super Admin</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Permissions</label>
+                                <div className="space-y-2">
+                                    {["View Patients", "Edit Patients", "Create Notes", "View Billing", "Admin Access"].map(perm => (
+                                        <label key={perm} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                                            <input type="checkbox" defaultChecked={perm !== "Admin Access"} className="rounded" />
+                                            <span className="text-sm">{perm}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex gap-2 pt-4">
+                                <button onClick={() => setShowManageAccess(null)} className="flex-1 px-4 py-2 border rounded-lg font-medium">Cancel</button>
+                                <button onClick={() => { alert("Access updated successfully!"); setShowManageAccess(null); }} className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-bold">Save Changes</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

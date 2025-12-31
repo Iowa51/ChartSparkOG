@@ -219,7 +219,7 @@ export default function NewNotePage() {
                 <div className="w-full max-w-[1700px] mx-auto h-full flex flex-col md:flex-row gap-6 p-4 md:p-6 overflow-hidden">
                     {/* Left Pane: Transcript & Input Hub */}
                     {showTranscript && (
-                        <aside className="flex flex-col w-full md:w-[400px] lg:w-[460px] gap-6 shrink-0 flex-none h-full overflow-hidden">
+                        <aside className="flex flex-col w-full md:w-[420px] lg:w-[500px] gap-6 shrink-0 flex-none h-full overflow-hidden">
                             {/* Input Clinical Hub */}
                             <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0 transition-all duration-500">
                                 <div className="px-5 py-3 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
@@ -272,7 +272,7 @@ export default function NewNotePage() {
                                             <button
                                                 onClick={handleGenerateNote}
                                                 disabled={isGenerating || !clinicianInput}
-                                                className="w-full py-2 bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-border flex items-center justify-center gap-2"
+                                                className="w-full py-2.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-700 dark:text-purple-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-purple-200/50 flex items-center justify-center gap-2"
                                             >
                                                 <Sparkles className="h-3.5 w-3.5" />
                                                 Process Typed History
@@ -345,7 +345,7 @@ export default function NewNotePage() {
                                             >
                                                 <div className="flex justify-between items-baseline mb-1.5">
                                                     <span
-                                                        className={`text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-widest ${entry.speaker === "NP"
+                                                        className={`text-[11px] font-black uppercase px-2.5 py-1 rounded tracking-widest ${entry.speaker === "NP"
                                                             ? "text-primary bg-primary/10"
                                                             : "text-muted-foreground bg-muted"
                                                             }`}
@@ -356,7 +356,7 @@ export default function NewNotePage() {
                                                         {entry.time}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-foreground/80 leading-relaxed italic">
+                                                <p className="text-base text-foreground/80 leading-relaxed italic">
                                                     "{entry.text}"
                                                 </p>
                                             </div>

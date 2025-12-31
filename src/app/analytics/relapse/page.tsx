@@ -172,6 +172,9 @@ export default function RelapsePreventionPage() {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [selectedPatient, setSelectedPatient] = useState<any>(null);
     const [alertThreshold, setAlertThreshold] = useState(70);
+    const [riskFilter, setRiskFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+    const [expandedFactors, setExpandedFactors] = useState<number[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
     const [alertsEnabled, setAlertsEnabled] = useState({
         inApp: true,
         email: true,
@@ -336,7 +339,15 @@ export default function RelapsePreventionPage() {
     };
 
     const filteredAndSortedPatients = patientsRiskData
-        .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        .filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesRisk =
+                riskFilter === 'all' ? true :
+                    riskFilter === 'high' ? p.risk7day >= 70 :
+                        riskFilter === 'medium' ? (p.risk7day >= 40 && p.risk7day < 70) :
+                            p.risk7day < 40;
+            return matchesSearch && matchesRisk;
+        })
         .sort((a, b: any) => {
             const aVal = a[sortBy] as string | number;
             const bVal = b[sortBy] as string | number;
@@ -380,7 +391,10 @@ export default function RelapsePreventionPage() {
             {/* Risk Overview Cards */}
             <div className="grid gap-4 md:grid-cols-4">
                 {/* Total Monitored */}
-                <Card>
+                <Card
+                    className={`cursor-pointer transition-all hover:ring-2 hover:ring-slate-200 ${riskFilter === 'all' ? 'ring-2 ring-primary border-primary/50 shadow-md' : ''}`}
+                    onClick={() => setRiskFilter('all')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Monitored</CardTitle>
                         <Users className="h-4 w-4 text-slate-500" />
@@ -394,7 +408,10 @@ export default function RelapsePreventionPage() {
                 </Card>
 
                 {/* High Risk */}
-                <Card className="border-red-200 dark:border-red-900 bg-red-50/10 dark:bg-red-950/10">
+                <Card
+                    className={`cursor-pointer transition-all hover:ring-2 hover:ring-red-200 border-red-200 dark:border-red-900 bg-red-50/10 dark:bg-red-950/10 ${riskFilter === 'high' ? 'ring-2 ring-red-500 border-red-500/50 shadow-md' : ''}`}
+                    onClick={() => setRiskFilter('high')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-red-900 dark:text-red-100">High Risk</CardTitle>
                         <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -412,7 +429,10 @@ export default function RelapsePreventionPage() {
                 </Card>
 
                 {/* Medium Risk */}
-                <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/10 dark:bg-amber-950/10">
+                <Card
+                    className={`cursor-pointer transition-all hover:ring-2 hover:ring-amber-200 border-amber-200 dark:border-amber-900 bg-amber-50/10 dark:bg-amber-950/10 ${riskFilter === 'medium' ? 'ring-2 ring-amber-500 border-amber-500/50 shadow-md' : ''}`}
+                    onClick={() => setRiskFilter('medium')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">Medium Risk</CardTitle>
                         <Activity className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -430,7 +450,10 @@ export default function RelapsePreventionPage() {
                 </Card>
 
                 {/* Low Risk */}
-                <Card className="border-emerald-200 dark:border-emerald-900 bg-emerald-50/10 dark:bg-emerald-950/10">
+                <Card
+                    className={`cursor-pointer transition-all hover:ring-2 hover:ring-emerald-200 border-emerald-200 dark:border-emerald-900 bg-emerald-50/10 dark:bg-emerald-950/10 ${riskFilter === 'low' ? 'ring-2 ring-emerald-500 border-emerald-500/50 shadow-md' : ''}`}
+                    onClick={() => setRiskFilter('low')}
+                >
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-emerald-900 dark:text-emerald-100">Low Risk</CardTitle>
                         <Shield className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -611,14 +634,27 @@ export default function RelapsePreventionPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="max-w-xs flex flex-wrap gap-1">
-                                                    {patient.riskFactors.slice(0, 2).map((factor, i) => (
+                                                    {(expandedFactors.includes(patient.id) ? patient.riskFactors : patient.riskFactors.slice(0, 2)).map((factor, i) => (
                                                         <Badge key={i} variant="outline" className="text-[10px] bg-white dark:bg-slate-950 font-normal text-slate-600 dark:text-slate-400">
                                                             {factor}
                                                         </Badge>
                                                     ))}
-                                                    {patient.riskFactors.length > 2 && (
-                                                        <Badge variant="outline" className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                                    {patient.riskFactors.length > 2 && !expandedFactors.includes(patient.id) && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                                            onClick={() => setExpandedFactors([...expandedFactors, patient.id])}
+                                                        >
                                                             +{patient.riskFactors.length - 2} more
+                                                        </Badge>
+                                                    )}
+                                                    {expandedFactors.includes(patient.id) && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-pointer hover:bg-slate-200"
+                                                            onClick={() => setExpandedFactors(expandedFactors.filter(id => id !== patient.id))}
+                                                        >
+                                                            show less
                                                         </Badge>
                                                     )}
                                                 </div>
@@ -748,8 +784,24 @@ export default function RelapsePreventionPage() {
                     </div>
 
                     <div className="flex justify-end pt-2">
-                        <Button size="lg" className="w-full md:w-auto bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
-                            Save Alert Settings
+                        <Button
+                            size="lg"
+                            disabled={isSaving}
+                            onClick={() => {
+                                setIsSaving(true);
+                                setTimeout(() => {
+                                    setIsSaving(false);
+                                    alert("Alert settings saved successfully! Your preferences have been updated across all notification channels.");
+                                }, 1000);
+                            }}
+                            className="w-full md:w-auto bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                        >
+                            {isSaving ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    Saving...
+                                </div>
+                            ) : "Save Alert Settings"}
                         </Button>
                     </div>
                 </CardContent>
