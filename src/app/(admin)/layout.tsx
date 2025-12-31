@@ -9,17 +9,29 @@ export default async function AdminLayout({
     children: React.ReactNode;
 }) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    let user = null;
+    let profile = null;
 
-    // Fetch role from profile
-    const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user?.id)
-        .single();
+    if (supabase) {
+        try {
+            const { data } = await supabase.auth.getUser();
+            user = data.user;
 
-    // Fallback for demo if profiles missing
-    const role = profile?.role || (user?.email === "admin@chartspark.com" ? "SUPER_ADMIN" : "ADMIN");
+            if (user) {
+                const { data: profileData } = await supabase
+                    .from("profiles")
+                    .select("role")
+                    .eq("id", user.id)
+                    .single();
+                profile = profileData;
+            }
+        } catch (e) {
+            console.error("Supabase error in AdminLayout:", e);
+        }
+    }
+
+    // Fallback for demo if profiles missing or Supabase disabled
+    const role = profile?.role || (user?.email === "admin@chartspark.io" ? "SUPER_ADMIN" : "ADMIN");
 
     // Determine context from URL (using headers since we are in asServerComponent)
     const headerList = await headers();

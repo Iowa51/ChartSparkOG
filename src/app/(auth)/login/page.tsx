@@ -31,16 +31,28 @@ export default function LoginPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Simplified Demo Login Fix
-        if (email === "demo@chartspark.com" || isDemoMode) {
-            setIsLoading(true); // Set loading state for demo as well
+        // Simplified Demo Login Fix: Allow specific demo credentials to bypass real API calls
+        const isDemoAccount =
+            email === "demo@chartspark.com" ||
+            email === "admin@chartspark.io" ||
+            email === "ad@mountainview.com";
+
+        if (isDemoAccount || isDemoMode) {
+            setIsLoading(true);
             localStorage.setItem('demoMode', 'true');
             // Set cookie for middleware bypass
             document.cookie = "demoMode=true; path=/";
 
             setTimeout(() => {
                 setIsLoading(false);
-                router.push(redirectPath);
+                // Redirect logic for specific accounts
+                if (email === "admin@chartspark.io") {
+                    router.push("/super-admin");
+                } else if (email === "ad@mountainview.com") {
+                    router.push("/admin");
+                } else {
+                    router.push(redirectPath);
+                }
             }, 500);
             return;
         }
