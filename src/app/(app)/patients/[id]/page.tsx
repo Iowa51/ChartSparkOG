@@ -114,6 +114,7 @@ export default function PatientDetailPage() {
         { id: "overview", label: "Overview", icon: Activity },
         { id: "encounters", label: "Encounters", icon: Calendar },
         { id: "medications", label: "Medications", icon: Pill },
+        { id: "risk", label: "Risk Assessment", icon: Shield },
         { id: "history", label: "History", icon: History },
     ];
 
@@ -514,6 +515,27 @@ export default function PatientDetailPage() {
                                     )}
                                 </div>
                             </section>
+                        )}
+                        {activeTab === "risk" && (
+                            <div className="space-y-6">
+                                <section className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden p-6">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Risk Assessments</h3>
+                                        <Link
+                                            href={`/patients/${patient.id}/risk/new`}
+                                            className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-2"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            New Assessment
+                                        </Link>
+                                    </div>
+                                    <div className="p-12 text-center border-2 border-dashed border-border rounded-2xl">
+                                        <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                                        <p className="text-sm text-muted-foreground">No formal risk assessments on file for this period.</p>
+                                        <p className="text-xs text-muted-foreground mt-1">Complete a Fall Risk, MMSE, or GDS-15 assessment to see trends.</p>
+                                    </div>
+                                </section>
+                            </div>
                         )}
                     </div>
 

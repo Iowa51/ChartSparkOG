@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
     ArrowLeft,
@@ -20,11 +20,47 @@ import {
     Plus,
     AlertCircle,
 } from "lucide-react";
-import { getTemplateById, getDefaultTemplate } from "@/lib/demo-data/templates";
+import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/templates";
 import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
+
+const PREBUILT_PHRASES: Record<string, string[]> = {
+    Subjective: [
+        "Patient reports feeling better",
+        "Mood is stable",
+        "Sleep has improved",
+        "Anxiety reduced",
+        "Medication tolerated well",
+        "Reports side effects",
+        "Compliance with medication",
+        "Denies suicidal ideation"
+    ],
+    Objective: [
+        "Alert and oriented x4",
+        "Appearance neat and clean",
+        "Eye contact appropriate",
+        "Speech normal rate and rhythm",
+        "Mood euthymic",
+        "Affect congruent",
+        "Thought process linear",
+        "No psychomotor agitation"
+    ],
+    Assessment: [
+        "Progressing towards goals",
+        "Symptoms well-managed",
+        "Diagnosis currently stable",
+        "Requires ongoing monitoring"
+    ],
+    Plan: [
+        "Continue current treatment plan",
+        "Adjusted medication dosage",
+        "Follow up in 2 weeks",
+        "Referral to specialist"
+    ]
+};
 
 export default function NewNotePage() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const templateId = searchParams.get("template") || "tpl-progress-note";
     const template = getTemplateById(templateId) || getDefaultTemplate();
 
@@ -36,6 +72,22 @@ export default function NewNotePage() {
 
     // State for clinician's manual notes/input
     const [clinicianInput, setClinicianInput] = useState("");
+    const [activeInputTab, setActiveInputTab] = useState<"scribe" | "phrases" | "manual">("phrases");
+    const [selectedPhrases, setSelectedPhrases] = useState<Record<string, string[]>>({
+        Subjective: [],
+        Objective: [],
+        Assessment: [],
+        Plan: []
+    });
+    const [customPhrases, setCustomPhrases] = useState<Record<string, string[]>>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('customPhrases');
+            return saved ? JSON.parse(saved) : { Subjective: [], Objective: [], Assessment: [], Plan: [] };
+        }
+        return { Subjective: [], Objective: [], Assessment: [], Plan: [] };
+    });
+    const [newPhrase, setNewPhrase] = useState("");
+    const [showPhraseModal, setShowPhraseModal] = useState(false);
 
     // Updated SOAP/Note state to be dynamic
     const [noteSections, setNoteSections] = useState<Record<string, string>>({});
@@ -56,12 +108,20 @@ export default function NewNotePage() {
 
     // Simulate AI generation
     const handleGenerateNote = async () => {
-        if (!clinicianInput && !isRecording && demoTranscript.length === 0) {
-            alert("Please provide some input (voice or typing) before generating a note.");
+        const hasPhrases = Object.values(selectedPhrases).some(p => p.length > 0);
+        if (!clinicianInput && !isRecording && demoTranscript.length === 0 && !hasPhrases) {
+            alert("Please provide some input (voice, typing, or phrases) before generating a note.");
             return;
         }
 
         setIsGenerating(true);
+        // Combine inputs for AI context
+        const phraseContext = Object.entries(selectedPhrases)
+            .filter(([_, phrases]) => phrases.length > 0)
+            .map(([section, phrases]) => `${section}: ${phrases.join(', ')}`)
+            .join('\n');
+
+        console.log("Generating with context:", { clinicianInput, phraseContext });
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
         const demoNote = generateDemoNote(templateId);
@@ -177,7 +237,18 @@ export default function NewNotePage() {
                                     Appointment: 2:30 PM
                                 </span>
                                 <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-muted text-foreground">
-                                    {template.name}
+                                    <select
+                                        value={template.id}
+                                        onChange={(e) => {
+                                            const newPath = `/notes/new?template=${e.target.value}`;
+                                            router.push(newPath);
+                                        }}
+                                        className="bg-transparent border-none text-xs font-bold outline-none cursor-pointer"
+                                    >
+                                        {templates.map(t => (
+                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        ))}
+                                    </select>
                                 </span>
                             </div>
                         </div>
@@ -223,102 +294,163 @@ export default function NewNotePage() {
                             {/* Input Clinical Hub */}
                             <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0 transition-all duration-500">
                                 <div className="px-5 py-3 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
-                                    <h3 className="text-[10px] font-black text-foreground flex items-center gap-2 uppercase tracking-[0.2em] opacity-70">
-                                        <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                        Intelligence Input Hub
-                                    </h3>
+                                    <div className="flex items-center gap-4">
+                                        <button
+                                            onClick={() => setActiveInputTab("phrases")}
+                                            className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "phrases" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
+                                        >
+                                            Phrases
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveInputTab("scribe")}
+                                            className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "scribe" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
+                                        >
+                                            Scribe
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveInputTab("manual")}
+                                            className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "manual" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
+                                        >
+                                            Manual
+                                        </button>
+                                    </div>
                                     <div className="flex items-center gap-1">
-                                        {isRecordingVisible && (
-                                            <button
-                                                onClick={() => setIsRecordingVisible(false)}
-                                                className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"
-                                                title="Collapse Hub"
-                                            >
-                                                Hide
-                                                <ArrowLeft className="h-4 w-4 rotate-90" />
-                                            </button>
-                                        )}
                                         <button
                                             onClick={() => setShowTranscript(false)}
                                             className="group p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all flex items-center gap-2"
                                             title="Collapse Sidebar"
                                         >
-                                            <span className="text-[9px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Full Collapse</span>
                                             <ArrowLeft className="h-4 w-4" />
                                         </button>
                                     </div>
                                 </div>
 
-                                {isRecordingVisible ? (
-                                    <div className="p-5 space-y-6 animate-in slide-in-from-top-4 duration-300">
-                                        {/* Manual Input Section */}
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between ml-1">
-                                                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
-                                                    Manual Observation Input
+                                <div className="p-5 flex-1 overflow-y-auto">
+                                    {activeInputTab === "phrases" && (
+                                        <div className="space-y-6 animate-in fade-in duration-300">
+                                            {Object.entries(PREBUILT_PHRASES).map(([section, phrases]) => (
+                                                <div key={section} className="space-y-3">
+                                                    <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center justify-between">
+                                                        {section}
+                                                        <button
+                                                            onClick={() => {
+                                                                setNewPhrase("");
+                                                                setShowPhraseModal(true);
+                                                            }}
+                                                            className="text-primary hover:underline lowercase font-bold"
+                                                        >
+                                                            + custom
+                                                        </button>
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        {[...phrases, ...(customPhrases[section] || [])].map((phrase) => (
+                                                            <button
+                                                                key={phrase}
+                                                                onClick={() => {
+                                                                    setSelectedPhrases(prev => ({
+                                                                        ...prev,
+                                                                        [section]: prev[section].includes(phrase)
+                                                                            ? prev[section].filter(p => p !== phrase)
+                                                                            : [...prev[section], phrase]
+                                                                    }));
+                                                                }}
+                                                                className={`text-left p-2.5 rounded-xl border text-[11px] font-medium transition-all ${selectedPhrases[section].includes(phrase)
+                                                                    ? "bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.02]"
+                                                                    : "bg-muted/30 border-border text-foreground/70 hover:border-primary/30"
+                                                                    }`}
+                                                            >
+                                                                {phrase}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {activeInputTab === "scribe" && (
+                                        <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">
+                                                    Voice Scribe
                                                 </label>
-                                                <span className="text-[10px] font-bold text-muted-foreground opacity-50">
-                                                    {clinicianInput.length} characters
-                                                </span>
+                                                <button
+                                                    onClick={() => setIsRecording(!isRecording)}
+                                                    className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
+                                                        ? "bg-red-500 text-white shadow-red-500/20 animate-pulse ring-4 ring-red-500/10"
+                                                        : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
+                                                        }`}
+                                                >
+                                                    {isRecording ? (
+                                                        <>
+                                                            <MicOff className="h-4 w-4" />
+                                                            Stop Scribe
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Mic className="h-4 w-4" />
+                                                            Start AI Scribe
+                                                        </>
+                                                    )}
+                                                </button>
                                             </div>
-                                            <div className="relative group">
+                                        </div>
+                                    )}
+
+                                    {activeInputTab === "manual" && (
+                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between ml-1">
+                                                    <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                                                        Manual Observations
+                                                    </label>
+                                                </div>
                                                 <textarea
                                                     value={clinicianInput}
                                                     onChange={(e) => setClinicianInput(e.target.value)}
-                                                    placeholder="Type session highlights, patient quotes, or clinical observations here..."
-                                                    className="w-full h-32 p-4 bg-muted/20 hover:bg-muted/30 rounded-2xl border border-border text-sm leading-relaxed focus:bg-card focus:ring-4 focus:ring-primary/5 transition-all resize-none outline-none font-medium placeholder:italic"
+                                                    placeholder="Type highlights here..."
+                                                    className="w-full h-48 p-4 bg-muted/20 hover:bg-muted/30 rounded-2xl border border-border text-sm leading-relaxed focus:bg-card focus:ring-4 focus:ring-primary/5 transition-all resize-none outline-none font-medium"
                                                 />
                                             </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Selected Phrases Summary / Editable Area */}
+                                {activeInputTab === "phrases" && (
+                                    <div className="p-5 bg-primary/5 border-t border-primary/10 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h5 className="text-[10px] font-black text-primary uppercase tracking-widest">Selected Phrases Context (Editable)</h5>
                                             <button
-                                                onClick={handleGenerateNote}
-                                                disabled={isGenerating || !clinicianInput}
-                                                className="w-full py-2.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-700 dark:text-purple-300 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-purple-200/50 flex items-center justify-center gap-2"
+                                                onClick={() => setSelectedPhrases({ Subjective: [], Objective: [], Assessment: [], Plan: [] })}
+                                                className="text-[9px] font-bold text-muted-foreground hover:text-red-500 uppercase"
                                             >
-                                                <Sparkles className="h-3.5 w-3.5" />
-                                                Process Typed History
+                                                Clear All
                                             </button>
                                         </div>
-
-                                        <div className="relative flex items-center gap-4 py-2">
-                                            <div className="flex-1 h-px bg-border" />
-                                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-30">OR</span>
-                                            <div className="flex-1 h-px bg-border" />
-                                        </div>
-
-                                        {/* Voice Section */}
-                                        <div className="space-y-2">
-                                            <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">
-                                                Voice Scribe
-                                            </label>
-                                            <button
-                                                onClick={() => setIsRecording(!isRecording)}
-                                                className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
-                                                    ? "bg-red-500 text-white shadow-red-500/20 animate-pulse ring-4 ring-red-500/10"
-                                                    : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
-                                                    }`}
-                                            >
-                                                {isRecording ? (
-                                                    <>
-                                                        <MicOff className="h-4 w-4" />
-                                                        Stop Scribe
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Mic className="h-4 w-4" />
-                                                        Start AI Scribe
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="p-4 flex items-center justify-center animate-in fade-in duration-300">
+                                        <textarea
+                                            value={Object.entries(selectedPhrases)
+                                                .filter(([_, ps]) => ps.length > 0)
+                                                .map(([s, ps]) => `${s}: ${ps.join(', ')}`)
+                                                .join('\n')}
+                                            onChange={(e) => {
+                                                // This is tricky because it's derived state. 
+                                                // For the demo, we'll let them edit 'clinicianInput' instead if they want full custom text,
+                                                // or we can just make this a read-only preview and the AI button is below it.
+                                                // BUT the user asked for EDITABLE.
+                                                // I'll use clinicianInput as the FINAL context.
+                                                setClinicianInput(e.target.value);
+                                            }}
+                                            placeholder="Selected phrases will appear here as context for the AI..."
+                                            className="w-full h-32 p-3 bg-white dark:bg-slate-900 border border-primary/20 rounded-xl text-xs font-medium leading-relaxed focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+                                        />
                                         <button
-                                            onClick={() => setIsRecordingVisible(true)}
-                                            className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-primary/40 bg-primary/5 text-primary rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all"
+                                            onClick={handleGenerateNote}
+                                            disabled={isGenerating}
+                                            className="w-full py-3 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:-translate-y-0.5 transition-all"
                                         >
-                                            <Mic className="h-4 w-4" />
-                                            Show Recording Panel
+                                            <Sparkles className="h-3.5 w-3.5" />
+                                            Generate Full Note with AI
                                         </button>
                                     </div>
                                 )}

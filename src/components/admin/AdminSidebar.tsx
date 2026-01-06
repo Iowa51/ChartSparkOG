@@ -21,6 +21,7 @@ const adminNavItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Organizations", href: "/admin/organizations", icon: Building2 },
     { label: "Users", href: "/admin/users", icon: Users },
+    { label: "Submissions", href: "/submissions", icon: FileText },
     { label: "Billing", href: "/admin/billing", icon: FileText },
     { label: "System Health", href: "/admin/system-health", icon: Stethoscope },
     { label: "Settings", href: "/admin/settings", icon: Settings },
@@ -31,6 +32,8 @@ const superAdminNavItems = [
     { label: "Overview", href: "#overview", icon: LayoutDashboard },
     { label: "Organizations", href: "#organizations", icon: Building2 },
     { label: "Users", href: "#users", icon: Users },
+    { label: "Insurance Claims", href: "#claims", icon: Shield },
+    { label: "All Submissions", href: "/submissions", icon: FileText },
     { label: "Revenue", href: "#revenue", icon: DollarSign },
 ];
 

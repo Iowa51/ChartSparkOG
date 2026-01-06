@@ -11,12 +11,15 @@ import {
     UserCircle,
     X,
     Shield,
+    CheckCircle2,
+    Clock,
+    AlertCircle,
 } from "lucide-react";
 import { useState } from "react";
 
 // Local Component Definitions
-const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
+const Card = ({ children, className, id }: { children: React.ReactNode; className?: string; id?: string }) => (
+    <div id={id} className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
 );
 const CardHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={`p-6 pb-2 ${className}`}>{children}</div>
@@ -168,6 +171,86 @@ export default function AdminDashboardPage() {
                                         </button>
                                     </div>
                                 ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Insurance Submissions Oversight */}
+                    <Card id="claims">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle>Insurance Submissions</CardTitle>
+                                    <CardDescription>Review and approve claims before insurance submission.</CardDescription>
+                                </div>
+                                <a
+                                    href="/submissions"
+                                    className="text-primary text-xs font-bold hover:underline"
+                                >
+                                    View Full Dashboard →
+                                </a>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800 flex items-center gap-4">
+                                    <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-lg text-amber-600">
+                                        <Clock className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Pending Review</p>
+                                        <p className="text-xl font-black text-slate-900 dark:text-white">8</p>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800 flex items-center gap-4">
+                                    <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg text-blue-600">
+                                        <FileText className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Ready to File</p>
+                                        <p className="text-xl font-black text-slate-900 dark:text-white">14</p>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-4">
+                                    <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-lg text-emerald-600">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Paid (MTD)</p>
+                                        <p className="text-xl font-black text-slate-900 dark:text-white">$12,450</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-6 overflow-hidden rounded-xl border border-border">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-muted/50 text-muted-foreground font-bold uppercase text-[10px]">
+                                        <tr>
+                                            <th className="px-6 py-3">Claim ID</th>
+                                            <th className="px-6 py-3">Patient</th>
+                                            <th className="px-6 py-3">Amount</th>
+                                            <th className="px-6 py-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {[
+                                            { id: "CLM-882", patient: "Sarah Connor", amount: 245, status: "Pending Review" },
+                                            { id: "CLM-881", patient: "Michael Reese", amount: 150, status: "Ready to Submit" },
+                                        ].map(claim => (
+                                            <tr key={claim.id} className="hover:bg-muted/30 transition-colors">
+                                                <td className="px-6 py-4 font-mono text-[10px] font-bold">{claim.id}</td>
+                                                <td className="px-6 py-4 font-bold">{claim.patient}</td>
+                                                <td className="px-6 py-4 font-black">${claim.amount}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${claim.status === "Pending Review" ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-blue-50 text-blue-600 border-blue-100"
+                                                        }`}>
+                                                        {claim.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </CardContent>
                     </Card>

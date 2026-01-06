@@ -25,8 +25,8 @@ import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tool
 import { useState } from "react";
 
 // Local Component Definitions (simulating UI library for consistency)
-const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
+const Card = ({ children, className, onClick, id }: { children: React.ReactNode; className?: string; onClick?: () => void; id?: string }) => (
+    <div id={id} onClick={onClick} className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
 );
 const CardHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={`p-6 pb-2 ${className}`}>{children}</div>
@@ -650,6 +650,71 @@ export default function SuperAdminDashboardPage() {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Global Insurance Claims Oversight */}
+                    <Card id="claims" className="mt-6 border-slate-200 dark:border-slate-800 scroll-mt-24">
+                        <CardHeader className="border-b border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle>Insurance Submissions Oversight</CardTitle>
+                                    <CardDescription>Platform-wide monitoring of claim approvals and submission health.</CardDescription>
+                                </div>
+                                <Link
+                                    href="/submissions"
+                                    className="text-primary text-xs font-bold hover:underline"
+                                >
+                                    Access Global Billing Dashboard →
+                                </Link>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                                {[
+                                    { label: "Pending Platform Approval", value: "42", color: "text-amber-600", bg: "bg-amber-50" },
+                                    { label: "Claims Ready to File", value: "128", color: "text-blue-600", bg: "bg-blue-50" },
+                                    { label: "Total Submissions (MTD)", value: "1,402", color: "text-primary", bg: "bg-primary/5" },
+                                    { label: "Rejection Rate", value: "2.4%", color: "text-red-600", bg: "bg-red-50" },
+                                ].map((stat, i) => (
+                                    <div key={i} className={`p-4 rounded-xl border border-slate-100 dark:border-slate-800 ${stat.bg} transition-all hover:scale-[1.02]`}>
+                                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{stat.label}</p>
+                                        <p className={`text-2xl font-black mt-1 ${stat.color}`}>{stat.value}</p>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8">
+                                <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Submission Health by Organization</h3>
+                                <div className="space-y-3">
+                                    {[
+                                        { org: "Mountain View Clinic", pending: 12, ready: 45, success: "98.2%" },
+                                        { org: "Coastal Mental Health", pending: 8, ready: 32, success: "97.5%" },
+                                        { org: "Valley Wellness Center", pending: 15, ready: 51, success: "99.1%" },
+                                    ].map((row, i) => (
+                                        <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                                <span className="text-sm font-bold text-slate-900 dark:text-white">{row.org}</span>
+                                            </div>
+                                            <div className="flex items-center gap-8">
+                                                <div className="text-center">
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Pending</p>
+                                                    <p className="text-sm font-black text-amber-600">{row.pending}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Ready</p>
+                                                    <p className="text-sm font-black text-blue-600">{row.ready}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-[9px] font-bold text-slate-400 uppercase">Success Rate</p>
+                                                    <p className="text-sm font-black text-emerald-600">{row.success}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

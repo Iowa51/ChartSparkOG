@@ -5,8 +5,8 @@ import { AlertTriangle, TrendingUp, Users, Activity, Shield, ArrowUpDown, Search
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Local Component Definitions
-const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
+const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
+    <div onClick={onClick} className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
 );
 const CardHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={`p-6 pb-2 ${className}`}>{children}</div>
