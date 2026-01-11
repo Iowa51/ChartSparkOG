@@ -137,9 +137,10 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
                 </Link>
             </div>
 
-            {/* Admin Profile */}
+
+            {/* Admin Profile & Logout */}
             <div className="p-4 border-t border-slate-700/50">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-3">
                     <div className={cn(
                         "h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm",
                         context === "super-admin" ? "bg-purple-600" : "bg-primary"
@@ -155,7 +156,16 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
                         </p>
                     </div>
                 </div>
+                <form action="/api/auth/signout" method="POST">
+                    <button
+                        type="submit"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
+                    >
+                        Sign Out
+                    </button>
+                </form>
             </div>
         </aside>
     );
 }
+

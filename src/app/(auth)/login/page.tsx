@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-    Stethoscope,
     Mail,
     Lock,
     ArrowRight,
@@ -15,77 +14,99 @@ import {
 } from "lucide-react";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 
+// Role-based redirect map
+const roleRoutes: Record<string, string> = {
+    'SUPER_ADMIN': '/super-admin',
+    'ADMIN': '/admin',
+    'AUDITOR': '/auditor',
+    'USER': '/dashboard'
+};
+
 export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const redirectPath = searchParams.get("redirect") || "/dashboard";
+    const defaultRedirect = "/dashboard";
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
-    const [isDemoMode, setIsDemoMode] = useState(false);
 
     const supabase = createBrowserClient();
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Simplified Demo Login Fix: Allow specific demo credentials to bypass real API calls
-        const isDemoAccount =
-            email === "demo@chartspark.com" ||
-            email === "admin@chartspark.io" ||
-            email === "ad@mountainview.com";
-
-        if (isDemoAccount || isDemoMode) {
-            setIsLoading(true);
-            localStorage.setItem('demoMode', 'true');
-            // Set cookie for middleware bypass
-            document.cookie = "demoMode=true; path=/";
-
-            setTimeout(() => {
-                setIsLoading(false);
-                // Redirect logic for specific accounts
-                if (email === "admin@chartspark.io") {
-                    router.push("/super-admin");
-                } else if (email === "ad@mountainview.com") {
-                    router.push("/admin");
-                } else {
-                    router.push(redirectPath);
-                }
-            }, 500);
-            return;
-        }
-
         setIsLoading(true);
         setError(null);
 
-        // In a real app with configured Supabase:
-        if (supabase) {
-            try {
-                const { error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
+        try {
+            // 1. Authenticate with Supabase
+            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-                if (error) {
-                    setError(error.message);
-                    setIsLoading(false);
-                    return;
-                }
+            if (authError) {
+                setError(authError.message);
+                setIsLoading(false);
+                return;
+            }
 
+            if (!authData.session?.user) {
+                setError("Authentication failed. Please try again.");
+                setIsLoading(false);
+                return;
+            }
+
+            const userId = authData.session.user.id;
+
+            // 2. Fetch user profile with role from users table
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('role, organization_id, first_name, last_name')
+                .eq('id', userId)
+                .single();
+
+            if (userError) {
+                console.error("Error fetching user profile:", userError);
+                // Fallback: detect role from demo email addresses
+                const demoRoleMap: Record<string, string> = {
+                    'super@chartspark.com': 'SUPER_ADMIN',
+                    'admin@chartspark.com': 'ADMIN',
+                    'auditor@chartspark.com': 'AUDITOR',
+                    'clinician@chartspark.com': 'USER',
+                };
+                const detectedRole = demoRoleMap[email.toLowerCase()] || 'USER';
+                const redirectPath = roleRoutes[detectedRole] || defaultRedirect;
                 router.push(redirectPath);
                 return;
-            } catch (err) {
-                console.error("Auth error:", err);
             }
-        }
 
-        // Fallback or failed login for non-demo items
-        setTimeout(() => {
+            // 3. Update last_login timestamp
+            await supabase
+                .from('users')
+                .update({ last_login: new Date().toISOString() })
+                .eq('id', userId);
+
+            // 4. Role-based redirect
+            const userRole = userData?.role || 'USER';
+            const redirectPath = roleRoutes[userRole] || defaultRedirect;
+
+            // Check for explicit redirect param (for returning to a specific page)
+            const explicitRedirect = searchParams.get("redirect");
+            if (explicitRedirect && userRole === 'USER') {
+                // Only honor redirect param for regular users going to dashboard routes
+                router.push(explicitRedirect);
+            } else {
+                router.push(redirectPath);
+            }
+
+        } catch (err) {
+            console.error("Login error:", err);
+            setError("An unexpected error occurred. Please try again.");
             setIsLoading(false);
-            setError("Invalid credentials for this demo environment.");
-        }, 1200);
+        }
     };
 
     return (
@@ -202,25 +223,44 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                {/* Demo Mode Section */}
-                <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                {/* Demo Credentials Section */}
+                <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-4 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2 mb-3">
                         <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                            Demo Environment
+                            Demo Accounts Available
                         </span>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setEmail("demo@chartspark.com");
-                            setPassword("demo123");
-                            setIsDemoMode(true);
-                        }}
-                        className="text-xs text-primary hover:underline font-bold"
-                    >
-                        Use Demo Credentials
-                    </button>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                        <button
+                            type="button"
+                            onClick={() => { setEmail("super@chartspark.com"); setPassword("Demo123!!"); }}
+                            className="px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                        >
+                            Super Admin
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setEmail("admin@chartspark.com"); setPassword("Demo123!!"); }}
+                            className="px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                        >
+                            Admin
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setEmail("auditor@chartspark.com"); setPassword("Demo123!!"); }}
+                            className="px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                        >
+                            Auditor
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setEmail("clinician@chartspark.com"); setPassword("Demo123!!"); }}
+                            className="px-3 py-2 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg font-medium hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors"
+                        >
+                            Clinician
+                        </button>
+                    </div>
                 </div>
             </div>
 

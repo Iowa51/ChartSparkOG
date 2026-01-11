@@ -35,6 +35,7 @@ const navSections = [
       { label: "Encounters", href: "/encounters", icon: ClipboardList },
       { label: "Templates", href: "/templates", icon: FileText },
       { label: "References", href: "/references", icon: BookOpen },
+      { label: "Geriatric Guide", href: "/references/geriatric", icon: BookOpen },
     ]
   },
   {
@@ -167,17 +168,15 @@ export function Sidebar() {
               <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-tight">Active Session</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              localStorage.removeItem('demoMode');
-              document.cookie = "demoMode=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-              window.location.href = '/login';
-            }}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-slate-100 dark:border-slate-800 hover:border-red-100 dark:hover:border-red-900/30"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Logout
-          </button>
+          <form action="/api/auth/signout" method="POST">
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-slate-100 dark:border-slate-800 hover:border-red-100 dark:hover:border-red-900/30"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Logout
+            </button>
+          </form>
         </div>
       </div>
     </aside>

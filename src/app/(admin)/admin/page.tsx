@@ -1,350 +1,271 @@
-"use client";
-
+import { createClient } from "@/lib/supabase/server";
 import {
-    Building2,
     Users,
     FileText,
-    Activity,
-    Plus,
-    Search,
-    MoreHorizontal,
-    UserCircle,
-    X,
-    Shield,
     CheckCircle2,
     Clock,
     AlertCircle,
+    TrendingUp,
+    ArrowRight,
+    Plus,
 } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
 
-// Local Component Definitions
-const Card = ({ children, className, id }: { children: React.ReactNode; className?: string; id?: string }) => (
-    <div id={id} className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
-);
-const CardHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={`p-6 pb-2 ${className}`}>{children}</div>
-);
-const CardTitle = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <h3 className={`font-semibold leading-none tracking-tight text-slate-900 dark:text-white ${className}`}>{children}</h3>
-);
-const CardDescription = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <p className={`text-sm text-slate-500 dark:text-slate-400 mt-2 ${className}`}>{children}</p>
-);
-const CardContent = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={`p-6 pt-0 ${className}`}>{children}</div>
-);
+export default async function AdminDashboard() {
+    const supabase = await createClient();
 
-// Mock Data (Shared/Simplified)
-const initialOrganizations = [
-    { id: 1, name: "Mountain View Clinic", userCount: 24, status: "active", joined: "2023-08-15" },
-    { id: 2, name: "Coastal Mental Health", userCount: 18, status: "active", joined: "2023-09-22" },
-    { id: 3, name: "Valley Wellness Center", userCount: 32, status: "active", joined: "2023-07-10" },
-];
+    let stats = {
+        totalUsers: 0,
+        activeUsers: 0,
+        notesThisMonth: 0,
+        pendingSubmissions: 0,
+        approvalRate: 0,
+    };
 
-const initialUsers = [
-    { id: 1, name: "Dr. Sarah Johnson", email: "sarah.johnson@mountainview.com", organization: "Mountain View Clinic", role: "ADMIN", status: "active" },
-    { id: 2, name: "Dr. Michael Chen", email: "m.chen@coastal.com", organization: "Coastal Mental Health", role: "USER", status: "active" },
-];
+    let recentSubmissions: any[] = [];
+    let organizationId: string | null = null;
 
-export default function AdminDashboardPage() {
-    const [organizations, setOrganizations] = useState(initialOrganizations);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [userSearchTerm, setUserSearchTerm] = useState("");
-    const [showAddStaff, setShowAddStaff] = useState(false);
-    const [showManageAccess, setShowManageAccess] = useState<number | null>(null);
+    if (supabase) {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
 
-    const selectedUser = initialUsers.find(u => u.id === showManageAccess);
+            if (user) {
+                // Get admin's organization
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('organization_id')
+                    .eq('id', user.id)
+                    .single();
+
+                organizationId = profile?.organization_id;
+
+                if (organizationId) {
+                    // Get users count for this organization
+                    const { count: userCount } = await supabase
+                        .from('users')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('organization_id', organizationId);
+                    stats.totalUsers = userCount || 0;
+
+                    const { count: activeCount } = await supabase
+                        .from('users')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('organization_id', organizationId)
+                        .eq('is_active', true);
+                    stats.activeUsers = activeCount || 0;
+
+                    // Get pending submissions
+                    const { count: pendingCount } = await supabase
+                        .from('submissions')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('organization_id', organizationId)
+                        .in('status', ['pending_audit', 'pending_approval']);
+                    stats.pendingSubmissions = pendingCount || 0;
+
+                    // Get recent submissions
+                    const { data: subsData } = await supabase
+                        .from('submissions')
+                        .select(`
+                            id,
+                            cpt_code,
+                            status,
+                            billing_amount,
+                            created_at,
+                            patients(first_name, last_name),
+                            users(first_name, last_name)
+                        `)
+                        .eq('organization_id', organizationId)
+                        .order('created_at', { ascending: false })
+                        .limit(10);
+                    recentSubmissions = subsData || [];
+                }
+            }
+        } catch (e) {
+            console.error("Error fetching admin stats:", e);
+        }
+    }
+
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case 'pending_audit':
+                return <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Pending Audit</span>;
+            case 'pending_approval':
+                return <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Pending Approval</span>;
+            case 'approved':
+                return <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Approved</span>;
+            case 'rejected':
+                return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">Rejected</span>;
+            default:
+                return <span className="px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">{status}</span>;
+        }
+    };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
+        <div className="flex-1 p-6 lg:p-8 overflow-auto">
             {/* Header */}
-            <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-10 shadow-sm">
-                <div className="max-w-7xl mx-auto">
-                    <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">ADMIN CONSOLE</h1>
-                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-widest opacity-70">
-                        Organization & Staff Oversight
-                    </p>
-                </div>
-            </header>
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                    Admin Dashboard
+                </h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-1">
+                    Manage your organization's users and submissions
+                </p>
+            </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                <div className="max-w-7xl mx-auto space-y-8">
-
-                    {/* Stats Overview */}
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">My Organizations</CardTitle>
-                                <Building2 className="h-4 w-4 text-slate-400" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{organizations.length}</div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Active Staff</CardTitle>
-                                <Users className="h-4 w-4 text-slate-400" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">42</div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">Pending Reports</CardTitle>
-                                <FileText className="h-4 w-4 text-slate-400" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">12</div>
-                            </CardContent>
-                        </Card>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                            <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                {stats.totalUsers}
+                            </p>
+                            <p className="text-sm text-slate-500">Total Users</p>
+                        </div>
                     </div>
+                    <p className="text-xs text-emerald-600 mt-3">{stats.activeUsers} active</p>
+                </div>
 
-                    {/* Organizations Table */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Organization Oversight</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="mt-4 overflow-hidden rounded-xl border border-border">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-muted/50 text-muted-foreground font-bold uppercase text-[10px]">
-                                        <tr>
-                                            <th className="px-6 py-3">Organization</th>
-                                            <th className="px-6 py-3">Users</th>
-                                            <th className="px-6 py-3">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {organizations.map(org => (
-                                            <tr key={org.id} className="hover:bg-muted/30 transition-colors">
-                                                <td className="px-6 py-4 font-bold">{org.name}</td>
-                                                <td className="px-6 py-4">{org.userCount}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                                                        {org.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center">
+                            <FileText className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                {stats.notesThisMonth}
+                            </p>
+                            <p className="text-sm text-slate-500">Notes This Month</p>
+                        </div>
+                    </div>
+                </div>
 
-                    {/* Staff Management */}
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle>Staff Management</CardTitle>
-                                <button
-                                    onClick={() => setShowAddStaff(true)}
-                                    className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Add New Staff
-                                </button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="mt-4 space-y-4">
-                                {initialUsers.map(user => (
-                                    <div key={user.id} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-border hover:border-primary/30 transition-all group">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                                                <UserCircle className="h-6 w-6 text-slate-400" />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-sm">{user.name}</p>
-                                                <p className="text-xs text-muted-foreground">{user.organization} • {user.role}</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setShowManageAccess(user.id)}
-                                            className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                                        >
-                                            <Shield className="h-3 w-3" />
-                                            Manage Access
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                            <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                {stats.pendingSubmissions}
+                            </p>
+                            <p className="text-sm text-slate-500">Pending Submissions</p>
+                        </div>
+                    </div>
+                </div>
 
-                    {/* Insurance Submissions Oversight */}
-                    <Card id="claims">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle>Insurance Submissions</CardTitle>
-                                    <CardDescription>Review and approve claims before insurance submission.</CardDescription>
-                                </div>
-                                <a
-                                    href="/submissions"
-                                    className="text-primary text-xs font-bold hover:underline"
-                                >
-                                    View Full Dashboard →
-                                </a>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800 flex items-center gap-4">
-                                    <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-lg text-amber-600">
-                                        <Clock className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Pending Review</p>
-                                        <p className="text-xl font-black text-slate-900 dark:text-white">8</p>
-                                    </div>
-                                </div>
-                                <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800 flex items-center gap-4">
-                                    <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-lg text-blue-600">
-                                        <FileText className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest">Ready to File</p>
-                                        <p className="text-xl font-black text-slate-900 dark:text-white">14</p>
-                                    </div>
-                                </div>
-                                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-4">
-                                    <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-lg text-emerald-600">
-                                        <CheckCircle2 className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Paid (MTD)</p>
-                                        <p className="text-xl font-black text-slate-900 dark:text-white">$12,450</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-6 overflow-hidden rounded-xl border border-border">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-muted/50 text-muted-foreground font-bold uppercase text-[10px]">
-                                        <tr>
-                                            <th className="px-6 py-3">Claim ID</th>
-                                            <th className="px-6 py-3">Patient</th>
-                                            <th className="px-6 py-3">Amount</th>
-                                            <th className="px-6 py-3">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {[
-                                            { id: "CLM-882", patient: "Sarah Connor", amount: 245, status: "Pending Review" },
-                                            { id: "CLM-881", patient: "Michael Reese", amount: 150, status: "Ready to Submit" },
-                                        ].map(claim => (
-                                            <tr key={claim.id} className="hover:bg-muted/30 transition-colors">
-                                                <td className="px-6 py-4 font-mono text-[10px] font-bold">{claim.id}</td>
-                                                <td className="px-6 py-4 font-bold">{claim.patient}</td>
-                                                <td className="px-6 py-4 font-black">${claim.amount}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${claim.status === "Pending Review" ? "bg-amber-50 text-amber-600 border-amber-100" : "bg-blue-50 text-blue-600 border-blue-100"
-                                                        }`}>
-                                                        {claim.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </CardContent>
-                    </Card>
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                            <TrendingUp className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                {stats.approvalRate}%
+                            </p>
+                            <p className="text-sm text-slate-500">Approval Rate</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Add Staff Modal */}
-            {showAddStaff && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddStaff(false)}>
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold">Add New Staff</h2>
-                            <button onClick={() => setShowAddStaff(false)} className="text-slate-400 hover:text-slate-600">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <form onSubmit={(e) => { e.preventDefault(); alert("Staff member added successfully!"); setShowAddStaff(false); }} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Full Name</label>
-                                <input type="text" required className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700" placeholder="Dr. Jane Smith" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Email</label>
-                                <input type="email" required className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700" placeholder="jane@clinic.com" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Role</label>
-                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
-                                    <option value="USER">User</option>
-                                    <option value="ADMIN">Admin</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-1">Organization</label>
-                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
-                                    {organizations.map(org => (
-                                        <option key={org.id} value={org.id}>{org.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="flex gap-2 pt-4">
-                                <button type="button" onClick={() => setShowAddStaff(false)} className="flex-1 px-4 py-2 border rounded-lg font-medium">Cancel</button>
-                                <button type="submit" className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-bold">Add Staff</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+                <Link
+                    href="/admin/users?action=create"
+                    className="flex items-center gap-3 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors"
+                >
+                    <Plus className="h-5 w-5" />
+                    <span className="font-medium">Add User</span>
+                </Link>
+                <Link
+                    href="/admin/submissions"
+                    className="flex items-center gap-3 p-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors"
+                >
+                    <FileText className="h-5 w-5" />
+                    <span className="font-medium">Review Submissions</span>
+                </Link>
+                <Link
+                    href="/admin/features"
+                    className="flex items-center gap-3 p-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition-colors"
+                >
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span className="font-medium">Assign Features</span>
+                </Link>
+            </div>
 
-            {/* Manage Access Modal */}
-            {showManageAccess && selectedUser && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowManageAccess(null)}>
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold flex items-center gap-2">
-                                <Shield className="h-5 w-5 text-primary" />
-                                Manage Access
-                            </h2>
-                            <button onClick={() => setShowManageAccess(null)} className="text-slate-400 hover:text-slate-600">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <div className="mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                            <p className="font-bold">{selectedUser.name}</p>
-                            <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
-                        </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Role</label>
-                                <select defaultValue={selectedUser.role} className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
-                                    <option value="USER">User</option>
-                                    <option value="ADMIN">Admin</option>
-                                    <option value="SUPER_ADMIN">Super Admin</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium mb-2">Permissions</label>
-                                <div className="space-y-2">
-                                    {["View Patients", "Edit Patients", "Create Notes", "View Billing", "Admin Access"].map(perm => (
-                                        <label key={perm} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                                            <input type="checkbox" defaultChecked={perm !== "Admin Access"} className="rounded" />
-                                            <span className="text-sm">{perm}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="flex gap-2 pt-4">
-                                <button onClick={() => setShowManageAccess(null)} className="flex-1 px-4 py-2 border rounded-lg font-medium">Cancel</button>
-                                <button onClick={() => { alert("Access updated successfully!"); setShowManageAccess(null); }} className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-bold">Save Changes</button>
-                            </div>
-                        </div>
+            {/* Recent Submissions Table */}
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <h3 className="font-bold text-slate-900 dark:text-white">Recent Submissions</h3>
+                    <Link href="/admin/submissions" className="text-sm text-primary hover:underline flex items-center gap-1">
+                        View All <ArrowRight className="h-4 w-4" />
+                    </Link>
+                </div>
+                <table className="w-full">
+                    <thead className="bg-slate-50 dark:bg-slate-800">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Provider</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">CPT</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {recentSubmissions.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                                    No submissions yet
+                                </td>
+                            </tr>
+                        ) : (
+                            recentSubmissions.map((sub) => (
+                                <tr key={sub.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                    <td className="px-6 py-4 text-sm text-slate-900 dark:text-white">
+                                        {sub.patients?.first_name} {sub.patients?.last_name}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                        {sub.users?.first_name} {sub.users?.last_name}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm font-mono text-slate-600 dark:text-slate-400">
+                                        {sub.cpt_code}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                        ${sub.billing_amount?.toFixed(2)}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {getStatusBadge(sub.status)}
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-slate-500">
+                                        {new Date(sub.created_at).toLocaleDateString()}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Important Notice */}
+            <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
+                <div className="flex items-start gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                        <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-blue-800 dark:text-blue-200">Organization-Scoped Access</h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                            You can only view and manage users and data within your organization.
+                            For platform-wide access, contact your Super Admin.
+                        </p>
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

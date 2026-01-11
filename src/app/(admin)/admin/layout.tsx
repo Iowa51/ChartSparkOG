@@ -3,30 +3,27 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
     LayoutDashboard,
-    Building2,
     Users,
-    UserCheck,
-    DollarSign,
-    Percent,
-    ClipboardList,
+    FileText,
+    Zap,
+    MessageSquare,
     Settings,
     LogOut,
     User,
     ChevronLeft,
+    Building2,
 } from "lucide-react";
 
-const superAdminNavItems = [
-    { label: "Dashboard", href: "/super-admin", icon: LayoutDashboard },
-    { label: "Organizations", href: "/super-admin/organizations", icon: Building2 },
-    { label: "Users", href: "/super-admin/users", icon: Users },
-    { label: "Auditors", href: "/super-admin/auditors", icon: UserCheck },
-    { label: "Financials", href: "/super-admin/financials", icon: DollarSign },
-    { label: "Platform Fees", href: "/super-admin/fees", icon: Percent },
-    { label: "Audit Logs", href: "/super-admin/audit-logs", icon: ClipboardList },
-    { label: "Settings", href: "/super-admin/settings", icon: Settings },
+const adminNavItems = [
+    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { label: "Users", href: "/admin/users", icon: Users },
+    { label: "Submissions", href: "/admin/submissions", icon: FileText },
+    { label: "Features", href: "/admin/features", icon: Zap },
+    { label: "Auditor Notes", href: "/admin/auditor-notes", icon: MessageSquare },
+    { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
-export default async function SuperAdminLayout({
+export default async function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
@@ -34,6 +31,7 @@ export default async function SuperAdminLayout({
     const supabase = await createClient();
     let user = null;
     let profile = null;
+    let organization = null;
 
     if (supabase) {
         try {
@@ -43,21 +41,29 @@ export default async function SuperAdminLayout({
             if (user) {
                 const { data: profileData } = await supabase
                     .from("users")
-                    .select("role, first_name, last_name")
+                    .select("role, first_name, last_name, organization_id")
                     .eq("id", user.id)
                     .single();
                 profile = profileData;
+
+                // Get organization info
+                if (profileData?.organization_id) {
+                    const { data: orgData } = await supabase
+                        .from("organizations")
+                        .select("id, name, subscription_tier")
+                        .eq("id", profileData.organization_id)
+                        .single();
+                    organization = orgData;
+                }
             }
         } catch (e) {
-            console.error("Supabase error in SuperAdminLayout:", e);
+            console.error("Supabase error in AdminLayout:", e);
         }
     }
 
-    // Authorization check - only SUPER_ADMIN can access
-    if (profile && profile.role !== 'SUPER_ADMIN') {
-        if (profile.role === 'ADMIN') {
-            redirect('/admin');
-        } else if (profile.role === 'AUDITOR') {
+    // Authorization check - ADMIN and SUPER_ADMIN can access
+    if (profile && profile.role !== 'ADMIN' && profile.role !== 'SUPER_ADMIN') {
+        if (profile.role === 'AUDITOR') {
             redirect('/auditor');
         } else {
             redirect('/dashboard');
@@ -71,15 +77,15 @@ export default async function SuperAdminLayout({
 
     const displayName = profile?.first_name
         ? `${profile.first_name} ${profile.last_name || ''}`.trim()
-        : user?.email || 'Super Admin';
+        : user?.email || 'Admin';
 
     return (
-        <div className="flex min-h-screen bg-slate-950">
+        <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
             {/* Sidebar */}
             <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
                 {/* Logo */}
                 <div className="p-6 border-b border-slate-800">
-                    <Link href="/super-admin" className="block">
+                    <Link href="/admin" className="block">
                         <img
                             src="/ChartSparkLogo.png"
                             alt="ChartSpark"
@@ -87,17 +93,22 @@ export default async function SuperAdminLayout({
                             style={{ filter: "brightness(0) invert(1)" }}
                         />
                     </Link>
-                    <div className="mt-3 flex items-center gap-2">
-                        <span className="px-2 py-1 text-xs font-bold rounded-full bg-purple-600 text-white">
-                            SUPER ADMIN
+                    <div className="mt-3">
+                        <span className="px-2 py-1 text-xs font-bold rounded-full bg-blue-600 text-white">
+                            ADMIN
                         </span>
-                        <span className="text-xs text-slate-500">Platform Control</span>
                     </div>
+                    {organization && (
+                        <div className="mt-3 flex items-center gap-2 text-slate-400">
+                            <Building2 className="h-4 w-4" />
+                            <span className="text-sm truncate">{organization.name}</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Navigation */}
                 <nav className="flex-1 p-4 space-y-1">
-                    {superAdminNavItems.map((item) => (
+                    {adminNavItems.map((item) => (
                         <Link
                             key={item.href}
                             href={item.href}
@@ -123,7 +134,7 @@ export default async function SuperAdminLayout({
                 {/* User Info & Logout */}
                 <div className="p-4 border-t border-slate-800">
                     <div className="flex items-center gap-3 mb-3">
-                        <div className="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center">
+                        <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center">
                             <User className="h-5 w-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
@@ -131,7 +142,7 @@ export default async function SuperAdminLayout({
                                 {displayName}
                             </p>
                             <p className="text-xs text-slate-400 truncate">
-                                {user?.email}
+                                {profile?.role}
                             </p>
                         </div>
                     </div>
@@ -148,7 +159,7 @@ export default async function SuperAdminLayout({
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950">
+            <main className="flex-1 flex flex-col overflow-hidden">
                 {children}
             </main>
         </div>

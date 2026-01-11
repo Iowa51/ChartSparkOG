@@ -26,12 +26,13 @@ export default function NewPatientPage() {
         e.preventDefault();
         setIsSaving(true);
         // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         setIsSaving(false);
         setSaved(true);
+        // Faster redirect after showing success
         setTimeout(() => {
             router.push('/patients');
-        }, 2000);
+        }, 1500);
     };
 
     return (
@@ -202,8 +203,8 @@ export default function NewPatientPage() {
                             type="submit"
                             disabled={isSaving || saved}
                             className={`flex items-center gap-2 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-[11px] transition-all shadow-xl active:scale-95 ${saved
-                                    ? "bg-emerald-600 text-white"
-                                    : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
+                                ? "bg-emerald-600 text-white"
+                                : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/20"
                                 }`}
                         >
                             {isSaving ? (
