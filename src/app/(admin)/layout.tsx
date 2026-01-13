@@ -1,4 +1,5 @@
 import { DemoAuthGuard } from "@/components/auth/DemoAuthGuard";
+import { SessionTimeout } from "@/components/SessionTimeout";
 
 /**
  * Parent layout for admin route group.
@@ -11,9 +12,13 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
+    const enableTimeout = process.env.NEXT_PUBLIC_DEMO_MODE !== 'true';
+
     return (
         <DemoAuthGuard>
             {children}
+            <SessionTimeout enabled={enableTimeout} />
         </DemoAuthGuard>
     );
 }
+

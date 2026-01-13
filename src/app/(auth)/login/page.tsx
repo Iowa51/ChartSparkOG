@@ -223,45 +223,47 @@ export default function LoginPage() {
                     </div>
                 </div>
 
-                {/* Demo Credentials Section */}
-                <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-4 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                            Demo Accounts Available
-                        </span>
+                {/* Demo Credentials Section - Only shown when DEMO_MODE is enabled */}
+                {process.env.NEXT_PUBLIC_DEMO_MODE !== 'false' && (
+                    <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-4 border-t border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                                Demo Accounts Available
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <button
+                                type="button"
+                                onClick={() => { setEmail("super@chartspark.com"); setPassword("Demo123!!"); }}
+                                className="px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                            >
+                                Super Admin
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setEmail("admin@chartspark.com"); setPassword("Demo123!!"); }}
+                                className="px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                            >
+                                Admin
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setEmail("auditor@chartspark.com"); setPassword("Demo123!!"); }}
+                                className="px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                            >
+                                Auditor
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setEmail("clinician@chartspark.com"); setPassword("Demo123!!"); }}
+                                className="px-3 py-2 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg font-medium hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors"
+                            >
+                                Clinician
+                            </button>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                        <button
-                            type="button"
-                            onClick={() => { setEmail("super@chartspark.com"); setPassword("Demo123!!"); }}
-                            className="px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
-                        >
-                            Super Admin
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setEmail("admin@chartspark.com"); setPassword("Demo123!!"); }}
-                            className="px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-                        >
-                            Admin
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setEmail("auditor@chartspark.com"); setPassword("Demo123!!"); }}
-                            className="px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
-                        >
-                            Auditor
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setEmail("clinician@chartspark.com"); setPassword("Demo123!!"); }}
-                            className="px-3 py-2 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg font-medium hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors"
-                        >
-                            Clinician
-                        </button>
-                    </div>
-                </div>
+                )}
             </div>
 
             <p className="text-xs text-slate-400 dark:text-slate-600 mt-8 text-center max-w-xs leading-relaxed">

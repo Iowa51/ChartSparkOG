@@ -1,6 +1,6 @@
 // Database types for ChartSpark
 
-export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN' | 'AUDITOR';
 
 export type SubscriptionTier = 'starter' | 'pro' | 'complete';
 
@@ -11,6 +11,58 @@ export type NoteStatus = 'draft' | 'pending_review' | 'signed' | 'amended';
 export type EncounterStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 
 export type FeeStatus = 'pending' | 'collected' | 'waived';
+
+// Feature Assignment System Types
+export type FeatureTier = 'STARTER' | 'PROFESSIONAL' | 'COMPLETE' | 'ADMIN' | 'SUPER_ADMIN';
+
+export type FeatureCategory = 'CORE' | 'CLINICAL' | 'AI' | 'INTEGRATION' | 'ADMIN' | 'SUPER_ADMIN';
+
+export type FeatureCode =
+    // STARTER (CORE)
+    | 'DASHBOARD' | 'PATIENTS_VIEW' | 'PATIENTS_CREATE' | 'PATIENTS_EDIT'
+    | 'NOTES_VIEW' | 'NOTES_CREATE' | 'TEMPLATES_BASIC' | 'QUICK_PHRASES'
+    | 'BILLING_VIEW' | 'ENCOUNTERS' | 'REFERENCES_BASIC'
+    // PROFESSIONAL (CLINICAL & AI)
+    | 'CALENDAR' | 'TELEHEALTH' | 'AI_NOTE_GENERATION' | 'AI_DIAGNOSIS'
+    | 'AI_TREATMENT' | 'CUSTOM_TEMPLATES' | 'CUSTOM_PHRASES' | 'ADVANCED_ANALYTICS'
+    | 'REFERENCES_FULL' | 'EXPORT_DATA'
+    // COMPLETE (INTEGRATION)
+    | 'E_PRESCRIBE' | 'EHR_INTEGRATION' | 'RELAPSE_PREVENTION' | 'SUBMISSIONS_CREATE'
+    | 'AUDIT_REPORTS' | 'API_ACCESS' | 'PRIORITY_SUPPORT' | 'WHITE_LABEL'
+    // ADMIN
+    | 'USER_MANAGEMENT' | 'FEATURE_ASSIGNMENT' | 'SUBMISSIONS_REVIEW'
+    | 'SUBMISSIONS_APPROVE' | 'ORG_SETTINGS' | 'ORG_REPORTS'
+    // SUPER_ADMIN
+    | 'ALL_ORGS_ACCESS' | 'CREATE_ORGS' | 'CREATE_ADMINS' | 'CREATE_AUDITORS'
+    | 'FINANCIALS' | 'PLATFORM_FEES' | 'TIER_OVERRIDE' | 'GLOBAL_SETTINGS' | 'AUDIT_LOGS';
+
+export interface Feature {
+    id: string;
+    code: FeatureCode;
+    name: string;
+    description: string;
+    tier_required: FeatureTier;
+    category: FeatureCategory;
+    is_active: boolean;
+    display_order: number;
+    created_at: string;
+}
+
+export interface UserFeature {
+    id: string;
+    user_id: string;
+    feature_id: string;
+    enabled: boolean;
+    granted_by: string | null;
+    granted_at: string;
+    revoked_by: string | null;
+    revoked_at: string | null;
+    is_tier_override: boolean;
+    override_reason: string | null;
+    expires_at: string | null;
+    // Joined feature data
+    feature?: Feature;
+}
 
 export interface Organization {
     id: string;
