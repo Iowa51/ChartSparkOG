@@ -70,7 +70,7 @@ export default function AuditorsPage() {
             if (assignmentsError) throw assignmentsError;
 
             // Map assignments to auditors
-            const auditorsWithOrgs = (auditorsData || []).map((auditor) => {
+            const auditorsWithOrgs = (auditorsData || []).map((auditor: { id: string; email: string; first_name: string | null; last_name: string | null; is_active: boolean }) => {
                 const assignments = (assignmentsData || []).filter((a: any) => a.auditor_id === auditor.id);
                 return {
                     ...auditor,
@@ -216,8 +216,8 @@ export default function AuditorsPage() {
                                     </div>
                                 </div>
                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${auditor.is_active
-                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                                        : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
                                     }`}>
                                     {auditor.is_active ? 'Active' : 'Inactive'}
                                 </span>
@@ -284,8 +284,8 @@ export default function AuditorsPage() {
                                     <label
                                         key={org.id}
                                         className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${selectedOrgs.includes(org.id)
-                                                ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                                                : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                                            : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                                             }`}
                                     >
                                         <input

@@ -74,11 +74,11 @@ export default function FinancialsPage() {
                 .in('status', ['paid', 'approved', 'submitted']);
 
             if (submissionsData) {
-                const totalRevenue = submissionsData.reduce((sum, s) => sum + (s.billing_amount || 0), 0);
-                const platformFees = submissionsData.reduce((sum, s) => sum + (s.platform_fee_amount || 0), 0);
+                const totalRevenue = submissionsData.reduce((sum: number, s: any) => sum + (s.billing_amount || 0), 0);
+                const platformFees = submissionsData.reduce((sum: number, s: any) => sum + (s.platform_fee_amount || 0), 0);
                 const outstanding = submissionsData
-                    .filter(s => s.status !== 'paid')
-                    .reduce((sum, s) => sum + (s.billing_amount || 0), 0);
+                    .filter((s: any) => s.status !== 'paid')
+                    .reduce((sum: number, s: any) => sum + (s.billing_amount || 0), 0);
 
                 setStats({
                     totalRevenue,
@@ -89,7 +89,7 @@ export default function FinancialsPage() {
 
                 // Group by organization
                 const orgMap = new Map();
-                submissionsData.forEach(s => {
+                submissionsData.forEach((s: any) => {
                     const orgName = s.organizations?.name || 'Unknown';
                     if (!orgMap.has(orgName)) {
                         orgMap.set(orgName, { name: orgName, revenue: 0, fees: 0 });

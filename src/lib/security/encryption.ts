@@ -104,7 +104,7 @@ export async function encryptPHIFields<T extends Record<string, any>>(
     data: T,
     fields: string[] = [...PHI_ENCRYPTED_FIELDS]
 ): Promise<T> {
-    const result = { ...data };
+    const result: Record<string, any> = { ...data };
 
     for (const field of fields) {
         if (result[field] && typeof result[field] === 'string' && !isEncrypted(result[field])) {
@@ -112,7 +112,7 @@ export async function encryptPHIFields<T extends Record<string, any>>(
         }
     }
 
-    return result;
+    return result as T;
 }
 
 /**
@@ -122,7 +122,7 @@ export async function decryptPHIFields<T extends Record<string, any>>(
     data: T,
     fields: string[] = [...PHI_ENCRYPTED_FIELDS]
 ): Promise<T> {
-    const result = { ...data };
+    const result: Record<string, any> = { ...data };
 
     for (const field of fields) {
         if (result[field] && typeof result[field] === 'string' && isEncrypted(result[field])) {
@@ -130,7 +130,7 @@ export async function decryptPHIFields<T extends Record<string, any>>(
         }
     }
 
-    return result;
+    return result as T;
 }
 
 /**

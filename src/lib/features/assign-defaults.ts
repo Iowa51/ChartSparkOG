@@ -45,7 +45,7 @@ export async function assignDefaultFeatures(
         }
 
         // Create user_features entries
-        const userFeatures = features.map(feature => ({
+        const userFeatures = features.map((feature: { id: string; code: string }) => ({
             user_id: userId,
             feature_id: feature.id,
             enabled: true,
@@ -163,8 +163,8 @@ export async function getUserFeaturesWithStatus(userId: string) {
         }
 
         // Merge the data
-        const featuresWithStatus = allFeatures?.map(feature => {
-            const userFeature = userFeatures?.find(uf => uf.feature_id === feature.id);
+        const featuresWithStatus = allFeatures?.map((feature: any) => {
+            const userFeature = userFeatures?.find((uf: any) => uf.feature_id === feature.id);
             return {
                 ...feature,
                 enabled: userFeature?.enabled ?? false,

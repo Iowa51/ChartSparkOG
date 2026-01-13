@@ -1,9 +1,11 @@
 /**
  * Azure OpenAI Service for ChartSpark
  * Handles all AI-powered features including clinical notes, treatment recommendations
+ * 
+ * Migrated to openai v4+ AzureOpenAI client (from deprecated @azure/openai v1.x)
  */
 
-import { OpenAIClient, AzureKeyCredential } from "@azure/openai";
+import { AzureOpenAI } from "openai";
 
 class AzureOpenAIService {
     constructor() {
@@ -18,10 +20,12 @@ class AzureOpenAIService {
             );
         }
 
-        this.client = new OpenAIClient(
-            this.endpoint,
-            new AzureKeyCredential(this.apiKey)
-        );
+        this.client = new AzureOpenAI({
+            endpoint: this.endpoint,
+            apiKey: this.apiKey,
+            apiVersion: this.apiVersion,
+            deployment: this.deploymentName
+        });
     }
 
     /**
@@ -44,9 +48,9 @@ Assessment: ${assessments}
 Generate a comprehensive SOAP (Subjective, Objective, Assessment, Plan) note that is professional, concise, and clinically appropriate.`;
 
         try {
-            const response = await this.client.getChatCompletions(
-                this.deploymentName,
-                [
+            const response = await this.client.chat.completions.create({
+                model: this.deploymentName,
+                messages: [
                     {
                         role: "system",
                         content: "You are an experienced mental health professional assistant specialized in clinical documentation."
@@ -56,12 +60,10 @@ Generate a comprehensive SOAP (Subjective, Objective, Assessment, Plan) note tha
                         content: prompt
                     }
                 ],
-                {
-                    maxTokens: 1000,
-                    temperature: 0.7,
-                    topP: 0.95
-                }
-            );
+                max_tokens: 1000,
+                temperature: 0.7,
+                top_p: 0.95
+            });
 
             return response.choices[0].message.content;
         } catch (error) {
@@ -88,9 +90,9 @@ Previous Treatments: ${previousTreatments}
 Provide 3-5 evidence-based treatment recommendations with brief rationale for each.`;
 
         try {
-            const response = await this.client.getChatCompletions(
-                this.deploymentName,
-                [
+            const response = await this.client.chat.completions.create({
+                model: this.deploymentName,
+                messages: [
                     {
                         role: "system",
                         content: "You are a clinical psychologist providing evidence-based treatment recommendations. Base your suggestions on current clinical practice guidelines."
@@ -100,12 +102,10 @@ Provide 3-5 evidence-based treatment recommendations with brief rationale for ea
                         content: prompt
                     }
                 ],
-                {
-                    maxTokens: 800,
-                    temperature: 0.6,
-                    topP: 0.9
-                }
-            );
+                max_tokens: 800,
+                temperature: 0.6,
+                top_p: 0.9
+            });
 
             return response.choices[0].message.content;
         } catch (error) {
@@ -129,9 +129,9 @@ Provide 3-5 evidence-based treatment recommendations with brief rationale for ea
 Session Notes: ${sessionNotes}`;
 
         try {
-            const response = await this.client.getChatCompletions(
-                this.deploymentName,
-                [
+            const response = await this.client.chat.completions.create({
+                model: this.deploymentName,
+                messages: [
                     {
                         role: "system",
                         content: "You are a mental health professional analyzing patient session notes for emotional content and clinical insights."
@@ -141,12 +141,10 @@ Session Notes: ${sessionNotes}`;
                         content: prompt
                     }
                 ],
-                {
-                    maxTokens: 500,
-                    temperature: 0.5,
-                    topP: 0.9
-                }
-            );
+                max_tokens: 500,
+                temperature: 0.5,
+                top_p: 0.9
+            });
 
             return {
                 success: true,
@@ -175,9 +173,9 @@ Patient Capabilities: ${patientCapabilities}
 Provide practical, achievable homework assignments that support the treatment goals.`;
 
         try {
-            const response = await this.client.getChatCompletions(
-                this.deploymentName,
-                [
+            const response = await this.client.chat.completions.create({
+                model: this.deploymentName,
+                messages: [
                     {
                         role: "system",
                         content: "You are a therapist creating practical homework assignments that support treatment goals."
@@ -187,12 +185,10 @@ Provide practical, achievable homework assignments that support the treatment go
                         content: prompt
                     }
                 ],
-                {
-                    maxTokens: 600,
-                    temperature: 0.7,
-                    topP: 0.9
-                }
-            );
+                max_tokens: 600,
+                temperature: 0.7,
+                top_p: 0.9
+            });
 
             return response.choices[0].message.content;
         } catch (error) {
@@ -221,15 +217,13 @@ Provide practical, achievable homework assignments that support the treatment go
                 }
             ];
 
-            const response = await this.client.getChatCompletions(
-                this.deploymentName,
-                messages,
-                {
-                    maxTokens: 800,
-                    temperature: 0.7,
-                    topP: 0.95
-                }
-            );
+            const response = await this.client.chat.completions.create({
+                model: this.deploymentName,
+                messages: messages,
+                max_tokens: 800,
+                temperature: 0.7,
+                top_p: 0.95
+            });
 
             return response.choices[0].message.content;
         } catch (error) {

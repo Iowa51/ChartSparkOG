@@ -113,7 +113,7 @@ export default function AdminFeaturesPage() {
 
             // Get feature counts for each user
             const usersWithCounts = await Promise.all(
-                usersData.map(async (u) => {
+                usersData.map(async (u: { id: string; email: string; first_name: string | null; last_name: string | null; role: string }) => {
                     const { count } = await supabase
                         .from('user_features')
                         .select('*', { count: 'exact', head: true })
@@ -261,10 +261,10 @@ export default function AdminFeaturesPage() {
                                         <p className="text-xs text-slate-500">Features enabled</p>
                                     </div>
                                     <span className={`px-2 py-1 text-xs font-bold rounded-lg ${user.role === 'ADMIN'
-                                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                            : user.role === 'SUPER_ADMIN'
-                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                        : user.role === 'SUPER_ADMIN'
+                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                                         }`}>
                                         {user.role}
                                     </span>

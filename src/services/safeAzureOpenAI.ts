@@ -4,12 +4,14 @@
  * This wrapper provides graceful fallback to demo mode when Azure OpenAI
  * credentials are not configured, ensuring the application works in both
  * demo and production environments.
+ * 
+ * Migrated to openai v4+ AzureOpenAI client (from deprecated @azure/openai v1.x)
  */
 
-import { OpenAIClient, AzureKeyCredential } from "@azure/openai";
+import { AzureOpenAI } from "openai";
 
 class SafeAzureOpenAIService {
-    private client: OpenAIClient | null = null;
+    private client: AzureOpenAI | null = null;
     private deploymentName: string = '';
     private isConfigured: boolean = false;
 
@@ -17,13 +19,16 @@ class SafeAzureOpenAIService {
         const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
         const apiKey = process.env.AZURE_OPENAI_API_KEY;
         const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
+        const apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-08-01-preview";
 
         if (endpoint && apiKey && deploymentName) {
             try {
-                this.client = new OpenAIClient(
-                    endpoint,
-                    new AzureKeyCredential(apiKey)
-                );
+                this.client = new AzureOpenAI({
+                    endpoint: endpoint,
+                    apiKey: apiKey,
+                    apiVersion: apiVersion,
+                    deployment: deploymentName
+                });
                 this.deploymentName = deploymentName;
                 this.isConfigured = true;
                 console.log('[Azure OpenAI] Service configured successfully');
@@ -66,14 +71,16 @@ class SafeAzureOpenAIService {
 
         try {
             const startTime = Date.now();
-            const response = await this.client!.getChatCompletions(
-                this.deploymentName,
-                [
+            const response = await this.client!.chat.completions.create({
+                model: this.deploymentName,
+                messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: `Analyze these clinical notes:\n\n${sessionNotes}\n\nProvide your analysis in JSON format with keys: symptoms, diagnoses, riskScores, recommendations` }
                 ],
-                { maxTokens: 1500, temperature: 0.3, topP: 0.9 }
-            );
+                max_tokens: 1500,
+                temperature: 0.3,
+                top_p: 0.9
+            });
 
             const content = response.choices[0].message?.content || '';
             const processingTime = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
@@ -128,14 +135,16 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
 
         try {
             const startTime = Date.now();
-            const response = await this.client!.getChatCompletions(
-                this.deploymentName,
-                [
+            const response = await this.client!.chat.completions.create({
+                model: this.deploymentName,
+                messages: [
                     { role: "system", content: "You are a clinical treatment planning specialist providing evidence-based recommendations." },
                     { role: "user", content: prompt }
                 ],
-                { maxTokens: 2000, temperature: 0.4, topP: 0.9 }
-            );
+                max_tokens: 2000,
+                temperature: 0.4,
+                top_p: 0.9
+            });
 
             const content = response.choices[0].message?.content || '';
             const processingTime = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
@@ -161,7 +170,7 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
         }
 
         try {
-            const messages = [
+            const messages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
                 {
                     role: "system" as const,
                     content: "You are ChartSpark AI, a clinical decision support assistant for mental health and geriatric care professionals. Provide evidence-based insights. For emergencies, always recommend contacting emergency services."
@@ -170,11 +179,13 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
                 { role: "user" as const, content: userMessage }
             ];
 
-            const response = await this.client!.getChatCompletions(
-                this.deploymentName,
-                messages,
-                { maxTokens: 1000, temperature: 0.7, topP: 0.95 }
-            );
+            const response = await this.client!.chat.completions.create({
+                model: this.deploymentName,
+                messages: messages,
+                max_tokens: 1000,
+                temperature: 0.7,
+                top_p: 0.95
+            });
 
             return response.choices[0].message?.content || "I couldn't generate a response. Please try again.";
         } catch (error) {
@@ -206,14 +217,16 @@ Initial Assessment: ${sessionData.assessment}
 Format the note professionally with clear S, O, A, P sections.`;
 
         try {
-            const response = await this.client!.getChatCompletions(
-                this.deploymentName,
-                [
+            const response = await this.client!.chat.completions.create({
+                model: this.deploymentName,
+                messages: [
                     { role: "system", content: "You are an expert clinical documentation specialist." },
                     { role: "user", content: prompt }
                 ],
-                { maxTokens: 1000, temperature: 0.5, topP: 0.9 }
-            );
+                max_tokens: 1000,
+                temperature: 0.5,
+                top_p: 0.9
+            });
 
             return response.choices[0].message?.content || this.getDemoSOAPNote(sessionData);
         } catch (error) {

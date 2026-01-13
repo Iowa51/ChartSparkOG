@@ -60,7 +60,7 @@ export default function OrganizationsPage() {
 
             // Get user counts for each org
             const orgsWithCounts = await Promise.all(
-                (data || []).map(async (org) => {
+                (data || []).map(async (org: { id: string; name: string; slug: string; subscription_tier: string; platform_fee_percentage: number; fee_collection_method: string; is_active: boolean; created_at: string }) => {
                     const { count } = await supabase
                         .from('users')
                         .select('*', { count: 'exact', head: true })
@@ -255,10 +255,10 @@ export default function OrganizationsPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${org.subscription_tier === 'COMPLETE'
-                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400'
-                                                : org.subscription_tier === 'PROFESSIONAL'
-                                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
-                                                    : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400'
+                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400'
+                                            : org.subscription_tier === 'PROFESSIONAL'
+                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
+                                                : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400'
                                             }`}>
                                             {org.subscription_tier}
                                         </span>
@@ -276,8 +276,8 @@ export default function OrganizationsPage() {
                                         <button
                                             onClick={() => handleToggleActive(org)}
                                             className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-colors ${org.is_active
-                                                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400'
-                                                    : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400'
+                                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400'
+                                                : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400'
                                                 }`}
                                         >
                                             {org.is_active ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}

@@ -3,7 +3,7 @@
 
 /**
  * Mask SSN - show only last 4 digits
- * Input: 123-45-6789 -> ***-**-6789
+ * Example: 123-45-6789 becomes ***-**-6789
  */
 export function maskSSN(ssn: string | null | undefined): string {
     if (!ssn) return '';
@@ -14,7 +14,7 @@ export function maskSSN(ssn: string | null | undefined): string {
 
 /**
  * Mask phone number - show only last 4 digits
- * Input: (555) 123-4567 -> (***) ***-4567
+ * Example: (555) 123-4567 becomes (***) ***-4567
  */
 export function maskPhone(phone: string | null | undefined): string {
     if (!phone) return '';
@@ -25,7 +25,7 @@ export function maskPhone(phone: string | null | undefined): string {
 
 /**
  * Mask email - show first/last chars and domain
- * Input: john.doe@example.com -> j***e@example.com
+ * Example: john.doe@example.com becomes j***e@example.com
  */
 export function maskEmail(email: string | null | undefined): string {
     if (!email) return '';
@@ -42,8 +42,8 @@ export function maskEmail(email: string | null | undefined): string {
 
 /**
  * Mask date of birth - show only year
- * Input: 1985-06-15 -> **/**/1985
-    */
+ * Example: 1985-06-15 becomes XX/XX/1985
+ */
 export function maskDOB(dob: string | null | undefined): string {
     if (!dob) return '';
     const year = dob.split('-')[0] || dob.split('/').pop();
@@ -53,7 +53,7 @@ export function maskDOB(dob: string | null | undefined): string {
 
 /**
  * Mask address - show only city/state
- * Input: 123 Main St, City, ST 12345 -> ***, City, ST ***
+ * Example: 123 Main St, City, ST 12345 becomes ***, City, ST ***
  */
 export function maskAddress(address: string | null | undefined): string {
     if (!address) return '';
@@ -89,7 +89,7 @@ export function maskMRN(mrn: string | null | undefined): string {
 
 /**
  * Mask name - show only first initial and last name
- * Input: John Doe -> J. Doe
+ * Example: John Doe becomes J. Doe
  */
 export function maskName(firstName: string | null | undefined, lastName: string | null | undefined): string {
     if (!firstName && !lastName) return '';
@@ -188,7 +188,7 @@ export function maskPatientData<T extends Record<string, any>>(
     role: string
 ): T {
     const config = getMaskingConfig(role);
-    const masked = { ...patient };
+    const masked: Record<string, any> = { ...patient };
 
     // SSN
     if (config.ssn === 'MASKED') {
@@ -243,5 +243,5 @@ export function maskPatientData<T extends Record<string, any>>(
         masked.medical_record_number = null;
     }
 
-    return masked;
+    return masked as T;
 }

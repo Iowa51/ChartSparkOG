@@ -307,7 +307,7 @@ export async function queryAuditLogs(options: {
         return [];
     }
 
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
         id: row.id,
         timestamp: new Date(row.timestamp),
         eventType: row.event_type as AuditEventType,
