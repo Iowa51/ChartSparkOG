@@ -58,6 +58,34 @@ export default function LoginPage() {
         }
 
         try {
+            // Demo mode without Supabase: allow login for known demo emails
+            if (!supabase) {
+                const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
+                if (isDemoMode) {
+                    const demoRoleMap: Record<string, string> = {
+                        'super@chartspark.com': 'SUPER_ADMIN',
+                        'admin@chartspark.com': 'ADMIN',
+                        'auditor@chartspark.com': 'AUDITOR',
+                        'clinician@chartspark.com': 'USER',
+                    };
+                    const detectedRole = demoRoleMap[email.toLowerCase()];
+                    if (detectedRole) {
+                        // Demo login successful
+                        const redirectPath = roleRoutes[detectedRole] || defaultRedirect;
+                        router.push(redirectPath);
+                        return;
+                    } else {
+                        setError('Demo mode: Use a demo account (see buttons below)');
+                        setIsLoading(false);
+                        return;
+                    }
+                } else {
+                    setError('Authentication service not configured');
+                    setIsLoading(false);
+                    return;
+                }
+            }
+
             // 1. Authenticate with Supabase
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email,
