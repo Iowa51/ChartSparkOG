@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
-import { checkRateLimit, getRateLimitHeaders } from "@/lib/security/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { checkSQLInjection, checkXSS, checkPathTraversal } from "@/lib/security/intrusion-detection";
 
 export async function middleware(request: NextRequest) {
@@ -27,27 +27,15 @@ export async function middleware(request: NextRequest) {
             );
         }
 
-        // Rate limiting
-        const result = checkRateLimit(ip, pathname);
+        // SEC-010: Rate limiting (async - uses Upstash Redis if configured)
+        const { success, response } = await checkRateLimit(request);
 
-        if (!result.allowed) {
-            return NextResponse.json(
-                { error: 'Too many requests. Please try again later.' },
-                {
-                    status: 429,
-                    headers: getRateLimitHeaders(result),
-                }
-            );
+        if (!success && response) {
+            return response;
         }
 
-        // Add rate limit headers to response
-        const response = NextResponse.next();
-        const headers = getRateLimitHeaders(result);
-        Object.entries(headers).forEach(([key, value]) => {
-            response.headers.set(key, value);
-        });
-
-        return response;
+        // Continue to next middleware/handler
+        return NextResponse.next();
     }
 
     // Handle session for non-API routes

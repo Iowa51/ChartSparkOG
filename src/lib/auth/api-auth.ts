@@ -42,11 +42,17 @@ export async function getAuthenticatedUser(
 
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, email, role, organization_id')
+            .select('id, email, role, organization_id, is_active')
             .eq('id', session.user.id)
             .single();
 
         if (userError || !user) {
+            return null;
+        }
+
+        // Check if account is active
+        if (user.is_active === false) {
+            console.warn('API Auth: Deactivated account attempted API access', user.email);
             return null;
         }
 
@@ -102,26 +108,38 @@ export function withAuth<T extends AuthContext>(
             return errorResponse('Organization required', 403);
         }
 
-        // Check feature requirement
+        // Check feature requirement - SEC-006: FAIL CLOSED
         if (options?.requiredFeature) {
             try {
                 const supabase = await createClient();
                 if (supabase) {
-                    const { data: feature } = await supabase
+                    const { data: feature, error: featureError } = await supabase
                         .from('user_features')
-                        .select('enabled, features!inner(code)')
+                        .select('enabled, expires_at, features!inner(code)')
                         .eq('user_id', user.id)
                         .eq('features.code', options.requiredFeature)
                         .eq('enabled', true)
                         .maybeSingle();
 
+                    if (featureError) {
+                        console.error('Feature check database error:', featureError);
+                        // FAIL CLOSED on database error
+                        return errorResponse('Feature validation unavailable', 503);
+                    }
+
                     if (!feature) {
                         return errorResponse('Feature not enabled for your account', 403);
+                    }
+
+                    // Check if feature has expired
+                    if (feature.expires_at && new Date(feature.expires_at) < new Date()) {
+                        return errorResponse('Feature access has expired', 403);
                     }
                 }
             } catch (err) {
                 console.error('Feature check error:', err);
-                // Allow through on feature check error (graceful degradation)
+                // SEC-006: FAIL CLOSED - Do NOT allow through on error
+                return errorResponse('Feature validation unavailable', 503);
             }
         }
 

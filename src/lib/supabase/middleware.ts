@@ -40,9 +40,20 @@ export async function updateSession(request: NextRequest) {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    // If Supabase is not configured, allow traffic
+    // SEC-003: Fail closed in production if Supabase not configured
     if (!supabaseUrl || !supabaseAnonKey) {
+        if (isProduction && !isDemoMode) {
+            console.error('CRITICAL: Supabase environment variables missing in production');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+        // Allow in development/demo mode
+        console.warn('WARNING: Supabase not configured, allowing traffic in development/demo');
         return supabaseResponse;
     }
 
@@ -94,15 +105,42 @@ export async function updateSession(request: NextRequest) {
         // Get user role from database
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('role')
+            .select('role, is_active')
             .eq('id', user.id)
             .single();
 
-        // Determine role: use DB role, fallback to email-based role, or default to USER
-        let userRole = userData?.role;
-        if (!userRole || userError) {
-            // Fallback to demo email detection
-            userRole = demoEmailRoles[user.email?.toLowerCase() || ''] || 'USER';
+        // SEC-002: Handle role lookup failure
+        let userRole: string;
+
+        if (userError || !userData || !userData.role) {
+            // Demo mode: fallback to email-based role detection for known demo emails only
+            if (isDemoMode) {
+                const detectedRole = demoEmailRoles[user.email?.toLowerCase() || ''];
+                if (detectedRole) {
+                    userRole = detectedRole;
+                } else {
+                    // Unknown email in demo mode - deny access
+                    console.warn('Middleware: Unknown user in demo mode', user.email);
+                    const loginUrl = new URL('/login', request.url);
+                    loginUrl.searchParams.set('error', 'profile_not_found');
+                    return NextResponse.redirect(loginUrl);
+                }
+            } else {
+                // Production: HARD FAIL if role cannot be determined
+                console.error('Middleware: Failed to fetch user role in production', userError);
+                const loginUrl = new URL('/login', request.url);
+                loginUrl.searchParams.set('error', 'session_invalid');
+                return NextResponse.redirect(loginUrl);
+            }
+        } else {
+            // Check if account is active
+            if (userData.is_active === false) {
+                console.warn('Middleware: Deactivated account attempted access', user.email);
+                const loginUrl = new URL('/login', request.url);
+                loginUrl.searchParams.set('error', 'account_deactivated');
+                return NextResponse.redirect(loginUrl);
+            }
+            userRole = userData.role;
         }
 
         const allowedRoles = protectedRoutes[matchedRoute];

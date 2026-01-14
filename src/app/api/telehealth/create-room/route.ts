@@ -1,23 +1,74 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+// src/app/api/telehealth/create-room/route.ts
+// SEC-005: Secured telehealth room creation with authentication
 
-export async function POST(request: NextRequest) {
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { createClient } from '@/lib/supabase/server';
+import { randomUUID } from 'crypto';
+
+async function handler(context: AuthContext) {
     try {
-        const { appointmentId, patientName, providerId } = await request.json();
+        const body = await context.request.json();
+        const { appointmentId, patientName, providerId } = body;
 
         if (!appointmentId) {
-            return NextResponse.json({ error: 'appointmentId required' }, { status: 400 });
+            return NextResponse.json(
+                { error: 'appointmentId required' },
+                { status: 400 }
+            );
         }
 
-        const roomName = `appointment-${appointmentId}-${Date.now()}`;
+        const supabase = await createClient();
+
+        // Verify appointment exists and belongs to user's organization
+        if (supabase) {
+            const { data: appointment, error: appointmentError } = await supabase
+                .from('appointments')
+                .select('id, patient_id, provider_id, organization_id')
+                .eq('id', appointmentId)
+                .single();
+
+            if (appointmentError || !appointment) {
+                return NextResponse.json(
+                    { error: 'Appointment not found' },
+                    { status: 404 }
+                );
+            }
+
+            // Verify organization access (unless demo mode)
+            if (context.user.organizationId &&
+                appointment.organization_id !== context.user.organizationId &&
+                context.user.role !== 'SUPER_ADMIN') {
+                return NextResponse.json(
+                    { error: 'Access denied - appointment belongs to different organization' },
+                    { status: 403 }
+                );
+            }
+        }
+
+        // SEC-005: Use non-guessable room name (UUID instead of predictable pattern)
+        const roomName = `room-${randomUUID()}`;
 
         console.log('Creating Daily.co room:', roomName);
+
+        // Check if Daily API is configured
+        const dailyApiKey = process.env.DAILY_API_KEY;
+        if (!dailyApiKey) {
+            // Demo mode - return mock room
+            return NextResponse.json({
+                roomUrl: `https://demo.daily.co/${roomName}`,
+                roomName: roomName,
+                providerToken: 'demo-provider-token',
+                patientToken: 'demo-patient-token',
+                isDemo: true
+            });
+        }
 
         const response = await fetch('https://api.daily.co/v1/rooms', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.DAILY_API_KEY}`
+                'Authorization': `Bearer ${dailyApiKey}`
             },
             body: JSON.stringify({
                 name: roomName,
@@ -27,7 +78,7 @@ export async function POST(request: NextRequest) {
                     enable_chat: false,
                     enable_screenshare: true,
                     max_participants: 2,
-                    exp: Math.floor(Date.now() / 1000) + (2 * 60 * 60)
+                    exp: Math.floor(Date.now() / 1000) + (2 * 60 * 60) // 2 hour expiry
                 }
             })
         });
@@ -35,34 +86,54 @@ export async function POST(request: NextRequest) {
         if (!response.ok) {
             const errorData = await response.json();
             console.error('Daily.co API Error:', errorData);
-            throw new Error(`Daily.co failed: ${errorData.error || 'Unknown error'}`);
+            return NextResponse.json(
+                { error: 'Failed to create telehealth room' },
+                { status: 500 }
+            );
         }
 
         const room = await response.json();
 
         console.log('✅ Room created:', room.url);
 
-        const supabase = await createClient();
+        // Update appointment in database
+        if (supabase) {
+            await supabase
+                .from('appointments')
+                .update({
+                    is_telehealth: true,
+                    telehealth_room_url: room.url,
+                    status: 'in_progress'
+                })
+                .eq('id', appointmentId);
 
-        await supabase
-            .from('appointments')
-            .update({
-                is_telehealth: true,
-                telehealth_room_url: room.url,
-                status: 'in_progress'
-            })
-            .eq('id', appointmentId);
+            // Audit log (no PHI)
+            await supabase.from('audit_logs').insert({
+                event_type: 'TELEHEALTH_ROOM_CREATED',
+                user_id: context.user.id,
+                user_email: context.user.email,
+                user_role: context.user.role,
+                organization_id: context.user.organizationId,
+                resource_type: 'telehealth_room',
+                resource_id: appointmentId,
+                ip_address: context.request.headers.get('x-forwarded-for') || 'unknown',
+                user_agent: context.request.headers.get('user-agent') || 'unknown',
+                risk_level: 'LOW',
+                details: { roomName }, // Only room name, no patient info
+            }).catch(() => { }); // Don't fail if audit log fails
+        }
 
+        // Generate meeting tokens
         const providerTokenResponse = await fetch('https://api.daily.co/v1/meeting-tokens', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.DAILY_API_KEY}`
+                'Authorization': `Bearer ${dailyApiKey}`
             },
             body: JSON.stringify({
                 properties: {
                     room_name: roomName,
-                    user_name: `Provider ${providerId}`,
+                    user_name: `Provider ${providerId || context.user.id}`,
                     is_owner: true,
                     enable_recording: 'cloud'
                 }
@@ -73,7 +144,7 @@ export async function POST(request: NextRequest) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.DAILY_API_KEY}`
+                'Authorization': `Bearer ${dailyApiKey}`
             },
             body: JSON.stringify({
                 properties: {
@@ -93,11 +164,18 @@ export async function POST(request: NextRequest) {
             patientToken: patientToken.token
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error creating room:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Failed to create room', details: error.message },
+            { error: 'Failed to create room', details: message },
             { status: 500 }
         );
     }
 }
+
+// SEC-005: Export with authentication and telehealth feature requirement
+export const POST = withAuth(handler, {
+    requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requiredFeature: 'TELEHEALTH',
+});

@@ -1,7 +1,8 @@
 // src/lib/security/audit-log.ts
-// Comprehensive audit logging for HIPAA compliance
+// SEC-009: Comprehensive audit logging for HIPAA compliance
+// IMPORTANT: This module should ONLY be used in server components and API routes
 
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 
 // Audit event types
 export type AuditEventType =
@@ -65,6 +66,34 @@ export interface AuditLogEntry {
 }
 
 /**
+ * SEC-009: Sanitize details object to remove any potential PHI
+ */
+function sanitizeDetails(details: Record<string, any>): Record<string, any> {
+    const phiFields = [
+        'ssn', 'social_security', 'date_of_birth', 'dob', 'address',
+        'phone', 'email', 'patient_name', 'first_name', 'last_name',
+        'insurance_id', 'medical_record', 'diagnosis', 'medication',
+        'treatment', 'symptoms', 'notes', 'content', 'patient', 'name',
+    ];
+
+    const sanitized: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(details)) {
+        const lowerKey = key.toLowerCase();
+
+        if (phiFields.some(phi => lowerKey.includes(phi))) {
+            sanitized[key] = '[REDACTED]';
+        } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            sanitized[key] = sanitizeDetails(value);
+        } else {
+            sanitized[key] = value;
+        }
+    }
+
+    return sanitized;
+}
+
+/**
  * Determine risk level based on event type
  */
 export function getRiskLevel(eventType: AuditEventType): RiskLevel {
@@ -105,13 +134,16 @@ export function getRiskLevel(eventType: AuditEventType): RiskLevel {
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
     try {
-        const supabase = createClient();
+        const supabase = await createClient();
 
         if (!supabase) {
             // In demo mode, just log to console
-            console.log('[AUDIT]', entry.eventType, entry);
+            console.log('[AUDIT]', entry.eventType, sanitizeDetails(entry.details || {}));
             return;
         }
+
+        // Sanitize details to remove any PHI
+        const sanitizedDetails = entry.details ? sanitizeDetails(entry.details) : null;
 
         const { error } = await supabase.from('audit_logs').insert({
             timestamp: new Date().toISOString(),
@@ -124,7 +156,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
             user_agent: entry.userAgent,
             resource_type: entry.resourceType,
             resource_id: entry.resourceId,
-            details: entry.details,
+            details: sanitizedDetails,
             phi_accessed: entry.phiAccessed || false,
             risk_level: entry.riskLevel || getRiskLevel(entry.eventType),
         });
@@ -261,7 +293,7 @@ export async function queryAuditLogs(options: {
     limit?: number;
     offset?: number;
 }): Promise<AuditLogEntry[]> {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     if (!supabase) {
         return [];

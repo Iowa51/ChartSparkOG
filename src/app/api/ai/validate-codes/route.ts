@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+// src/app/api/ai/validate-codes/route.ts
+// SEC-004: Secured code validation endpoint with authentication
 
-/**
- * API Route to validate medical codes (ICD-10 for diagnoses and CPT for procedures/billing).
- * This currently uses an internal library/regex-based validation and some mock high-fidelity data.
- */
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 
 // Mock database of common valid codes for demo purposes
 const VALID_ICD10_CODES = [
@@ -14,16 +13,37 @@ const VALID_CPT_CODES = [
     '90834', '90837', '99213', '99214', '90791', '96127', '99404'
 ];
 
-export async function POST(request: NextRequest) {
+async function handler(context: AuthContext) {
     try {
-        const { codes } = await request.json();
+        const body = await context.request.json();
+        const { codes } = body;
 
         if (!Array.isArray(codes)) {
-            return NextResponse.json({ error: 'Invalid input: codes must be an array' }, { status: 400 });
+            return NextResponse.json(
+                { error: 'Invalid input: codes must be an array' },
+                { status: 400 }
+            );
+        }
+
+        if (codes.length > 100) {
+            return NextResponse.json(
+                { error: 'Too many codes (max 100)' },
+                { status: 400 }
+            );
         }
 
         const results = codes.map(codeData => {
             const { code, type } = codeData; // type: 'ICD10' | 'CPT'
+
+            if (!code || !type) {
+                return {
+                    code: code || 'unknown',
+                    type: type || 'unknown',
+                    isValid: false,
+                    description: 'Invalid code data',
+                    timestamp: new Date().toISOString()
+                };
+            }
 
             let isValid = false;
             let description = 'Unknown code';
@@ -31,7 +51,6 @@ export async function POST(request: NextRequest) {
             if (type === 'ICD10') {
                 isValid = VALID_ICD10_CODES.includes(code.toUpperCase());
                 if (isValid) {
-                    // Mock descriptions
                     const descriptions: Record<string, string> = {
                         'F32.1': 'Major depressive disorder, single episode, moderate',
                         'F32.9': 'Major depressive disorder, single episode, unspecified',
@@ -71,8 +90,17 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ results });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error in validate-codes API:', error);
-        return NextResponse.json({ error: 'Failed to validate codes' }, { status: 500 });
+        return NextResponse.json(
+            { error: 'Failed to validate codes' },
+            { status: 500 }
+        );
     }
 }
+
+// SEC-004: Export with authentication
+export const POST = withAuth(handler, {
+    requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requiredFeature: 'AI_NOTE_GENERATION',
+});

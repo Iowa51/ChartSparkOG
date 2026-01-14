@@ -40,6 +40,23 @@ export default function LoginPage() {
         setIsLoading(true);
         setError(null);
 
+        // Check for lockout before attempting login
+        try {
+            const lockoutCheck = await fetch('/api/auth/check-lockout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            const lockoutData = await lockoutCheck.json();
+            if (lockoutData.locked) {
+                setError(lockoutData.message || 'Account temporarily locked. Please try again later.');
+                setIsLoading(false);
+                return;
+            }
+        } catch {
+            // Continue if lockout check fails
+        }
+
         try {
             // 1. Authenticate with Supabase
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -48,6 +65,13 @@ export default function LoginPage() {
             });
 
             if (authError) {
+                // Record failed login attempt
+                await fetch('/api/auth/record-attempt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, success: false }),
+                }).catch(() => { });
+
                 setError(authError.message);
                 setIsLoading(false);
                 return;
@@ -64,32 +88,67 @@ export default function LoginPage() {
             // 2. Fetch user profile with role from users table
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('role, organization_id, first_name, last_name')
+                .select('role, organization_id, first_name, last_name, is_active')
                 .eq('id', userId)
                 .single();
 
-            if (userError) {
+            // 3. Handle profile fetch failure
+            if (userError || !userData) {
                 console.error("Error fetching user profile:", userError);
-                // Fallback: detect role from demo email addresses
-                const demoRoleMap: Record<string, string> = {
-                    'super@chartspark.com': 'SUPER_ADMIN',
-                    'admin@chartspark.com': 'ADMIN',
-                    'auditor@chartspark.com': 'AUDITOR',
-                    'clinician@chartspark.com': 'USER',
-                };
-                const detectedRole = demoRoleMap[email.toLowerCase()] || 'USER';
-                const redirectPath = roleRoutes[detectedRole] || defaultRedirect;
-                router.push(redirectPath);
+
+                // Demo mode: fallback to email-based role detection
+                const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
+                if (isDemoMode) {
+                    const demoRoleMap: Record<string, string> = {
+                        'super@chartspark.com': 'SUPER_ADMIN',
+                        'admin@chartspark.com': 'ADMIN',
+                        'auditor@chartspark.com': 'AUDITOR',
+                        'clinician@chartspark.com': 'USER',
+                    };
+                    const detectedRole = demoRoleMap[email.toLowerCase()];
+                    if (detectedRole) {
+                        // Record successful demo login
+                        await fetch('/api/auth/record-attempt', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, success: true }),
+                        }).catch(() => { });
+
+                        const redirectPath = roleRoutes[detectedRole] || defaultRedirect;
+                        router.push(redirectPath);
+                        return;
+                    }
+                }
+
+                // Production mode OR unknown email: HARD FAIL
+                await supabase.auth.signOut();
+                setError("Unable to load your profile. Please contact support.");
+                setIsLoading(false);
                 return;
             }
 
-            // 3. Update last_login timestamp
+            // 4. Check if account is active
+            if (userData.is_active === false) {
+                await supabase.auth.signOut();
+                setError("Your account has been deactivated. Please contact support.");
+                setIsLoading(false);
+                return;
+            }
+
+            // 5. Record successful login
+            await fetch('/api/auth/record-attempt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, success: true }),
+            }).catch(() => { });
+
+            // 6. Update last_login timestamp
             await supabase
                 .from('users')
                 .update({ last_login: new Date().toISOString() })
                 .eq('id', userId);
 
-            // 4. Role-based redirect
+            // 7. Role-based redirect
             const userRole = userData?.role || 'USER';
             const redirectPath = roleRoutes[userRole] || defaultRedirect;
 

@@ -1,13 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
+// src/app/api/ai/diagnose/route.ts
+// SEC-004: Secured AI diagnose endpoint with authentication
+
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 
-export async function POST(request: NextRequest) {
+async function handler(context: AuthContext) {
     try {
-        const { sessionNotes, specialty = 'mental_health' } = await request.json();
+        const body = await context.request.json();
+        const { sessionNotes, specialty = 'mental_health' } = body;
 
-        if (!sessionNotes) {
+        // Validation
+        if (!sessionNotes || typeof sessionNotes !== 'string') {
             return NextResponse.json(
                 { error: 'Session notes are required' },
+                { status: 400 }
+            );
+        }
+
+        if (sessionNotes.length > 10000) {
+            return NextResponse.json(
+                { error: 'Session notes too long (max 10000 characters)' },
                 { status: 400 }
             );
         }
@@ -17,7 +30,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(result);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error in diagnose API:', error);
         return NextResponse.json(
             { error: 'Failed to analyze clinical notes' },
@@ -25,3 +38,9 @@ export async function POST(request: NextRequest) {
         );
     }
 }
+
+// SEC-004: Export with authentication
+export const POST = withAuth(handler, {
+    requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requiredFeature: 'AI_DIAGNOSIS',
+});
