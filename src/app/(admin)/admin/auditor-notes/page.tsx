@@ -40,6 +40,11 @@ export default function AdminAuditorNotesPage() {
     }, []);
 
     const fetchCurrentUserOrg = async () => {
+        if (!supabase) {
+            // Demo mode - use demo data
+            setLoading(false);
+            return;
+        }
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             const { data: profile } = await supabase
@@ -56,6 +61,7 @@ export default function AdminAuditorNotesPage() {
     };
 
     const fetchFlags = async (orgId: string) => {
+        if (!supabase) return;
         setLoading(true);
         try {
             const { data, error } = await supabase
@@ -81,6 +87,7 @@ export default function AdminAuditorNotesPage() {
     };
 
     const handleResolve = async (flagId: string) => {
+        if (!supabase) return;
         try {
             const { error } = await supabase
                 .from('audit_flags')
@@ -175,11 +182,11 @@ export default function AdminAuditorNotesPage() {
                             key={sev}
                             onClick={() => setSeverityFilter(sev)}
                             className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${severityFilter === sev
-                                    ? sev === 'critical' ? 'bg-red-600 text-white' :
-                                        sev === 'high' ? 'bg-orange-600 text-white' :
-                                            sev === 'medium' ? 'bg-amber-600 text-white' :
-                                                'bg-slate-900 text-white'
-                                    : 'bg-white dark:bg-slate-900 text-slate-600 hover:bg-slate-100'
+                                ? sev === 'critical' ? 'bg-red-600 text-white' :
+                                    sev === 'high' ? 'bg-orange-600 text-white' :
+                                        sev === 'medium' ? 'bg-amber-600 text-white' :
+                                            'bg-slate-900 text-white'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 hover:bg-slate-100'
                                 }`}
                         >
                             {sev === 'ALL' ? 'All' : sev.charAt(0).toUpperCase() + sev.slice(1)}
@@ -205,10 +212,10 @@ export default function AdminAuditorNotesPage() {
                         <div
                             key={flag.id}
                             className={`bg-white dark:bg-slate-900 rounded-2xl border p-6 ${flag.resolved_at
-                                    ? 'border-slate-200 dark:border-slate-800 opacity-60'
-                                    : flag.severity === 'critical'
-                                        ? 'border-red-200 dark:border-red-900'
-                                        : 'border-amber-200 dark:border-amber-900'
+                                ? 'border-slate-200 dark:border-slate-800 opacity-60'
+                                : flag.severity === 'critical'
+                                    ? 'border-red-200 dark:border-red-900'
+                                    : 'border-amber-200 dark:border-amber-900'
                                 }`}
                         >
                             <div className="flex items-start justify-between">
