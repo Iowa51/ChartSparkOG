@@ -514,6 +514,44 @@ Prognosis: Favorable with continued treatment adherence.`;
         setIsGenerating(false);
     };
 
+    // State to track if full note was copied
+    const [noteCopied, setNoteCopied] = useState(false);
+
+    // Copy the entire generated note to clipboard
+    const copyFullNote = async () => {
+        // Build the full note from all sections
+        const fullNote = template.sections
+            .map(section => {
+                const content = noteSections[section.id] || '';
+                return content ? `**${section.label.toUpperCase()}**\n${content}` : '';
+            })
+            .filter(Boolean)
+            .join('\n\n');
+
+        if (!fullNote.trim()) {
+            alert('Please generate a note first before copying.');
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(fullNote);
+            setNoteCopied(true);
+            setTimeout(() => setNoteCopied(false), 3000);
+        } catch (err) {
+            // Fallback for browsers without clipboard API
+            const textArea = document.createElement('textarea');
+            textArea.value = fullNote;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            setNoteCopied(true);
+            setTimeout(() => setNoteCopied(false), 3000);
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-background">
             {/* Top Navigation */}
@@ -619,6 +657,25 @@ Prognosis: Favorable with continued treatment adherence.`;
                                 <>
                                     <Sparkles className="h-5 w-5" />
                                     Generate AI Note
+                                </>
+                            )}
+                        </button>
+                        <button
+                            onClick={copyFullNote}
+                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95 ${noteCopied
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-muted hover:bg-muted/80 text-foreground border border-border'
+                                }`}
+                        >
+                            {noteCopied ? (
+                                <>
+                                    <CheckCircle className="h-4 w-4" />
+                                    Note Copied!
+                                </>
+                            ) : (
+                                <>
+                                    <Copy className="h-4 w-4" />
+                                    Copy Note
                                 </>
                             )}
                         </button>
