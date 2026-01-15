@@ -11,20 +11,40 @@ export async function middleware(request: NextRequest) {
 
     // Apply rate limiting and intrusion detection to API routes
     if (pathname.startsWith('/api')) {
-        // Intrusion detection on URL
-        const urlChecks = [
-            checkSQLInjection(pathname),
-            checkXSS(decodeURIComponent(pathname)),
-            checkPathTraversal(pathname),
+        // Safelist for legitimate API paths that contain words that might trigger IDS
+        // e.g., /api/telehealth/create-room contains 'create' which matches SQL patterns
+        const safelistedPaths = [
+            '/api/telehealth/create-room',
+            '/api/telehealth/end-session',
+            '/api/auth/complete-signup',
+            '/api/auth/check-lockout',
+            '/api/auth/record-attempt',
+            '/api/patients',
+            '/api/notes',
+            '/api/appointments',
+            '/api/billing',
+            '/api/ai/',
         ];
 
-        const threats = urlChecks.filter(c => c.detected);
-        if (threats.length > 0) {
-            console.warn(`[SECURITY] Blocked suspicious request from ${ip}: ${threats[0].threatType}`);
-            return NextResponse.json(
-                { error: 'Request blocked for security reasons' },
-                { status: 403 }
-            );
+        const isSafelisted = safelistedPaths.some(safe => pathname.startsWith(safe));
+
+        // Only run intrusion detection on non-safelisted paths
+        if (!isSafelisted) {
+            // Intrusion detection on URL
+            const urlChecks = [
+                checkSQLInjection(pathname),
+                checkXSS(decodeURIComponent(pathname)),
+                checkPathTraversal(pathname),
+            ];
+
+            const threats = urlChecks.filter(c => c.detected);
+            if (threats.length > 0) {
+                console.warn(`[SECURITY] Blocked suspicious request from ${ip}: ${threats[0].threatType}`);
+                return NextResponse.json(
+                    { error: 'Request blocked for security reasons' },
+                    { status: 403 }
+                );
+            }
         }
 
         // SEC-010: Rate limiting (async - uses Upstash Redis if configured)

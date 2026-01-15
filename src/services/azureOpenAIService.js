@@ -13,19 +13,26 @@ class AzureOpenAIService {
         this.apiKey = process.env.AZURE_OPENAI_API_KEY;
         this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
         this.apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-08-01-preview";
+        this.isConfigured = !!(this.endpoint && this.apiKey && this.deploymentName);
+        this.client = null;
+    }
 
-        if (!this.endpoint || !this.apiKey || !this.deploymentName) {
+    _ensureClient() {
+        if (!this.isConfigured) {
             throw new Error(
-                "Missing required Azure OpenAI configuration. Please check your .env file."
+                "Running in DEMO mode - no Azure credentials configured"
             );
         }
 
-        this.client = new AzureOpenAI({
-            endpoint: this.endpoint,
-            apiKey: this.apiKey,
-            apiVersion: this.apiVersion,
-            deployment: this.deploymentName
-        });
+        if (!this.client) {
+            this.client = new AzureOpenAI({
+                endpoint: this.endpoint,
+                apiKey: this.apiKey,
+                apiVersion: this.apiVersion,
+                deployment: this.deploymentName
+            });
+        }
+        return this.client;
     }
 
     /**
@@ -48,7 +55,7 @@ Assessment: ${assessments}
 Generate a comprehensive SOAP (Subjective, Objective, Assessment, Plan) note that is professional, concise, and clinically appropriate.`;
 
         try {
-            const response = await this.client.chat.completions.create({
+            const response = await this._ensureClient().chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     {
@@ -90,7 +97,7 @@ Previous Treatments: ${previousTreatments}
 Provide 3-5 evidence-based treatment recommendations with brief rationale for each.`;
 
         try {
-            const response = await this.client.chat.completions.create({
+            const response = await this._ensureClient().chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     {
@@ -129,7 +136,7 @@ Provide 3-5 evidence-based treatment recommendations with brief rationale for ea
 Session Notes: ${sessionNotes}`;
 
         try {
-            const response = await this.client.chat.completions.create({
+            const response = await this._ensureClient().chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     {
@@ -173,7 +180,7 @@ Patient Capabilities: ${patientCapabilities}
 Provide practical, achievable homework assignments that support the treatment goals.`;
 
         try {
-            const response = await this.client.chat.completions.create({
+            const response = await this._ensureClient().chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     {
@@ -217,7 +224,7 @@ Provide practical, achievable homework assignments that support the treatment go
                 }
             ];
 
-            const response = await this.client.chat.completions.create({
+            const response = await this._ensureClient().chat.completions.create({
                 model: this.deploymentName,
                 messages: messages,
                 max_tokens: 800,

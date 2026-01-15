@@ -121,7 +121,9 @@ export default function NewNotePage() {
             .map(([section, phrases]) => `${section}: ${phrases.join(', ')}`)
             .join('\n');
 
-        console.log("Generating with context:", { clinicianInput, phraseContext });
+        // SEC-007: Log metadata only, not PHI content
+        console.log("Generating note:", { hasPhrases: phraseContext.length > 0, inputLength: clinicianInput.length });
+
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
         const demoNote = generateDemoNote(templateId);
