@@ -100,12 +100,160 @@ export default function NewNotePage() {
     // Track which codes have been selected/copied
     const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
 
-    // Handle clicking on a code - copy to clipboard and mark as selected
-    const handleCodeClick = async (code: string, type: 'cpt' | 'icd10') => {
+    // Modal for code explanations
+    const [codeModalOpen, setCodeModalOpen] = useState(false);
+    const [selectedCodeInfo, setSelectedCodeInfo] = useState<{
+        code: string;
+        type: 'cpt' | 'icd10';
+        title: string;
+        description: string;
+        details: string[];
+    } | null>(null);
+
+    // Comprehensive code explanations
+    const codeExplanations: Record<string, { title: string; description: string; details: string[] }> = {
+        // CPT Codes
+        '99214': {
+            title: 'Evaluation & Management - Level 4',
+            description: 'Office or other outpatient visit for the evaluation and management of an established patient, which requires a medically appropriate history and/or examination and moderate level of medical decision making.',
+            details: [
+                'Time: Typically 30-39 minutes when time is the basis',
+                'Used for: Established patients with moderate complexity conditions',
+                'Documentation: Must show 2 of 3: Limited data reviewed, Prescription drug management, Moderate risk procedures',
+                'Common uses: Follow-up visits for chronic conditions, medication management'
+            ]
+        },
+        '99213': {
+            title: 'Evaluation & Management - Level 3',
+            description: 'Office or other outpatient visit for the evaluation and management of an established patient, which requires a medically appropriate history and/or examination and low level of medical decision making.',
+            details: [
+                'Time: Typically 20-29 minutes when time is the basis',
+                'Used for: Established patients with low complexity conditions',
+                'Documentation: Straightforward or low complexity decision making',
+                'Common uses: Routine follow-ups, stable chronic disease management'
+            ]
+        },
+        '90834': {
+            title: 'Psychotherapy, 45 minutes',
+            description: 'Psychotherapy, 45 minutes with patient when performed with an evaluation and management service.',
+            details: [
+                'Duration: 38-52 minutes face-to-face with patient',
+                'Used for: Individual psychotherapy sessions',
+                'Can be billed with E/M codes for same-day services',
+                'Documentation: Must include start/stop times and therapeutic interventions'
+            ]
+        },
+        '90837': {
+            title: 'Psychotherapy, 60 minutes',
+            description: 'Psychotherapy, 60 minutes with patient when performed with an evaluation and management service.',
+            details: [
+                'Duration: 53+ minutes face-to-face with patient',
+                'Used for: Extended individual psychotherapy sessions',
+                'Highest level of psychotherapy time code',
+                'Documentation: Detailed notes on therapeutic techniques and patient response'
+            ]
+        },
+        '90833': {
+            title: 'Psychotherapy Add-on',
+            description: 'Psychotherapy, 30 minutes with patient when performed with an evaluation and management service (add-on code).',
+            details: [
+                'Duration: 16-37 minutes face-to-face',
+                'Must be billed WITH an E/M code (not standalone)',
+                'Used when psychotherapy is provided during a medication management visit',
+                'Common pairing: 99214 + 90833 for combined med check with brief therapy'
+            ]
+        },
+        '90792': {
+            title: 'Psychiatric Diagnostic Evaluation with Medical Services',
+            description: 'Psychiatric diagnostic evaluation with medical services, including history, mental status exam, and medical assessment.',
+            details: [
+                'Used for: Initial psychiatric evaluations with medication consideration',
+                'Includes: Comprehensive psychiatric history, MSE, diagnosis formulation',
+                'Can only be billed once per patient (for initial evaluation)',
+                'Documentation: Detailed biopsychosocial assessment required'
+            ]
+        },
+        // ICD-10 Codes
+        'F32.1': {
+            title: 'Major Depressive Disorder, Single Episode, Moderate',
+            description: 'A mood disorder characterized by a single episode of depression with moderate severity. Patient experiences depressed mood and/or loss of interest lasting at least 2 weeks with functional impairment.',
+            details: [
+                'Criteria: 5+ symptoms present during same 2-week period',
+                'Symptoms: Depressed mood, anhedonia, weight changes, sleep disturbance, psychomotor changes, fatigue, worthlessness, concentration difficulties, suicidal ideation',
+                'Moderate severity: Symptoms cause clinically significant distress with moderate functional impairment',
+                'Single episode: No prior history of major depressive episodes'
+            ]
+        },
+        'F41.1': {
+            title: 'Generalized Anxiety Disorder',
+            description: 'A mental health disorder characterized by persistent and excessive worry about various aspects of life that is difficult to control, lasting at least 6 months.',
+            details: [
+                'Core feature: Excessive anxiety and worry occurring more days than not for 6+ months',
+                'Physical symptoms: Restlessness, fatigue, concentration difficulties, irritability, muscle tension, sleep disturbance',
+                'Must cause clinically significant distress or functional impairment',
+                'Cannot be better explained by substances, medical conditions, or other mental disorders'
+            ]
+        },
+        'F33.1': {
+            title: 'Major Depressive Disorder, Recurrent, Moderate',
+            description: 'A mood disorder characterized by multiple episodes of major depression with moderate severity. Current or most recent episode meets criteria for moderate depressive episode.',
+            details: [
+                'Recurrent: History of 2 or more major depressive episodes',
+                'Episodes separated by at least 2 consecutive months without significant symptoms',
+                'Moderate: Number and intensity of symptoms and functional impairment between mild and severe',
+                'Treatment: Often requires combination of pharmacotherapy and psychotherapy'
+            ]
+        },
+        'G44.209': {
+            title: 'Tension-type Headache, Unspecified, Not Intractable',
+            description: 'A primary headache disorder characterized by mild to moderate bilateral pressing or tightening pain that is not aggravated by routine physical activity.',
+            details: [
+                'Duration: 30 minutes to 7 days',
+                'Character: Bilateral, pressing/tightening (non-pulsating)',
+                'Not intractable: Responsive to standard treatment',
+                'Distinguishing: No nausea, no more than one of photophobia or phonophobia'
+            ]
+        },
+        'I10': {
+            title: 'Essential (Primary) Hypertension',
+            description: 'High blood pressure without an identifiable secondary cause. Defined as systolic BP ≥130 mmHg and/or diastolic BP ≥80 mmHg on at least two occasions.',
+            details: [
+                'Stage 1: 130-139/80-89 mmHg',
+                'Stage 2: ≥140/≥90 mmHg',
+                'Risk factors: Age, obesity, sedentary lifestyle, high sodium diet, genetics',
+                'Complications if untreated: Heart disease, stroke, kidney disease'
+            ]
+        },
+        'E11.9': {
+            title: 'Type 2 Diabetes Mellitus Without Complications',
+            description: 'A metabolic disorder characterized by high blood sugar, insulin resistance, and relative lack of insulin. This code indicates no documented micro- or macrovascular complications.',
+            details: [
+                'Diagnostic criteria: HbA1c ≥6.5%, Fasting glucose ≥126 mg/dL, or 2-hour plasma glucose ≥200 mg/dL',
+                'Without complications: No retinopathy, nephropathy, neuropathy, or cardiovascular complications documented',
+                'Management: Lifestyle modification, oral hypoglycemics, monitoring',
+                'Update code if complications develop (E11.2x-E11.8)'
+            ]
+        }
+    };
+
+    // Handle clicking on a code - show explanation modal
+    const handleCodeClick = (code: string, type: 'cpt' | 'icd10') => {
+        const explanation = codeExplanations[code];
+        if (explanation) {
+            setSelectedCodeInfo({
+                code,
+                type,
+                ...explanation
+            });
+            setCodeModalOpen(true);
+        }
+    };
+
+    // Copy code to clipboard
+    const copyCodeToClipboard = async (code: string) => {
         try {
             await navigator.clipboard.writeText(code);
             setSelectedCodes(prev => new Set([...prev, code]));
-            // Show a brief visual confirmation
             setTimeout(() => {
                 setSelectedCodes(prev => {
                     const next = new Set(prev);
@@ -114,7 +262,21 @@ export default function NewNotePage() {
                 });
             }, 2000);
         } catch (err) {
-            console.error('Failed to copy code:', err);
+            // Fallback for browsers without clipboard API
+            const textArea = document.createElement('textarea');
+            textArea.value = code;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            setSelectedCodes(prev => new Set([...prev, code]));
+            setTimeout(() => {
+                setSelectedCodes(prev => {
+                    const next = new Set(prev);
+                    next.delete(code);
+                    return next;
+                });
+            }, 2000);
         }
     };
 
@@ -234,33 +396,63 @@ export default function NewNotePage() {
             ['Current interventions effective; continue', 'Behavioral activation strategies discussed', 'Regular sleep schedule encouraged', 'Warning signs reviewed', 'Return visit in 3 weeks']
         ][variationSeed];
 
-        // Build expanded subjective
+        // Build expanded subjective (longer with more detail)
         const subjectiveBase = [...subjectivePhrases, clinicianInput].filter(Boolean).join('. ');
+        const subjectiveAdditions = [
+            'Patient was accompanied to the visit and appeared engaged in the therapeutic process.',
+            'Reports adherence to treatment recommendations discussed in previous sessions.',
+            'Denies any new medical concerns, changes in appetite, or significant weight fluctuations.',
+            'Sleep quality has been consistent without significant disturbances.'
+        ];
         const subjective = subjectiveBase
-            ? `${subjectiveBase}. Patient reports medication compliance has been good. No new medical concerns reported since last visit. Denies any acute distress or safety concerns at this time.`
-            : 'Patient presents for routine follow-up visit. Reports overall stable condition since last visit. No new complaints or concerns expressed. Medication compliance has been adequate.';
+            ? `${subjectiveBase}. ${subjectiveAdditions.slice(0, 2 + (variationSeed % 2)).join(' ')} Denies any acute distress or safety concerns at this time.`
+            : `Patient presents for scheduled follow-up visit. Reports overall stable condition since last encounter. ${subjectiveAdditions.slice(0, 3).join(' ')} Medication compliance has been adequate with no missed doses reported. No new complaints or concerns expressed.`;
 
-        // Build expanded objective
+        // Build expanded objective (more detailed)
+        const additionalFindings = [
+            'No acute distress observed. Hygiene and grooming appropriate.',
+            'Motor activity within normal limits without psychomotor abnormalities.',
+            'Memory appears intact for recent and remote events.',
+            'Concentration adequate throughout the session.'
+        ];
         const objective = `Vital Signs: ${vitals}
+
+Physical Appearance: Patient is well-groomed and appropriately dressed for the setting.
 
 Mental Status Examination:
 ${mseVariations}
-${objectivePhrases.length > 0 ? `\nAdditional observations: ${objectivePhrases.join('. ')}.` : ''}`;
+${additionalFindings[variationSeed % 4]}
+${objectivePhrases.length > 0 ? `\nClinical Observations: ${objectivePhrases.join('. ')}.` : ''}
 
-        // Build assessment with ICD codes
+Behavior: Cooperative throughout the session with good rapport.`;
+
+        // Build assessment with ICD codes and clinical reasoning
         const assessmentContent = assessmentPhrases.length > 0
             ? assessmentPhrases.join('. ')
             : 'Condition stable with ongoing treatment';
         const assessment = `${assessmentContent}.
 
 Primary Diagnosis: Major Depressive Disorder, moderate episode (F32.1)
-Secondary: Generalized Anxiety Disorder (F41.1)
-Functional Status: Patient demonstrates continued progress toward treatment goals.`;
+- Patient continues to demonstrate progress toward treatment goals
+- Symptoms remain well-controlled with current regimen
 
-        // Build plan
+Secondary Diagnosis: Generalized Anxiety Disorder (F41.1)
+- Anxiety manageable with current interventions
+
+Risk Assessment: Patient denies suicidal ideation, homicidal ideation, and self-harm urges. Safety plan in place.
+Prognosis: Favorable with continued treatment adherence.`;
+
+        // Build comprehensive plan
         const planItems = planPhrases.length > 0 ? planPhrases : defaultPlanItems;
+        const additionalPlanNotes = [
+            'Patient education provided regarding medication adherence and side effects to monitor.',
+            'Discussed coping strategies and stress management techniques.',
+            'Crisis resources reviewed including 988 Suicide & Crisis Lifeline.'
+        ];
         const plan = planItems.map((item, i) => `${i + 1}. ${item}`).join('\n') +
-            `\n\nTime spent: ${20 + (variationSeed * 5)} minutes, greater than 50% counseling and care coordination.`;
+            `\n${planItems.length + 1}. ${additionalPlanNotes[variationSeed % 3]}` +
+            `\n\nPatient verbalized understanding of treatment plan and agrees to follow recommendations.` +
+            `\n\nTotal time spent: ${25 + (variationSeed * 5)} minutes face-to-face, greater than 50% in counseling and care coordination.`;
 
         return {
             subjective,
@@ -798,14 +990,14 @@ Functional Status: Patient demonstrates continued progress toward treatment goal
                                                         key={code}
                                                         onClick={() => handleCodeClick(code, 'icd10')}
                                                         className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer shadow-sm ${selectedCodes.has(code)
-                                                                ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
-                                                                : 'bg-card border-border hover:border-primary/30 hover:bg-primary/5'
+                                                            ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
+                                                            : 'bg-card border-border hover:border-primary/30 hover:bg-primary/5'
                                                             }`}
                                                         title="Click to copy code"
                                                     >
                                                         <span className={`text-sm font-black px-2 py-1 rounded border tracking-wider ${selectedCodes.has(code)
-                                                                ? 'text-white bg-white/20 border-white/30'
-                                                                : 'text-primary bg-primary/5 border-primary/10'
+                                                            ? 'text-white bg-white/20 border-white/30'
+                                                            : 'text-primary bg-primary/5 border-primary/10'
                                                             }`}>
                                                             {selectedCodes.has(code) ? '✓' : code}
                                                         </span>
@@ -837,6 +1029,92 @@ Functional Status: Patient demonstrates continued progress toward treatment goal
                     </section>
                 </div>
             </main>
+
+            {/* Code Explanation Modal */}
+            {codeModalOpen && selectedCodeInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+                        <div className="sticky top-0 bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b border-border">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className={`text-lg font-black px-3 py-1.5 rounded-lg ${selectedCodeInfo.type === 'cpt'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-primary text-white'
+                                            }`}>
+                                            {selectedCodeInfo.code}
+                                        </span>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${selectedCodeInfo.type === 'cpt'
+                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                            : 'bg-primary/10 text-primary'
+                                            }`}>
+                                            {selectedCodeInfo.type === 'cpt' ? 'CPT Code' : 'ICD-10 Code'}
+                                        </span>
+                                    </div>
+                                    <h2 className="text-xl font-bold text-foreground">{selectedCodeInfo.title}</h2>
+                                </div>
+                                <button
+                                    onClick={() => setCodeModalOpen(false)}
+                                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-all"
+                                >
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            <div>
+                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Description</h3>
+                                <p className="text-foreground leading-relaxed">{selectedCodeInfo.description}</p>
+                            </div>
+
+                            <div>
+                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Key Details</h3>
+                                <ul className="space-y-2">
+                                    {selectedCodeInfo.details.map((detail, i) => (
+                                        <li key={i} className="flex items-start gap-3 text-sm">
+                                            <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                            <span className="text-foreground/80">{detail}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <div className="pt-4 border-t border-border flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        copyCodeToClipboard(selectedCodeInfo.code);
+                                    }}
+                                    className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedCodes.has(selectedCodeInfo.code)
+                                        ? 'bg-emerald-500 text-white'
+                                        : 'bg-muted hover:bg-muted/80 text-foreground'
+                                        }`}
+                                >
+                                    {selectedCodes.has(selectedCodeInfo.code) ? (
+                                        <>
+                                            <CheckCircle className="h-4 w-4" />
+                                            Copied to Clipboard!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Copy className="h-4 w-4" />
+                                            Copy Code
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => setCodeModalOpen(false)}
+                                    className="px-6 py-3 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-all"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
