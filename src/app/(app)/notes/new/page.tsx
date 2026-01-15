@@ -19,6 +19,7 @@ import {
     Sparkles,
     Plus,
     AlertCircle,
+    Trash2,
 } from "lucide-react";
 import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/templates";
 import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
@@ -70,6 +71,11 @@ export default function NewNotePage() {
     const [showTranscript, setShowTranscript] = useState(true);
     const [autoSaved, setAutoSaved] = useState<string | null>(null);
 
+    // Scribe state
+    const [scribeTranscription, setScribeTranscription] = useState("");
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [hasRecording, setHasRecording] = useState(false);
+
     // State for clinician's manual notes/input
     const [clinicianInput, setClinicianInput] = useState("");
     const [activeInputTab, setActiveInputTab] = useState<"scribe" | "phrases" | "manual">("phrases");
@@ -88,6 +94,7 @@ export default function NewNotePage() {
     });
     const [newPhrase, setNewPhrase] = useState("");
     const [showPhraseModal, setShowPhraseModal] = useState(false);
+    const [phraseCategory, setPhraseCategory] = useState<"Subjective" | "Objective" | "Assessment" | "Plan">("Subjective");
 
     // Updated SOAP/Note state to be dynamic
     const [noteSections, setNoteSections] = useState<Record<string, string>>({});
@@ -663,8 +670,8 @@ Prognosis: Favorable with continued treatment adherence.`;
                         <button
                             onClick={copyFullNote}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95 ${noteCopied
-                                    ? 'bg-emerald-500 text-white'
-                                    : 'bg-muted hover:bg-muted/80 text-foreground border border-border'
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-muted hover:bg-muted/80 text-foreground border border-border'
                                 }`}
                         >
                             {noteCopied ? (
@@ -700,16 +707,16 @@ Prognosis: Favorable with continued treatment adherence.`;
                                             Phrases
                                         </button>
                                         <button
-                                            onClick={() => setActiveInputTab("scribe")}
-                                            className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "scribe" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
-                                        >
-                                            Scribe
-                                        </button>
-                                        <button
                                             onClick={() => setActiveInputTab("manual")}
                                             className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "manual" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
                                         >
                                             Manual
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveInputTab("scribe")}
+                                            className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "scribe" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
+                                        >
+                                            Scribe
                                         </button>
                                     </div>
                                     <div className="flex items-center gap-1">
@@ -733,6 +740,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                         <button
                                                             onClick={() => {
                                                                 setNewPhrase("");
+                                                                setPhraseCategory(section as "Subjective" | "Objective" | "Assessment" | "Plan");
                                                                 setShowPhraseModal(true);
                                                             }}
                                                             className="text-primary hover:underline lowercase font-bold"
@@ -741,7 +749,8 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                         </button>
                                                     </h4>
                                                     <div className="grid grid-cols-1 gap-2">
-                                                        {[...phrases, ...(customPhrases[section] || [])].map((phrase) => (
+                                                        {/* System phrases */}
+                                                        {phrases.map((phrase) => (
                                                             <button
                                                                 key={phrase}
                                                                 onClick={() => {
@@ -760,6 +769,48 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                 {phrase}
                                                             </button>
                                                         ))}
+                                                        {/* Custom phrases with delete */}
+                                                        {(customPhrases[section] || []).map((phrase) => (
+                                                            <div key={phrase} className="flex gap-1">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setSelectedPhrases(prev => ({
+                                                                            ...prev,
+                                                                            [section]: prev[section].includes(phrase)
+                                                                                ? prev[section].filter(p => p !== phrase)
+                                                                                : [...prev[section], phrase]
+                                                                        }));
+                                                                    }}
+                                                                    className={`flex-1 text-left p-2.5 rounded-xl border text-[11px] font-medium transition-all ${selectedPhrases[section].includes(phrase)
+                                                                        ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
+                                                                        : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-foreground/70 hover:border-primary/30"
+                                                                        }`}
+                                                                >
+                                                                    {phrase}
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        // Delete custom phrase
+                                                                        const updated = {
+                                                                            ...customPhrases,
+                                                                            [section]: (customPhrases[section] || []).filter(p => p !== phrase)
+                                                                        };
+                                                                        setCustomPhrases(updated);
+                                                                        localStorage.setItem('customPhrases', JSON.stringify(updated));
+                                                                        // Also remove from selected if it was selected
+                                                                        setSelectedPhrases(prev => ({
+                                                                            ...prev,
+                                                                            [section]: prev[section].filter(p => p !== phrase)
+                                                                        }));
+                                                                    }}
+                                                                    className="px-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
+                                                                    title="Delete custom phrase"
+                                                                >
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </button>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             ))}
@@ -767,22 +818,50 @@ Prognosis: Favorable with continued treatment adherence.`;
                                     )}
 
                                     {activeInputTab === "scribe" && (
-                                        <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
-                                            <div className="space-y-2">
-                                                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest ml-1">
-                                                    Voice Scribe
-                                                </label>
+                                        <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                                                        AI Voice Scribe
+                                                    </label>
+                                                    {isRecording && (
+                                                        <span className="text-xs font-mono text-red-500 flex items-center gap-1">
+                                                            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                                                            Recording...
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Recording Control Button */}
                                                 <button
-                                                    onClick={() => setIsRecording(!isRecording)}
-                                                    className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
-                                                        ? "bg-red-500 text-white shadow-red-500/20 animate-pulse ring-4 ring-red-500/10"
+                                                    onClick={() => {
+                                                        if (isRecording) {
+                                                            // Stop recording - simulate transcription
+                                                            setIsRecording(false);
+                                                            setHasRecording(true);
+                                                            // Demo transcription
+                                                            setScribeTranscription(
+                                                                "Patient reports feeling much better since last visit. Sleep has improved significantly, now getting 7-8 hours per night. " +
+                                                                "No side effects reported from current medication. Mood is stable, describes it as 'pretty good most days'. " +
+                                                                "Appetite is normal. Energy levels have improved. Denies any suicidal or homicidal ideation. " +
+                                                                "Patient is compliant with medication regimen. Wants to continue current treatment plan."
+                                                            );
+                                                        } else {
+                                                            // Start recording
+                                                            setIsRecording(true);
+                                                            setRecordingTime(0);
+                                                            setScribeTranscription("");
+                                                        }
+                                                    }}
+                                                    className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
+                                                        ? "bg-red-500 text-white shadow-red-500/30 ring-4 ring-red-500/20"
                                                         : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
                                                         }`}
                                                 >
                                                     {isRecording ? (
                                                         <>
                                                             <MicOff className="h-4 w-4" />
-                                                            Stop Scribe
+                                                            Stop Recording
                                                         </>
                                                     ) : (
                                                         <>
@@ -791,25 +870,94 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                         </>
                                                     )}
                                                 </button>
+
+                                                {/* Transcription Area */}
+                                                {(hasRecording || scribeTranscription) && (
+                                                    <div className="space-y-3 pt-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                                                Transcription
+                                                            </label>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setScribeTranscription("");
+                                                                    setHasRecording(false);
+                                                                }}
+                                                                className="text-[9px] text-muted-foreground hover:text-red-500 font-bold uppercase"
+                                                            >
+                                                                Clear
+                                                            </button>
+                                                        </div>
+                                                        <textarea
+                                                            value={scribeTranscription}
+                                                            onChange={(e) => setScribeTranscription(e.target.value)}
+                                                            placeholder="Transcription will appear here after recording..."
+                                                            className="w-full h-32 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                // Use transcription as clinician input and generate
+                                                                setClinicianInput(scribeTranscription);
+                                                                handleGenerateNote();
+                                                            }}
+                                                            disabled={isGenerating || !scribeTranscription.trim()}
+                                                            className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {isGenerating ? (
+                                                                <>
+                                                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                                                    Generating...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Sparkles className="h-4 w-4" />
+                                                                    Generate Note from Transcription
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
 
                                     {activeInputTab === "manual" && (
                                         <div className="space-y-4 animate-in fade-in duration-300">
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between ml-1">
+                                            <div className="space-y-3">
+                                                <div className="flex items-center justify-between">
                                                     <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
-                                                        Manual Observations
+                                                        Manual Note Entry
                                                     </label>
+                                                    <span className="text-[9px] text-muted-foreground">
+                                                        {clinicianInput.length} characters
+                                                    </span>
                                                 </div>
                                                 <textarea
                                                     value={clinicianInput}
                                                     onChange={(e) => setClinicianInput(e.target.value)}
-                                                    placeholder="Type highlights here..."
-                                                    className="w-full h-48 p-4 bg-muted/20 hover:bg-muted/30 rounded-2xl border border-border text-sm leading-relaxed focus:bg-card focus:ring-4 focus:ring-primary/5 transition-all resize-none outline-none font-medium"
+                                                    placeholder="Type your clinical observations here...
+
+Example: 45yo male, depression follow-up. Reports improved mood on current medication. Sleeping better, 7-8 hours. No side effects. Appetite normal. Denies SI/HI. Continue current treatment plan."
+                                                    className="w-full h-56 p-4 bg-muted/20 hover:bg-muted/30 rounded-2xl border border-border text-sm leading-relaxed focus:bg-card focus:ring-4 focus:ring-primary/5 transition-all resize-none outline-none font-medium"
                                                 />
                                             </div>
+                                            <button
+                                                onClick={handleGenerateNote}
+                                                disabled={isGenerating || !clinicianInput.trim()}
+                                                className="w-full py-3.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                                            >
+                                                {isGenerating ? (
+                                                    <>
+                                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                                        Generating Note...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Sparkles className="h-4 w-4" />
+                                                        Generate Note with AI
+                                                    </>
+                                                )}
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -1086,6 +1234,55 @@ Prognosis: Favorable with continued treatment adherence.`;
                     </section>
                 </div>
             </main>
+
+            {/* Add Custom Phrase Modal */}
+            {showPhraseModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+                        <div className="p-5 border-b border-border">
+                            <h3 className="text-lg font-bold">Add Custom Phrase</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Add to: <span className="font-bold text-primary">{phraseCategory}</span>
+                            </p>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <textarea
+                                value={newPhrase}
+                                onChange={(e) => setNewPhrase(e.target.value)}
+                                placeholder="Enter your custom phrase..."
+                                className="w-full h-24 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
+                                autoFocus
+                            />
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowPhraseModal(false)}
+                                    className="flex-1 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (newPhrase.trim()) {
+                                            const updated = {
+                                                ...customPhrases,
+                                                [phraseCategory]: [...(customPhrases[phraseCategory] || []), newPhrase.trim()]
+                                            };
+                                            setCustomPhrases(updated);
+                                            localStorage.setItem('customPhrases', JSON.stringify(updated));
+                                            setNewPhrase("");
+                                            setShowPhraseModal(false);
+                                        }
+                                    }}
+                                    disabled={!newPhrase.trim()}
+                                    className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+                                >
+                                    Add Phrase
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Code Explanation Modal */}
             {codeModalOpen && selectedCodeInfo && (
