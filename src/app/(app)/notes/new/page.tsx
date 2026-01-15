@@ -136,8 +136,8 @@ export default function NewNotePage() {
             if (!response.ok) {
                 // Fallback to demo note if API fails
                 console.warn('AI API failed, using fallback');
-                const demoNote = generateDemoNote(templateId);
-                applyNoteToSections(demoNote);
+                const phraseNote = generateNoteFromPhrases();
+                applyNoteToSections(phraseNote);
                 return;
             }
 
@@ -162,18 +162,52 @@ export default function NewNotePage() {
                 if (data.suggestedCodes) setSuggestedCodes(data.suggestedCodes);
             } else {
                 // Fallback
-                const demoNote = generateDemoNote(templateId);
-                applyNoteToSections(demoNote);
+                const phraseNote = generateNoteFromPhrases();
+                applyNoteToSections(phraseNote);
             }
         } catch (error) {
             console.error('Error calling AI:', error);
             // Fallback to demo on error
-            const demoNote = generateDemoNote(templateId);
-            applyNoteToSections(demoNote);
+            const phraseNote = generateNoteFromPhrases();
+            applyNoteToSections(phraseNote);
         } finally {
             setIsGenerating(false);
             setAutoSaved(new Date().toLocaleTimeString());
         }
+    };
+
+    // Helper to generate note from selected phrases (fallback when API unavailable)
+    const generateNoteFromPhrases = () => {
+        const subjectivePhrases = selectedPhrases['Subjective'] || [];
+        const objectivePhrases = selectedPhrases['Objective'] || [];
+        const assessmentPhrases = selectedPhrases['Assessment'] || [];
+        const planPhrases = selectedPhrases['Plan'] || [];
+
+        // Build sections from phrases + clinician input
+        const subjective = [
+            ...subjectivePhrases,
+            clinicianInput ? clinicianInput : null
+        ].filter(Boolean).join('. ') || 'Patient presents for follow-up visit.';
+
+        const objective = objectivePhrases.length > 0
+            ? objectivePhrases.join('. ') + '.'
+            : 'Mental Status Exam: Alert and oriented x4. Appearance appropriate.';
+
+        const assessment = assessmentPhrases.length > 0
+            ? assessmentPhrases.join('. ') + '.'
+            : 'Condition stable, continue current treatment plan.';
+
+        const plan = planPhrases.length > 0
+            ? planPhrases.map(p => `- ${p}`).join('\n')
+            : '- Continue current medication regimen\n- Follow-up in 2-4 weeks\n- Patient education provided';
+
+        return {
+            subjective,
+            objective,
+            assessment,
+            plan,
+            suggestedCodes: { cpt: ['90834', '90837'], icd10: ['F32.1', 'F41.1'] }
+        };
     };
 
     // Helper to apply demo note to sections
