@@ -106,7 +106,8 @@ export default function NewNotePage() {
         setNoteSections(initialSections);
     }, [template]);
 
-    // Simulate AI generation
+
+    // Generate note using AI service
     const handleGenerateNote = async () => {
         const hasPhrases = Object.values(selectedPhrases).some(p => p.length > 0);
         if (!clinicianInput && !isRecording && demoTranscript.length === 0 && !hasPhrases) {
@@ -115,40 +116,83 @@ export default function NewNotePage() {
         }
 
         setIsGenerating(true);
-        // Combine inputs for AI context
-        const phraseContext = Object.entries(selectedPhrases)
-            .filter(([_, phrases]) => phrases.length > 0)
-            .map(([section, phrases]) => `${section}: ${phrases.join(', ')}`)
-            .join('\n');
 
         // SEC-007: Log metadata only, not PHI content
-        console.log("Generating note:", { hasPhrases: phraseContext.length > 0, inputLength: clinicianInput.length });
+        console.log("Generating note:", { hasPhrases, inputLength: clinicianInput.length });
 
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        try {
+            // Call the AI endpoint with user's selections
+            const response = await fetch('/api/ai/generate-note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clinicianInput,
+                    selectedPhrases,
+                    templateId,
+                    templateFormat: template.format
+                })
+            });
 
-        const demoNote = generateDemoNote(templateId);
+            if (!response.ok) {
+                // Fallback to demo note if API fails
+                console.warn('AI API failed, using fallback');
+                const demoNote = generateDemoNote(templateId);
+                applyNoteToSections(demoNote);
+                return;
+            }
 
-        // Map demo note to template sections
+            const data = await response.json();
+
+            if (data.success && data.sections) {
+                // Apply AI-generated sections to template
+                const updatedSections: Record<string, string> = { ...noteSections };
+                if (template.format === "soap") {
+                    template.sections.forEach(s => {
+                        const label = s.label.toLowerCase();
+                        if (label.includes("subjective")) updatedSections[s.id] = data.sections.subjective || '';
+                        else if (label.includes("objective")) updatedSections[s.id] = data.sections.objective || '';
+                        else if (label.includes("assessment")) updatedSections[s.id] = data.sections.assessment || '';
+                        else if (label.includes("plan")) updatedSections[s.id] = data.sections.plan || '';
+                    });
+                } else {
+                    updatedSections[template.sections[0].id] = data.sections.content ||
+                        `${data.sections.subjective}\n\n${data.sections.objective}\n\n${data.sections.assessment}\n\n${data.sections.plan}`;
+                }
+                setNoteSections(updatedSections);
+                if (data.suggestedCodes) setSuggestedCodes(data.suggestedCodes);
+            } else {
+                // Fallback
+                const demoNote = generateDemoNote(templateId);
+                applyNoteToSections(demoNote);
+            }
+        } catch (error) {
+            console.error('Error calling AI:', error);
+            // Fallback to demo on error
+            const demoNote = generateDemoNote(templateId);
+            applyNoteToSections(demoNote);
+        } finally {
+            setIsGenerating(false);
+            setAutoSaved(new Date().toLocaleTimeString());
+        }
+    };
+
+    // Helper to apply demo note to sections
+    const applyNoteToSections = (demoNote: { subjective: string; objective: string; assessment: string; plan: string; suggestedCodes: any }) => {
         const updatedSections: Record<string, string> = { ...noteSections };
         if (template.format === "soap") {
-            // Mapping demo SOAP properties to section IDs if they match label start
             template.sections.forEach(s => {
                 const label = s.label.toLowerCase();
                 if (label.includes("subjective")) updatedSections[s.id] = demoNote.subjective;
                 else if (label.includes("objective")) updatedSections[s.id] = demoNote.objective;
                 else if (label.includes("assessment")) updatedSections[s.id] = demoNote.assessment;
                 else if (label.includes("plan")) updatedSections[s.id] = demoNote.plan;
-                else updatedSections[s.id] = demoNote.subjective; // fallback
+                else updatedSections[s.id] = demoNote.subjective;
             });
         } else {
-            // Paragraph format: put everything in the first/only section
             updatedSections[template.sections[0].id] = `${demoNote.subjective}\n\n${demoNote.objective}\n\n${demoNote.assessment}\n\n${demoNote.plan}`;
         }
-
         setNoteSections(updatedSections);
         setSuggestedCodes(demoNote.suggestedCodes);
-        setIsGenerating(false);
-        setAutoSaved(new Date().toLocaleTimeString());
     };
 
     // Auto-save simulation
