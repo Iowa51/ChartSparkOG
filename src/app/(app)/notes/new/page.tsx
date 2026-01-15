@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -75,6 +75,16 @@ export default function NewNotePage() {
     const [scribeTranscription, setScribeTranscription] = useState("");
     const [recordingTime, setRecordingTime] = useState(0);
     const [hasRecording, setHasRecording] = useState(false);
+    const [speechSupported, setSpeechSupported] = useState(true);
+    const recognitionRef = React.useRef<any>(null);
+
+    // Check for Web Speech API support
+    React.useEffect(() => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            setSpeechSupported(false);
+        }
+    }, []);
 
     // State for clinician's manual notes/input
     const [clinicianInput, setClinicianInput] = useState("");
@@ -836,21 +846,61 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                 <button
                                                     onClick={() => {
                                                         if (isRecording) {
-                                                            // Stop recording - simulate transcription
+                                                            // Stop recording
                                                             setIsRecording(false);
                                                             setHasRecording(true);
-                                                            // Demo transcription
-                                                            setScribeTranscription(
-                                                                "Patient reports feeling much better since last visit. Sleep has improved significantly, now getting 7-8 hours per night. " +
-                                                                "No side effects reported from current medication. Mood is stable, describes it as 'pretty good most days'. " +
-                                                                "Appetite is normal. Energy levels have improved. Denies any suicidal or homicidal ideation. " +
-                                                                "Patient is compliant with medication regimen. Wants to continue current treatment plan."
-                                                            );
+                                                            if (recognitionRef.current) {
+                                                                recognitionRef.current.stop();
+                                                            }
                                                         } else {
-                                                            // Start recording
-                                                            setIsRecording(true);
-                                                            setRecordingTime(0);
-                                                            setScribeTranscription("");
+                                                            // Start recording with Web Speech API
+                                                            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                                                            if (SpeechRecognition) {
+                                                                const recognition = new SpeechRecognition();
+                                                                recognition.continuous = true;
+                                                                recognition.interimResults = true;
+                                                                recognition.lang = 'en-US';
+
+                                                                recognition.onresult = (event: any) => {
+                                                                    let transcript = '';
+                                                                    for (let i = 0; i < event.results.length; i++) {
+                                                                        transcript += event.results[i][0].transcript;
+                                                                    }
+                                                                    setScribeTranscription(transcript);
+                                                                };
+
+                                                                recognition.onerror = (event: any) => {
+                                                                    console.error('Speech recognition error:', event.error);
+                                                                    setIsRecording(false);
+                                                                };
+
+                                                                recognition.onend = () => {
+                                                                    setIsRecording(false);
+                                                                    setHasRecording(true);
+                                                                };
+
+                                                                recognitionRef.current = recognition;
+                                                                recognition.start();
+                                                                setIsRecording(true);
+                                                                setRecordingTime(0);
+                                                                setScribeTranscription("");
+                                                            } else {
+                                                                // Fallback demo mode for unsupported browsers
+                                                                alert('Speech recognition is not supported in this browser. Using demo mode.');
+                                                                setIsRecording(true);
+                                                                setRecordingTime(0);
+                                                                setScribeTranscription("");
+                                                                setTimeout(() => {
+                                                                    setIsRecording(false);
+                                                                    setHasRecording(true);
+                                                                    setScribeTranscription(
+                                                                        "Patient reports feeling much better since last visit. Sleep has improved significantly, now getting 7-8 hours per night. " +
+                                                                        "No side effects reported from current medication. Mood is stable, describes it as 'pretty good most days'. " +
+                                                                        "Appetite is normal. Energy levels have improved. Denies any suicidal or homicidal ideation. " +
+                                                                        "Patient is compliant with medication regimen. Wants to continue current treatment plan."
+                                                                    );
+                                                                }, 3000);
+                                                            }
                                                         }
                                                     }}
                                                     className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording

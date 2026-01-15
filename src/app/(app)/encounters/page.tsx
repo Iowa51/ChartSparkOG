@@ -231,7 +231,7 @@ export default function EncountersPage() {
                                                         <Eye className="h-5 w-5" />
                                                     </Link>
                                                     <Link
-                                                        href={`/encounters/${encounter.id}/note`}
+                                                        href={`/notes/new?encounterId=${encounter.id}`}
                                                         className="p-2 text-muted-foreground hover:text-primary hover:bg-accent rounded-lg transition-colors"
                                                         title="Edit Note"
                                                     >
