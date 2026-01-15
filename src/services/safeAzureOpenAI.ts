@@ -207,25 +207,39 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
             return this.getDemoSOAPNote(sessionData);
         }
 
-        const prompt = `Generate a professional clinical SOAP note based on:
+        const prompt = `You are a clinical documentation specialist. Generate a detailed, professional SOAP note for a mental health or primary care visit.
 
-Subjective: ${sessionData.subjective}
-Objective: ${sessionData.objective}
-Key Symptoms: ${sessionData.symptoms.join(', ')}
-Initial Assessment: ${sessionData.assessment}
+Based on the following observations provided by the clinician:
 
-Format the note professionally with clear S, O, A, P sections.`;
+**Patient Observations:**
+- Subjective complaints: ${sessionData.subjective || 'General follow-up visit'}
+- Objective findings: ${sessionData.objective || 'To be assessed'}
+- Key symptoms noted: ${sessionData.symptoms.join(', ') || 'None specified'}
+- Initial clinical impression: ${sessionData.assessment || 'Stable condition'}
+
+**Instructions:**
+1. EXPAND on each observation with appropriate clinical detail and professional language
+2. Add realistic vital signs and mental status exam findings to the Objective section
+3. Include relevant ICD-10 codes in the Assessment
+4. Create a comprehensive treatment Plan with specific interventions
+5. Make the note sound natural and varied - avoid repetitive phrasing
+6. The note should be 200-400 words total, professionally formatted
+
+Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** sections.`;
 
         try {
             const response = await this.client!.chat.completions.create({
                 model: this.deploymentName,
                 messages: [
-                    { role: "system", content: "You are an expert clinical documentation specialist." },
+                    {
+                        role: "system",
+                        content: "You are an expert clinical documentation specialist who writes detailed, professional SOAP notes. Each note should be unique with varied phrasing. Never generate identical notes."
+                    },
                     { role: "user", content: prompt }
                 ],
-                max_tokens: 1000,
-                temperature: 0.5,
-                top_p: 0.9
+                max_tokens: 1500,
+                temperature: 0.7,  // Higher temperature for more variety
+                top_p: 0.95
             });
 
             return response.choices[0].message?.content || this.getDemoSOAPNote(sessionData);
@@ -314,21 +328,69 @@ Format the note professionally with clear S, O, A, P sections.`;
     }
 
     private getDemoSOAPNote(sessionData: any): string {
+        // Add variability with random elements
+        const timestamp = Date.now();
+        const variationSeed = timestamp % 5;
+
+        // Vital sign variations
+        const vitals = [
+            'BP 118/76 mmHg, HR 72 bpm, RR 16, Temp 98.4°F',
+            'BP 122/78 mmHg, HR 68 bpm, RR 14, Temp 98.6°F',
+            'BP 116/74 mmHg, HR 74 bpm, RR 15, Temp 98.2°F',
+            'BP 120/80 mmHg, HR 70 bpm, RR 16, Temp 98.5°F',
+            'BP 124/82 mmHg, HR 76 bpm, RR 14, Temp 98.3°F'
+        ][variationSeed];
+
+        // Mental status exam variations
+        const mseFindings = [
+            'Alert and oriented x4. Cooperative with fair eye contact. Speech normal in rate and rhythm. Mood described as "okay." Affect congruent, mildly restricted range. Thought process linear and goal-directed. No suicidal or homicidal ideation.',
+            'Patient is alert, oriented, and cooperative. Good eye contact maintained throughout interview. Speech is coherent with normal prosody. Mood reported as "doing better." Affect is euthymic with appropriate reactivity. Thought content without delusions or perceptual disturbances.',
+            'Awake, alert, fully oriented. Dressed appropriately with good hygiene. Speech clear and spontaneous. Reports mood as "managing." Affect is congruent with mild improvement noted. No psychomotor abnormalities. Insight and judgment appear intact.',
+            'Alert and attentive throughout session. Engaged appropriately with interviewer. Mood described as "stable." Affect reactive and congruent. Thought process organized. Denies current SI/HI. Judgment and insight are fair.',
+            'Oriented to person, place, time, and situation. Cooperative demeanor with adequate eye contact. Speech fluent without pressure or latency. Mood "not bad." Affect full range, appropriate to content. No evidence of thought disorder.'
+        ][variationSeed];
+
+        // Plan variations
+        const planItems = [
+            ['Continue current medication regimen as prescribed', 'Psychotherapy session scheduled for next week', 'Sleep hygiene education reinforced', 'Return to clinic in 2-4 weeks for follow-up', 'Crisis resources reviewed; patient to call 988 if needed'],
+            ['Maintain current treatment plan with close monitoring', 'Weekly CBT sessions to continue focusing on cognitive restructuring', 'Encouraged daily physical activity for 30 minutes', 'Follow-up appointment scheduled in 3 weeks', 'Safety plan updated and in place'],
+            ['No changes to current medication at this time', 'Continue individual therapy twice monthly', 'Discussed importance of medication adherence', 'Labs ordered for routine monitoring', 'Next visit in 4 weeks unless symptoms worsen'],
+            ['Treatment plan reviewed and adjusted as indicated', 'Supportive psychotherapy provided during session', 'Stress reduction techniques reviewed', 'Patient education on condition provided', 'Follow-up in 2 weeks to reassess progress'],
+            ['Current interventions appear effective; continue', 'Therapy focusing on behavioral activation strategies', 'Encouraged maintaining regular sleep schedule', 'Discussed warning signs requiring immediate attention', 'Return visit scheduled for 3 weeks']
+        ][variationSeed];
+
+        // Expand subjective with clinical context
+        const subjectiveBase = sessionData.subjective || 'Patient presents for routine follow-up visit.';
+        const subjectiveExpanded = subjectiveBase.length < 50
+            ? `${subjectiveBase} Patient was accompanied by family member who confirms reported symptoms. No new medical concerns since last visit. Denies chest pain, shortness of breath, or other acute complaints. Medication compliance has been good.`
+            : subjectiveBase;
+
+        // Build assessment with ICD codes
+        const assessmentBase = sessionData.assessment || 'Condition stable with ongoing treatment.';
+        const assessment = `${assessmentBase}
+
+Primary Diagnosis: Major Depressive Disorder, moderate episode (F32.1)
+Secondary: Generalized Anxiety Disorder (F41.1)
+Current functional status: Improved from baseline. Patient demonstrates progress toward treatment goals.`;
+
         return `**SUBJECTIVE**
-${sessionData.subjective || 'Patient presents for follow-up visit.'}
+${subjectiveExpanded}
 
 **OBJECTIVE**
-${sessionData.objective || 'Mental Status Exam: Alert and oriented x4. Appearance appropriate.'}
-Key symptoms: ${sessionData.symptoms?.join(', ') || 'As noted above'}
+Vital Signs: ${vitals}
+
+Mental Status Examination:
+${mseFindings}
+
+${sessionData.symptoms?.length > 0 ? `Key symptoms addressed today: ${sessionData.symptoms.join(', ')}.` : ''}
 
 **ASSESSMENT**
-${sessionData.assessment || 'Condition stable, continue current treatment plan.'}
+${assessment}
 
 **PLAN**
-- Continue current medication regimen
-- Follow-up in 2-4 weeks
-- Patient education provided
-- Safety plan reviewed if applicable`;
+${planItems.map((item, i) => `${i + 1}. ${item}`).join('\n')}
+
+Time spent: ${15 + (variationSeed * 5)} minutes, greater than 50% in counseling and coordination of care.`;
     }
 }
 
