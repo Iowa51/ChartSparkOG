@@ -247,9 +247,17 @@ export default function NewNotePage() {
     const handleRegenerateSection = async (id: string) => {
         setIsGenerating(true);
         await new Promise((resolve) => setTimeout(resolve, 1000));
-        const demoNote = generateDemoNote(templateId);
-        // Fallback random generation for specific section
-        handleSectionChange(id, demoNote.subjective);
+        const phraseNote = generateNoteFromPhrases();
+        // Regenerate the specific section based on its label
+        const section = template.sections.find(s => s.id === id);
+        if (section) {
+            const label = section.label.toLowerCase();
+            if (label.includes("subjective")) handleSectionChange(id, phraseNote.subjective);
+            else if (label.includes("objective")) handleSectionChange(id, phraseNote.objective);
+            else if (label.includes("assessment")) handleSectionChange(id, phraseNote.assessment);
+            else if (label.includes("plan")) handleSectionChange(id, phraseNote.plan);
+            else handleSectionChange(id, phraseNote.subjective);
+        }
         setIsGenerating(false);
     };
 
