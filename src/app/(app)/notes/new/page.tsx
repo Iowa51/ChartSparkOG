@@ -97,6 +97,27 @@ export default function NewNotePage() {
         icd10: string[];
     }>({ cpt: [], icd10: [] });
 
+    // Track which codes have been selected/copied
+    const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
+
+    // Handle clicking on a code - copy to clipboard and mark as selected
+    const handleCodeClick = async (code: string, type: 'cpt' | 'icd10') => {
+        try {
+            await navigator.clipboard.writeText(code);
+            setSelectedCodes(prev => new Set([...prev, code]));
+            // Show a brief visual confirmation
+            setTimeout(() => {
+                setSelectedCodes(prev => {
+                    const next = new Set(prev);
+                    next.delete(code);
+                    return next;
+                });
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy code:', err);
+        }
+    };
+
     // Initialize/Reset note sections based on template
     useEffect(() => {
         const initialSections: Record<string, string> = {};
@@ -418,9 +439,9 @@ Functional Status: Patient demonstrates continued progress toward treatment goal
                 <div className="w-full max-w-[1700px] mx-auto h-full flex flex-col md:flex-row gap-6 p-4 md:p-6 overflow-hidden">
                     {/* Left Pane: Transcript & Input Hub */}
                     {showTranscript && (
-                        <aside className="flex flex-col w-full md:w-[420px] lg:w-[500px] gap-6 shrink-0 flex-none h-full overflow-hidden">
+                        <aside className="flex flex-col w-full md:w-[420px] lg:w-[500px] gap-6 shrink-0 flex-none h-full overflow-y-auto">
                             {/* Input Clinical Hub */}
-                            <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0 transition-all duration-500">
+                            <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-visible shrink-0 transition-all duration-500">
                                 <div className="px-5 py-3 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <button
@@ -727,20 +748,31 @@ Functional Status: Patient demonstrates continued progress toward treatment goal
                                         <div className="flex flex-wrap gap-3">
                                             {suggestedCodes.cpt.length > 0 ? (
                                                 suggestedCodes.cpt.map((code) => (
-                                                    <div
+                                                    <button
                                                         key={code}
-                                                        className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-muted/50 border border-border hover:border-primary/30 transition-all cursor-pointer"
+                                                        onClick={() => handleCodeClick(code, 'cpt')}
+                                                        className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer ${selectedCodes.has(code)
+                                                            ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
+                                                            : 'bg-muted/50 border-border hover:border-primary/30 hover:bg-primary/5'
+                                                            }`}
+                                                        title="Click to copy code"
                                                     >
-                                                        <span className="text-base font-black text-foreground tracking-tight underline decoration-primary/30 underline-offset-4">{code}</span>
+                                                        <span className={`text-base font-black tracking-tight ${selectedCodes.has(code) ? 'text-white' : 'text-foreground underline decoration-primary/30 underline-offset-4'}`}>
+                                                            {selectedCodes.has(code) ? '✓ Copied!' : code}
+                                                        </span>
                                                         <div className="w-px h-6 bg-border mx-1" />
-                                                        <span className="text-xs font-bold text-muted-foreground">
+                                                        <span className={`text-xs font-bold ${selectedCodes.has(code) ? 'text-white/80' : 'text-muted-foreground'}`}>
                                                             {code === "99214" && "Evaluation & Management - Level 4"}
                                                             {code === "99213" && "Evaluation & Management - Level 3"}
+                                                            {code === "90834" && "Psychotherapy, 45 min"}
+                                                            {code === "90837" && "Psychotherapy, 60 min"}
                                                             {code === "90833" && "Psychotherapy Adjunct"}
                                                             {code === "90792" && "Psych Diagnostic Eval"}
                                                         </span>
-                                                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="High Confidence Matches Documentation" />
-                                                    </div>
+                                                        {!selectedCodes.has(code) && (
+                                                            <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        )}
+                                                    </button>
                                                 ))
                                             ) : (
                                                 <div className="flex items-center gap-3 text-sm text-muted-foreground italic bg-muted/20 px-4 py-2 rounded-xl border border-dashed border-border">
@@ -762,22 +794,34 @@ Functional Status: Patient demonstrates continued progress toward treatment goal
                                         <div className="flex flex-wrap gap-3">
                                             {suggestedCodes.icd10.length > 0 ? (
                                                 suggestedCodes.icd10.map((code) => (
-                                                    <div
+                                                    <button
                                                         key={code}
-                                                        className="group flex items-center gap-3 px-4 py-2.5 rounded-xl bg-card border border-border hover:border-primary/30 transition-all cursor-pointer shadow-sm"
+                                                        onClick={() => handleCodeClick(code, 'icd10')}
+                                                        className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer shadow-sm ${selectedCodes.has(code)
+                                                                ? 'bg-emerald-500 text-white border-emerald-500 scale-105'
+                                                                : 'bg-card border-border hover:border-primary/30 hover:bg-primary/5'
+                                                            }`}
+                                                        title="Click to copy code"
                                                     >
-                                                        <span className="text-sm font-black text-primary px-2 py-1 bg-primary/5 rounded border border-primary/10 tracking-wider">
-                                                            {code}
+                                                        <span className={`text-sm font-black px-2 py-1 rounded border tracking-wider ${selectedCodes.has(code)
+                                                                ? 'text-white bg-white/20 border-white/30'
+                                                                : 'text-primary bg-primary/5 border-primary/10'
+                                                            }`}>
+                                                            {selectedCodes.has(code) ? '✓' : code}
                                                         </span>
-                                                        <span className="text-xs font-bold text-foreground/80">
+                                                        <span className={`text-xs font-bold ${selectedCodes.has(code) ? 'text-white' : 'text-foreground/80'}`}>
+                                                            {selectedCodes.has(code) && 'Copied! - '}
                                                             {code === "G44.209" && "Tension-type headache, not intractable"}
                                                             {code === "I10" && "Essential (primary) hypertension"}
                                                             {code === "E11.9" && "Type 2 diabetes mellitus without complications"}
-                                                            {code === "F32.1" && "Major depressive disorder, single episode, moderate"}
+                                                            {code === "F32.1" && "Major depressive disorder, moderate"}
                                                             {code === "F41.1" && "Generalized anxiety disorder"}
+                                                            {code === "F33.1" && "Major depressive disorder, recurrent, moderate"}
                                                         </span>
-                                                        <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-all ml-2" />
-                                                    </div>
+                                                        {!selectedCodes.has(code) && (
+                                                            <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
+                                                        )}
+                                                    </button>
                                                 ))
                                             ) : (
                                                 <button className="flex items-center gap-3 text-sm text-muted-foreground italic bg-muted/20 px-4 py-2 rounded-xl border border-dashed border-border hover:border-primary group transition-all">
