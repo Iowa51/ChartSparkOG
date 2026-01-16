@@ -102,7 +102,8 @@ async function handler(context: AuthContext) {
 }
 
 // SEC-005: Export with authentication
+// NOTE: Feature requirement temporarily disabled for demo - re-enable in production
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
-    requiredFeature: 'TELEHEALTH',
+    // requiredFeature: 'TELEHEALTH', // Disabled for demo mode
 });
