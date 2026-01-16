@@ -2,24 +2,25 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Header } from "@/components/layout";
 import {
     Video,
     Calendar,
     Clock,
-    Phone,
     Users,
-    Sparkles,
-    MessageSquare,
-    PhoneOff,
-    Mic,
-    Monitor,
     Settings,
-    User,
-    ArrowRight,
     TrendingUp,
-    ShieldCheck
+    ShieldCheck,
+    Loader2,
+    AlertCircle
 } from "lucide-react";
+
+// Dynamically import the video component to avoid SSR issues with Daily.co
+const DailyVideoCall = dynamic(
+    () => import("@/components/telehealth/DailyVideoCall"),
+    { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> }
+);
 
 const upcomingAppointments = [
     {
@@ -84,16 +85,83 @@ const sessionHistory = [
     }
 ];
 
-export default function TelehealthPage() {
-    const [activeCall, setActiveCall] = useState(false);
-    const [isCameraStarting, setIsCameraStarting] = useState(false);
+interface CallSession {
+    roomUrl: string;
+    roomName: string;
+    providerToken: string;
+    patientLink: string;
+    patientName: string;
+}
 
-    const handleStartCall = () => {
-        setIsCameraStarting(true);
-        setTimeout(() => {
-            setIsCameraStarting(false);
-            setActiveCall(true);
-        }, 1500);
+export default function TelehealthPage() {
+    const [isStartingCall, setIsStartingCall] = useState(false);
+    const [callSession, setCallSession] = useState<CallSession | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleStartCall = async (appointmentId: number, patientName: string) => {
+        setIsStartingCall(true);
+        setError(null);
+
+        try {
+            console.log("[Telehealth] Creating room for appointment:", appointmentId);
+
+            const response = await fetch("/api/telehealth/create-room", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    appointmentId: appointmentId.toString(),
+                    patientName: patientName,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to create telehealth room");
+            }
+
+            const data = await response.json();
+            console.log("[Telehealth] Room created:", data);
+
+            // Generate patient link (the room URL with patient token)
+            const patientLink = data.isDemo
+                ? `${data.roomUrl}?t=${data.patientToken}`
+                : `${data.roomUrl}?t=${data.patientToken}`;
+
+            setCallSession({
+                roomUrl: data.roomUrl,
+                roomName: data.roomName,
+                providerToken: data.providerToken,
+                patientLink: patientLink,
+                patientName: patientName,
+            });
+        } catch (err) {
+            console.error("[Telehealth] Error starting call:", err);
+            setError(err instanceof Error ? err.message : "Failed to start telehealth session");
+        } finally {
+            setIsStartingCall(false);
+        }
+    };
+
+    const handleEndCall = async () => {
+        if (callSession) {
+            try {
+                // End the session on the server
+                await fetch("/api/telehealth/end-session", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        roomName: callSession.roomName,
+                    }),
+                });
+            } catch (err) {
+                console.error("[Telehealth] Error ending session:", err);
+            }
+        }
+        setCallSession(null);
     };
 
     return (
@@ -181,15 +249,24 @@ export default function TelehealthPage() {
                                         <p className="text-xs font-medium text-slate-400 italic">{apt.type}</p>
                                     </div>
                                     <button
-                                        disabled={apt.status !== "ready" || activeCall || isCameraStarting}
-                                        onClick={handleStartCall}
-                                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${apt.status === "ready"
+                                        disabled={apt.status !== "ready" || !!callSession || isStartingCall}
+                                        onClick={() => handleStartCall(apt.id, apt.patientName)}
+                                        className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${apt.status === "ready" && !callSession
                                             ? "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/20"
                                             : "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
-                                            } ${isCameraStarting && apt.status === "ready" ? "animate-pulse" : ""}`}
+                                            } ${isStartingCall && apt.status === "ready" ? "animate-pulse" : ""}`}
                                     >
-                                        <Video className={`h-4 w-4 ${isCameraStarting ? "animate-spin" : ""}`} />
-                                        {isCameraStarting ? "Connecting..." : apt.status === "ready" ? "Start Session" : "Scheduled"}
+                                        {isStartingCall ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Connecting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Video className="h-4 w-4" />
+                                                {apt.status === "ready" ? "Start Session" : "Scheduled"}
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             ))}
@@ -201,9 +278,11 @@ export default function TelehealthPage() {
                         <div className="px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
                             <div className="flex items-center gap-3">
                                 <Video className="h-5 w-5 text-primary" />
-                                <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Active Terminal</h2>
+                                <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                    {callSession ? `Session: ${callSession.patientName}` : "Active Terminal"}
+                                </h2>
                             </div>
-                            {activeCall && (
+                            {callSession && (
                                 <div className="px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-2">
                                     <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
                                     Live Call
@@ -211,49 +290,28 @@ export default function TelehealthPage() {
                             )}
                         </div>
                         <div className="flex-1 p-8">
-                            {isCameraStarting ? (
+                            {error && (
+                                <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3">
+                                    <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                                    <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+                                </div>
+                            )}
+
+                            {isStartingCall ? (
                                 <div className="h-full min-h-[300px] bg-slate-900 rounded-3xl flex flex-col items-center justify-center text-center p-8 border border-white/5 animate-pulse">
                                     <div className="h-16 w-16 rounded-full border-4 border-primary border-t-transparent animate-spin mb-4" />
-                                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Initializing Camera</h3>
+                                    <h3 className="text-lg font-black text-white uppercase tracking-tight">Creating Session</h3>
                                     <p className="text-xs text-slate-500 font-medium">Securing HIPAA-compliant connection...</p>
                                 </div>
-                            ) : activeCall ? (
-                                <div className="h-full min-h-[300px] bg-slate-950 rounded-3xl relative overflow-hidden group border border-white/5 ring-1 ring-white/10 shadow-2xl">
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                                        <div className="h-24 w-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/20 mb-4">
-                                            <User className="h-12 w-12" />
-                                        </div>
-                                        <h3 className="text-lg font-bold text-white/40 tracking-tight">Michael Chen (Patient)</h3>
-                                        <div className="mt-4 flex items-center gap-2 text-[10px] font-black text-emerald-400 uppercase tracking-widest px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-                                            <TrendingUp className="h-3 w-3" />
-                                            Connection: Excellent
-                                        </div>
-                                    </div>
-
-                                    {/* Self View (Small Overlay) */}
-                                    <div className="absolute bottom-6 right-6 w-32 aspect-video bg-slate-800 rounded-xl border border-white/10 shadow-2xl overflow-hidden ring-4 ring-black/50">
-                                        <div className="h-full w-full flex items-center justify-center bg-slate-700">
-                                            <Sparkles className="h-5 w-5 text-primary/40 animate-pulse" />
-                                        </div>
-                                    </div>
-
-                                    {/* Controls Overlay */}
-                                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 bg-black/60 backdrop-blur-2xl rounded-[1.5rem] border border-white/10 shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                                        <button className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all">
-                                            <Mic className="h-4 w-4" />
-                                        </button>
-                                        <button className="p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all">
-                                            <Monitor className="h-4 w-4" />
-                                        </button>
-                                        <div className="w-px h-6 bg-white/10 mx-1" />
-                                        <button
-                                            onClick={() => setActiveCall(false)}
-                                            className="px-4 py-2 rounded-full bg-red-500 hover:bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl shadow-red-500/20 transition-all"
-                                        >
-                                            End Session
-                                        </button>
-                                    </div>
-                                </div>
+                            ) : callSession ? (
+                                <DailyVideoCall
+                                    roomUrl={callSession.roomUrl}
+                                    token={callSession.providerToken}
+                                    userName="Provider"
+                                    patientLink={callSession.patientLink}
+                                    onLeave={handleEndCall}
+                                    onError={(err) => setError(err)}
+                                />
                             ) : (
                                 <div className="h-full min-h-[300px] bg-slate-50 dark:bg-slate-800/20 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl flex flex-col items-center justify-center text-center p-8">
                                     <div className="h-20 w-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 mb-6">

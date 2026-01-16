@@ -31,12 +31,14 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'", // SEC-011: Removed unsafe-eval
+      "script-src 'self' 'unsafe-inline' https://*.daily.co", // SEC-011: Added Daily.co scripts
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' blob: data: https:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://api.daily.co", // Added Daily.co
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://*.daily.co wss://*.daily.co https://*.wss.daily.co", // Added Daily.co WebSockets
       "frame-src 'self' https://*.daily.co", // SEC-011: Allow Daily.co frames for telehealth
+      "media-src 'self' blob: https://*.daily.co", // Allow video/audio streams
+      "worker-src 'self' blob:", // Allow web workers for Daily.co
       "frame-ancestors 'none'",
       "form-action 'self'",
       "base-uri 'self'",
