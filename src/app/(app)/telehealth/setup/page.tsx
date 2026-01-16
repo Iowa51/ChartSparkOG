@@ -13,7 +13,7 @@ import {
     AlertCircle,
     Loader2
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface DeviceInfo {
     deviceId: string;
@@ -32,6 +32,8 @@ export default function TelehealthSetupPage() {
     const [selectedSpeaker, setSelectedSpeaker] = useState<string>("");
     const [permissionError, setPermissionError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    const videoRef = useRef<HTMLVideoElement>(null);
 
     // Get available devices
     useEffect(() => {
@@ -81,21 +83,31 @@ export default function TelehealthSetupPage() {
         getDevices();
     }, []);
 
+    // Attach stream to video element when it changes
+    useEffect(() => {
+        if (videoRef.current && testStream) {
+            videoRef.current.srcObject = testStream;
+            videoRef.current.play().catch(e => console.error("Error playing video:", e));
+        }
+    }, [testStream, testActive]);
+
     const startTest = async () => {
         try {
             setPermissionError(null);
+
+            // Stop any existing stream first
+            if (testStream) {
+                testStream.getTracks().forEach(track => track.stop());
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: selectedCamera ? { deviceId: { exact: selectedCamera } } : true,
                 audio: selectedMic ? { deviceId: { exact: selectedMic } } : true
             });
+
             setTestStream(stream);
             setTestActive(true);
 
-            // Play to video preview
-            const videoElement = document.getElementById("camera-preview") as HTMLVideoElement;
-            if (videoElement) {
-                videoElement.srcObject = stream;
-            }
         } catch (err) {
             console.error("Error starting test:", err);
             setPermissionError("Could not access camera or microphone. Please check permissions.");
@@ -109,9 +121,8 @@ export default function TelehealthSetupPage() {
         }
         setTestActive(false);
 
-        const videoElement = document.getElementById("camera-preview") as HTMLVideoElement;
-        if (videoElement) {
-            videoElement.srcObject = null;
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
         }
     };
 
@@ -241,7 +252,7 @@ export default function TelehealthSetupPage() {
                             {testActive ? (
                                 <>
                                     <video
-                                        id="camera-preview"
+                                        ref={videoRef}
                                         autoPlay
                                         playsInline
                                         muted

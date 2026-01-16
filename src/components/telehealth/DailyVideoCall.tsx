@@ -31,9 +31,6 @@ interface ParticipantState {
     isLocal: boolean;
 }
 
-// Singleton to track global Daily instance
-let globalDailyInstance: DailyCall | null = null;
-
 export default function DailyVideoCall({
     roomUrl,
     token,
@@ -45,7 +42,6 @@ export default function DailyVideoCall({
     const callRef = useRef<DailyCall | null>(null);
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
-    const initializingRef = useRef(false);
 
     const [isJoining, setIsJoining] = useState(true);
     const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -73,20 +69,24 @@ export default function DailyVideoCall({
 
     // Handle participant updates
     const updateParticipants = useCallback((call: DailyCall) => {
-        const participantList = call.participants();
-        const newParticipants: ParticipantState[] = [];
+        try {
+            const participantList = call.participants();
+            const newParticipants: ParticipantState[] = [];
 
-        Object.values(participantList).forEach((p: DailyParticipant) => {
-            newParticipants.push({
-                id: p.session_id,
-                userName: p.user_name || "Guest",
-                videoTrack: p.tracks?.video?.persistentTrack || null,
-                audioTrack: p.tracks?.audio?.persistentTrack || null,
-                isLocal: p.local
+            Object.values(participantList).forEach((p: DailyParticipant) => {
+                newParticipants.push({
+                    id: p.session_id,
+                    userName: p.user_name || "Guest",
+                    videoTrack: p.tracks?.video?.persistentTrack || null,
+                    audioTrack: p.tracks?.audio?.persistentTrack || null,
+                    isLocal: p.local
+                });
             });
-        });
 
-        setParticipants(newParticipants);
+            setParticipants(newParticipants);
+        } catch (e) {
+            console.error("[Telehealth] Error updating participants:", e);
+        }
     }, []);
 
     // Attach video tracks to elements
@@ -114,70 +114,68 @@ export default function DailyVideoCall({
         }
     }, [participants]);
 
-    // Cleanup function
-    const cleanup = useCallback(() => {
-        console.log("[Telehealth] Cleaning up Daily.co call...");
+    // Cleanup function - destroys Call object properly
+    const cleanup = useCallback(async () => {
+        console.log("[Telehealth] Cleaning up...");
+
         if (callRef.current) {
             try {
-                callRef.current.leave();
+                const state = callRef.current.meetingState();
+                if (state === "joined-meeting" || state === "joining-meeting") {
+                    await callRef.current.leave();
+                }
                 callRef.current.destroy();
+                console.log("[Telehealth] Call destroyed successfully");
             } catch (e) {
                 console.error("[Telehealth] Cleanup error:", e);
             }
             callRef.current = null;
         }
-        if (globalDailyInstance) {
-            try {
-                globalDailyInstance.destroy();
-            } catch (e) {
-                console.error("[Telehealth] Global cleanup error:", e);
-            }
-            globalDailyInstance = null;
-        }
-        initializingRef.current = false;
     }, []);
 
     // Cancel/stop while connecting
-    const handleCancel = useCallback(() => {
-        cleanup();
+    const handleCancel = useCallback(async () => {
+        await cleanup();
         onLeave?.();
     }, [cleanup, onLeave]);
 
-    // Initialize Daily call
+    // Initialize Daily call - with proper instance management
     useEffect(() => {
         let isMounted = true;
+        let call: DailyCall | null = null;
 
         const initCall = async () => {
-            // Guard against duplicate initialization
-            if (initializingRef.current || callRef.current || globalDailyInstance) {
-                console.log("[Telehealth] Call already exists or initializing, cleaning up first...");
-                // Destroy existing instance first
-                if (globalDailyInstance) {
-                    try {
-                        globalDailyInstance.destroy();
-                    } catch (e) {
-                        console.error("[Telehealth] Error destroying existing instance:", e);
-                    }
-                    globalDailyInstance = null;
-                }
-            }
-
-            initializingRef.current = true;
-
             try {
                 console.log("[Telehealth] Initializing Daily.co call...");
 
-                const call = DailyIframe.createCallObject({
+                // Check if there's an existing call instance and destroy it
+                const existingCall = DailyIframe.getCallInstance();
+                if (existingCall) {
+                    console.log("[Telehealth] Found existing call instance, destroying it...");
+                    try {
+                        const state = existingCall.meetingState();
+                        if (state === "joined-meeting" || state === "joining-meeting") {
+                            await existingCall.leave();
+                        }
+                        existingCall.destroy();
+                    } catch (e) {
+                        console.error("[Telehealth] Error destroying existing instance:", e);
+                    }
+                }
+
+                // Small delay to ensure cleanup is complete
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                if (!isMounted) return;
+
+                // Create new call object
+                call = DailyIframe.createCallObject({
                     audioSource: true,
                     videoSource: true,
                 });
 
-                globalDailyInstance = call;
-
                 if (!isMounted) {
                     call.destroy();
-                    globalDailyInstance = null;
-                    initializingRef.current = false;
                     return;
                 }
 
@@ -188,42 +186,44 @@ export default function DailyVideoCall({
                     console.log("[Telehealth] Joined meeting successfully!");
                     if (isMounted) {
                         setIsJoining(false);
-                        updateParticipants(call);
+                        updateParticipants(call!);
                     }
                 });
 
                 call.on("participant-joined", (event) => {
                     console.log("[Telehealth] Participant joined:", event?.participant?.user_name);
-                    if (isMounted) updateParticipants(call);
+                    if (isMounted && call) updateParticipants(call);
                 });
 
                 call.on("participant-left", (event) => {
                     console.log("[Telehealth] Participant left:", event?.participant?.user_name);
-                    if (isMounted) updateParticipants(call);
+                    if (isMounted && call) updateParticipants(call);
                 });
 
                 call.on("participant-updated", () => {
-                    if (isMounted) updateParticipants(call);
+                    if (isMounted && call) updateParticipants(call);
                 });
 
                 call.on("track-started", () => {
-                    if (isMounted) updateParticipants(call);
+                    if (isMounted && call) updateParticipants(call);
                 });
 
                 call.on("track-stopped", () => {
-                    if (isMounted) updateParticipants(call);
+                    if (isMounted && call) updateParticipants(call);
                 });
 
                 call.on("error", (event) => {
                     console.error("[Telehealth] Daily.co error:", event);
-                    initializingRef.current = false;
-                    onError?.(event?.errorMsg || "Unknown error occurred");
+                    if (isMounted) {
+                        onError?.(event?.errorMsg || "Unknown error occurred");
+                    }
                 });
 
                 call.on("left-meeting", () => {
                     console.log("[Telehealth] Left meeting");
-                    initializingRef.current = false;
-                    onLeave?.();
+                    if (isMounted) {
+                        onLeave?.();
+                    }
                 });
 
                 // Join the call
@@ -234,11 +234,11 @@ export default function DailyVideoCall({
                     userName: userName,
                 });
 
-                initializingRef.current = false;
             } catch (error) {
                 console.error("[Telehealth] Failed to join call:", error);
-                initializingRef.current = false;
-                onError?.(error instanceof Error ? error.message : "Failed to join call");
+                if (isMounted) {
+                    onError?.(error instanceof Error ? error.message : "Failed to join call");
+                }
             }
         };
 
@@ -265,7 +265,7 @@ export default function DailyVideoCall({
     };
 
     const leaveCall = async () => {
-        cleanup();
+        await cleanup();
         onLeave?.();
     };
 
