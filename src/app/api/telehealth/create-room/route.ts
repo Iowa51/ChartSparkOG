@@ -74,8 +74,7 @@ async function handler(context: AuthContext) {
                 name: roomName,
                 privacy: 'private',
                 properties: {
-                    enable_recording: 'cloud',
-                    enable_chat: false,
+                    enable_chat: true,
                     enable_screenshare: true,
                     max_participants: 2,
                     exp: Math.floor(Date.now() / 1000) + (2 * 60 * 60) // 2 hour expiry
@@ -84,10 +83,13 @@ async function handler(context: AuthContext) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Daily.co API Error:', errorData);
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Daily.co API Error:', response.status, errorData);
             return NextResponse.json(
-                { error: 'Failed to create telehealth room' },
+                {
+                    error: 'Failed to create telehealth room',
+                    details: errorData.error || errorData.info || JSON.stringify(errorData)
+                },
                 { status: 500 }
             );
         }
