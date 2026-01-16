@@ -7,14 +7,11 @@ import {
     MicOff,
     Video,
     VideoOff,
-    PhoneOff,
-    Monitor,
     Users,
-    Maximize2,
-    Minimize2,
     Copy,
     Check,
-    Loader2
+    Loader2,
+    XCircle
 } from "lucide-react";
 
 interface DailyVideoCallProps {
@@ -34,6 +31,9 @@ interface ParticipantState {
     isLocal: boolean;
 }
 
+// Singleton to track global Daily instance
+let globalDailyInstance: DailyCall | null = null;
+
 export default function DailyVideoCall({
     roomUrl,
     token,
@@ -45,15 +45,15 @@ export default function DailyVideoCall({
     const callRef = useRef<DailyCall | null>(null);
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
+    const initializingRef = useRef(false);
 
     const [isJoining, setIsJoining] = useState(true);
     const [isAudioMuted, setIsAudioMuted] = useState(false);
     const [isVideoOff, setIsVideoOff] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
     const [participants, setParticipants] = useState<ParticipantState[]>([]);
     const [linkCopied, setLinkCopied] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
-    const [connectionQuality, setConnectionQuality] = useState<"excellent" | "good" | "poor">("excellent");
+    const [connectionQuality] = useState<"excellent" | "good" | "poor">("excellent");
 
     // Timer for call duration
     useEffect(() => {
@@ -114,16 +114,55 @@ export default function DailyVideoCall({
         }
     }, [participants]);
 
+    // Cleanup function
+    const cleanup = useCallback(() => {
+        console.log("[Telehealth] Cleaning up Daily.co call...");
+        if (callRef.current) {
+            try {
+                callRef.current.leave();
+                callRef.current.destroy();
+            } catch (e) {
+                console.error("[Telehealth] Cleanup error:", e);
+            }
+            callRef.current = null;
+        }
+        if (globalDailyInstance) {
+            try {
+                globalDailyInstance.destroy();
+            } catch (e) {
+                console.error("[Telehealth] Global cleanup error:", e);
+            }
+            globalDailyInstance = null;
+        }
+        initializingRef.current = false;
+    }, []);
+
+    // Cancel/stop while connecting
+    const handleCancel = useCallback(() => {
+        cleanup();
+        onLeave?.();
+    }, [cleanup, onLeave]);
+
     // Initialize Daily call
     useEffect(() => {
         let isMounted = true;
 
         const initCall = async () => {
             // Guard against duplicate initialization
-            if (callRef.current) {
-                console.log("[Telehealth] Call already exists, skipping initialization");
-                return;
+            if (initializingRef.current || callRef.current || globalDailyInstance) {
+                console.log("[Telehealth] Call already exists or initializing, cleaning up first...");
+                // Destroy existing instance first
+                if (globalDailyInstance) {
+                    try {
+                        globalDailyInstance.destroy();
+                    } catch (e) {
+                        console.error("[Telehealth] Error destroying existing instance:", e);
+                    }
+                    globalDailyInstance = null;
+                }
             }
+
+            initializingRef.current = true;
 
             try {
                 console.log("[Telehealth] Initializing Daily.co call...");
@@ -133,8 +172,12 @@ export default function DailyVideoCall({
                     videoSource: true,
                 });
 
+                globalDailyInstance = call;
+
                 if (!isMounted) {
                     call.destroy();
+                    globalDailyInstance = null;
+                    initializingRef.current = false;
                     return;
                 }
 
@@ -173,11 +216,13 @@ export default function DailyVideoCall({
 
                 call.on("error", (event) => {
                     console.error("[Telehealth] Daily.co error:", event);
+                    initializingRef.current = false;
                     onError?.(event?.errorMsg || "Unknown error occurred");
                 });
 
                 call.on("left-meeting", () => {
                     console.log("[Telehealth] Left meeting");
+                    initializingRef.current = false;
                     onLeave?.();
                 });
 
@@ -188,8 +233,11 @@ export default function DailyVideoCall({
                     token: token,
                     userName: userName,
                 });
+
+                initializingRef.current = false;
             } catch (error) {
                 console.error("[Telehealth] Failed to join call:", error);
+                initializingRef.current = false;
                 onError?.(error instanceof Error ? error.message : "Failed to join call");
             }
         };
@@ -198,18 +246,9 @@ export default function DailyVideoCall({
 
         return () => {
             isMounted = false;
-            if (callRef.current) {
-                console.log("[Telehealth] Cleaning up Daily.co call...");
-                try {
-                    callRef.current.leave();
-                    callRef.current.destroy();
-                } catch (e) {
-                    console.error("[Telehealth] Cleanup error:", e);
-                }
-                callRef.current = null;
-            }
+            cleanup();
         };
-    }, [roomUrl, token, userName, onError, onLeave, updateParticipants]);
+    }, [roomUrl, token, userName, onError, onLeave, updateParticipants, cleanup]);
 
     const toggleAudio = async () => {
         if (callRef.current) {
@@ -226,9 +265,7 @@ export default function DailyVideoCall({
     };
 
     const leaveCall = async () => {
-        if (callRef.current) {
-            await callRef.current.leave();
-        }
+        cleanup();
         onLeave?.();
     };
 
@@ -242,7 +279,7 @@ export default function DailyVideoCall({
 
     const remoteParticipant = participants.find(p => !p.isLocal);
 
-    // Loading state
+    // Loading/connecting state with CANCEL button
     if (isJoining) {
         return (
             <div className="h-full min-h-[400px] bg-slate-950 rounded-3xl flex flex-col items-center justify-center p-8 border border-white/10">
@@ -250,9 +287,16 @@ export default function DailyVideoCall({
                 <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">
                     Connecting to Session
                 </h3>
-                <p className="text-sm text-slate-400 font-medium">
+                <p className="text-sm text-slate-400 font-medium mb-6">
                     Initializing secure HIPAA-compliant video stream...
                 </p>
+                <button
+                    onClick={handleCancel}
+                    className="px-6 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-xl shadow-red-500/30"
+                >
+                    <XCircle className="h-4 w-4" />
+                    Cancel
+                </button>
             </div>
         );
     }
