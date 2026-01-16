@@ -968,14 +968,32 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                                 }
                                                                             };
 
+                                                                            // Additional event handlers for debugging
+                                                                            recognition.onaudiostart = () => {
+                                                                                console.log('[Scribe] Audio capture started - microphone is listening');
+                                                                                setScribeTranscription("🎤 Listening... Speak now!");
+                                                                            };
+
+                                                                            recognition.onaudioend = () => {
+                                                                                console.log('[Scribe] Audio capture ended');
+                                                                            };
+
+                                                                            recognition.onspeechstart = () => {
+                                                                                console.log('[Scribe] Speech detected!');
+                                                                            };
+
+                                                                            recognition.onspeechend = () => {
+                                                                                console.log('[Scribe] Speech ended');
+                                                                            };
+
                                                                             // Set state before starting
                                                                             setIsRecording(true);
                                                                             setRecordingTime(0);
-                                                                            setScribeTranscription("");
+                                                                            setScribeTranscription("Initializing speech recognition...");
 
                                                                             recognitionRef.current = recognition;
                                                                             recognition.start();
-                                                                            console.log('[Scribe] Called recognition.start()');
+                                                                            console.log('[Scribe] Called recognition.start() - waiting for audio...');
 
                                                                         } catch (err) {
                                                                             console.error('[Scribe] Failed to start speech recognition:', err);
