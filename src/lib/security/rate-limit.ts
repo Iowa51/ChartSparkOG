@@ -29,8 +29,8 @@ export const RATE_LIMITS: Record<string, RateLimitConfig> = {
     // Login attempts: 5 per 15 minutes
     login: { limit: 5, window: 15 * 60 * 1000 },
 
-    // Telehealth: 10 room creations per hour
-    telehealth: { limit: 10, window: 60 * 60 * 1000 },
+    // Telehealth: 50 room creations per hour (increased for demo)
+    telehealth: { limit: 50, window: 60 * 60 * 1000 },
 };
 
 // In-memory fallback store (for development/demo without Redis)
