@@ -19,8 +19,9 @@ async function handler(context: AuthContext) {
         }
 
         const supabase = await createClient();
+        let appointmentVerified = false;
 
-        // Verify appointment exists and belongs to user's organization
+        // Try to verify appointment exists (optional for demo mode)
         if (supabase) {
             const { data: appointment, error: appointmentError } = await supabase
                 .from('appointments')
@@ -29,20 +30,19 @@ async function handler(context: AuthContext) {
                 .single();
 
             if (appointmentError || !appointment) {
-                return NextResponse.json(
-                    { error: 'Appointment not found' },
-                    { status: 404 }
-                );
-            }
-
-            // Verify organization access (unless demo mode)
-            if (context.user.organizationId &&
-                appointment.organization_id !== context.user.organizationId &&
-                context.user.role !== 'SUPER_ADMIN') {
-                return NextResponse.json(
-                    { error: 'Access denied - appointment belongs to different organization' },
-                    { status: 403 }
-                );
+                // Log but don't fail - allow demo appointments
+                console.log(`[Telehealth] Appointment ${appointmentId} not found in DB - proceeding in demo mode`);
+            } else {
+                appointmentVerified = true;
+                // Verify organization access (unless demo mode)
+                if (context.user.organizationId &&
+                    appointment.organization_id !== context.user.organizationId &&
+                    context.user.role !== 'SUPER_ADMIN') {
+                    return NextResponse.json(
+                        { error: 'Access denied - appointment belongs to different organization' },
+                        { status: 403 }
+                    );
+                }
             }
         }
 
