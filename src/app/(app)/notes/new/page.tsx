@@ -883,94 +883,120 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                             console.log('[Scribe] SpeechRecognition available:', !!SpeechRecognition);
 
                                                             if (SpeechRecognition) {
-                                                                try {
-                                                                    const recognition = new SpeechRecognition();
-                                                                    recognition.continuous = true;
-                                                                    recognition.interimResults = true;
-                                                                    recognition.lang = 'en-US';
+                                                                // First, explicitly request microphone permission via getUserMedia
+                                                                // This triggers Chrome's native permission dialog
+                                                                console.log('[Scribe] Requesting microphone permission...');
 
-                                                                    recognition.onstart = () => {
-                                                                        console.log('[Scribe] Speech recognition started');
-                                                                    };
+                                                                navigator.mediaDevices.getUserMedia({ audio: true })
+                                                                    .then((stream) => {
+                                                                        console.log('[Scribe] Microphone permission granted!');
+                                                                        // Stop the stream immediately - we just needed the permission
+                                                                        stream.getTracks().forEach(track => track.stop());
 
-                                                                    recognition.onresult = (event: any) => {
-                                                                        let transcript = '';
-                                                                        for (let i = 0; i < event.results.length; i++) {
-                                                                            transcript += event.results[i][0].transcript;
+                                                                        // Now start speech recognition
+                                                                        try {
+                                                                            const recognition = new SpeechRecognition();
+                                                                            recognition.continuous = true;
+                                                                            recognition.interimResults = true;
+                                                                            recognition.lang = 'en-US';
+
+                                                                            recognition.onstart = () => {
+                                                                                console.log('[Scribe] Speech recognition started successfully!');
+                                                                            };
+
+                                                                            recognition.onresult = (event: any) => {
+                                                                                let transcript = '';
+                                                                                for (let i = 0; i < event.results.length; i++) {
+                                                                                    transcript += event.results[i][0].transcript;
+                                                                                }
+                                                                                console.log('[Scribe] Transcript:', transcript);
+                                                                                setScribeTranscription(transcript);
+                                                                            };
+
+                                                                            recognition.onerror = (event: any) => {
+                                                                                console.error('[Scribe] Speech recognition error:', event.error);
+                                                                                setIsRecording(false);
+
+                                                                                // Provide clear, actionable error messages instead of demo fallback
+                                                                                if (event.error === 'not-allowed') {
+                                                                                    alert(
+                                                                                        '🎤 Microphone Access Required\n\n' +
+                                                                                        'To use AI Scribe, please enable microphone access:\n\n' +
+                                                                                        '1. Click the lock/tune icon (🔒) in the address bar\n' +
+                                                                                        '2. Find "Microphone" and set it to "Allow"\n' +
+                                                                                        '3. Refresh this page (Ctrl+R)\n' +
+                                                                                        '4. Click "Start AI Scribe" again\n\n' +
+                                                                                        'If still not working, check:\n' +
+                                                                                        '• Windows Settings → Privacy → Microphone\n' +
+                                                                                        '• Ensure Chrome has microphone access enabled\n\n' +
+                                                                                        'Recommended Browser: Google Chrome or Microsoft Edge'
+                                                                                    );
+                                                                                } else if (event.error === 'no-speech') {
+                                                                                    // This is normal - just means no speech detected yet
+                                                                                    console.log('[Scribe] No speech detected');
+                                                                                } else if (event.error === 'network') {
+                                                                                    alert(
+                                                                                        '🌐 Network Error\n\n' +
+                                                                                        'Speech recognition requires an internet connection.\n' +
+                                                                                        'Please check your network and try again.\n\n' +
+                                                                                        'Note: Some browsers (like Vivaldi) block speech recognition.\n' +
+                                                                                        'Recommended: Use Google Chrome or Microsoft Edge.'
+                                                                                    );
+                                                                                } else if (event.error === 'service-not-allowed') {
+                                                                                    alert(
+                                                                                        '⚠️ Browser Not Compatible\n\n' +
+                                                                                        'Your browser blocks speech recognition services.\n\n' +
+                                                                                        'Please use one of these browsers:\n' +
+                                                                                        '• Google Chrome (Recommended)\n' +
+                                                                                        '• Microsoft Edge\n' +
+                                                                                        '• Safari (Mac/iOS only)\n\n' +
+                                                                                        'Note: Firefox and Vivaldi do NOT support this feature.'
+                                                                                    );
+                                                                                } else if (event.error === 'aborted') {
+                                                                                    // User stopped recording, this is fine
+                                                                                    console.log('[Scribe] Recognition aborted');
+                                                                                } else {
+                                                                                    alert('Speech recognition error: ' + event.error + '\n\nPlease try refreshing the page or use Google Chrome.');
+                                                                                }
+                                                                            };
+
+                                                                            recognition.onend = () => {
+                                                                                console.log('[Scribe] Speech recognition ended');
+                                                                                setIsRecording(false);
+                                                                                if (scribeTranscription) {
+                                                                                    setHasRecording(true);
+                                                                                }
+                                                                            };
+
+                                                                            // Set state before starting
+                                                                            setIsRecording(true);
+                                                                            setRecordingTime(0);
+                                                                            setScribeTranscription("");
+
+                                                                            recognitionRef.current = recognition;
+                                                                            recognition.start();
+                                                                            console.log('[Scribe] Called recognition.start()');
+
+                                                                        } catch (err) {
+                                                                            console.error('[Scribe] Failed to start speech recognition:', err);
+                                                                            setIsRecording(false);
+                                                                            alert('Failed to start speech recognition. Please try again or use a different browser.');
                                                                         }
-                                                                        console.log('[Scribe] Transcript:', transcript);
-                                                                        setScribeTranscription(transcript);
-                                                                    };
-
-                                                                    recognition.onerror = (event: any) => {
-                                                                        console.error('[Scribe] Speech recognition error:', event.error);
-                                                                        setIsRecording(false);
-
-                                                                        // Provide clear, actionable error messages instead of demo fallback
-                                                                        if (event.error === 'not-allowed') {
-                                                                            alert(
-                                                                                '🎤 Microphone Access Required\n\n' +
-                                                                                'To use AI Scribe, please enable microphone access:\n\n' +
-                                                                                '1. Click the lock/tune icon (🔒) in the address bar\n' +
-                                                                                '2. Find "Microphone" and set it to "Allow"\n' +
-                                                                                '3. Refresh this page (Ctrl+R)\n' +
-                                                                                '4. Click "Start AI Scribe" again\n\n' +
-                                                                                'If still not working, check:\n' +
-                                                                                '• Windows Settings → Privacy → Microphone\n' +
-                                                                                '• Ensure Chrome has microphone access enabled\n\n' +
-                                                                                'Recommended Browser: Google Chrome or Microsoft Edge'
-                                                                            );
-                                                                        } else if (event.error === 'no-speech') {
-                                                                            // This is normal - just means no speech detected yet
-                                                                            console.log('[Scribe] No speech detected');
-                                                                        } else if (event.error === 'network') {
-                                                                            alert(
-                                                                                '🌐 Network Error\n\n' +
-                                                                                'Speech recognition requires an internet connection.\n' +
-                                                                                'Please check your network and try again.\n\n' +
-                                                                                'Note: Some browsers (like Vivaldi) block speech recognition.\n' +
-                                                                                'Recommended: Use Google Chrome or Microsoft Edge.'
-                                                                            );
-                                                                        } else if (event.error === 'service-not-allowed') {
-                                                                            alert(
-                                                                                '⚠️ Browser Not Compatible\n\n' +
-                                                                                'Your browser blocks speech recognition services.\n\n' +
-                                                                                'Please use one of these browsers:\n' +
-                                                                                '• Google Chrome (Recommended)\n' +
-                                                                                '• Microsoft Edge\n' +
-                                                                                '• Safari (Mac/iOS only)\n\n' +
-                                                                                'Note: Firefox and Vivaldi do NOT support this feature.'
-                                                                            );
-                                                                        } else if (event.error === 'aborted') {
-                                                                            // User stopped recording, this is fine
-                                                                            console.log('[Scribe] Recognition aborted');
-                                                                        } else {
-                                                                            alert('Speech recognition error: ' + event.error + '\n\nPlease try refreshing the page or use Google Chrome.');
-                                                                        }
-                                                                    };
-
-                                                                    recognition.onend = () => {
-                                                                        console.log('[Scribe] Speech recognition ended');
-                                                                        setIsRecording(false);
-                                                                        if (scribeTranscription) {
-                                                                            setHasRecording(true);
-                                                                        }
-                                                                    };
-
-                                                                    // Set state before starting
-                                                                    setIsRecording(true);
-                                                                    setRecordingTime(0);
-                                                                    setScribeTranscription("");
-
-                                                                    recognitionRef.current = recognition;
-                                                                    recognition.start();
-                                                                    console.log('[Scribe] Called recognition.start()');
-
-                                                                } catch (err) {
-                                                                    console.error('[Scribe] Failed to start speech recognition:', err);
-                                                                    setIsRecording(false);
-                                                                    alert('Failed to start speech recognition. Please try again or use a different browser.');
-                                                                }
+                                                                    })
+                                                                    .catch((err) => {
+                                                                        console.error('[Scribe] Microphone access denied:', err);
+                                                                        alert(
+                                                                            '🎤 Microphone Access Required\n\n' +
+                                                                            'Please grant microphone permission to use AI Scribe:\n\n' +
+                                                                            '1. Click the lock icon (🔒) in the address bar\n' +
+                                                                            '2. Set "Microphone" to "Allow"\n' +
+                                                                            '3. Refresh the page and try again\n\n' +
+                                                                            'If still not working:\n' +
+                                                                            '• Windows: Settings → Privacy → Microphone → Allow apps to access\n' +
+                                                                            '• Make sure Chrome has microphone permission\n\n' +
+                                                                            'Error: ' + (err.message || err.name || 'Access denied')
+                                                                        );
+                                                                    });
                                                             } else {
                                                                 // Fallback demo mode for unsupported browsers - no alert, just start demo
                                                                 console.log('[Scribe] Using demo mode - SpeechRecognition not available');
