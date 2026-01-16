@@ -31,7 +31,7 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://*.daily.co", // SEC-011: Added Daily.co scripts
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.daily.co", // SEC-011: Added Daily.co scripts + unsafe-eval required by Daily.co SDK
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' blob: data: https:",
