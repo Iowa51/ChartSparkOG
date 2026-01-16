@@ -842,6 +842,31 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                     )}
                                                 </div>
 
+                                                {/* Browser Support Warning */}
+                                                {!speechSupported && (
+                                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                                                        <div className="flex items-start gap-3">
+                                                            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                                            <div className="space-y-1">
+                                                                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
+                                                                    Speech Recognition Not Available
+                                                                </p>
+                                                                <p className="text-xs text-amber-700 dark:text-amber-300">
+                                                                    Your browser doesn&apos;t support the Web Speech API. For live voice transcription, please use:
+                                                                </p>
+                                                                <ul className="text-xs text-amber-700 dark:text-amber-300 list-disc list-inside mt-1">
+                                                                    <li><strong>Google Chrome</strong> (recommended)</li>
+                                                                    <li><strong>Microsoft Edge</strong></li>
+                                                                    <li><strong>Safari</strong> on macOS/iOS</li>
+                                                                </ul>
+                                                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 italic">
+                                                                    Demo mode is available below for testing purposes.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {/* Recording Control Button */}
                                                 <button
                                                     onClick={() => {
@@ -885,8 +910,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                 setRecordingTime(0);
                                                                 setScribeTranscription("");
                                                             } else {
-                                                                // Fallback demo mode for unsupported browsers
-                                                                alert('Speech recognition is not supported in this browser. Using demo mode.');
+                                                                // Fallback demo mode for unsupported browsers - no alert, just start demo
                                                                 setIsRecording(true);
                                                                 setRecordingTime(0);
                                                                 setScribeTranscription("");
@@ -905,7 +929,9 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                     }}
                                                     className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
                                                         ? "bg-red-500 text-white shadow-red-500/30 ring-4 ring-red-500/20"
-                                                        : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
+                                                        : speechSupported
+                                                            ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
+                                                            : "bg-amber-600 text-white hover:bg-amber-700 shadow-amber-600/20"
                                                         }`}
                                                 >
                                                     {isRecording ? (
@@ -913,10 +939,15 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                             <MicOff className="h-4 w-4" />
                                                             Stop Recording
                                                         </>
-                                                    ) : (
+                                                    ) : speechSupported ? (
                                                         <>
                                                             <Mic className="h-4 w-4" />
                                                             Start AI Scribe
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Mic className="h-4 w-4" />
+                                                            Start Demo Mode
                                                         </>
                                                     )}
                                                 </button>
