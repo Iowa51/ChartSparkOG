@@ -98,31 +98,39 @@ async function handler(context: AuthContext) {
 
         console.log('✅ Room created:', room.url);
 
-        // Update appointment in database
+        // Update appointment in database (optional - may not exist for demo)
         if (supabase) {
-            await supabase
-                .from('appointments')
-                .update({
-                    is_telehealth: true,
-                    telehealth_room_url: room.url,
-                    status: 'in_progress'
-                })
-                .eq('id', appointmentId);
+            try {
+                await supabase
+                    .from('appointments')
+                    .update({
+                        is_telehealth: true,
+                        telehealth_room_url: room.url,
+                        status: 'in_progress'
+                    })
+                    .eq('id', appointmentId);
+            } catch {
+                // Ignore - demo appointments may not exist
+            }
 
-            // Audit log (no PHI)
-            await supabase.from('audit_logs').insert({
-                event_type: 'TELEHEALTH_ROOM_CREATED',
-                user_id: context.user.id,
-                user_email: context.user.email,
-                user_role: context.user.role,
-                organization_id: context.user.organizationId,
-                resource_type: 'telehealth_room',
-                resource_id: appointmentId,
-                ip_address: context.request.headers.get('x-forwarded-for') || 'unknown',
-                user_agent: context.request.headers.get('user-agent') || 'unknown',
-                risk_level: 'LOW',
-                details: { roomName }, // Only room name, no patient info
-            }).catch(() => { }); // Don't fail if audit log fails
+            // Audit log (no PHI) - wrapped in try-catch
+            try {
+                await supabase.from('audit_logs').insert({
+                    event_type: 'TELEHEALTH_ROOM_CREATED',
+                    user_id: context.user.id,
+                    user_email: context.user.email,
+                    user_role: context.user.role,
+                    organization_id: context.user.organizationId,
+                    resource_type: 'telehealth_room',
+                    resource_id: appointmentId,
+                    ip_address: context.request.headers.get('x-forwarded-for') || 'unknown',
+                    user_agent: context.request.headers.get('user-agent') || 'unknown',
+                    risk_level: 'LOW',
+                    details: { roomName }, // Only room name, no patient info
+                });
+            } catch {
+                // Don't fail if audit log fails
+            }
         }
 
         // Generate meeting tokens
