@@ -116,7 +116,15 @@ export default function DailyVideoCall({
 
     // Initialize Daily call
     useEffect(() => {
+        let isMounted = true;
+
         const initCall = async () => {
+            // Guard against duplicate initialization
+            if (callRef.current) {
+                console.log("[Telehealth] Call already exists, skipping initialization");
+                return;
+            }
+
             try {
                 console.log("[Telehealth] Initializing Daily.co call...");
 
@@ -125,35 +133,42 @@ export default function DailyVideoCall({
                     videoSource: true,
                 });
 
+                if (!isMounted) {
+                    call.destroy();
+                    return;
+                }
+
                 callRef.current = call;
 
                 // Set up event handlers
                 call.on("joined-meeting", () => {
                     console.log("[Telehealth] Joined meeting successfully!");
-                    setIsJoining(false);
-                    updateParticipants(call);
+                    if (isMounted) {
+                        setIsJoining(false);
+                        updateParticipants(call);
+                    }
                 });
 
                 call.on("participant-joined", (event) => {
                     console.log("[Telehealth] Participant joined:", event?.participant?.user_name);
-                    updateParticipants(call);
+                    if (isMounted) updateParticipants(call);
                 });
 
                 call.on("participant-left", (event) => {
                     console.log("[Telehealth] Participant left:", event?.participant?.user_name);
-                    updateParticipants(call);
+                    if (isMounted) updateParticipants(call);
                 });
 
                 call.on("participant-updated", () => {
-                    updateParticipants(call);
+                    if (isMounted) updateParticipants(call);
                 });
 
                 call.on("track-started", () => {
-                    updateParticipants(call);
+                    if (isMounted) updateParticipants(call);
                 });
 
                 call.on("track-stopped", () => {
-                    updateParticipants(call);
+                    if (isMounted) updateParticipants(call);
                 });
 
                 call.on("error", (event) => {
@@ -182,9 +197,16 @@ export default function DailyVideoCall({
         initCall();
 
         return () => {
+            isMounted = false;
             if (callRef.current) {
-                callRef.current.leave();
-                callRef.current.destroy();
+                console.log("[Telehealth] Cleaning up Daily.co call...");
+                try {
+                    callRef.current.leave();
+                    callRef.current.destroy();
+                } catch (e) {
+                    console.error("[Telehealth] Cleanup error:", e);
+                }
+                callRef.current = null;
             }
         };
     }, [roomUrl, token, userName, onError, onLeave, updateParticipants]);
@@ -273,10 +295,10 @@ export default function DailyVideoCall({
                         </span>
                     </div>
                     <div className={`px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md ${connectionQuality === "excellent"
-                            ? "bg-emerald-500/90 text-white"
-                            : connectionQuality === "good"
-                                ? "bg-yellow-500/90 text-black"
-                                : "bg-red-500/90 text-white"
+                        ? "bg-emerald-500/90 text-white"
+                        : connectionQuality === "good"
+                            ? "bg-yellow-500/90 text-black"
+                            : "bg-red-500/90 text-white"
                         }`}>
                         {connectionQuality.charAt(0).toUpperCase() + connectionQuality.slice(1)} Connection
                     </div>
@@ -312,8 +334,8 @@ export default function DailyVideoCall({
                     <button
                         onClick={toggleAudio}
                         className={`p-3 rounded-xl transition-all ${isAudioMuted
-                                ? "bg-red-500 text-white"
-                                : "bg-white/10 text-white hover:bg-white/20"
+                            ? "bg-red-500 text-white"
+                            : "bg-white/10 text-white hover:bg-white/20"
                             }`}
                         title={isAudioMuted ? "Unmute" : "Mute"}
                     >
@@ -322,8 +344,8 @@ export default function DailyVideoCall({
                     <button
                         onClick={toggleVideo}
                         className={`p-3 rounded-xl transition-all ${isVideoOff
-                                ? "bg-red-500 text-white"
-                                : "bg-white/10 text-white hover:bg-white/20"
+                            ? "bg-red-500 text-white"
+                            : "bg-white/10 text-white hover:bg-white/20"
                             }`}
                         title={isVideoOff ? "Turn on camera" : "Turn off camera"}
                     >
@@ -353,8 +375,8 @@ export default function DailyVideoCall({
                     <button
                         onClick={copyPatientLink}
                         className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${linkCopied
-                                ? "bg-emerald-500 text-white"
-                                : "bg-primary text-white hover:bg-primary/90"
+                            ? "bg-emerald-500 text-white"
+                            : "bg-primary text-white hover:bg-primary/90"
                             }`}
                     >
                         {linkCopied ? (
