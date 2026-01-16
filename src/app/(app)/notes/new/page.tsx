@@ -880,37 +880,69 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                         } else {
                                                             // Start recording with Web Speech API
                                                             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                                                            console.log('[Scribe] SpeechRecognition available:', !!SpeechRecognition);
+
                                                             if (SpeechRecognition) {
-                                                                const recognition = new SpeechRecognition();
-                                                                recognition.continuous = true;
-                                                                recognition.interimResults = true;
-                                                                recognition.lang = 'en-US';
+                                                                try {
+                                                                    const recognition = new SpeechRecognition();
+                                                                    recognition.continuous = true;
+                                                                    recognition.interimResults = true;
+                                                                    recognition.lang = 'en-US';
 
-                                                                recognition.onresult = (event: any) => {
-                                                                    let transcript = '';
-                                                                    for (let i = 0; i < event.results.length; i++) {
-                                                                        transcript += event.results[i][0].transcript;
-                                                                    }
-                                                                    setScribeTranscription(transcript);
-                                                                };
+                                                                    recognition.onstart = () => {
+                                                                        console.log('[Scribe] Speech recognition started');
+                                                                    };
 
-                                                                recognition.onerror = (event: any) => {
-                                                                    console.error('Speech recognition error:', event.error);
+                                                                    recognition.onresult = (event: any) => {
+                                                                        let transcript = '';
+                                                                        for (let i = 0; i < event.results.length; i++) {
+                                                                            transcript += event.results[i][0].transcript;
+                                                                        }
+                                                                        console.log('[Scribe] Transcript:', transcript);
+                                                                        setScribeTranscription(transcript);
+                                                                    };
+
+                                                                    recognition.onerror = (event: any) => {
+                                                                        console.error('[Scribe] Speech recognition error:', event.error);
+                                                                        setIsRecording(false);
+                                                                        // Show user-friendly error
+                                                                        if (event.error === 'not-allowed') {
+                                                                            alert('Microphone access denied. Please allow microphone permissions and try again.');
+                                                                        } else if (event.error === 'no-speech') {
+                                                                            // This is normal - just means no speech detected yet
+                                                                            console.log('[Scribe] No speech detected');
+                                                                        } else if (event.error === 'network') {
+                                                                            alert('Network error. Speech recognition requires an internet connection.');
+                                                                        } else {
+                                                                            alert(`Speech recognition error: ${event.error}`);
+                                                                        }
+                                                                    };
+
+                                                                    recognition.onend = () => {
+                                                                        console.log('[Scribe] Speech recognition ended');
+                                                                        setIsRecording(false);
+                                                                        if (scribeTranscription) {
+                                                                            setHasRecording(true);
+                                                                        }
+                                                                    };
+
+                                                                    // Set state before starting
+                                                                    setIsRecording(true);
+                                                                    setRecordingTime(0);
+                                                                    setScribeTranscription("");
+
+                                                                    recognitionRef.current = recognition;
+                                                                    recognition.start();
+                                                                    console.log('[Scribe] Called recognition.start()');
+
+                                                                } catch (err) {
+                                                                    console.error('[Scribe] Failed to start speech recognition:', err);
                                                                     setIsRecording(false);
-                                                                };
-
-                                                                recognition.onend = () => {
-                                                                    setIsRecording(false);
-                                                                    setHasRecording(true);
-                                                                };
-
-                                                                recognitionRef.current = recognition;
-                                                                recognition.start();
-                                                                setIsRecording(true);
-                                                                setRecordingTime(0);
-                                                                setScribeTranscription("");
+                                                                    alert('Failed to start speech recognition. Please try again or use a different browser.');
+                                                                }
                                                             } else {
                                                                 // Fallback demo mode for unsupported browsers - no alert, just start demo
+                                                                console.log('[Scribe] Using demo mode - SpeechRecognition not available');
                                                                 setIsRecording(true);
                                                                 setRecordingTime(0);
                                                                 setScribeTranscription("");
