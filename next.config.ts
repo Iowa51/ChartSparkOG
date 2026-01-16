@@ -67,7 +67,7 @@ const nextConfig: NextConfig = {
   // Apply security headers to all routes
   async headers() {
     return [
-      // SEC-011: Allow camera/mic only on telehealth routes
+      // SEC-011: Allow camera/mic on telehealth routes
       {
         source: '/telehealth/:path*',
         headers: telehealthHeaders,
@@ -77,9 +77,15 @@ const nextConfig: NextConfig = {
         source: '/notes/:path*',
         headers: telehealthHeaders,
       },
-      // All other routes - strict permissions
+      // All other routes EXCEPT /notes and /telehealth - strict permissions
+      // Using regex to exclude specific paths
       {
-        source: '/:path*',
+        source: '/((?!notes|telehealth).*)',
+        headers: defaultHeaders,
+      },
+      // Also apply to root path
+      {
+        source: '/',
         headers: defaultHeaders,
       },
     ];
