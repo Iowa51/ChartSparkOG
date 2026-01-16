@@ -906,43 +906,46 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                         console.error('[Scribe] Speech recognition error:', event.error);
                                                                         setIsRecording(false);
 
-                                                                        // For 'not-allowed' or 'network' errors, fall back to demo mode
-                                                                        // This handles Vivaldi and other browsers that block Google's speech servers
-                                                                        if (event.error === 'not-allowed' || event.error === 'network' || event.error === 'service-not-allowed') {
-                                                                            console.log('[Scribe] Falling back to demo mode due to:', event.error);
-                                                                            // Auto-start demo mode
-                                                                            setIsRecording(true);
-                                                                            setRecordingTime(0);
-                                                                            setTimeout(() => {
-                                                                                setIsRecording(false);
-                                                                                setHasRecording(true);
-                                                                                setScribeTranscription(
-                                                                                    "Patient reports feeling much better since last visit. Sleep has improved significantly, now getting 7-8 hours per night. " +
-                                                                                    "No side effects reported from current medication. Mood is stable, describes it as 'pretty good most days'. " +
-                                                                                    "Appetite is normal. Energy levels have improved. Denies any suicidal or homicidal ideation. " +
-                                                                                    "Patient is compliant with medication regimen. Wants to continue current treatment plan."
-                                                                                );
-                                                                            }, 3000);
+                                                                        // Provide clear, actionable error messages instead of demo fallback
+                                                                        if (event.error === 'not-allowed') {
+                                                                            alert(
+                                                                                '🎤 Microphone Access Required\n\n' +
+                                                                                'To use AI Scribe, please enable microphone access:\n\n' +
+                                                                                '1. Click the lock/tune icon (🔒) in the address bar\n' +
+                                                                                '2. Find "Microphone" and set it to "Allow"\n' +
+                                                                                '3. Refresh this page (Ctrl+R)\n' +
+                                                                                '4. Click "Start AI Scribe" again\n\n' +
+                                                                                'If still not working, check:\n' +
+                                                                                '• Windows Settings → Privacy → Microphone\n' +
+                                                                                '• Ensure Chrome has microphone access enabled\n\n' +
+                                                                                'Recommended Browser: Google Chrome or Microsoft Edge'
+                                                                            );
                                                                         } else if (event.error === 'no-speech') {
                                                                             // This is normal - just means no speech detected yet
                                                                             console.log('[Scribe] No speech detected');
+                                                                        } else if (event.error === 'network') {
+                                                                            alert(
+                                                                                '🌐 Network Error\n\n' +
+                                                                                'Speech recognition requires an internet connection.\n' +
+                                                                                'Please check your network and try again.\n\n' +
+                                                                                'Note: Some browsers (like Vivaldi) block speech recognition.\n' +
+                                                                                'Recommended: Use Google Chrome or Microsoft Edge.'
+                                                                            );
+                                                                        } else if (event.error === 'service-not-allowed') {
+                                                                            alert(
+                                                                                '⚠️ Browser Not Compatible\n\n' +
+                                                                                'Your browser blocks speech recognition services.\n\n' +
+                                                                                'Please use one of these browsers:\n' +
+                                                                                '• Google Chrome (Recommended)\n' +
+                                                                                '• Microsoft Edge\n' +
+                                                                                '• Safari (Mac/iOS only)\n\n' +
+                                                                                'Note: Firefox and Vivaldi do NOT support this feature.'
+                                                                            );
                                                                         } else if (event.error === 'aborted') {
                                                                             // User stopped recording, this is fine
-                                                                            console.log('[Scribe] Recognition aborted by user');
+                                                                            console.log('[Scribe] Recognition aborted');
                                                                         } else {
-                                                                            console.log('[Scribe] Other error, using demo mode:', event.error);
-                                                                            // Fall back to demo for any other errors too
-                                                                            setIsRecording(true);
-                                                                            setTimeout(() => {
-                                                                                setIsRecording(false);
-                                                                                setHasRecording(true);
-                                                                                setScribeTranscription(
-                                                                                    "Patient reports feeling much better since last visit. Sleep has improved significantly, now getting 7-8 hours per night. " +
-                                                                                    "No side effects reported from current medication. Mood is stable, describes it as 'pretty good most days'. " +
-                                                                                    "Appetite is normal. Energy levels have improved. Denies any suicidal or homicidal ideation. " +
-                                                                                    "Patient is compliant with medication regimen. Wants to continue current treatment plan."
-                                                                                );
-                                                                            }, 3000);
+                                                                            alert('Speech recognition error: ' + event.error + '\n\nPlease try refreshing the page or use Google Chrome.');
                                                                         }
                                                                     };
 
