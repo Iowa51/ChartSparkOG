@@ -407,12 +407,12 @@ export default function DailyVideoCall({
 
             {/* Patient link section */}
             {patientLink && !remoteParticipant && (
-                <div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between">
-                    <div>
+                <div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
                         <p className="text-xs font-black text-primary uppercase tracking-widest mb-1">
                             Patient Invite Link
                         </p>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 font-mono truncate max-w-md">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-mono truncate overflow-hidden text-ellipsis">
                             {patientLink}
                         </p>
                     </div>
