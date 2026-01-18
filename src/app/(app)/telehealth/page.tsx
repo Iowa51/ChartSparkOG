@@ -124,10 +124,9 @@ export default function TelehealthPage() {
             const data = await response.json();
             console.log("[Telehealth] Room created:", data);
 
-            // Generate patient link (the room URL with patient token)
-            const patientLink = data.isDemo
-                ? `${data.roomUrl}?t=${data.patientToken}`
-                : `${data.roomUrl}?t=${data.patientToken}`;
+            // Generate patient link pointing to our patient-facing join page
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+            const patientLink = `${baseUrl}/telehealth/join?room=${encodeURIComponent(data.roomUrl)}&t=${encodeURIComponent(data.patientToken || '')}`;
 
             setCallSession({
                 roomUrl: data.roomUrl,
