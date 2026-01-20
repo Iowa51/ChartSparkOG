@@ -28,12 +28,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: true,
         cpt_suggestions: ["99213", "99214", "99215"],
-        format: "soap",
+        format: "paragraph",
         sections: [
-            { id: "s1", label: "Subjective", placeholder: "Chief complaint, HPI, ROS, current medications...", required: true },
-            { id: "s2", label: "Objective", placeholder: "Vitals, physical exam, mental status exam...", required: true },
-            { id: "s3", label: "Assessment", placeholder: "Diagnostic formulation, ICD-10 codes, risk level...", required: true },
-            { id: "s4", label: "Plan", placeholder: "Medications, therapy, follow-up, patient education...", required: true },
+            { id: "full", label: "Session Notes", placeholder: "Document the visit including: Subjective (chief complaint, HPI, ROS, current medications), Objective (vitals, physical exam, mental status exam), Assessment (diagnostic formulation, ICD-10 codes, risk level), and Plan (medications, therapy, follow-up, patient education)...", required: true }
         ]
     },
     {
@@ -45,12 +42,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["99214", "90833"],
-        format: "soap",
+        format: "paragraph",
         sections: [
-            { id: "m1", label: "Current Medications", placeholder: "List all active meds and dosages...", required: true },
-            { id: "m2", label: "Effectiveness & Side Effects", placeholder: "How is the patient tolerating the regime?", required: true },
-            { id: "m3", label: "Target Symptoms", placeholder: "Changes in primary symptoms since last visit...", required: true },
-            { id: "m4", label: "Revised Plan", placeholder: "Refills, dosage adjustments, monitoring labs...", required: true },
+            { id: "full", label: "Session Notes", placeholder: "Document the medication follow-up including: Current medications and dosages, effectiveness and side effects, changes in target symptoms since last visit, and revised plan (refills, dosage adjustments, monitoring labs)...", required: true }
         ]
     },
     {
@@ -119,14 +113,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["99483", "96116", "96132"],
-        format: "soap",
+        format: "paragraph",
         sections: [
-            { id: "cog1", label: "Chief Complaint", placeholder: "Memory concerns, confusion, behavioral changes reported by patient/family...", required: true },
-            { id: "cog2", label: "Cognitive Testing", placeholder: "MMSE, MoCA, clock drawing, verbal fluency scores...", required: true },
-            { id: "cog3", label: "Neurological Exam", placeholder: "Cranial nerves, motor, sensory, reflexes, gait...", required: true },
-            { id: "cog4", label: "Functional Impact", placeholder: "Impact on daily activities, safety concerns, driving ability...", required: true },
-            { id: "cog5", label: "Diagnosis & Staging", placeholder: "Dementia type, stage, reversible causes ruled out...", required: true },
-            { id: "cog6", label: "Care Plan", placeholder: "Medications, caregiver support, referrals, follow-up...", required: true },
+            { id: "full", label: "Session Notes", placeholder: "Document the cognitive evaluation including: Chief complaint (memory concerns, confusion, behavioral changes), cognitive testing (MMSE, MoCA, clock drawing scores), neurological exam findings, functional impact on daily activities, diagnosis and staging, and care plan (medications, caregiver support, referrals)...", required: true }
         ]
     },
     {
@@ -138,13 +127,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["99213", "99214", "97110"],
-        format: "soap",
+        format: "paragraph",
         sections: [
-            { id: "fall1", label: "Fall History", placeholder: "Previous falls (number, circumstances, injuries)...", required: true },
-            { id: "fall2", label: "Medication Review", placeholder: "High-risk medications (sedatives, antihypertensives, polypharmacy)...", required: true },
-            { id: "fall3", label: "Physical Assessment", placeholder: "Gait, balance, strength, TUG test, Berg Balance...", required: true },
-            { id: "fall4", label: "Environmental Factors", placeholder: "Home hazards, assistive devices, footwear...", required: true },
-            { id: "fall5", label: "Risk Level & Interventions", placeholder: "Risk score, PT referral, medication adjustments, home modifications...", required: true },
+            { id: "full", label: "Session Notes", placeholder: "Document the fall risk assessment including: Fall history (number, circumstances, injuries), medication review (high-risk medications, polypharmacy), physical assessment (gait, balance, TUG test), environmental factors (home hazards, assistive devices), and risk level with interventions (PT referral, medication adjustments, home modifications)...", required: true }
         ]
     },
     {
@@ -156,13 +141,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["99490", "99491", "99487"],
-        format: "soap",
+        format: "paragraph",
         sections: [
-            { id: "ccm1", label: "Conditions Managed", placeholder: "List of chronic conditions addressed this month...", required: true },
-            { id: "ccm2", label: "Time Spent", placeholder: "Total minutes of care coordination (must be 20+ for 99490)...", required: true },
-            { id: "ccm3", label: "Care Activities", placeholder: "Phone calls, medication reconciliation, care coordination...", required: true },
-            { id: "ccm4", label: "Patient Education", placeholder: "Self-management support, disease education provided...", required: true },
-            { id: "ccm5", label: "Next Steps", placeholder: "Upcoming appointments, labs, specialist referrals...", required: true },
+            { id: "full", label: "Session Notes", placeholder: "Document the chronic care management including: Conditions managed this month, time spent on care coordination (20+ minutes for 99490), care activities (phone calls, medication reconciliation), patient education provided, and next steps (upcoming appointments, labs, referrals)...", required: true }
         ]
     }
 ];
