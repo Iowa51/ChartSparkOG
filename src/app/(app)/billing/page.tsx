@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout";
 import {
     Search,
@@ -39,6 +39,7 @@ function formatCurrency(amount: number): string {
 
 // USER View Component
 function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
+    const router = useRouter();
     const stats = currentUserBillingStats;
     const topCodes = Object.entries(stats.codes_used)
         .sort(([, a], [, b]) => b - a)
@@ -48,11 +49,11 @@ function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
     const [searchQuery, setSearchQuery] = useState("");
 
     const allClaims = [
-        { id: "C-1004", patient: "Arthur Smith", service: "T2DM Management", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
-        { id: "C-1005", patient: "John Doe", service: "Acute Pharyngitis", date: "Today", amount: 165.00, status: "Missing ICD-10", type: "Pending" },
-        { id: "C-1001", patient: "Maria Rodriguez", service: "Hypertension F/U", date: "Oct 20, 2023", amount: 150.00, status: "Paid", type: "Paid" },
-        { id: "C-1002", patient: "James Wilson", service: "Mental Health Session", date: "Oct 15, 2023", amount: 200.00, status: "Overdue", type: "Overdue" },
-        { id: "C-1003", patient: "Linda Blane", service: "Initial Consultation", date: "Oct 12, 2023", amount: 250.00, status: "Paid", type: "Paid" },
+        { id: "C-1004", patient: "Arthur Smith", patientId: "1", service: "T2DM Management", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
+        { id: "C-1005", patient: "John Doe", patientId: "2", service: "Acute Pharyngitis", date: "Today", amount: 165.00, status: "Missing ICD-10", type: "Pending" },
+        { id: "C-1001", patient: "Maria Rodriguez", patientId: "3", service: "Hypertension F/U", date: "Oct 20, 2023", amount: 150.00, status: "Paid", type: "Paid" },
+        { id: "C-1002", patient: "James Wilson", patientId: "4", service: "Mental Health Session", date: "Oct 15, 2023", amount: 200.00, status: "Overdue", type: "Overdue" },
+        { id: "C-1003", patient: "Linda Blane", patientId: "5", service: "Initial Consultation", date: "Oct 12, 2023", amount: 250.00, status: "Paid", type: "Paid" },
     ];
 
     const filteredClaims = allClaims.filter(c => {
@@ -213,10 +214,14 @@ function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
                                 </thead>
                                 <tbody className="divide-y divide-border">
                                     {filteredClaims.length > 0 ? filteredClaims.map((claim) => (
-                                        <tr key={claim.id} className="hover:bg-muted/30 transition-colors group">
+                                        <tr
+                                            key={claim.id}
+                                            onClick={() => router.push(`/patients/${claim.patientId}`)}
+                                            className="hover:bg-muted/30 transition-colors group cursor-pointer hover:bg-primary/5"
+                                        >
                                             <td className="px-6 py-4 font-mono text-xs text-muted-foreground">{claim.id}</td>
                                             <td className="px-6 py-4">
-                                                <div className="font-bold text-foreground">{claim.patient}</div>
+                                                <div className="font-bold text-foreground group-hover:text-primary transition-colors">{claim.patient}</div>
                                                 <div className="text-[10px] text-muted-foreground uppercase">{claim.service}</div>
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-foreground">{formatCurrency(claim.amount)}</td>
@@ -703,32 +708,6 @@ function BillingContent() {
             />
 
             <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
-                {/* Demo Role Switcher */}
-                <div className="mb-6 p-4 rounded-xl bg-slate-900 text-white shadow-xl shadow-slate-200 dark:shadow-none">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                            <span className="text-sm font-black uppercase tracking-[0.2em] opacity-80">Demo Simulation Environment</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold mr-2 text-slate-400">IMPERSONATE ROLE:</span>
-                            <div className="flex gap-1 bg-slate-800 p-1 rounded-lg">
-                                {(["USER", "ADMIN", "SUPER_ADMIN"] as Role[]).map((role) => (
-                                    <button
-                                        key={role}
-                                        onClick={() => setCurrentRole(role)}
-                                        className={`px-4 py-1.5 rounded-md text-[10px] font-black tracking-widest uppercase transition-all ${currentRole === role
-                                            ? "bg-primary text-primary-foreground shadow-lg"
-                                            : "text-slate-400 hover:text-white hover:bg-slate-700"
-                                            }`}
-                                    >
-                                        {role}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Role-based Content */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
