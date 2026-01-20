@@ -15,6 +15,8 @@ import {
     X,
     CheckCircle,
     ClipboardList,
+    Copy,
+    ClipboardCheck,
 } from "lucide-react";
 
 // Assessment questions/content for interactive modals
@@ -106,6 +108,162 @@ const assessmentContent: Record<string, {
         ],
         interpretation: ["0-4: Minimal depression", "5-9: Mild depression", "10-14: Moderate depression", "15-19: Moderately severe depression", "20-27: Severe depression"],
     },
+    "Clock Drawing Test": {
+        instructions: "Ask patient to draw a clock showing a specific time (e.g., 10 past 11). Score based on the drawing.",
+        questions: [
+            { id: "circle", text: "Circle: Is the clock face reasonably circular?", options: [{ label: "Yes", score: 1 }, { label: "No", score: 0 }] },
+            { id: "numbers", text: "Numbers: Are all 12 numbers present?", options: [{ label: "Yes", score: 1 }, { label: "No", score: 0 }] },
+            { id: "sequence", text: "Sequence: Are numbers in correct clockwise order?", options: [{ label: "Yes", score: 1 }, { label: "No", score: 0 }] },
+            { id: "hands", text: "Hands: Are both hour and minute hands present?", options: [{ label: "Yes", score: 1 }, { label: "No", score: 0 }] },
+        ],
+        interpretation: ["4: Normal", "3: Mild impairment", "0-2: Significant impairment - further evaluation needed"],
+    },
+    "Mini-Cog": {
+        instructions: "Step 1: Ask patient to repeat 3 words. Step 2: Clock Drawing Test. Step 3: Ask patient to recall the 3 words.",
+        questions: [
+            { id: "word1", text: "Word Recall 1: Did patient recall first word?", options: [{ label: "Yes", score: 1 }, { label: "No", score: 0 }] },
+            { id: "word2", text: "Word Recall 2: Did patient recall second word?", options: [{ label: "Yes", score: 1 }, { label: "No", score: 0 }] },
+            { id: "word3", text: "Word Recall 3: Did patient recall third word?", options: [{ label: "Yes", score: 1 }, { label: "No", score: 0 }] },
+            { id: "clock", text: "Clock Drawing: Is the clock normal (all numbers, correct time)?", options: [{ label: "Normal (2 pts)", score: 2 }, { label: "Abnormal (0 pts)", score: 0 }] },
+        ],
+        interpretation: ["4-5: Lower likelihood of dementia", "3: Possible cognitive impairment", "0-2: High likelihood of dementia - further evaluation needed"],
+    },
+    "Cornell Scale for Depression in Dementia": {
+        instructions: "Interview both patient AND caregiver. Rate each item based on observations from the week prior to interview.",
+        questions: [
+            { id: "anxiety", text: "Anxiety: Anxious expression, ruminations, worrying", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "sadness", text: "Sadness: Sad expression, sad voice, tearfulness", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "pleasure", text: "Lack of Reactivity: Failure to react to pleasant events", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "irritability", text: "Irritability: Easily annoyed, short-tempered", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "agitation", text: "Agitation: Restlessness, hand-wringing, hair-pulling", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "retardation", text: "Retardation: Slow movements, speech, reactions", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "somatic", text: "Multiple Somatic Complaints", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "interest", text: "Loss of Interest: Less involved in usual activities", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "appetite", text: "Appetite Loss: Eating less than usual", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "weight", text: "Weight Loss: Lost weight in last month", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "energy", text: "Lack of Energy: Fatigues easily, unable to sustain activities", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+            { id: "sleep", text: "Sleep Disturbance: Trouble falling asleep, multiple awakenings", options: [{ label: "Absent", score: 0 }, { label: "Mild/Intermittent", score: 1 }, { label: "Severe", score: 2 }] },
+        ],
+        interpretation: ["0-7: No significant depression", "8-10: Mild depression", "11-17: Moderate depression", "18+: Severe depression"],
+    },
+    "Berg Balance Scale": {
+        instructions: "14-item scale assessing static balance and fall risk. Score each item 0-4.",
+        questions: [
+            { id: "sit-stand", text: "Sitting to Standing: Able to stand without using hands", options: [{ label: "4 - No hands", score: 4 }, { label: "3 - Uses hands", score: 3 }, { label: "2 - Several tries", score: 2 }, { label: "1 - Minimal assist", score: 1 }, { label: "0 - Mod/Max assist", score: 0 }] },
+            { id: "standing", text: "Standing Unsupported: Stand safely for 2 minutes", options: [{ label: "4 - 2 min safely", score: 4 }, { label: "3 - 2 min supervised", score: 3 }, { label: "2 - 30 sec", score: 2 }, { label: "1 - Several tries", score: 1 }, { label: "0 - Unable", score: 0 }] },
+            { id: "sitting", text: "Sitting Unsupported: Sit safely for 2 minutes", options: [{ label: "4 - 2 min safely", score: 4 }, { label: "3 - 2 min supervised", score: 3 }, { label: "2 - 30 sec", score: 2 }, { label: "1 - 10 sec", score: 1 }, { label: "0 - Unable", score: 0 }] },
+            { id: "stand-sit", text: "Standing to Sitting: Sits safely with minimal use of hands", options: [{ label: "4 - No hands", score: 4 }, { label: "3 - Controls with hands", score: 3 }, { label: "2 - Uses back of legs", score: 2 }, { label: "1 - Sits independently", score: 1 }, { label: "0 - Needs assist", score: 0 }] },
+            { id: "transfers", text: "Transfers: Able to transfer safely with minor use of hands", options: [{ label: "4 - No hands", score: 4 }, { label: "3 - Minor hand use", score: 3 }, { label: "2 - Verbal cues", score: 2 }, { label: "1 - One person assist", score: 1 }, { label: "0 - Two people", score: 0 }] },
+            { id: "eyes-closed", text: "Standing with Eyes Closed: Stand 10 seconds safely", options: [{ label: "4 - 10 sec", score: 4 }, { label: "3 - 10 sec supervised", score: 3 }, { label: "2 - 3 sec", score: 2 }, { label: "1 - Unable but steady", score: 1 }, { label: "0 - Needs help", score: 0 }] },
+            { id: "feet-together", text: "Feet Together: Stand with feet together for 1 minute", options: [{ label: "4 - 1 min", score: 4 }, { label: "3 - 1 min supervised", score: 3 }, { label: "2 - 30 sec", score: 2 }, { label: "1 - Needs help positioning", score: 1 }, { label: "0 - Unable", score: 0 }] },
+        ],
+        interpretation: ["45-56: Low fall risk", "21-44: Medium fall risk", "0-20: High fall risk"],
+    },
+    "STEADI Algorithm (CDC)": {
+        instructions: "Stopping Elderly Accidents, Deaths & Injuries - Fall risk screening algorithm.",
+        questions: [
+            { id: "fallen", text: "Have you fallen in the past year?", options: [{ label: "No", score: 0 }, { label: "Yes, once", score: 1 }, { label: "Yes, 2+ times", score: 2 }] },
+            { id: "unsteady", text: "Do you feel unsteady when standing or walking?", options: [{ label: "No", score: 0 }, { label: "Sometimes", score: 1 }, { label: "Often", score: 2 }] },
+            { id: "worried", text: "Are you worried about falling?", options: [{ label: "No", score: 0 }, { label: "Sometimes", score: 1 }, { label: "Often", score: 2 }] },
+            { id: "gait", text: "Gait Speed: Walk 4 meters at normal pace", options: [{ label: ">1 m/s (Normal)", score: 0 }, { label: "0.8-1 m/s (Slow)", score: 1 }, { label: "<0.8 m/s (Very slow)", score: 2 }] },
+            { id: "tug", text: "Timed Up and Go result:", options: [{ label: "<12 sec", score: 0 }, { label: "12-14 sec", score: 1 }, { label: ">14 sec", score: 2 }] },
+            { id: "chair", text: "30-Second Chair Stand: Number of stands", options: [{ label: "Age-appropriate", score: 0 }, { label: "Below average", score: 1 }, { label: "Unable/very low", score: 2 }] },
+        ],
+        interpretation: ["0-2: Low fall risk - provide education", "3-5: Moderate risk - assess gait, strength, balance", "6+: High risk - comprehensive assessment and intervention"],
+    },
+    "Morse Fall Scale": {
+        instructions: "Rapid fall risk assessment for hospital/nursing home settings.",
+        questions: [
+            { id: "history", text: "History of falling (immediate or within 3 months)", options: [{ label: "No", score: 0 }, { label: "Yes", score: 25 }] },
+            { id: "secondary", text: "Secondary diagnosis (2+ medical diagnoses)", options: [{ label: "No", score: 0 }, { label: "Yes", score: 15 }] },
+            { id: "ambulatory", text: "Ambulatory aid", options: [{ label: "None/Bed rest/Nurse", score: 0 }, { label: "Crutches/Cane/Walker", score: 15 }, { label: "Furniture for support", score: 30 }] },
+            { id: "iv", text: "IV therapy or heparin lock", options: [{ label: "No", score: 0 }, { label: "Yes", score: 20 }] },
+            { id: "gait", text: "Gait/Transferring", options: [{ label: "Normal/Bedrest/Immobile", score: 0 }, { label: "Weak", score: 10 }, { label: "Impaired", score: 20 }] },
+            { id: "mental", text: "Mental status", options: [{ label: "Oriented to own ability", score: 0 }, { label: "Overestimates/Forgets limitations", score: 15 }] },
+        ],
+        interpretation: ["0-24: Low risk (Standard precautions)", "25-44: Moderate risk (Implement fall prevention)", "45+: High risk (High-risk interventions required)"],
+    },
+    "Lawton IADL Scale": {
+        instructions: "Assess Instrumental Activities of Daily Living. Score each activity.",
+        questions: [
+            { id: "phone", text: "Ability to Use Telephone", options: [{ label: "Operates independently", score: 1 }, { label: "Dials a few known numbers", score: 1 }, { label: "Answers but does not dial", score: 1 }, { label: "Does not use telephone", score: 0 }] },
+            { id: "shopping", text: "Shopping", options: [{ label: "Shops independently", score: 1 }, { label: "Shops for small purchases", score: 0 }, { label: "Needs accompaniment", score: 0 }, { label: "Completely unable", score: 0 }] },
+            { id: "food", text: "Food Preparation", options: [{ label: "Plans and prepares meals", score: 1 }, { label: "Prepares if supplied ingredients", score: 0 }, { label: "Heats and serves prepared meals", score: 0 }, { label: "Needs meals prepared", score: 0 }] },
+            { id: "housekeeping", text: "Housekeeping", options: [{ label: "Maintains house alone", score: 1 }, { label: "Performs light daily tasks", score: 1 }, { label: "Needs help with all tasks", score: 0 }, { label: "Does not participate", score: 0 }] },
+            { id: "laundry", text: "Laundry", options: [{ label: "Does laundry completely", score: 1 }, { label: "Washes small items", score: 1 }, { label: "All laundry done by others", score: 0 }] },
+            { id: "transport", text: "Mode of Transportation", options: [{ label: "Travels independently", score: 1 }, { label: "Arranges own travel via taxi", score: 1 }, { label: "Uses public transport with assist", score: 1 }, { label: "Travels only with arrange", score: 0 }, { label: "Does not travel", score: 0 }] },
+            { id: "meds", text: "Responsibility for Medications", options: [{ label: "Takes meds correctly", score: 1 }, { label: "Takes if prepared in advance", score: 0 }, { label: "Cannot take own meds", score: 0 }] },
+            { id: "finances", text: "Ability to Handle Finances", options: [{ label: "Manages independently", score: 1 }, { label: "Manages day-to-day", score: 1 }, { label: "Unable to handle money", score: 0 }] },
+        ],
+        interpretation: ["8: High function (independent)", "4-7: Moderate function (needs some assistance)", "0-3: Low function (needs significant assistance)"],
+    },
+    "Barthel Index": {
+        instructions: "Assess basic ADLs. Score each activity based on level of independence.",
+        questions: [
+            { id: "feeding", text: "Feeding", options: [{ label: "Independent", score: 10 }, { label: "Needs help cutting", score: 5 }, { label: "Dependent", score: 0 }] },
+            { id: "bathing", text: "Bathing", options: [{ label: "Independent", score: 5 }, { label: "Dependent", score: 0 }] },
+            { id: "grooming", text: "Grooming (face, hair, teeth, shaving)", options: [{ label: "Independent", score: 5 }, { label: "Needs help", score: 0 }] },
+            { id: "dressing", text: "Dressing", options: [{ label: "Independent", score: 10 }, { label: "Needs help", score: 5 }, { label: "Dependent", score: 0 }] },
+            { id: "bowels", text: "Bowel Control", options: [{ label: "Continent", score: 10 }, { label: "Occasional accident", score: 5 }, { label: "Incontinent", score: 0 }] },
+            { id: "bladder", text: "Bladder Control", options: [{ label: "Continent", score: 10 }, { label: "Occasional accident", score: 5 }, { label: "Incontinent", score: 0 }] },
+            { id: "toilet", text: "Toilet Use", options: [{ label: "Independent", score: 10 }, { label: "Needs some help", score: 5 }, { label: "Dependent", score: 0 }] },
+            { id: "transfers", text: "Transfers (bed to chair)", options: [{ label: "Independent", score: 15 }, { label: "Minor help", score: 10 }, { label: "Major help", score: 5 }, { label: "Unable", score: 0 }] },
+            { id: "mobility", text: "Mobility (on level surfaces)", options: [{ label: "Independent 50 yards", score: 15 }, { label: "With help 50 yards", score: 10 }, { label: "Wheelchair independent", score: 5 }, { label: "Immobile", score: 0 }] },
+            { id: "stairs", text: "Stairs", options: [{ label: "Independent", score: 10 }, { label: "Needs help", score: 5 }, { label: "Unable", score: 0 }] },
+        ],
+        interpretation: ["80-100: Independent", "60-79: Minimal dependence", "40-59: Moderate dependence", "20-39: Severe dependence", "0-19: Total dependence"],
+    },
+    "Beers Criteria": {
+        instructions: "Review patient medications against AGS Beers Criteria 2023 categories.",
+        questions: [
+            { id: "anticholinergics", text: "Anticholinergics (antihistamines, antispasmodics)", options: [{ label: "None identified", score: 0 }, { label: "1 medication", score: 1 }, { label: "2+ medications", score: 2 }] },
+            { id: "benzos", text: "Benzodiazepines", options: [{ label: "None", score: 0 }, { label: "Short-acting PRN", score: 1 }, { label: "Regular use", score: 2 }] },
+            { id: "nsaids", text: "NSAIDs (chronic use)", options: [{ label: "None/PRN only", score: 0 }, { label: "Regular use", score: 2 }] },
+            { id: "ppis", text: "PPIs (>8 weeks without indication)", options: [{ label: "None or indicated", score: 0 }, { label: "Prolonged without clear indication", score: 1 }] },
+            { id: "opioids", text: "Opioids with benzodiazepines", options: [{ label: "No combination", score: 0 }, { label: "Combined use", score: 2 }] },
+            { id: "antipsychotics", text: "Antipsychotics in dementia", options: [{ label: "Not applicable", score: 0 }, { label: "Present", score: 2 }] },
+            { id: "sulfonylureas", text: "Long-acting sulfonylureas (glipizide, glyburide)", options: [{ label: "None", score: 0 }, { label: "Present", score: 1 }] },
+            { id: "muscle-relaxants", text: "Muscle Relaxants", options: [{ label: "None", score: 0 }, { label: "Present", score: 1 }] },
+        ],
+        interpretation: ["0: No Beers concerns identified", "1-3: Moderate concern - review medications", "4+: High concern - deprescribing review recommended"],
+    },
+    "STOPP/START Criteria": {
+        instructions: "STOPP: Screening Tool of Older Persons' Prescriptions. START: Screening Tool to Alert to Right Treatment.",
+        questions: [
+            { id: "stopp-ppi", text: "STOPP: PPI at full dose >8 weeks", options: [{ label: "Not applicable", score: 0 }, { label: "Present - consider reducing", score: 1 }] },
+            { id: "stopp-aspirin", text: "STOPP: Aspirin without cardiovascular disease", options: [{ label: "Indicated use", score: 0 }, { label: "Primary prevention only", score: 1 }] },
+            { id: "stopp-duplicate", text: "STOPP: Duplicate drug classes", options: [{ label: "None identified", score: 0 }, { label: "Present", score: 1 }] },
+            { id: "stopp-nsaid", text: "STOPP: NSAID with heart failure/CKD/hypertension", options: [{ label: "No concern", score: 0 }, { label: "Present", score: 2 }] },
+            { id: "start-osteo", text: "START: Vitamin D/Calcium in osteoporosis", options: [{ label: "Present or not indicated", score: 0 }, { label: "Missing in osteoporosis", score: 1 }] },
+            { id: "start-statin", text: "START: Statin in diabetes with CVD risk", options: [{ label: "Present or not indicated", score: 0 }, { label: "Missing with indication", score: 1 }] },
+            { id: "start-acei", text: "START: ACE inhibitor in heart failure", options: [{ label: "Present or not indicated", score: 0 }, { label: "Missing with indication", score: 1 }] },
+            { id: "start-vaccine", text: "START: Influenza/Pneumococcal vaccines", options: [{ label: "Up to date", score: 0 }, { label: "Not up to date", score: 1 }] },
+        ],
+        interpretation: ["0: No STOPP/START concerns", "1-3: Minor interventions recommended", "4+: Significant optimization opportunities"],
+    },
+    "Anticholinergic Burden Scale": {
+        instructions: "Sum the anticholinergic scores for all current medications. Score 1-3 per medication.",
+        questions: [
+            { id: "score1-meds", text: "Score 1 meds (mild): hydrocortisone, ranitidine, fentanyl", options: [{ label: "0 medications", score: 0 }, { label: "1-2 medications", score: 2 }, { label: "3+ medications", score: 3 }] },
+            { id: "score2-meds", text: "Score 2 meds (moderate): amantadine, carbamazepine, cyclobenzaprine", options: [{ label: "0 medications", score: 0 }, { label: "1 medication", score: 2 }, { label: "2+ medications", score: 4 }] },
+            { id: "score3-meds", text: "Score 3 meds (high): amitriptyline, diphenhydramine, oxybutynin, paroxetine", options: [{ label: "0 medications", score: 0 }, { label: "1 medication", score: 3 }, { label: "2+ medications", score: 6 }] },
+            { id: "symptoms", text: "Are anticholinergic symptoms present? (dry mouth, constipation, confusion, urinary retention)", options: [{ label: "No", score: 0 }, { label: "Mild", score: 1 }, { label: "Moderate/Severe", score: 2 }] },
+        ],
+        interpretation: ["0-2: Low anticholinergic burden", "3-5: Moderate burden - monitor for side effects", "6+: High burden - significant cognitive and fall risk"],
+    },
+    "High-Risk Fall Medications": {
+        instructions: "Identify medications associated with increased fall risk in older adults.",
+        questions: [
+            { id: "sedatives", text: "Sedatives/Hypnotics (benzodiazepines, z-drugs)", options: [{ label: "None", score: 0 }, { label: "PRN use", score: 1 }, { label: "Daily use", score: 2 }] },
+            { id: "antihypertensives", text: "Antihypertensives causing orthostatic hypotension", options: [{ label: "None/BP stable", score: 0 }, { label: "Present, symptomatic", score: 2 }] },
+            { id: "opioids", text: "Opioid analgesics", options: [{ label: "None", score: 0 }, { label: "Low-dose/PRN", score: 1 }, { label: "Regular high-dose", score: 2 }] },
+            { id: "antidepressants", text: "Antidepressants (especially TCAs, SSRIs)", options: [{ label: "None or well-tolerated", score: 0 }, { label: "Present", score: 1 }] },
+            { id: "antipsychotics", text: "Antipsychotics", options: [{ label: "None", score: 0 }, { label: "Present", score: 2 }] },
+            { id: "anticonvulsants", text: "Anticonvulsants causing sedation", options: [{ label: "None", score: 0 }, { label: "Present", score: 1 }] },
+            { id: "polypharmacy", text: "Total medications >5", options: [{ label: "5 or fewer", score: 0 }, { label: "6-9 medications", score: 1 }, { label: "10+ medications", score: 2 }] },
+        ],
+        interpretation: ["0-2: Low medication-related fall risk", "3-5: Moderate risk - review medications", "6+: High risk - medication review and fall prevention essential"],
+    },
 };
 
 // Geriatric reference data
@@ -118,8 +276,8 @@ const referenceCategories = [
         items: [
             { title: "Mini-Mental State Examination (MMSE)", description: "30-point questionnaire for cognitive impairment screening", scoring: "24-30 = Normal, 19-23 = Mild, 10-18 = Moderate, <10 = Severe", link: "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3532551/", hasAssessment: true },
             { title: "Montreal Cognitive Assessment (MoCA)", description: "Detects mild cognitive impairment, more sensitive than MMSE", scoring: "26+ = Normal, 18-25 = MCI, <18 = Significant impairment", link: "https://www.mocatest.org/", hasAssessment: true },
-            { title: "Clock Drawing Test", description: "Quick screening for visuospatial and executive function", scoring: "4-point scale: 4 = Normal, <3 = Impairment suspected", link: null, hasAssessment: false },
-            { title: "Mini-Cog", description: "3-minute dementia screening combining word recall and clock draw", scoring: "0-2 = High dementia risk, 3-5 = Lower risk", link: "https://mini-cog.com/", hasAssessment: false },
+            { title: "Clock Drawing Test", description: "Quick screening for visuospatial and executive function", scoring: "4-point scale: 4 = Normal, <3 = Impairment suspected", link: null, hasAssessment: true },
+            { title: "Mini-Cog", description: "3-minute dementia screening combining word recall and clock draw", scoring: "0-2 = High dementia risk, 3-5 = Lower risk", link: "https://mini-cog.com/", hasAssessment: true },
         ],
     },
     {
@@ -130,7 +288,7 @@ const referenceCategories = [
         items: [
             { title: "Geriatric Depression Scale-15 (GDS-15)", description: "Self-report measure designed for older adults", scoring: "0-4 = Normal, 5-9 = Mild, 10-15 = Moderate/Severe", link: "https://web.stanford.edu/~yesavage/GDS.html", hasAssessment: true },
             { title: "PHQ-9", description: "9-item depression severity measure", scoring: "0-4 = Minimal, 5-9 = Mild, 10-14 = Moderate, 15-19 = Mod-Severe, 20+ = Severe", link: "https://www.phqscreeners.com/", hasAssessment: true },
-            { title: "Cornell Scale for Depression in Dementia", description: "Depression assessment for patients with cognitive impairment", scoring: "Clinician-administered, considers caregiver input", link: null, hasAssessment: false },
+            { title: "Cornell Scale for Depression in Dementia", description: "Depression assessment for patients with cognitive impairment", scoring: "Clinician-administered, considers caregiver input", link: null, hasAssessment: true },
         ],
     },
     {
@@ -140,9 +298,9 @@ const referenceCategories = [
         color: "amber",
         items: [
             { title: "Timed Up and Go (TUG)", description: "Measures mobility and fall risk", scoring: "<10s = Normal, 10-20s = Borderline, >20s = High risk", link: null, hasAssessment: true },
-            { title: "Berg Balance Scale", description: "14-item objective measure of balance ability", scoring: "45-56 = Low risk, 21-44 = Medium, 0-20 = High fall risk", link: null, hasAssessment: false },
-            { title: "STEADI Algorithm (CDC)", description: "Stopping Elderly Accidents, Deaths & Injuries toolkit", scoring: "Comprehensive fall prevention protocol", link: "https://www.cdc.gov/steadi/", hasAssessment: false },
-            { title: "Morse Fall Scale", description: "Quick assessment for hospital/nursing home settings", scoring: "0-24 = Low, 25-44 = Moderate, 45+ = High risk", link: null, hasAssessment: false },
+            { title: "Berg Balance Scale", description: "14-item objective measure of balance ability", scoring: "45-56 = Low risk, 21-44 = Medium, 0-20 = High fall risk", link: null, hasAssessment: true },
+            { title: "STEADI Algorithm (CDC)", description: "Stopping Elderly Accidents, Deaths & Injuries toolkit", scoring: "Comprehensive fall prevention protocol", link: "https://www.cdc.gov/steadi/", hasAssessment: true },
+            { title: "Morse Fall Scale", description: "Quick assessment for hospital/nursing home settings", scoring: "0-24 = Low, 25-44 = Moderate, 45+ = High risk", link: null, hasAssessment: true },
         ],
     },
     {
@@ -152,8 +310,8 @@ const referenceCategories = [
         color: "teal",
         items: [
             { title: "Katz Index of Independence in ADL", description: "Basic Activities of Daily Living assessment", scoring: "6 = Full function, 4 = Moderate, 2 or less = Severe impairment", link: null, hasAssessment: true },
-            { title: "Lawton IADL Scale", description: "Instrumental Activities of Daily Living", scoring: "8 = High function, 0 = Low function (gender-adjusted)", link: null, hasAssessment: false },
-            { title: "Barthel Index", description: "ADL and mobility assessment, 10 items", scoring: "80-100 = Independent, 60-79 = Minimal assistance, <60 = Dependent", link: null, hasAssessment: false },
+            { title: "Lawton IADL Scale", description: "Instrumental Activities of Daily Living", scoring: "8 = High function, 0 = Low function (gender-adjusted)", link: null, hasAssessment: true },
+            { title: "Barthel Index", description: "ADL and mobility assessment, 10 items", scoring: "80-100 = Independent, 60-79 = Minimal assistance, <60 = Dependent", link: null, hasAssessment: true },
         ],
     },
     {
@@ -162,10 +320,10 @@ const referenceCategories = [
         icon: Pill,
         color: "red",
         items: [
-            { title: "Beers Criteria", description: "Potentially inappropriate medications for older adults", scoring: "Updated 2023 by American Geriatrics Society", link: "https://geriatricscareonline.org/ProductAbstract/american-geriatrics-society-beers-criteria-2023-update/CL001", hasAssessment: false },
-            { title: "STOPP/START Criteria", description: "European screening tool for medication review", scoring: "STOPP = Meds to avoid, START = Meds to consider", link: null, hasAssessment: false },
-            { title: "Anticholinergic Burden Scale", description: "Risk scoring for anticholinergic medications", scoring: "Score 3+ indicates significant cognitive risk", link: null, hasAssessment: false },
-            { title: "High-Risk Fall Medications", description: "Medications associated with increased fall risk", scoring: "Sedatives, antihypertensives, opioids, antidepressants", link: null, hasAssessment: false },
+            { title: "Beers Criteria", description: "Potentially inappropriate medications for older adults", scoring: "Updated 2023 by American Geriatrics Society", link: "https://geriatricscareonline.org/ProductAbstract/american-geriatrics-society-beers-criteria-2023-update/CL001", hasAssessment: true },
+            { title: "STOPP/START Criteria", description: "European screening tool for medication review", scoring: "STOPP = Meds to avoid, START = Meds to consider", link: null, hasAssessment: true },
+            { title: "Anticholinergic Burden Scale", description: "Risk scoring for anticholinergic medications", scoring: "Score 3+ indicates significant cognitive risk", link: null, hasAssessment: true },
+            { title: "High-Risk Fall Medications", description: "Medications associated with increased fall risk", scoring: "Sedatives, antihypertensives, opioids, antidepressants", link: null, hasAssessment: true },
         ],
     },
 ];
@@ -240,6 +398,34 @@ export default function GeriatricReferencesPage() {
             }
         }
         return interpretations[interpretations.length - 1];
+    };
+
+    const [copied, setCopied] = useState(false);
+
+    const copyResultsToClipboard = () => {
+        if (!selectedAssessment) return;
+        const score = calculateScore();
+        const interpretation = getInterpretation(score, assessmentContent[selectedAssessment]?.interpretation || []);
+        const date = new Date().toLocaleDateString();
+
+        const resultText = `GERIATRIC ASSESSMENT RESULTS
+Assessment: ${selectedAssessment}
+Date: ${date}
+Score: ${score}
+Interpretation: ${interpretation}
+
+Individual Responses:
+${Object.entries(answers).map(([questionId, answerScore]) => {
+            const question = assessmentContent[selectedAssessment]?.questions?.find(q => q.id === questionId);
+            const selectedOption = question?.options?.find(o => o.score === answerScore);
+            return `- ${question?.text?.split(':')[0] || questionId}: ${selectedOption?.label || answerScore}`;
+        }).join('\n')}
+`;
+
+        navigator.clipboard.writeText(resultText).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
     };
 
     return (
@@ -438,8 +624,8 @@ export default function GeriatricReferencesPage() {
                                                         key={opt.label}
                                                         onClick={() => setAnswers(prev => ({ ...prev, [q.id]: opt.score }))}
                                                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${answers[q.id] === opt.score
-                                                                ? 'bg-teal-600 text-white'
-                                                                : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-teal-500'
+                                                            ? 'bg-teal-600 text-white'
+                                                            : 'bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-teal-500'
                                                             }`}
                                                     >
                                                         {opt.label}
@@ -468,6 +654,27 @@ export default function GeriatricReferencesPage() {
                                             ))}
                                         </ul>
                                     </div>
+
+                                    {/* Copy to Clipboard Button */}
+                                    <button
+                                        onClick={copyResultsToClipboard}
+                                        className={`mt-6 w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${copied
+                                                ? 'bg-emerald-600 text-white'
+                                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
+                                            }`}
+                                    >
+                                        {copied ? (
+                                            <>
+                                                <ClipboardCheck className="h-4 w-4" />
+                                                Copied to Clipboard!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy className="h-4 w-4" />
+                                                Copy Results for Patient Chart
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             )}
                         </div>
