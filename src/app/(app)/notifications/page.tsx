@@ -198,8 +198,14 @@ export default function NotificationsPage() {
                         </span>
                     )}
                     <button
-                        onClick={markAllAsRead}
-                        className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                        onClick={() => {
+                            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                        }}
+                        disabled={unreadCount === 0}
+                        className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${unreadCount === 0
+                                ? 'text-slate-400 cursor-not-allowed'
+                                : 'text-primary hover:bg-primary/10'
+                            }`}
                     >
                         Mark all as read
                     </button>
