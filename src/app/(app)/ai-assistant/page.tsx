@@ -135,8 +135,8 @@ export default function AIAssistantPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    notes: sessionNotes,
-                    patientContext: selectedPatient
+                    sessionNotes: sessionNotes,
+                    specialty: 'mental_health'
                 })
             });
 
