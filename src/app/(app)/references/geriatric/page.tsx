@@ -17,6 +17,8 @@ import {
     ClipboardList,
     Copy,
     ClipboardCheck,
+    DollarSign,
+    Clock,
 } from "lucide-react";
 
 // Assessment questions/content for interactive modals
@@ -329,17 +331,94 @@ const referenceCategories = [
 ];
 
 const geriatricCodes = [
-    { code: "G0438", description: "Initial Annual Wellness Visit (IAWV)" },
-    { code: "G0439", description: "Subsequent Annual Wellness Visit" },
-    { code: "99483", description: "Cognitive Assessment and Care Plan" },
-    { code: "99490", description: "Chronic Care Management (20+ min)" },
-    { code: "99491", description: "CCM by Clinical Staff (30+ min)" },
-    { code: "99487", description: "Complex CCM (60+ min)" },
-    { code: "96116", description: "Neurobehavioral Status Exam" },
-    { code: "96132", description: "Neuropsychological Testing Eval" },
-    { code: "G2211", description: "Complexity Add-on (Primary Care)" },
-    { code: "99497", description: "Advance Care Planning (first 30 min)" },
-    { code: "99498", description: "Advance Care Planning (each add'l 30 min)" },
+    {
+        code: "G0438",
+        description: "Initial Annual Wellness Visit (IAWV)",
+        details: "First-time Medicare AWV for new patients or those who haven't had one in the practice.",
+        requirements: ["Health Risk Assessment", "Review of functional ability and safety", "Detection of cognitive impairment", "Personalized prevention plan"],
+        time: "45-60 minutes typical",
+        reimbursement: "~$175-$185"
+    },
+    {
+        code: "G0439",
+        description: "Subsequent Annual Wellness Visit",
+        details: "Follow-up AWV for patients who have previously had an Initial AWV.",
+        requirements: ["Update Health Risk Assessment", "Review and update prevention plan", "Cognitive and depression screening", "Advance care planning discussion"],
+        time: "30-45 minutes typical",
+        reimbursement: "~$125-$135"
+    },
+    {
+        code: "99483",
+        description: "Cognitive Assessment and Care Plan",
+        details: "Comprehensive evaluation for patients with cognitive impairment. Can be billed same day as E/M.",
+        requirements: ["Cognition-focused evaluation", "Functional assessment", "Safety evaluation", "Caregiver needs assessment", "Written care plan"],
+        time: "50+ minutes required",
+        reimbursement: "~$280-$300"
+    },
+    {
+        code: "99490",
+        description: "Chronic Care Management (20+ min)",
+        details: "Non-face-to-face care coordination for patients with 2+ chronic conditions expected to last 12+ months.",
+        requirements: ["2+ chronic conditions", "20+ minutes/month", "Comprehensive care plan", "Patient consent required"],
+        time: "20+ minutes/month",
+        reimbursement: "~$62-$65/month"
+    },
+    {
+        code: "99491",
+        description: "CCM by Clinical Staff (30+ min)",
+        details: "CCM services provided personally by physician or qualified health professional.",
+        requirements: ["30+ minutes by physician/QHP", "Direct patient management", "Care plan development/revision"],
+        time: "30+ minutes/month",
+        reimbursement: "~$85-$90/month"
+    },
+    {
+        code: "99487",
+        description: "Complex CCM (60+ min)",
+        details: "For patients requiring substantially more complex medical decision-making.",
+        requirements: ["60+ minutes/month", "Complex medical decisions", "Care team conferences", "Substantial care plan changes"],
+        time: "60+ minutes/month",
+        reimbursement: "~$135-$145/month"
+    },
+    {
+        code: "96116",
+        description: "Neurobehavioral Status Exam",
+        details: "Clinical assessment of thinking, reasoning, and judgment with interpretation and report.",
+        requirements: ["Face-to-face assessment", "Standardized instruments", "Clinical interpretation", "Written report"],
+        time: "Per hour of face-to-face",
+        reimbursement: "~$150-$165/hour"
+    },
+    {
+        code: "96132",
+        description: "Neuropsychological Testing Eval",
+        details: "Evaluation of neuropsychological test results, integration of data, and clinical decision-making.",
+        requirements: ["Test administration", "Score interpretation", "Integration with history", "Report generation"],
+        time: "Per hour of service",
+        reimbursement: "~$140-$155/hour"
+    },
+    {
+        code: "G2211",
+        description: "Complexity Add-on (Primary Care)",
+        details: "Add-on for E/M visits involving ongoing care of serious or complex conditions.",
+        requirements: ["Longitudinal relationship", "Serious/complex condition", "Ongoing care coordination", "Cannot bill with CCM same month"],
+        time: "Add-on to E/M",
+        reimbursement: "~$16-$18 (add-on)"
+    },
+    {
+        code: "99497",
+        description: "Advance Care Planning (first 30 min)",
+        details: "Face-to-face discussion of advance directives with patient, family, or surrogate.",
+        requirements: ["Voluntary patient participation", "Discussion of goals of care", "Review/completion of advance directives", "Documentation of discussion"],
+        time: "First 30 minutes",
+        reimbursement: "~$85-$95"
+    },
+    {
+        code: "99498",
+        description: "Advance Care Planning (each add'l 30 min)",
+        details: "Additional time beyond initial 30 minutes for advance care planning discussions.",
+        requirements: ["Add-on to 99497", "Additional 30 minutes", "Extended discussion documentation"],
+        time: "Each additional 30 min",
+        reimbursement: "~$75-$80 each"
+    },
 ];
 
 export default function GeriatricReferencesPage() {
@@ -348,6 +427,7 @@ export default function GeriatricReferencesPage() {
     const [selectedAssessment, setSelectedAssessment] = useState<string | null>(null);
     const [answers, setAnswers] = useState<Record<string, number>>({});
     const [showResults, setShowResults] = useState(false);
+    const [selectedCode, setSelectedCode] = useState<typeof geriatricCodes[0] | null>(null);
 
     const filteredCategories = referenceCategories.map(cat => ({
         ...cat,
@@ -554,16 +634,20 @@ ${Object.entries(answers).map(([questionId, answerScore]) => {
                                 <FileText className="h-5 w-5 text-teal-600" />
                                 Geriatric CPT Codes
                             </h3>
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 {geriatricCodes.map((code) => (
-                                    <div key={code.code} className="flex items-start gap-3">
-                                        <span className="px-2 py-1 bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 text-xs font-mono font-bold rounded">
+                                    <button
+                                        key={code.code}
+                                        onClick={() => setSelectedCode(code)}
+                                        className="w-full flex items-start gap-3 p-2 -mx-2 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors text-left group"
+                                    >
+                                        <span className="px-2 py-1 bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-400 text-xs font-mono font-bold rounded group-hover:bg-teal-200 dark:group-hover:bg-teal-800/50 transition-colors">
                                             {code.code}
                                         </span>
-                                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                                        <span className="text-sm text-slate-600 dark:text-slate-400 group-hover:text-teal-700 dark:group-hover:text-teal-300 transition-colors">
                                             {code.description}
                                         </span>
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -659,8 +743,8 @@ ${Object.entries(answers).map(([questionId, answerScore]) => {
                                     <button
                                         onClick={copyResultsToClipboard}
                                         className={`mt-6 w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${copied
-                                                ? 'bg-emerald-600 text-white'
-                                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
+                                            ? 'bg-emerald-600 text-white'
+                                            : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
                                             }`}
                                     >
                                         {copied ? (
@@ -703,6 +787,86 @@ ${Object.entries(answers).map(([questionId, answerScore]) => {
                                     Done
                                 </button>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CPT Code Modal */}
+            {selectedCode && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-emerald-50 dark:bg-emerald-900/20">
+                            <div className="flex items-center gap-3">
+                                <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                                    <span className="text-emerald-700 dark:text-emerald-400 font-mono font-bold text-sm">
+                                        {selectedCode.code}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h2 className="font-bold text-slate-900 dark:text-white">{selectedCode.description}</h2>
+                                    <p className="text-xs text-slate-500">CPT/HCPCS Code</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setSelectedCode(null)}
+                                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                            >
+                                <X className="h-5 w-5 text-slate-500" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-5">
+                            {/* Description */}
+                            <div>
+                                <p className="text-slate-700 dark:text-slate-300">{selectedCode.details}</p>
+                            </div>
+
+                            {/* Time & Reimbursement */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Clock className="h-4 w-4 text-blue-600" />
+                                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">Time</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedCode.time}</p>
+                                </div>
+                                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <DollarSign className="h-4 w-4 text-emerald-600" />
+                                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase">Reimbursement</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-slate-900 dark:text-white">{selectedCode.reimbursement}</p>
+                                </div>
+                            </div>
+
+                            {/* Requirements */}
+                            <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
+                                <h4 className="font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                                    <CheckCircle className="h-4 w-4 text-teal-600" />
+                                    Documentation Requirements
+                                </h4>
+                                <ul className="space-y-2">
+                                    {selectedCode.requirements.map((req, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-teal-500 mt-2 shrink-0" />
+                                            {req}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                            <button
+                                onClick={() => setSelectedCode(null)}
+                                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold transition-colors"
+                            >
+                                Close
+                            </button>
                         </div>
                     </div>
                 </div>
