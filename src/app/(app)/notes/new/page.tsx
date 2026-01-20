@@ -63,7 +63,28 @@ export default function NewNotePage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const templateId = searchParams.get("template") || "tpl-progress-note";
+    const editId = searchParams.get("edit"); // Get the note ID being edited
     const template = getTemplateById(templateId) || getDefaultTemplate();
+
+    // Notes data for looking up patient info when editing
+    const allNotes: Record<string, {
+        patientName: string;
+        patientInitials: string;
+        date: string;
+        diagnosis: string;
+        diagnosisCode: string;
+    }> = {
+        "1": { patientName: "John Doe", patientInitials: "JD", date: "Oct 29, 2023", diagnosis: "Acute Pharyngitis", diagnosisCode: "J02.9" },
+        "2": { patientName: "Maria Rodriguez", patientInitials: "MR", date: "Oct 28, 2023", diagnosis: "Hypertension F/U", diagnosisCode: "I10" },
+        "3": { patientName: "Arthur Smith", patientInitials: "AS", date: "Oct 24, 2023", diagnosis: "T2DM Management", diagnosisCode: "E11.9" },
+        "4": { patientName: "Sarah Williams", patientInitials: "SW", date: "Oct 22, 2023", diagnosis: "Anxiety Screening", diagnosisCode: "F41.1" },
+        "5": { patientName: "David Miller", patientInitials: "DM", date: "Oct 20, 2023", diagnosis: "Lower Back Pain", diagnosisCode: "M54.5" },
+    };
+
+    // Get patient info - use edit ID if available, otherwise default
+    const currentPatient = editId && allNotes[editId]
+        ? allNotes[editId]
+        : { patientName: "New Patient", patientInitials: "NP", date: new Date().toLocaleDateString(), diagnosis: "", diagnosisCode: "" };
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
@@ -612,31 +633,33 @@ Prognosis: Favorable with continued treatment adherence.`;
                 <div className="max-w-[1700px] mx-auto flex flex-wrap justify-between items-center gap-4">
                     <div className="flex items-center gap-5">
                         <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-                            JD
+                            {currentPatient.patientInitials}
                         </div>
                         <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-3">
                                 <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                                    John Doe
+                                    {currentPatient.patientName}
                                 </h1>
                                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
-                                    Est. Patient
+                                    {editId ? "Editing Note" : "New Note"}
                                 </span>
                             </div>
                             <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                                 <span className="flex items-center gap-1.5">
                                     <Calendar className="h-3.5 w-3.5" />
-                                    Oct 29, 2023
+                                    {currentPatient.date}
                                 </span>
-                                <span className="flex items-center gap-1.5">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    Appointment: 2:30 PM
-                                </span>
+                                {currentPatient.diagnosis && (
+                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-muted/50">
+                                        {currentPatient.diagnosis} ({currentPatient.diagnosisCode})
+                                    </span>
+                                )}
                                 <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-muted text-foreground">
                                     <select
                                         value={template.id}
                                         onChange={(e) => {
-                                            const newPath = `/notes/new?template=${e.target.value}`;
+                                            const editParam = editId ? `&edit=${editId}` : '';
+                                            const newPath = `/notes/new?template=${e.target.value}${editParam}`;
                                             router.push(newPath);
                                         }}
                                         className="bg-transparent border-none text-xs font-bold outline-none cursor-pointer"
