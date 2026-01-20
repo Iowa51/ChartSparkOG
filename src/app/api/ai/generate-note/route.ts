@@ -100,8 +100,7 @@ async function handler(context: AuthContext) {
     }
 }
 
-// Requires authentication and AI feature
+// Requires authentication (feature requirement removed for demo mode)
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
-    requiredFeature: 'AI_NOTE_GENERATION',
 });
