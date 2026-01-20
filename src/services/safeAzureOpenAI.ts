@@ -290,42 +290,78 @@ Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** se
 
     private getDemoTreatmentPlan() {
         return {
-            recommendedOption: 'moderate',
+            patientProfile: {
+                currentDiagnoses: ['Major Depressive Disorder', 'Generalized Anxiety Disorder'],
+                severity: 'Moderate',
+                riskFactors: ['Family history of depression', 'Recent stressful life events', 'Sleep disturbance'],
+                protectiveFactors: ['Strong social support', 'Employed', 'Engaged in treatment', 'No substance use']
+            },
+            recommendations: {
+                recommended: 'moderate',
+                rationale: 'Based on moderate depression severity (PHQ-9: 18) with co-occurring anxiety, combined medication and psychotherapy approach offers optimal response rates. Patient\'s strong social support and treatment engagement are positive prognostic factors.',
+                alternativeConsiderations: 'If patient prefers non-pharmacological approach initially, intensive psychotherapy-only track may be considered with close monitoring for adequate response.'
+            },
             options: [
                 {
+                    id: 'conservative',
                     name: 'Conservative',
-                    description: 'Psychotherapy-focused approach',
-                    medications: [],
-                    therapy: { type: 'CBT', frequency: 'Weekly', duration: '12-16 weeks' },
-                    lifestyle: ['Regular sleep', 'Daily exercise', 'Social activities'],
-                    cptCodes: [{ code: '90834', description: 'Psychotherapy 45 min', frequency: 'Weekly' }],
-                    predictedEfficacy: 70,
-                    timeline: '8-12 weeks'
+                    description: 'Psychotherapy-focused approach with lifestyle modifications. Preferred for patients who want to avoid or minimize medication use.',
+                    predictedEfficacy: 65,
+                    timeToImprovement: '8-12 weeks',
+                    successRate: '55-65%',
+                    medications: [
+                        { name: 'None initially', dosage: 'N/A', cost: '$0', rationale: 'Trial of psychotherapy alone before considering medication' }
+                    ],
+                    therapy: { type: 'Cognitive Behavioral Therapy (CBT)', frequency: 'Weekly sessions', duration: '12-16 weeks' },
+                    lifestyle: ['Establish consistent sleep schedule (10pm-6am)', 'Daily exercise 30 minutes (walking, swimming, yoga)', 'Social engagement at least 3x per week', 'Limit caffeine and alcohol', 'Mindfulness practice 10 min daily'],
+                    pros: ['No medication side effects', 'Develops long-term coping skills', 'Lower cost if uninsured', 'Patient-empowered approach'],
+                    cons: ['Slower response time', 'Requires high patient commitment', 'May not be sufficient for moderate-severe cases', 'Weekly time commitment required']
                 },
                 {
+                    id: 'moderate',
                     name: 'Moderate',
-                    description: 'Combined medication and therapy',
-                    medications: [{ name: 'Sertraline', dosage: '50mg daily', duration: '6-12 months' }],
-                    therapy: { type: 'CBT', frequency: 'Weekly', duration: '12-16 weeks' },
-                    lifestyle: ['Regular sleep', 'Daily exercise', 'Stress management'],
-                    cptCodes: [
-                        { code: '90834', description: 'Psychotherapy 45 min', frequency: 'Weekly' },
-                        { code: '99213', description: 'Med management', frequency: 'Monthly' }
+                    description: 'Combined medication and psychotherapy approach. Evidence-based standard of care for moderate depression with anxiety.',
+                    predictedEfficacy: 82,
+                    timeToImprovement: '4-6 weeks',
+                    successRate: '70-80%',
+                    medications: [
+                        { name: 'Escitalopram (Lexapro)', dosage: 'Start 5mg x 1 week, then 10mg daily', cost: '$$', rationale: 'First-line SSRI with excellent tolerability and efficacy for MDD + GAD. Low drug interaction potential.' },
+                        { name: 'Hydroxyzine (Vistaril)', dosage: '25mg as needed for acute anxiety', cost: '$', rationale: 'PRN for anxiety peaks during SSRI initiation. Non-habit forming.' }
                     ],
-                    predictedEfficacy: 85,
-                    timeline: '4-6 weeks'
+                    therapy: { type: 'Cognitive Behavioral Therapy (CBT)', frequency: 'Weekly sessions', duration: '12-16 weeks' },
+                    lifestyle: ['Consistent sleep schedule', 'Aerobic exercise 30 min 4x/week', 'Limit caffeine to morning only', 'Social activities 2-3x per week', 'Relaxation techniques daily'],
+                    pros: ['Fastest symptom improvement', 'Synergistic effects of therapy + medication', 'Well-established evidence base', 'Flexible PRN option for anxiety'],
+                    cons: ['Potential medication side effects', 'Higher total cost', 'Requires medication adherence', '4-6 weeks for SSRI effect onset']
+                },
+                {
+                    id: 'intensive',
+                    name: 'Intensive',
+                    description: 'Aggressive treatment approach for faster response. Recommended if symptoms significantly impair function.',
+                    predictedEfficacy: 88,
+                    timeToImprovement: '2-4 weeks',
+                    successRate: '75-85%',
+                    medications: [
+                        { name: 'Venlafaxine XR (Effexor XR)', dosage: 'Start 37.5mg x 4 days, increase to 75mg, target 150mg', cost: '$$$', rationale: 'SNRI provides dual mechanism for combined depression and anxiety. Faster onset than SSRIs for some patients.' },
+                        { name: 'Buspirone (Buspar)', dosage: '5mg TID, titrate to 15mg TID', cost: '$$', rationale: 'Augmentation for anxiety without sedation or dependence risk.' },
+                        { name: 'Trazodone', dosage: '25-50mg at bedtime PRN', cost: '$', rationale: 'For sleep initiation without benzodiazepine risks.' }
+                    ],
+                    therapy: { type: 'Intensive CBT + Behavioral Activation', frequency: '2x weekly sessions', duration: '8-12 weeks' },
+                    lifestyle: ['Structured daily schedule', 'Exercise 5x/week', 'Sleep restriction therapy if insomnia persists', 'Weekly activity logging', 'Support group participation'],
+                    pros: ['Fastest response rates', 'Comprehensive symptom coverage', 'More intensive monitoring', 'Best for severe functional impairment'],
+                    cons: ['More side effect management', 'Higher medication burden', 'Requires more frequent visits', 'Higher total cost']
                 }
             ],
             monitoring: {
-                initialFollowUp: '2 weeks',
-                regularFollowUp: 'Monthly then quarterly',
-                assessments: ['PHQ-9', 'Suicide risk screening']
+                initialFollowUp: '1-2 weeks',
+                regularFollowUp: 'Weekly x 4, then biweekly, then monthly',
+                assessments: ['PHQ-9 at each visit', 'GAD-7 at each visit', 'Suicide risk screening', 'Side effect assessment']
             },
             fromCache: false,
             modelUsed: 'demo-mode',
-            processingTime: '0.5s'
+            processingTime: '0.8s'
         };
     }
+
 
     private getDemoSOAPNote(sessionData: any): string {
         // Add variability with random elements

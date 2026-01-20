@@ -8,10 +8,13 @@ import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 async function handler(context: AuthContext) {
     try {
         const body = await context.request.json();
-        const { patientProfile, diagnoses } = body;
+        // Support both patientData (from frontend) and patientProfile (legacy)
+        const patientProfile = body.patientData || body.patientProfile;
+        const { diagnoses } = body;
 
         // Validation
         if (!patientProfile || !diagnoses) {
+            console.log('[Treatment Plan] Missing data:', { hasPatientProfile: !!patientProfile, hasDiagnoses: !!diagnoses, bodyKeys: Object.keys(body) });
             return NextResponse.json(
                 { error: 'Patient profile and diagnoses are required' },
                 { status: 400 }
@@ -24,6 +27,8 @@ async function handler(context: AuthContext) {
                 { status: 400 }
             );
         }
+
+        console.log('[Treatment Plan] Generating plan for:', patientProfile.name || 'Unknown patient');
 
         // Use safe Azure OpenAI wrapper (falls back to demo if not configured)
         const result = await safeAzureOpenAI.generateTreatmentPlan(patientProfile, diagnoses);
@@ -39,8 +44,8 @@ async function handler(context: AuthContext) {
     }
 }
 
-// SEC-004: Export with authentication
+// SEC-004: Export with authentication (removed AI_TREATMENT feature requirement for demo mode)
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
-    requiredFeature: 'AI_TREATMENT',
+    // requiredFeature: 'AI_TREATMENT', // Disabled for demo mode
 });
