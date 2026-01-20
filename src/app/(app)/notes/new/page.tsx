@@ -116,6 +116,19 @@ export default function NewNotePage() {
         Assessment: [],
         Plan: []
     });
+
+    // Reset selected phrases when template changes (switching between notes)
+    React.useEffect(() => {
+        setSelectedPhrases({
+            Subjective: [],
+            Objective: [],
+            Assessment: [],
+            Plan: []
+        });
+        // Also reset clinician input and scribe transcription when switching templates
+        setClinicianInput("");
+        setScribeTranscription("");
+    }, [templateId]);
     const [customPhrases, setCustomPhrases] = useState<Record<string, string[]>>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('customPhrases');

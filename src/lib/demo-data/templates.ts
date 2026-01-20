@@ -62,12 +62,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["90834", "90837"],
-        format: "soap",
+        format: "paragraph",
         sections: [
-            { id: "c1", label: "Agenda & Objective", placeholder: "Topics covered, CBT techniques applied...", required: true },
-            { id: "c2", label: "Interventions", placeholder: "Cognitive restructuring, behavioral activation...", required: true },
-            { id: "c3", label: "Progress & Insights", placeholder: "Patient's response to therapy, homework review...", required: true },
-            { id: "c4", label: "Home Tasks", placeholder: "Assigned tasks for next session...", required: true },
+            { id: "full", label: "Session Notes", placeholder: "Document the therapy session including: Agenda & objectives, CBT techniques applied (cognitive restructuring, behavioral activation), patient's response and insights, homework assignments for next session...", required: true }
         ]
     },
     {
@@ -93,12 +90,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["99204", "99205"],
-        format: "soap",
+        format: "paragraph",
         sections: [
-            { id: "v1", label: "Medical History", placeholder: "Relevant medical conditions, allergies, labs...", required: true },
-            { id: "v2", label: "Current Symptoms", placeholder: "Primary complaints and symptom severity...", required: true },
-            { id: "v3", label: "Treatment Goals", placeholder: "What the patient hopes to achieve...", required: true },
-            { id: "v4", label: "Initial Prescription", placeholder: "Starting dose, monitor plan, risks explained...", required: true },
+            { id: "full", label: "Visit Documentation", placeholder: "Document the initial medication visit including: Medical history and allergies, current symptoms and severity, treatment goals, initial prescription with starting dose, monitoring plan, and risks explained to patient...", required: true }
         ]
     },
     // ===== GERIATRIC TEMPLATES =====
@@ -111,14 +105,9 @@ export const templates: Template[] = [
         is_system: true,
         is_default: false,
         cpt_suggestions: ["G0438", "G0439", "99490"],
-        format: "soap",
+        format: "paragraph",
         sections: [
-            { id: "awv1", label: "Health Risk Assessment", placeholder: "Current health conditions, family history, medications review...", required: true },
-            { id: "awv2", label: "Functional Status", placeholder: "ADLs, IADLs, mobility, vision, hearing screening...", required: true },
-            { id: "awv3", label: "Cognitive Assessment", placeholder: "MMSE score, orientation, memory concerns...", required: true },
-            { id: "awv4", label: "Depression Screening", placeholder: "PHQ-9 or GDS-15 score, mood assessment...", required: true },
-            { id: "awv5", label: "Fall Risk Assessment", placeholder: "Timed Up and Go, balance, previous falls...", required: true },
-            { id: "awv6", label: "Personalized Prevention Plan", placeholder: "Vaccinations, screenings, advance directives...", required: true },
+            { id: "full", label: "Annual Wellness Visit Documentation", placeholder: "Document the complete AWV including: Health Risk Assessment (conditions, family history, medications), Functional Status (ADLs, IADLs, mobility, vision, hearing), Cognitive Assessment (MMSE score, orientation, memory), Depression Screening (PHQ-9/GDS-15 score), Fall Risk Assessment (TUG test, balance, previous falls), and Personalized Prevention Plan (vaccinations, screenings, advance directives)...", required: true }
         ]
     },
     {
