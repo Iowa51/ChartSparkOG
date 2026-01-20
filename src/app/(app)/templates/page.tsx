@@ -81,20 +81,6 @@ export default function TemplatesPage() {
             />
 
             <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-                {/* Demo Mode Banner */}
-                <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/40">
-                        <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div>
-                        <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                            Demo Mode Active
-                        </p>
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                            AI note generation is simulated with realistic sample responses
-                        </p>
-                    </div>
-                </div>
 
                 {/* Primary Template - Progress Note */}
                 <section className="mb-8">
