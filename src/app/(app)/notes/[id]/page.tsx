@@ -18,50 +18,115 @@ export default function NotePage() {
     const params = useParams();
     const id = params.id as string;
 
-    // Helper to determine mock note based on ID
-    const getMockNote = (noteId: string) => {
-        if (noteId === "5") {
-            return {
-                id: noteId,
-                patientName: "David Miller",
-                date: "2024-01-12",
-                type: "Bio-Psychosocial Assessment",
-                format: "paragraph" as const,
-                content: "Patient is a 55-year-old male presenting for an initial assessment. He reports a history of chronic lower back pain following a work-related injury 10 years ago. He describes his current mood as 'stable but frustrated' due to limited mobility.\n\nClinically, the patient is cooperative and articulate. He has maintained consistent employment in a modified capacity and has strong family support. He denies acute suicidal ideation but expresses concern about long-term physical health trends.\n\nThe primary goals for treatment are pain management, improved sleep hygiene, and cognitive restructuring regarding physical limitations. Referral to physical therapy and a vocational counselor is recommended.",
-                status: "completed"
-            };
-        }
-
-        if (noteId === "3") {
-            return {
-                id: noteId,
-                patientName: "Arthur Smith",
-                date: "2024-01-14",
-                type: "Discharge Summary",
-                format: "paragraph" as const,
-                content: "Patient has successfully completed the 12-week intensive outpatient program for T2DM management. He has demonstrated significant improvement in blood glucose monitoring and dietary adherence.\n\nFinal A1c at discharge is 6.8%, down from 8.2% at admission. Patient has been provided with a long-term maintenance plan and primary care follow-up is scheduled for next month.\n\nDischarge Status: Stable, improved. All goals met.",
-                status: "completed"
-            };
-        }
-
-        // Default to Progress Note (SOAP)
-        return {
-            id: noteId,
-            patientName: "Sarah Johnson",
-            date: "2024-01-15",
+    // Notes data matching the list in /notes/page.tsx
+    const allNotes: Record<string, {
+        id: string;
+        patientName: string;
+        patientInitials: string;
+        dob: string;
+        diagnosis: string;
+        diagnosisCode: string;
+        date: string;
+        type: string;
+        format: "soap" | "paragraph";
+        content: string | { subjective: string; objective: string; assessment: string; plan: string };
+        status: string;
+    }> = {
+        "1": {
+            id: "1",
+            patientName: "John Doe",
+            patientInitials: "JD",
+            dob: "04/12/1985",
+            diagnosis: "Acute Pharyngitis",
+            diagnosisCode: "J02.9",
+            date: "Oct 29, 2023",
             type: "Progress Note",
-            format: "soap" as const,
+            format: "soap",
+            content: {
+                subjective: "Patient presents with sore throat for 3 days, difficulty swallowing, and low-grade fever. Reports no cough or nasal congestion.",
+                objective: "Throat appears erythematous with mild tonsillar enlargement. No exudates. Temp 99.8°F. Lymph nodes slightly tender.",
+                assessment: "Acute viral pharyngitis. Low probability of streptococcal infection based on presentation.",
+                plan: "Symptomatic treatment with OTC analgesics. Warm salt water gargles. Return if symptoms worsen or persist >7 days."
+            },
+            status: "Draft"
+        },
+        "2": {
+            id: "2",
+            patientName: "Maria Rodriguez",
+            patientInitials: "MR",
+            dob: "11/22/1972",
+            diagnosis: "Hypertension F/U",
+            diagnosisCode: "I10",
+            date: "Oct 28, 2023",
+            type: "Progress Note",
+            format: "soap",
+            content: {
+                subjective: "Patient returns for routine hypertension follow-up. Reports good medication compliance. No headaches or dizziness.",
+                objective: "BP: 128/82 mmHg. HR: 72 bpm. Weight stable at 156 lbs. No peripheral edema.",
+                assessment: "Essential hypertension, well-controlled on current regimen.",
+                plan: "Continue Lisinopril 10mg daily. Recheck in 3 months. Continue low-sodium diet and regular exercise."
+            },
+            status: "Signed"
+        },
+        "3": {
+            id: "3",
+            patientName: "Arthur Smith",
+            patientInitials: "AS",
+            dob: "02/08/1954",
+            diagnosis: "T2DM Management",
+            diagnosisCode: "E11.9",
+            date: "Oct 24, 2023",
+            type: "Progress Note",
+            format: "paragraph",
+            content: "Patient has successfully completed the 12-week intensive outpatient program for T2DM management. He has demonstrated significant improvement in blood glucose monitoring and dietary adherence.\n\nFinal A1c at discharge is 6.8%, down from 8.2% at admission. Patient has been provided with a long-term maintenance plan and primary care follow-up is scheduled for next month.\n\nDischarge Status: Stable, improved. All goals met.",
+            status: "Pending Review"
+        },
+        "4": {
+            id: "4",
+            patientName: "Sarah Williams",
+            patientInitials: "SW",
+            dob: "06/15/1992",
+            diagnosis: "Anxiety Screening",
+            diagnosisCode: "F41.1",
+            date: "Oct 22, 2023",
+            type: "Progress Note",
+            format: "soap",
             content: {
                 subjective: "Patient reports improved mood over the past week. Still experiencing some anxiety in social situations.",
                 objective: "Patient appears well-groomed and engaged. Eye contact appropriate. No psychomotor agitation noted.",
-                assessment: "Improving depression symptoms. Anxiety still present but manageable. Patient responding well to current treatment plan.",
+                assessment: "Generalized anxiety disorder, improving. PHQ-9 score improved from 12 to 7.",
                 plan: "Continue current medication regimen. Schedule follow-up in 2 weeks. Encourage continued therapy attendance."
             },
-            status: "completed"
-        };
+            status: "Signed"
+        },
+        "5": {
+            id: "5",
+            patientName: "David Miller",
+            patientInitials: "DM",
+            dob: "09/30/1968",
+            diagnosis: "Lower Back Pain",
+            diagnosisCode: "M54.5",
+            date: "Oct 20, 2023",
+            type: "Bio-Psychosocial Assessment",
+            format: "paragraph",
+            content: "Patient is a 55-year-old male presenting for an initial assessment. He reports a history of chronic lower back pain following a work-related injury 10 years ago. He describes his current mood as 'stable but frustrated' due to limited mobility.\n\nClinically, the patient is cooperative and articulate. He has maintained consistent employment in a modified capacity and has strong family support. He denies acute suicidal ideation but expresses concern about long-term physical health trends.\n\nThe primary goals for treatment are pain management, improved sleep hygiene, and cognitive restructuring regarding physical limitations. Referral to physical therapy and a vocational counselor is recommended.",
+            status: "Signed"
+        }
     };
 
-    const mockNote = getMockNote(id);
+    const mockNote = allNotes[id] || {
+        id: id,
+        patientName: "Unknown Patient",
+        patientInitials: "??",
+        dob: "N/A",
+        diagnosis: "N/A",
+        diagnosisCode: "N/A",
+        date: new Date().toLocaleDateString(),
+        type: "Progress Note",
+        format: "paragraph" as const,
+        content: "Note not found.",
+        status: "Draft"
+    };
 
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
