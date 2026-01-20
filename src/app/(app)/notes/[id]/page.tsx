@@ -90,10 +90,13 @@ export default function NotePage() {
                             <Trash2 className="h-4 w-4 text-destructive" />
                             Delete
                         </button>
-                        <button className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
+                        <Link
+                            href={`/notes/new?edit=${id}`}
+                            className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                        >
                             <Edit3 className="h-4 w-4" />
                             Edit Note
-                        </button>
+                        </Link>
                     </div>
                 </div>
 
