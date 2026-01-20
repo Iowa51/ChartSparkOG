@@ -20,6 +20,28 @@ export default function SettingsPage() {
     const [saved, setSaved] = useState(false);
     const [activeTab, setActiveTab] = useState('profile');
 
+    // Profile settings
+    const [autoSignNotes, setAutoSignNotes] = useState(false);
+    const [aiSuggestions, setAiSuggestions] = useState(true);
+
+    // Notification settings
+    const [notifications, setNotifications] = useState({
+        email: true,
+        appointments: true,
+        newPatients: false,
+        billing: true,
+    });
+
+    // Security settings
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+    // Appearance settings
+    const [theme, setTheme] = useState<'Light' | 'Dark' | 'System'>('System');
+    const [compactMode, setCompactMode] = useState(false);
+
+    // EHR settings
+    const [ehrAutoSync, setEhrAutoSync] = useState(true);
+
     const handleSave = async () => {
         setIsSaving(true);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -132,9 +154,12 @@ export default function SettingsPage() {
                                                 <p className="text-sm font-bold">Auto-sign notes</p>
                                                 <p className="text-xs text-muted-foreground">Automatically sign notes after final review.</p>
                                             </div>
-                                            <div className="h-6 w-11 bg-muted rounded-full relative cursor-pointer border border-border">
-                                                <div className="h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform translate-x-0 transition-transform" />
-                                            </div>
+                                            <button
+                                                onClick={() => setAutoSignNotes(!autoSignNotes)}
+                                                className={`h-6 w-11 ${autoSignNotes ? 'bg-primary' : 'bg-muted'} rounded-full relative cursor-pointer border border-border transition-colors`}
+                                            >
+                                                <div className={`h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform ${autoSignNotes ? 'translate-x-5' : 'translate-x-0'} transition-transform`} />
+                                            </button>
                                         </div>
 
                                         <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-primary/20 ring-1 ring-primary/5">
@@ -142,9 +167,12 @@ export default function SettingsPage() {
                                                 <p className="text-sm font-bold">AI Clinical Suggestions</p>
                                                 <p className="text-xs text-muted-foreground">Enable real-time ICD-10 and CPT coding assistance.</p>
                                             </div>
-                                            <div className="h-6 w-11 bg-primary rounded-full relative cursor-pointer shadow-inner">
-                                                <div className="h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform translate-x-5 transition-transform" />
-                                            </div>
+                                            <button
+                                                onClick={() => setAiSuggestions(!aiSuggestions)}
+                                                className={`h-6 w-11 ${aiSuggestions ? 'bg-primary' : 'bg-muted'} rounded-full relative cursor-pointer shadow-inner transition-colors`}
+                                            >
+                                                <div className={`h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform ${aiSuggestions ? 'translate-x-5' : 'translate-x-0'} transition-transform`} />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -162,19 +190,22 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="p-6 space-y-4">
                                     {[
-                                        { label: "Email notifications", desc: "Receive email alerts for important updates", enabled: true },
-                                        { label: "Appointment reminders", desc: "Get notified before scheduled appointments", enabled: true },
-                                        { label: "New patient alerts", desc: "Notify when new patients are assigned", enabled: false },
-                                        { label: "Billing updates", desc: "Receive billing and payment notifications", enabled: true },
-                                    ].map((item, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50">
+                                        { key: 'email' as const, label: "Email notifications", desc: "Receive email alerts for important updates" },
+                                        { key: 'appointments' as const, label: "Appointment reminders", desc: "Get notified before scheduled appointments" },
+                                        { key: 'newPatients' as const, label: "New patient alerts", desc: "Notify when new patients are assigned" },
+                                        { key: 'billing' as const, label: "Billing updates", desc: "Receive billing and payment notifications" },
+                                    ].map((item) => (
+                                        <div key={item.key} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50">
                                             <div className="space-y-0.5">
                                                 <p className="text-sm font-bold">{item.label}</p>
                                                 <p className="text-xs text-muted-foreground">{item.desc}</p>
                                             </div>
-                                            <div className={`h-6 w-11 ${item.enabled ? 'bg-primary' : 'bg-muted'} rounded-full relative cursor-pointer border border-border`}>
-                                                <div className={`h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform ${item.enabled ? 'translate-x-5' : 'translate-x-0'} transition-transform`} />
-                                            </div>
+                                            <button
+                                                onClick={() => setNotifications(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                                                className={`h-6 w-11 ${notifications[item.key] ? 'bg-primary' : 'bg-muted'} rounded-full relative cursor-pointer border border-border transition-colors`}
+                                            >
+                                                <div className={`h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform ${notifications[item.key] ? 'translate-x-5' : 'translate-x-0'} transition-transform`} />
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
@@ -208,10 +239,13 @@ export default function SettingsPage() {
                                     <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-primary/20 ring-1 ring-primary/5 mt-4">
                                         <div className="space-y-0.5">
                                             <p className="text-sm font-bold">Two-Factor Authentication</p>
-                                            <p className="text-xs text-muted-foreground">Add an extra layer of security to your account.</p>
+                                            <p className="text-xs text-muted-foreground">{twoFactorEnabled ? '2FA is currently enabled on your account.' : 'Add an extra layer of security to your account.'}</p>
                                         </div>
-                                        <button className="text-xs font-black uppercase tracking-widest text-primary hover:underline px-4 py-2 bg-primary/5 rounded-lg border border-primary/10">
-                                            Enable 2FA
+                                        <button
+                                            onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
+                                            className={`text-xs font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-all ${twoFactorEnabled ? 'bg-emerald-500 text-white border-emerald-600' : 'text-primary hover:underline bg-primary/5 border-primary/10'}`}
+                                        >
+                                            {twoFactorEnabled ? '2FA Enabled ✓' : 'Enable 2FA'}
                                         </button>
                                     </div>
                                 </div>
@@ -231,9 +265,13 @@ export default function SettingsPage() {
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Theme</label>
                                         <div className="flex gap-3">
-                                            {['Light', 'Dark', 'System'].map((theme) => (
-                                                <button key={theme} className={`px-6 py-3 rounded-xl text-sm font-bold border transition-all ${theme === 'System' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/20 border-border hover:border-primary/30'}`}>
-                                                    {theme}
+                                            {(['Light', 'Dark', 'System'] as const).map((t) => (
+                                                <button
+                                                    key={t}
+                                                    onClick={() => setTheme(t)}
+                                                    className={`px-6 py-3 rounded-xl text-sm font-bold border transition-all ${theme === t ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/20 border-border hover:border-primary/30'}`}
+                                                >
+                                                    {t}
                                                 </button>
                                             ))}
                                         </div>
@@ -243,9 +281,12 @@ export default function SettingsPage() {
                                             <p className="text-sm font-bold">Compact Mode</p>
                                             <p className="text-xs text-muted-foreground">Reduce spacing for more content on screen.</p>
                                         </div>
-                                        <div className="h-6 w-11 bg-muted rounded-full relative cursor-pointer border border-border">
-                                            <div className="h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform translate-x-0 transition-transform" />
-                                        </div>
+                                        <button
+                                            onClick={() => setCompactMode(!compactMode)}
+                                            className={`h-6 w-11 ${compactMode ? 'bg-primary' : 'bg-muted'} rounded-full relative cursor-pointer border border-border transition-colors`}
+                                        >
+                                            <div className={`h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform ${compactMode ? 'translate-x-5' : 'translate-x-0'} transition-transform`} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -273,9 +314,12 @@ export default function SettingsPage() {
                                             <p className="text-sm font-bold">Auto-sync notes</p>
                                             <p className="text-xs text-muted-foreground">Automatically push signed notes to EHR.</p>
                                         </div>
-                                        <div className="h-6 w-11 bg-primary rounded-full relative cursor-pointer shadow-inner">
-                                            <div className="h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform translate-x-5 transition-transform" />
-                                        </div>
+                                        <button
+                                            onClick={() => setEhrAutoSync(!ehrAutoSync)}
+                                            className={`h-6 w-11 ${ehrAutoSync ? 'bg-primary' : 'bg-muted'} rounded-full relative cursor-pointer shadow-inner transition-colors`}
+                                        >
+                                            <div className={`h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform ${ehrAutoSync ? 'translate-x-5' : 'translate-x-0'} transition-transform`} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
