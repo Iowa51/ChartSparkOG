@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
     Bell,
     CheckCircle,
@@ -14,7 +15,8 @@ import {
     Check,
     Trash2,
     Filter,
-    Search
+    Search,
+    ExternalLink
 } from "lucide-react";
 
 interface Notification {
@@ -27,6 +29,7 @@ interface Notification {
     read: boolean;
     icon: typeof Bell;
     color: string;
+    link: string;
 }
 
 const allNotifications: Notification[] = [
@@ -39,7 +42,8 @@ const allNotifications: Notification[] = [
         type: "patient",
         read: false,
         icon: UserPlus,
-        color: "text-blue-500 bg-blue-50 dark:bg-blue-950/50"
+        color: "text-blue-500 bg-blue-50 dark:bg-blue-950/50",
+        link: "/patients"
     },
     {
         id: 2,
@@ -50,7 +54,8 @@ const allNotifications: Notification[] = [
         type: "appointment",
         read: false,
         icon: Calendar,
-        color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/50"
+        color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/50",
+        link: "/calendar"
     },
     {
         id: 3,
@@ -61,7 +66,8 @@ const allNotifications: Notification[] = [
         type: "billing",
         read: false,
         icon: CreditCard,
-        color: "text-amber-500 bg-amber-50 dark:bg-amber-950/50"
+        color: "text-amber-500 bg-amber-50 dark:bg-amber-950/50",
+        link: "/billing"
     },
     {
         id: 4,
@@ -72,7 +78,8 @@ const allNotifications: Notification[] = [
         type: "system",
         read: true,
         icon: Settings,
-        color: "text-purple-500 bg-purple-50 dark:bg-purple-950/50"
+        color: "text-purple-500 bg-purple-50 dark:bg-purple-950/50",
+        link: "/settings"
     },
     {
         id: 5,
@@ -83,7 +90,8 @@ const allNotifications: Notification[] = [
         type: "document",
         read: true,
         icon: FileText,
-        color: "text-slate-500 bg-slate-50 dark:bg-slate-800/50"
+        color: "text-slate-500 bg-slate-50 dark:bg-slate-800/50",
+        link: "/notes"
     },
     {
         id: 6,
@@ -94,7 +102,8 @@ const allNotifications: Notification[] = [
         type: "appointment",
         read: true,
         icon: Calendar,
-        color: "text-red-500 bg-red-50 dark:bg-red-950/50"
+        color: "text-red-500 bg-red-50 dark:bg-red-950/50",
+        link: "/calendar"
     },
     {
         id: 7,
@@ -105,7 +114,8 @@ const allNotifications: Notification[] = [
         type: "document",
         read: true,
         icon: FileText,
-        color: "text-primary bg-primary/10"
+        color: "text-primary bg-primary/10",
+        link: "/treatment-planner"
     },
     {
         id: 8,
@@ -116,11 +126,13 @@ const allNotifications: Notification[] = [
         type: "system",
         read: true,
         icon: MessageSquare,
-        color: "text-indigo-500 bg-indigo-50 dark:bg-indigo-950/50"
+        color: "text-indigo-500 bg-indigo-50 dark:bg-indigo-950/50",
+        link: "/dashboard"
     }
 ];
 
 export default function NotificationsPage() {
+    const router = useRouter();
     const [notifications, setNotifications] = useState(allNotifications);
     const [filter, setFilter] = useState<"all" | "unread">("all");
     const [searchQuery, setSearchQuery] = useState("");
@@ -134,7 +146,8 @@ export default function NotificationsPage() {
 
     const unreadCount = notifications.filter(n => !n.read).length;
 
-    const markAsRead = (id: number) => {
+    const markAsRead = (id: number, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
         setNotifications(prev =>
             prev.map(n => n.id === id ? { ...n, read: true } : n)
         );
@@ -144,8 +157,16 @@ export default function NotificationsPage() {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     };
 
-    const deleteNotification = (id: number) => {
+    const deleteNotification = (id: number, e: React.MouseEvent) => {
+        e.stopPropagation();
         setNotifications(prev => prev.filter(n => n.id !== id));
+    };
+
+    const handleNotificationClick = (notification: Notification) => {
+        // Mark as read first
+        markAsRead(notification.id);
+        // Navigate to the relevant page
+        router.push(notification.link);
     };
 
     const groupedNotifications = filteredNotifications.reduce((acc, notification) => {
@@ -232,7 +253,8 @@ export default function NotificationsPage() {
                                 {items.map((notification) => (
                                     <div
                                         key={notification.id}
-                                        className={`group relative bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 transition-all hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 ${!notification.read ? "ring-2 ring-primary/20 bg-primary/5" : ""
+                                        onClick={() => handleNotificationClick(notification)}
+                                        className={`group relative bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 transition-all hover:shadow-md hover:border-primary/50 dark:hover:border-primary/50 cursor-pointer ${!notification.read ? "ring-2 ring-primary/20 bg-primary/5" : ""
                                             }`}
                                     >
                                         <div className="flex gap-4">
@@ -241,16 +263,19 @@ export default function NotificationsPage() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start gap-2">
-                                                    <h3 className={`text-sm font-bold text-slate-900 dark:text-white ${!notification.read ? "text-primary" : ""
+                                                    <h3 className={`text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors ${!notification.read ? "text-primary" : ""
                                                         }`}>
                                                         {notification.title}
                                                         {!notification.read && (
                                                             <span className="ml-2 inline-block h-2 w-2 rounded-full bg-primary" />
                                                         )}
                                                     </h3>
-                                                    <span className="text-xs text-slate-400 whitespace-nowrap">
-                                                        {notification.time}
-                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs text-slate-400 whitespace-nowrap">
+                                                            {notification.time}
+                                                        </span>
+                                                        <ExternalLink className="h-3 w-3 text-slate-300 group-hover:text-primary transition-colors" />
+                                                    </div>
                                                 </div>
                                                 <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
                                                     {notification.description}
@@ -259,10 +284,10 @@ export default function NotificationsPage() {
                                         </div>
 
                                         {/* Actions */}
-                                        <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="absolute top-3 right-12 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {!notification.read && (
                                                 <button
-                                                    onClick={() => markAsRead(notification.id)}
+                                                    onClick={(e) => markAsRead(notification.id, e)}
                                                     className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-emerald-500 transition-colors"
                                                     title="Mark as read"
                                                 >
@@ -270,7 +295,7 @@ export default function NotificationsPage() {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => deleteNotification(notification.id)}
+                                                onClick={(e) => deleteNotification(notification.id, e)}
                                                 className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors"
                                                 title="Delete"
                                             >
@@ -287,3 +312,4 @@ export default function NotificationsPage() {
         </div>
     );
 }
+
