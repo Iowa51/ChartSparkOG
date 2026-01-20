@@ -49,11 +49,11 @@ function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
     const [searchQuery, setSearchQuery] = useState("");
 
     const allClaims = [
-        { id: "C-1004", patient: "Arthur Smith", patientId: "1", service: "T2DM Management", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
-        { id: "C-1005", patient: "John Doe", patientId: "2", service: "Acute Pharyngitis", date: "Today", amount: 165.00, status: "Missing ICD-10", type: "Pending" },
-        { id: "C-1001", patient: "Maria Rodriguez", patientId: "3", service: "Hypertension F/U", date: "Oct 20, 2023", amount: 150.00, status: "Paid", type: "Paid" },
-        { id: "C-1002", patient: "James Wilson", patientId: "4", service: "Mental Health Session", date: "Oct 15, 2023", amount: 200.00, status: "Overdue", type: "Overdue" },
-        { id: "C-1003", patient: "Linda Blane", patientId: "5", service: "Initial Consultation", date: "Oct 12, 2023", amount: 250.00, status: "Paid", type: "Paid" },
+        { id: "C-1004", patient: "Sarah Connor", patientId: "p1", service: "Hypertension F/U", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
+        { id: "C-1005", patient: "Michael Reese", patientId: "p2", service: "Seasonal Allergies", date: "Today", amount: 165.00, status: "Missing ICD-10", type: "Pending" },
+        { id: "C-1001", patient: "Elena Fisher", patientId: "p3", service: "Anxiety F/U", date: "Oct 20, 2023", amount: 150.00, status: "Paid", type: "Paid" },
+        { id: "C-1002", patient: "Nathan Drake", patientId: "p4", service: "Back Pain Eval", date: "Oct 15, 2023", amount: 200.00, status: "Overdue", type: "Overdue" },
+        { id: "C-1003", patient: "Victor Jones", patientId: "p5", service: "Initial Consultation", date: "Oct 12, 2023", amount: 250.00, status: "Paid", type: "Paid" },
     ];
 
     const filteredClaims = allClaims.filter(c => {
