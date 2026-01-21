@@ -54,7 +54,7 @@ class SafeAzureOpenAIService {
      */
     async diagnose(sessionNotes: string, specialty: string = 'mental_health'): Promise<any> {
         if (!this.isAvailable()) {
-            return this.getDemoDiagnosis();
+            throw new Error('Azure OpenAI is not configured. Please configure AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_DEPLOYMENT_NAME environment variables.');
         }
 
         const systemPrompt = specialty === 'geriatric'
@@ -69,15 +69,36 @@ class SafeAzureOpenAIService {
                3. Risk scores (PHQ-9, GAD-7 estimates)
                4. Evidence-based treatment recommendations`;
 
+        const jsonStructureExample = `{
+  "symptoms": [
+    { "text": "symptom name", "confidence": 0.85, "severity": "mild|moderate|severe" }
+  ],
+  "diagnoses": [
+    {
+      "condition": "Diagnosis name",
+      "icdCode": "F32.1",
+      "confidence": 0.85,
+      "dsm5Criteria": ["Criterion 1", "Criterion 2", "Criterion 3"],
+      "evidence": "Detailed clinical evidence supporting this diagnosis.",
+      "treatmentConsiderations": "Recommended treatment approaches for this condition."
+    }
+  ],
+  "riskScores": {
+    "phq9": { "score": 18, "severity": "Moderately Severe Depression", "interpretation": "Clinical interpretation" },
+    "gad7": { "score": 12, "severity": "Moderate Anxiety", "interpretation": "Clinical interpretation" }
+  },
+  "recommendations": ["Recommendation 1", "Recommendation 2"]
+}`;
+
         try {
             const startTime = Date.now();
             const response = await this.client!.chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     { role: "system", content: systemPrompt },
-                    { role: "user", content: `Analyze these clinical notes:\n\n${sessionNotes}\n\nProvide your analysis in JSON format with keys: symptoms, diagnoses, riskScores, recommendations` }
+                    { role: "user", content: `Analyze these clinical notes:\n\n${sessionNotes}\n\nProvide your analysis in the following EXACT JSON format. IMPORTANT: confidence values MUST be decimals between 0 and 1 (e.g., 0.85 not 85), and dsm5Criteria MUST be an array of strings.\n\n${jsonStructureExample}` }
                 ],
-                max_tokens: 1500,
+                max_tokens: 2000,
                 temperature: 0.3,
                 top_p: 0.9
             });
@@ -87,9 +108,20 @@ class SafeAzureOpenAIService {
 
             // Try to parse as JSON, otherwise return raw content
             try {
-                const parsed = JSON.parse(content);
+                // Extract JSON from markdown code blocks if present
+                let jsonContent = content;
+                const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    jsonContent = jsonMatch[1];
+                }
+
+                const parsed = JSON.parse(jsonContent);
+
+                // Normalize the response to ensure correct format
+                const normalized = this.normalizeDiagnosisResponse(parsed);
+
                 return {
-                    ...parsed,
+                    ...normalized,
                     fromCache: false,
                     modelUsed: this.deploymentName,
                     processingTime
@@ -104,9 +136,43 @@ class SafeAzureOpenAIService {
             }
         } catch (error) {
             console.error('[Azure OpenAI] Diagnose error:', error);
-            return this.getDemoDiagnosis();
+            throw error;
         }
     }
+
+    /**
+     * Normalize diagnosis response to ensure consistent format
+     */
+    private normalizeDiagnosisResponse(data: any): any {
+        // Normalize symptoms confidence values
+        if (data.symptoms && Array.isArray(data.symptoms)) {
+            data.symptoms = data.symptoms.map((s: any) => ({
+                ...s,
+                confidence: s.confidence > 1 ? s.confidence / 100 : s.confidence
+            }));
+        }
+
+        // Normalize diagnoses
+        if (data.diagnoses && Array.isArray(data.diagnoses)) {
+            data.diagnoses = data.diagnoses.map((d: any) => ({
+                ...d,
+                confidence: d.confidence > 1 ? d.confidence / 100 : d.confidence,
+                // Ensure dsm5Criteria is an array
+                dsm5Criteria: Array.isArray(d.dsm5Criteria)
+                    ? d.dsm5Criteria
+                    : typeof d.dsm5Criteria === 'string'
+                        ? d.dsm5Criteria.split(/[,;]|\.\s+/).map((c: string) => c.trim()).filter((c: string) => c.length > 0)
+                        : [],
+                // Ensure evidence field exists
+                evidence: d.evidence || d.supportingEvidence || d.clinicalEvidence || 'Clinical evidence supports this diagnosis based on the presented symptoms.',
+                // Ensure treatmentConsiderations field exists
+                treatmentConsiderations: d.treatmentConsiderations || d.treatment || d.recommendations || 'Evidence-based treatment should be tailored to patient presentation and preferences.'
+            }));
+        }
+
+        return data;
+    }
+
 
     /**
      * Generate treatment plan recommendations
@@ -250,43 +316,6 @@ Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** se
     }
 
     // ========== DEMO FALLBACKS ==========
-
-    private getDemoDiagnosis() {
-        return {
-            symptoms: [
-                { text: 'Low mood', confidence: 85, severity: 'moderate' },
-                { text: 'Sleep disturbance', confidence: 90, severity: 'moderate' },
-                { text: 'Difficulty concentrating', confidence: 75, severity: 'mild' }
-            ],
-            diagnoses: [
-                {
-                    condition: 'Major Depressive Disorder, Moderate Episode',
-                    icdCode: 'F32.1',
-                    confidence: 85,
-                    dsm5Criteria: [
-                        'Depressed mood most of the day',
-                        'Diminished interest in activities',
-                        'Sleep disturbance',
-                        'Difficulty concentrating'
-                    ],
-                    supportingEvidence: 'Patient reports persistent low mood for 6 weeks, sleep difficulties, and reduced interest in previously enjoyed activities.'
-                }
-            ],
-            riskScores: {
-                phq9: { score: 18, severity: 'Moderately Severe Depression', interpretation: 'Warrants active treatment' },
-                gad7: { score: 12, severity: 'Moderate Anxiety', interpretation: 'Consider further assessment' }
-            },
-            recommendations: [
-                'Consider antidepressant medication (SSRI first-line)',
-                'Refer for cognitive behavioral therapy (CBT)',
-                'Follow-up in 2 weeks to assess treatment response',
-                'Assess suicide risk at each visit'
-            ],
-            fromCache: false,
-            modelUsed: 'demo-mode',
-            processingTime: '0.5s'
-        };
-    }
 
     private getDemoTreatmentPlan() {
         return {

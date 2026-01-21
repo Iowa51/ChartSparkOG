@@ -104,13 +104,7 @@ const Progress = ({ value, className }: { value: number, className?: string }) =
     </div>
 );
 
-const SAMPLE_NOTES = `Patient presents with persistent low mood for the past 3 weeks. Reports difficulty sleeping (waking at 3 AM most nights), decreased appetite, and feeling constantly tired despite adequate rest. 
 
-Describes feeling worthless and having difficulty concentrating at work. No longer enjoys activities that previously brought pleasure (anhedonia). 
-
-Denies current suicidal ideation but reports passive thoughts about "not wanting to wake up." No specific plan or intent. Has strong support system with spouse and close friends.
-
-Patient started experiencing these symptoms after a work-related setback but symptoms have persisted and worsened. Functional impairment noted in work performance and social relationships.`;
 
 export default function AIAssistantPage() {
     const [sessionNotes, setSessionNotes] = useState("");
@@ -225,12 +219,6 @@ export default function AIAssistantPage() {
                             <div>
                                 <div className="flex items-center justify-between mb-2.5 ml-1">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Session Observational Notes</label>
-                                    <button
-                                        onClick={() => setSessionNotes(SAMPLE_NOTES)}
-                                        className="text-[10px] font-black uppercase text-primary hover:underline transition-all"
-                                    >
-                                        Load Sample Case
-                                    </button>
                                 </div>
                                 <textarea
                                     placeholder="Enter raw session notes, patient symptoms, or transcribed observations for neural analysis..."
@@ -351,11 +339,21 @@ export default function AIAssistantPage() {
                                             </div>
 
                                             <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-500/10 rounded-xl mb-4">
-                                                <p className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1.5 mb-1.5">
+                                                <p className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1.5 mb-2">
                                                     <CheckCircle2 className="h-3 w-3" />
                                                     DSM-5 Criteria Alignment
                                                 </p>
-                                                <p className="text-sm text-slate-700 dark:text-slate-300 font-medium italic">"{diagnosis.dsm5Criteria}"</p>
+                                                <ul className="text-sm text-slate-700 dark:text-slate-300 font-medium space-y-1.5">
+                                                    {Array.isArray(diagnosis.dsm5Criteria)
+                                                        ? diagnosis.dsm5Criteria.map((criterion: string, idx: number) => (
+                                                            <li key={idx} className="flex items-start gap-2">
+                                                                <span className="text-emerald-500 mt-1">•</span>
+                                                                <span>{criterion}</span>
+                                                            </li>
+                                                        ))
+                                                        : <li className="italic">"{diagnosis.dsm5Criteria}"</li>
+                                                    }
+                                                </ul>
                                             </div>
 
                                             {expandedDiagnosis === i && (
