@@ -418,13 +418,15 @@ export default function IntegrationsPage() {
 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Data Quality</CardTitle>
-                        <AlertCircle className="h-4 w-4 text-emerald-500" />
+                        <CardTitle className="text-sm font-medium">System Health</CardTitle>
+                        <Shield className="h-4 w-4 text-emerald-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white">98%</div>
+                        <div className="text-2xl font-bold text-slate-900 dark:text-white">
+                            {ehrSystems.some(s => s.status === 'connected') ? '100%' : 'N/A'}
+                        </div>
                         <p className="text-xs text-slate-500 mt-1">
-                            Successful data transfers
+                            {ehrSystems.some(s => s.status === 'connected') ? 'All systems operational' : 'Connect a system to see health'}
                         </p>
                     </CardContent>
                 </Card>
@@ -432,7 +434,6 @@ export default function IntegrationsPage() {
 
             {/* EHR Systems */}
             <div>
-                <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Available EHR Systems</h3>
                 <div className="grid md:grid-cols-3 gap-4">
                     {ehrSystems.map(ehr => (
                         <Card key={ehr.id || ehr.ehr_system} className={ehr.status === 'connected' ? 'border-green-500 dark:border-green-500/50' : ''}>

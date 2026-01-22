@@ -29,9 +29,21 @@ export async function GET(request: NextRequest) {
         const offset = parseInt(searchParams.get('offset') || '0');
 
         // Fetch EHR-related audit logs (RLS will filter by organization for non-super-admins)
+        // Join with users table to get real names
         const { data, error } = await supabase
             .from('audit_logs')
-            .select('id, created_at, action, details')
+            .select(`
+                id, 
+                created_at, 
+                action, 
+                details,
+                user_id,
+                users (
+                    first_name,
+                    last_name,
+                    email
+                )
+            `)
             .like('action', 'EHR_%')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
@@ -42,15 +54,22 @@ export async function GET(request: NextRequest) {
         }
 
         // Transform to match UI expectations
-        const auditLog = (data || []).map((log: any) => ({
-            id: log.id,
-            timestamp: log.created_at,
-            system: log.details?.ehr_system || log.details?.display_name || 'ChartSpark',
-            action: formatEventType(log.action),
-            user: 'Authorized User',
-            records: log.details?.records_affected || 0,
-            status: 'success'
-        }));
+        const auditLog = (data || []).map((log: any) => {
+            const user = log.users;
+            const userName = user
+                ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email
+                : 'System';
+
+            return {
+                id: log.id,
+                timestamp: log.created_at,
+                system: log.details?.ehr_system || log.details?.display_name || 'ChartSpark',
+                action: formatEventType(log.action),
+                user: userName,
+                records: log.details?.records_affected || 0,
+                status: 'success'
+            };
+        });
 
         return NextResponse.json({ auditLog });
     } catch (error) {

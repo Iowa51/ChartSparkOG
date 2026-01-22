@@ -7,7 +7,6 @@ export async function GET() {
         const supabase = await createClient();
 
         if (!supabase) {
-            // Demo mode fallback
             return NextResponse.json({
                 consents: {
                     share_diagnoses: true,

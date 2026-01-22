@@ -7,14 +7,7 @@ export async function GET() {
         const supabase = await createClient();
 
         if (!supabase) {
-            // Demo mode fallback
-            return NextResponse.json({
-                configurations: [
-                    { id: '1', ehr_system: 'chartpath', display_name: 'ChartPath', status: 'connected', patients_synced: 127, last_sync_at: new Date().toISOString() },
-                    { id: '2', ehr_system: 'epic', display_name: 'Epic', status: 'not_connected', patients_synced: 0, last_sync_at: null },
-                    { id: '3', ehr_system: 'cerner', display_name: 'Cerner', status: 'not_connected', patients_synced: 0, last_sync_at: null }
-                ]
-            });
+            return NextResponse.json({ configurations: [] });
         }
 
         // Get current user's organization
