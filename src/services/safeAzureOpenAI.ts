@@ -92,6 +92,8 @@ class SafeAzureOpenAIService {
 
         try {
             const startTime = Date.now();
+            console.log('[Azure OpenAI] Starting diagnosis request...');
+
             const response = await this.client!.chat.completions.create({
                 model: this.deploymentName,
                 messages: [
@@ -106,6 +108,10 @@ class SafeAzureOpenAIService {
             const content = response.choices[0].message?.content || '';
             const processingTime = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
 
+            console.log('[Azure OpenAI] Response received in', processingTime);
+            console.log('[Azure OpenAI] Content length:', content.length);
+            console.log('[Azure OpenAI] Content preview:', content.substring(0, 200));
+
             // Try to parse as JSON, otherwise return raw content
             try {
                 // Extract JSON from markdown code blocks if present
@@ -113,9 +119,11 @@ class SafeAzureOpenAIService {
                 const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
                     jsonContent = jsonMatch[1];
+                    console.log('[Azure OpenAI] Extracted JSON from code block');
                 }
 
                 const parsed = JSON.parse(jsonContent);
+                console.log('[Azure OpenAI] Successfully parsed JSON');
 
                 // Normalize the response to ensure correct format
                 const normalized = this.normalizeDiagnosisResponse(parsed);
@@ -126,7 +134,9 @@ class SafeAzureOpenAIService {
                     modelUsed: this.deploymentName,
                     processingTime
                 };
-            } catch {
+            } catch (parseError) {
+                console.error('[Azure OpenAI] JSON parse error:', parseError);
+                console.log('[Azure OpenAI] Raw content:', content);
                 return {
                     rawAnalysis: content,
                     fromCache: false,

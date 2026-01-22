@@ -134,14 +134,16 @@ export default function AIAssistantPage() {
                 })
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                throw new Error('Analysis failed');
+                throw new Error(data.error || 'Analysis failed');
             }
 
-            const data = await response.json();
             setAnalysis(data);
         } catch (err) {
-            setError("Failed to analyze symptoms. Please try again.");
+            const errorMessage = err instanceof Error ? err.message : "Failed to analyze symptoms. Please try again.";
+            setError(errorMessage);
             console.error(err);
         } finally {
             setLoading(false);

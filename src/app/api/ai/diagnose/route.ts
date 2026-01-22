@@ -25,21 +25,46 @@ async function handler(context: AuthContext) {
             );
         }
 
-        // Use safe Azure OpenAI wrapper (falls back to demo if not configured)
+        // Use Azure OpenAI wrapper
         const result = await safeAzureOpenAI.diagnose(sessionNotes, specialty);
 
         return NextResponse.json(result);
 
     } catch (error: unknown) {
         console.error('Error in diagnose API:', error);
+
+        // Provide more specific error messages
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        if (errorMessage.includes('not configured')) {
+            return NextResponse.json(
+                { error: 'Azure OpenAI is not configured. Please set up your API credentials.' },
+                { status: 503 }
+            );
+        }
+
+        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+            return NextResponse.json(
+                { error: 'Azure OpenAI authentication failed. Please check your API key.' },
+                { status: 401 }
+            );
+        }
+
+        if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+            return NextResponse.json(
+                { error: 'Rate limit exceeded. Please wait a moment and try again.' },
+                { status: 429 }
+            );
+        }
+
         return NextResponse.json(
-            { error: 'Failed to analyze clinical notes' },
+            { error: `AI analysis failed: ${errorMessage}` },
             { status: 500 }
         );
     }
 }
 
-// SEC-004: Export with authentication (feature requirement removed for demo mode compatibility)
+// SEC-004: Export with authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
 });

@@ -1,7 +1,43 @@
 "use client";
 
-import { useState } from 'react';
-import { Database, Link2, CheckCircle2, Circle, AlertCircle, RefreshCw, X, ChevronDown, Eye, Download, Upload, Shield } from "lucide-react";
+import { useState, useEffect, useCallback } from 'react';
+import { Database, Link2, CheckCircle2, Circle, AlertCircle, RefreshCw, X, ChevronDown, Eye, Download, Upload, Shield, Loader2 } from "lucide-react";
+
+// Types for API responses
+interface EHRConfiguration {
+    id: string | null;
+    ehr_system: string;
+    display_name: string;
+    status: 'connected' | 'pending' | 'not_connected' | 'error';
+    last_sync_at: string | null;
+    patients_synced: number;
+}
+
+interface AuditLogEntry {
+    id: string;
+    timestamp: string;
+    system: string;
+    action: string;
+    user: string;
+    records: number;
+    status: 'success' | 'failed';
+}
+
+interface ConsentSettings {
+    share_diagnoses: boolean;
+    share_medications: boolean;
+    share_notes: boolean;
+    share_labs: boolean;
+    share_appointments: boolean;
+    share_assessments: boolean;
+}
+
+// EHR System metadata (logos and descriptions)
+const EHR_METADATA: Record<string, { logo: string; description: string }> = {
+    chartpath: { logo: '🏥', description: 'Leading EHR for mental health practices' },
+    epic: { logo: '⚕️', description: 'Enterprise healthcare software' },
+    cerner: { logo: '🏨', description: 'Health information technology solutions' }
+};
 
 // Local Component Definitions
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -151,94 +187,89 @@ export default function IntegrationsPage() {
     const [selectedEHR, setSelectedEHR] = useState<string>('');
     const [connectDialogOpen, setConnectDialogOpen] = useState(false);
     const [testingConnection, setTestingConnection] = useState(false);
+    const [savingConsents, setSavingConsents] = useState(false);
 
-    // New State for Task 2.16
-    const [consents, setConsents] = useState({
-        shareDiagnoses: true,
-        shareMedications: true,
-        shareNotes: false,
-        shareLabs: true,
-        shareAppointments: true,
-        shareAssessments: false
+    // Loading and error states
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Data from API
+    const [ehrSystems, setEhrSystems] = useState<EHRConfiguration[]>([]);
+    const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+    const [consents, setConsents] = useState<ConsentSettings>({
+        share_diagnoses: true,
+        share_medications: true,
+        share_notes: false,
+        share_labs: true,
+        share_appointments: true,
+        share_assessments: false
     });
 
-    const ehrSystems = [
-        {
-            id: 'chartpath',
-            name: 'ChartPath',
-            description: 'Leading EHR for mental health practices',
-            status: 'connected',
-            lastSync: '2024-01-15 10:30 AM',
-            patientsSync: 127,
-            logo: '🏥'
-        },
-        {
-            id: 'epic',
-            name: 'Epic',
-            description: 'Enterprise healthcare software',
-            status: 'not_connected',
-            lastSync: null,
-            patientsSync: 0,
-            logo: '⚕️'
-        },
-        {
-            id: 'cerner',
-            name: 'Cerner',
-            description: 'Health information technology solutions',
-            status: 'not_connected',
-            lastSync: null,
-            patientsSync: 0,
-            logo: '🏨'
-        }
-    ];
+    // Fetch all data on mount
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const [configRes, consentRes, auditRes] = await Promise.all([
+                fetch('/api/ehr/configurations'),
+                fetch('/api/ehr/consent'),
+                fetch('/api/ehr/audit-log')
+            ]);
 
-    const auditLog = [
-        {
-            id: 1,
-            timestamp: '2024-01-15 10:30:15',
-            system: 'ChartPath',
-            action: 'Data Sync',
-            user: 'System',
-            records: 127,
-            status: 'success'
-        },
-        {
-            id: 2,
-            timestamp: '2024-01-15 09:15:42',
-            system: 'ChartPath',
-            action: 'Patient Record Access',
-            user: 'Dr. Sarah Johnson',
-            records: 1,
-            status: 'success'
-        },
-        {
-            id: 3,
-            timestamp: '2024-01-14 16:45:33',
-            system: 'ChartPath',
-            action: 'Data Export',
-            user: 'Admin',
-            records: 50,
-            status: 'success'
-        },
-        {
-            id: 4,
-            timestamp: '2024-01-14 14:22:18',
-            system: 'ChartPath',
-            action: 'Data Sync',
-            user: 'System',
-            records: 125,
-            status: 'success'
-        },
-        {
-            id: 5,
-            timestamp: '2024-01-14 11:30:05',
-            system: 'Epic',
-            action: 'Connection Test',
-            user: 'Admin',
-            records: 0,
-            status: 'failed'
+            if (!configRes.ok || !consentRes.ok || !auditRes.ok) {
+                throw new Error('Failed to fetch EHR data');
+            }
+
+            const [configData, consentData, auditData] = await Promise.all([
+                configRes.json(),
+                consentRes.json(),
+                auditRes.json()
+            ]);
+
+            setEhrSystems(configData.configurations || []);
+            setConsents(consentData.consents || consents);
+            setAuditLog(auditData.auditLog || []);
+        } catch (err) {
+            console.error('Error fetching EHR data:', err);
+            setError('Failed to load EHR integration data');
+        } finally {
+            setLoading(false);
         }
-    ];
+    }, []);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+
+    // Save consent settings
+    const handleSaveConsents = async () => {
+        setSavingConsents(true);
+        try {
+            const response = await fetch('/api/ehr/consent', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(consents)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save consent settings');
+            }
+
+            // Refresh audit log to show the new entry
+            const auditRes = await fetch('/api/ehr/audit-log');
+            if (auditRes.ok) {
+                const auditData = await auditRes.json();
+                setAuditLog(auditData.auditLog || []);
+            }
+
+            alert('Consent preferences saved successfully!');
+        } catch (err) {
+            console.error('Error saving consents:', err);
+            alert('Failed to save consent preferences. Please try again.');
+        } finally {
+            setSavingConsents(false);
+        }
+    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -246,6 +277,8 @@ export default function IntegrationsPage() {
                 return 'text-green-600 dark:text-green-500';
             case 'pending':
                 return 'text-amber-600 dark:text-amber-500';
+            case 'error':
+                return 'text-red-600 dark:text-red-500';
             default:
                 return 'text-slate-400 dark:text-slate-500';
         }
@@ -257,6 +290,8 @@ export default function IntegrationsPage() {
                 return <Badge className="bg-green-600 hover:bg-green-700 text-white border-transparent">Connected</Badge>;
             case 'pending':
                 return <Badge variant="secondary">Pending</Badge>;
+            case 'error':
+                return <Badge variant="destructive">Error</Badge>;
             default:
                 return <Badge variant="outline">Not Connected</Badge>;
         }
@@ -269,6 +304,67 @@ export default function IntegrationsPage() {
             alert('Connection test successful! Validated credentials with provider.');
         }, 2000);
     };
+
+    const handleConnectEHR = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const formData = new FormData(e.currentTarget);
+
+        try {
+            const response = await fetch('/api/ehr/configurations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ehr_system: selectedEHR,
+                    display_name: EHR_METADATA[selectedEHR]?.description || selectedEHR,
+                    api_endpoint: formData.get('api_endpoint'),
+                    client_id: formData.get('client_id')
+                })
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to connect EHR');
+            }
+
+            setConnectDialogOpen(false);
+            fetchData(); // Refresh data
+            alert(`Connection request sent to ${selectedEHR}. Verification pending.`);
+        } catch (err) {
+            console.error('Error connecting EHR:', err);
+            alert('Failed to connect EHR. Please try again.');
+        }
+    };
+
+    // Format timestamp for display
+    const formatTimestamp = (timestamp: string | null) => {
+        if (!timestamp) return 'Never';
+        return new Date(timestamp).toLocaleString();
+    };
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="flex-1 flex items-center justify-center h-full">
+                <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                    <p className="text-slate-500">Loading EHR integrations...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="flex-1 flex items-center justify-center h-full">
+                <div className="text-center">
+                    <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-4" />
+                    <p className="text-red-500 mb-4">{error}</p>
+                    <Button onClick={fetchData}>Try Again</Button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 h-full overflow-y-auto">
@@ -312,10 +408,10 @@ export default function IntegrationsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {ehrSystems.reduce((sum, s) => sum + s.patientsSync, 0)}
+                            {ehrSystems.reduce((sum, s) => sum + (s.patients_synced || 0), 0)}
                         </div>
                         <p className="text-xs text-slate-500 mt-1">
-                            Last sync: {ehrSystems.find(s => s.status === 'connected')?.lastSync || 'Never'}
+                            Last sync: {formatTimestamp(ehrSystems.find(s => s.status === 'connected')?.last_sync_at || null)}
                         </p>
                     </CardContent>
                 </Card>
@@ -339,14 +435,14 @@ export default function IntegrationsPage() {
                 <h3 className="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Available EHR Systems</h3>
                 <div className="grid md:grid-cols-3 gap-4">
                     {ehrSystems.map(ehr => (
-                        <Card key={ehr.id} className={ehr.status === 'connected' ? 'border-green-500 dark:border-green-500/50' : ''}>
+                        <Card key={ehr.id || ehr.ehr_system} className={ehr.status === 'connected' ? 'border-green-500 dark:border-green-500/50' : ''}>
                             <CardHeader>
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="text-4xl">{ehr.logo}</div>
+                                        <div className="text-4xl">{EHR_METADATA[ehr.ehr_system]?.logo || '📋'}</div>
                                         <div>
                                             <CardTitle className="flex items-center gap-2 text-base">
-                                                {ehr.name}
+                                                {ehr.display_name}
                                                 <div className={getStatusColor(ehr.status)}>
                                                     {ehr.status === 'connected' ? (
                                                         <CheckCircle2 className="h-4 w-4" />
@@ -355,7 +451,7 @@ export default function IntegrationsPage() {
                                                     )}
                                                 </div>
                                             </CardTitle>
-                                            <CardDescription className="mt-1 line-clamp-1">{ehr.description}</CardDescription>
+                                            <CardDescription className="mt-1 line-clamp-1">{EHR_METADATA[ehr.ehr_system]?.description || ''}</CardDescription>
                                         </div>
                                     </div>
                                 </div>
@@ -370,11 +466,11 @@ export default function IntegrationsPage() {
                                     <>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-slate-500">Last Sync:</span>
-                                            <span className="font-medium text-slate-900 dark:text-white">{ehr.lastSync}</span>
+                                            <span className="font-medium text-slate-900 dark:text-white">{formatTimestamp(ehr.last_sync_at)}</span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-slate-500">Patients:</span>
-                                            <span className="font-medium text-slate-900 dark:text-white">{ehr.patientsSync}</span>
+                                            <span className="font-medium text-slate-900 dark:text-white">{ehr.patients_synced}</span>
                                         </div>
                                     </>
                                 )}
@@ -394,12 +490,12 @@ export default function IntegrationsPage() {
                                         size="sm"
                                         className="w-full bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
                                         onClick={() => {
-                                            setSelectedEHR(ehr.id);
+                                            setSelectedEHR(ehr.ehr_system);
                                             setConnectDialogOpen(true);
                                         }}
                                     >
                                         <Link2 className="mr-2 h-3 w-3" />
-                                        Connect {ehr.name}
+                                        Connect {ehr.display_name}
                                     </Button>
                                 )}
                             </CardContent>
@@ -427,8 +523,8 @@ export default function IntegrationsPage() {
                                 <p className="text-xs text-slate-500">ICD-10 codes and diagnosis history</p>
                             </div>
                             <Switch
-                                checked={consents.shareDiagnoses}
-                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, shareDiagnoses: checked })}
+                                checked={consents.share_diagnoses}
+                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, share_diagnoses: checked })}
                             />
                         </div>
 
@@ -438,8 +534,8 @@ export default function IntegrationsPage() {
                                 <p className="text-xs text-slate-500">Current and past prescriptions</p>
                             </div>
                             <Switch
-                                checked={consents.shareMedications}
-                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, shareMedications: checked })}
+                                checked={consents.share_medications}
+                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, share_medications: checked })}
                             />
                         </div>
 
@@ -449,8 +545,8 @@ export default function IntegrationsPage() {
                                 <p className="text-xs text-slate-500">Session notes and assessments</p>
                             </div>
                             <Switch
-                                checked={consents.shareNotes}
-                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, shareNotes: checked })}
+                                checked={consents.share_notes}
+                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, share_notes: checked })}
                             />
                         </div>
 
@@ -460,8 +556,8 @@ export default function IntegrationsPage() {
                                 <p className="text-xs text-slate-500">Laboratory test results and values</p>
                             </div>
                             <Switch
-                                checked={consents.shareLabs}
-                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, shareLabs: checked })}
+                                checked={consents.share_labs}
+                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, share_labs: checked })}
                             />
                         </div>
 
@@ -471,8 +567,8 @@ export default function IntegrationsPage() {
                                 <p className="text-xs text-slate-500">Scheduled and completed appointments</p>
                             </div>
                             <Switch
-                                checked={consents.shareAppointments}
-                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, shareAppointments: checked })}
+                                checked={consents.share_appointments}
+                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, share_appointments: checked })}
                             />
                         </div>
 
@@ -482,12 +578,19 @@ export default function IntegrationsPage() {
                                 <p className="text-xs text-slate-500">PHQ-9, GAD-7, and other standardized assessments</p>
                             </div>
                             <Switch
-                                checked={consents.shareAssessments}
-                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, shareAssessments: checked })}
+                                checked={consents.share_assessments}
+                                onCheckedChange={(checked: boolean) => setConsents({ ...consents, share_assessments: checked })}
                             />
                         </div>
 
-                        <Button className="w-full mt-4 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">Save Consent Preferences</Button>
+                        <Button
+                            className="w-full mt-4 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                            onClick={handleSaveConsents}
+                            disabled={savingConsents}
+                        >
+                            {savingConsents ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Save Consent Preferences
+                        </Button>
                     </CardContent>
                 </Card>
 
@@ -572,9 +675,9 @@ export default function IntegrationsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {auditLog.map(log => (
+                                    {auditLog.map((log: AuditLogEntry) => (
                                         <TableRow key={log.id}>
-                                            <TableCell className="text-xs font-mono text-slate-600 dark:text-slate-400">{log.timestamp}</TableCell>
+                                            <TableCell className="text-xs font-mono text-slate-600 dark:text-slate-400">{formatTimestamp(log.timestamp)}</TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="bg-white dark:bg-slate-950 font-normal">{log.system}</Badge>
                                             </TableCell>
@@ -602,18 +705,17 @@ export default function IntegrationsPage() {
                     <DialogHeader>
                         <DialogTitle>Connect EHR System</DialogTitle>
                     </DialogHeader>
-                    <form className="space-y-4 pt-4" onSubmit={(e) => {
-                        e.preventDefault();
-                        alert(`Connection request sent to ${selectedEHR ? ehrSystems.find(e => e.id === selectedEHR)?.name : 'Provider'}. Verification pending.`);
-                        setConnectDialogOpen(false);
-                    }}>
+                    <form className="space-y-4 pt-4" onSubmit={handleConnectEHR}>
                         <div className="space-y-2">
                             <Label>EHR System</Label>
                             <SimpleSelect
                                 value={selectedEHR}
                                 onValueChange={setSelectedEHR}
                                 placeholder="Select EHR system"
-                                options={ehrSystems.filter(s => s.status !== 'connected').map(ehr => ({ value: ehr.id, label: `${ehr.logo} ${ehr.name}` }))}
+                                options={ehrSystems.filter(s => s.status !== 'connected').map(ehr => ({
+                                    value: ehr.ehr_system,
+                                    label: `${EHR_METADATA[ehr.ehr_system]?.logo || '📋'} ${ehr.display_name}`
+                                }))}
                             />
                         </div>
 
