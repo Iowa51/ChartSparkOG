@@ -90,7 +90,16 @@ export default function LicensingPage() {
                         {licenses.map((license) => {
                             const status = getLicenseStatus(license.expiry);
                             return (
-                                <div key={license.id} className="flex items-center justify-between p-5 bg-muted/10 border border-border rounded-2xl hover:border-primary/20 transition-all group">
+                                <button
+                                    key={license.id}
+                                    onClick={() => {
+                                        const newNum = prompt(`Edit ${license.type} Number:`, license.number);
+                                        if (newNum) {
+                                            setLicenses(prev => prev.map(l => l.id === license.id ? { ...l, number: newNum } : l));
+                                        }
+                                    }}
+                                    className="w-full flex items-center justify-between p-5 bg-muted/10 border border-border rounded-2xl hover:border-primary/20 hover:bg-muted/20 transition-all group text-left"
+                                >
                                     <div className="space-y-1">
                                         <h3 className="text-sm font-black text-foreground uppercase tracking-tight">{license.type}</h3>
                                         <p className="text-[10px] font-mono text-muted-foreground">{license.number}</p>
@@ -103,14 +112,19 @@ export default function LicensingPage() {
                                         <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${status.color}`}>
                                             {status.label}
                                         </span>
-                                        <button
-                                            onClick={() => setLicenses(prev => prev.filter(l => l.id !== license.id))}
+                                        <span
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (confirm('Delete this credential?')) {
+                                                    setLicenses(prev => prev.filter(l => l.id !== license.id));
+                                                }
+                                            }}
                                             className="p-1.5 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                                         >
                                             <Trash2 className="h-4 w-4" />
-                                        </button>
+                                        </span>
                                     </div>
-                                </div>
+                                </button>
                             );
                         })}
 

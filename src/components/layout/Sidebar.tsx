@@ -51,11 +51,11 @@ const navSections = [
   {
     title: "Practice Operations",
     items: [
-      { label: "Billing", href: "/billing", icon: CreditCard },
+      { label: "E-Prescribe", href: "/e-prescribe", icon: Pill, tier: "complete" },
       { label: "License Tracking", href: "/licensing", icon: Award },
+      { label: "Billing", href: "/billing", icon: CreditCard },
       { label: "Calendar", href: "/calendar", icon: Calendar, tier: "pro" },
       { label: "Telehealth", href: "/telehealth", icon: Video, tier: "pro" },
-      { label: "E-Prescribe", href: "/e-prescribe", icon: Pill, tier: "complete" },
     ]
   }
 ];
