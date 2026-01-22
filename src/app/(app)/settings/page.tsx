@@ -42,6 +42,25 @@ export default function SettingsPage() {
     // EHR settings
     const [ehrAutoSync, setEhrAutoSync] = useState(true);
 
+    // Mobile device settings
+    const [devices, setDevices] = useState([
+        { id: '1', name: 'iPhone 14 Pro', lastActive: 'Today, 10:30 AM' },
+        { id: '2', name: 'iPad Pro', lastActive: 'Yesterday, 4:15 PM' }
+    ]);
+
+    const handleRemoveDevice = (id: string) => {
+        setDevices(prev => prev.filter(d => d.id !== id));
+    };
+
+    const handleAddDevice = () => {
+        const newDevice = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: 'New Authorized Device',
+            lastActive: 'Just Now'
+        };
+        setDevices(prev => [...prev, newDevice]);
+    };
+
     const handleSave = async () => {
         setIsSaving(true);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -335,25 +354,32 @@ export default function SettingsPage() {
                                     </h2>
                                 </div>
                                 <div className="p-6 space-y-4">
-                                    <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-bold">iPhone 14 Pro</p>
-                                            <p className="text-xs text-muted-foreground">Last active: Today, 10:30 AM</p>
+                                    {devices.map((device) => (
+                                        <div key={device.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50 animate-in fade-in slide-in-from-right-4 duration-300">
+                                            <div className="space-y-0.5">
+                                                <p className="text-sm font-bold">{device.name}</p>
+                                                <p className="text-xs text-muted-foreground">Last active: {device.lastActive}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleRemoveDevice(device.id)}
+                                                className="text-xs font-black uppercase tracking-widest text-red-600 hover:underline px-3 py-1 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-all"
+                                            >
+                                                Remove
+                                            </button>
                                         </div>
-                                        <button className="text-xs font-black uppercase tracking-widest text-red-600 hover:underline">
-                                            Remove
-                                        </button>
-                                    </div>
-                                    <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-border/50">
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-bold">iPad Pro</p>
-                                            <p className="text-xs text-muted-foreground">Last active: Yesterday, 4:15 PM</p>
+                                    ))}
+
+                                    {devices.length === 0 && (
+                                        <div className="py-8 text-center border-2 border-dashed border-border rounded-xl">
+                                            <p className="text-sm font-bold text-muted-foreground">No authorized devices found.</p>
                                         </div>
-                                        <button className="text-xs font-black uppercase tracking-widest text-red-600 hover:underline">
-                                            Remove
-                                        </button>
-                                    </div>
-                                    <button className="w-full py-3 text-sm font-bold text-primary hover:bg-primary/5 rounded-xl border border-dashed border-primary/30 transition-all">
+                                    )}
+
+                                    <button
+                                        onClick={handleAddDevice}
+                                        className="w-full py-4 text-sm font-bold text-primary hover:bg-primary/5 rounded-xl border-2 border-dashed border-primary/30 transition-all flex items-center justify-center gap-2 group active:scale-[0.99]"
+                                    >
+                                        <Smartphone className="h-4 w-4 group-hover:scale-110 transition-transform" />
                                         + Add New Device
                                     </button>
                                 </div>
