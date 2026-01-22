@@ -16,7 +16,16 @@ import {
     QrCode,
     X,
     Laptop,
-    Camera
+    Camera,
+    FileText,
+    Award,
+    History,
+    Search,
+    Plus,
+    Trash2,
+    Calendar,
+    AlertTriangle,
+    LifeBuoy
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
@@ -58,27 +67,62 @@ export default function SettingsPage() {
     ]);
     const [isPairingModalOpen, setIsPairingModalOpen] = useState(false);
 
+    // Advanced Clinical Feature States
+    const [dotPhrases, setDotPhrases] = useState([
+        { id: '1', shortcut: '.cardio', expansion: 'Cardiovascular exam shows normal S1/S2 rhythm, no murmurs, rubs, or gallops.' },
+        { id: '2', shortcut: '.resp', expansion: 'Lungs clear to auscultation bilaterally. No wheezes, rales, or rhonchi noted.' },
+        { id: '3', shortcut: '.neuro', expansion: 'CN II-XII grossly intact. Alert and oriented x3. Motor strength 5/5 in all extremities.' }
+    ]);
+    const [licenses, setLicenses] = useState([
+        { id: '1', type: 'State Medical License', number: 'NP-77821-NY', expiry: '2026-12-15' },
+        { id: '2', type: 'DEA Registration', number: 'AB1234567', expiry: '2026-03-01' },
+        { id: '3', type: 'ANCC Certification', number: '20230192', expiry: '2026-01-30' }
+    ]);
+
+    const getLicenseStatus = (expiry: string) => {
+        const today = new Date('2026-01-22'); // Using today's fixed date for alignment
+        const expiryDate = new Date(expiry);
+        const diffDays = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) return { label: 'Expired', color: 'bg-red-500/10 text-red-600 border-red-500/20' };
+        if (diffDays < 30) return { label: 'Expiring Soon', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' };
+        return { label: 'Active', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' };
+    };
+
+    const syncLogs = [
+        { id: '1', patient: 'Sarah Johnson', status: 'Success', timestamp: 'Today, 10:45 AM', reference: 'EPIC-99214' },
+        { id: '2', patient: 'Michael Chen', status: 'Success', timestamp: 'Today, 09:12 AM', reference: 'EPIC-99213' },
+        { id: '3', patient: 'Emily Rodriguez', status: 'Failed', timestamp: 'Yesterday, 04:30 PM', reference: 'Timeout' },
+    ];
+
     // Load from localStorage on mount
     useEffect(() => {
         const savedPhoto = localStorage.getItem('cs_profile_image');
         const savedDevices = localStorage.getItem('cs_paired_devices');
+        const savedDots = localStorage.getItem('cs_dot_phrases');
+        const savedLicenses = localStorage.getItem('cs_licenses');
+
         if (savedPhoto) setProfileImage(savedPhoto);
         if (savedDevices) {
-            try {
-                setDevices(JSON.parse(savedDevices));
-            } catch (e) {
-                console.error("Failed to parse saved devices", e);
-            }
+            try { setDevices(JSON.parse(savedDevices)); } catch (e) { }
+        }
+        if (savedDots) {
+            try { setDotPhrases(JSON.parse(savedDots)); } catch (e) { }
+        }
+        if (savedLicenses) {
+            try { setLicenses(JSON.parse(savedLicenses)); } catch (e) { }
         }
         setHasLoaded(true);
     }, []);
 
-    // Save to localStorage when things change
+    // Save to localStorage
     useEffect(() => {
         if (!hasLoaded) return;
         if (profileImage) localStorage.setItem('cs_profile_image', profileImage);
         localStorage.setItem('cs_paired_devices', JSON.stringify(devices));
-    }, [profileImage, devices, hasLoaded]);
+        localStorage.setItem('cs_dot_phrases', JSON.stringify(dotPhrases));
+        localStorage.setItem('cs_licenses', JSON.stringify(licenses));
+    }, [profileImage, devices, dotPhrases, licenses, hasLoaded]);
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -138,7 +182,10 @@ export default function SettingsPage() {
                             { id: 'security', label: 'Security & Privacy', icon: Shield },
                             { id: 'appearance', label: 'Appearance', icon: Palette },
                             { id: 'ehr', label: 'EHR Sync Settings', icon: Database },
+                            { id: 'templates', label: 'Clinical Templates', icon: FileText },
+                            { id: 'licensing', label: 'Credential Tracking', icon: Award },
                             { id: 'mobility', label: 'Mobile Access', icon: Smartphone },
+                            { id: 'ehr-logs', label: 'EHR Sync History', icon: History },
                         ].map((item) => {
                             const Icon = item.icon;
                             const isActive = activeTab === item.id;
@@ -403,6 +450,131 @@ export default function SettingsPage() {
                                             <div className={`h-5 w-5 bg-white rounded-full m-0.5 shadow-sm transform ${ehrAutoSync ? 'translate-x-5' : 'translate-x-0'} transition-transform`} />
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Clinical Templates & Dot Phrases */}
+                        {activeTab === 'templates' && (
+                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                                <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+                                    <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
+                                        <FileText className="h-4 w-4 text-primary" />
+                                        DOT Phrases & Templates
+                                    </h2>
+                                    <button
+                                        onClick={() => {
+                                            const shortcut = prompt("Enter shortcut (e.g. .heart):");
+                                            const expansion = prompt("Enter full text expansion:");
+                                            if (shortcut && expansion) {
+                                                setDotPhrases(prev => [...prev, { id: Math.random().toString(), shortcut, expansion }]);
+                                            }
+                                        }}
+                                        className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
+                                    >
+                                        + Create New
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {dotPhrases.map((phrase) => (
+                                        <div key={phrase.id} className="p-4 bg-muted/10 border border-border rounded-xl group hover:border-primary/30 transition-all">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-black text-primary px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">{phrase.shortcut}</span>
+                                                <button
+                                                    onClick={() => setDotPhrases(prev => prev.filter(p => p.id !== phrase.id))}
+                                                    className="p-1.5 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                            <p className="text-sm text-foreground/80 font-medium leading-relaxed italic">"{phrase.expansion}"</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Credential Tracking */}
+                        {activeTab === 'licensing' && (
+                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                                <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
+                                    <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
+                                        <Award className="h-4 w-4 text-primary" />
+                                        Medical Licenses & Certifications
+                                    </h2>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {licenses.map((license) => {
+                                        const status = getLicenseStatus(license.expiry);
+                                        return (
+                                            <div key={license.id} className="flex items-center justify-between p-5 bg-muted/10 border border-border rounded-2xl hover:border-primary/20 transition-all">
+                                                <div className="space-y-1">
+                                                    <h3 className="text-sm font-black text-foreground uppercase tracking-tight">{license.type}</h3>
+                                                    <p className="text-[10px] font-mono text-muted-foreground">{license.number}</p>
+                                                </div>
+                                                <div className="flex items-center gap-6">
+                                                    <div className="text-right">
+                                                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Expires</p>
+                                                        <p className="text-xs font-bold">{license.expiry}</p>
+                                                    </div>
+                                                    <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${status.color}`}>
+                                                        {status.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="mt-4 p-4 bg-primary/5 border border-primary/10 rounded-xl flex items-start gap-3">
+                                        <AlertTriangle className="h-4 w-4 text-primary mt-0.5" />
+                                        <p className="text-[10px] text-primary font-bold uppercase tracking-widest leading-relaxed">
+                                            Compliance Alert: Your ANCC Certification expires in less than 30 days. Please initiate renewal to avoid interruption.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* EHR Sync History */}
+                        {activeTab === 'ehr-logs' && (
+                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                                <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+                                    <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
+                                        <History className="h-4 w-4 text-primary" />
+                                        Direct Integration Logs
+                                    </h2>
+                                    <span className="text-[10px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">System Live</span>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-border bg-slate-50/50 dark:bg-slate-950/20">
+                                                <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Patient</th>
+                                                <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Status</th>
+                                                <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Time</th>
+                                                <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reference</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {syncLogs.map((log) => (
+                                                <tr key={log.id} className="hover:bg-muted/5 transition-colors">
+                                                    <td className="px-6 py-4 text-sm font-bold">{log.patient}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${log.status === 'Success' ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                            {log.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs text-muted-foreground">{log.timestamp}</td>
+                                                    <td className="px-6 py-4 text-[10px] font-mono text-muted-foreground">{log.reference}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="p-6 bg-slate-50 dark:bg-slate-950/20 border-t border-border">
+                                    <button className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline flex items-center gap-2">
+                                        <LifeBuoy className="h-3 w-3" />
+                                        Request Manual Sync Reconciliation
+                                    </button>
                                 </div>
                             </div>
                         )}
