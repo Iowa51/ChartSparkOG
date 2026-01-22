@@ -13,7 +13,7 @@ import {
     AlertCircle,
     Loader2
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 interface DeviceInfo {
     deviceId: string;
@@ -31,57 +31,118 @@ export default function TelehealthSetupPage() {
     const [selectedMic, setSelectedMic] = useState<string>("");
     const [selectedSpeaker, setSelectedSpeaker] = useState<string>("");
     const [permissionError, setPermissionError] = useState<string | null>(null);
+    const [errorType, setErrorType] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [permissionsGranted, setPermissionsGranted] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
 
-    // Get available devices
-    useEffect(() => {
-        const getDevices = async () => {
-            try {
-                // Request permission first to get device labels
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                stream.getTracks().forEach(track => track.stop());
+    const getDevices = useCallback(async () => {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
 
-                const devices = await navigator.mediaDevices.enumerateDevices();
+            // Only update if we actually have labels (labels are hidden until permission is granted)
+            const hasLabels = devices.some(d => d.label);
 
-                const videoInputs = devices.filter(d => d.kind === "videoinput").map(d => ({
-                    deviceId: d.deviceId,
-                    label: d.label || `Camera ${d.deviceId.slice(0, 8)}`,
-                    kind: d.kind
-                }));
+            const videoInputs = devices.filter(d => d.kind === "videoinput").map(d => ({
+                deviceId: d.deviceId,
+                label: d.label || `Camera ${d.deviceId.slice(0, 8)}`,
+                kind: d.kind
+            }));
 
-                const audioInputs = devices.filter(d => d.kind === "audioinput").map(d => ({
-                    deviceId: d.deviceId,
-                    label: d.label || `Microphone ${d.deviceId.slice(0, 8)}`,
-                    kind: d.kind
-                }));
+            const audioInputs = devices.filter(d => d.kind === "audioinput").map(d => ({
+                deviceId: d.deviceId,
+                label: d.label || `Microphone ${d.deviceId.slice(0, 8)}`,
+                kind: d.kind
+            }));
 
-                const audioOutputs = devices.filter(d => d.kind === "audiooutput").map(d => ({
-                    deviceId: d.deviceId,
-                    label: d.label || `Speaker ${d.deviceId.slice(0, 8)}`,
-                    kind: d.kind
-                }));
+            const audioOutputs = devices.filter(d => d.kind === "audiooutput").map(d => ({
+                deviceId: d.deviceId,
+                label: d.label || `Speaker ${d.deviceId.slice(0, 8)}`,
+                kind: d.kind
+            }));
 
-                setCameras(videoInputs);
-                setMicrophones(audioInputs);
-                setSpeakers(audioOutputs);
+            setCameras(videoInputs);
+            setMicrophones(audioInputs);
+            setSpeakers(audioOutputs);
 
-                if (videoInputs.length > 0) setSelectedCamera(videoInputs[0].deviceId);
-                if (audioInputs.length > 0) setSelectedMic(audioInputs[0].deviceId);
-                if (audioOutputs.length > 0) setSelectedSpeaker(audioOutputs[0].deviceId);
+            if (videoInputs.length > 0 && !selectedCamera) setSelectedCamera(videoInputs[0].deviceId);
+            if (audioInputs.length > 0 && !selectedMic) setSelectedMic(audioInputs[0].deviceId);
+            if (audioOutputs.length > 0 && !selectedSpeaker) setSelectedSpeaker(audioOutputs[0].deviceId);
 
-                setPermissionError(null);
-            } catch (err) {
-                console.error("Error getting devices:", err);
-                setPermissionError("Please allow camera and microphone access to configure devices.");
-            } finally {
-                setIsLoading(false);
+            if (hasLabels) {
+                setPermissionsGranted(true);
             }
+        } catch (err) {
+            console.error("Error getting devices:", err);
+        }
+    }, [selectedCamera, selectedMic, selectedSpeaker]);
+
+    const requestPermissions = async () => {
+        setIsLoading(true);
+        setPermissionError(null);
+        setErrorType(null);
+
+        try {
+            console.log("[Hardware] Requesting media permissions...");
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: true
+            });
+
+            // Stop tracks immediately as we only want to trigger the browser prompt
+            stream.getTracks().forEach(track => track.stop());
+
+            setPermissionsGranted(true);
+            await getDevices();
+            setPermissionError(null);
+        } catch (err: any) {
+            console.error("[Hardware] Permission error:", err);
+            setErrorType(err.name);
+
+            if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                setPermissionError("Camera and microphone access was denied. Please update your browser settings for this site.");
+            } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+                setPermissionError("No camera or microphone hardware was found on this device.");
+            } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+                setPermissionError("Your camera or microphone is already in use by another application.");
+            } else {
+                setPermissionError(`Device access error: ${err.message || "Unknown error"}`);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Initial check for devices and permissions
+    useEffect(() => {
+        const checkInitialStatus = async () => {
+            // First check what we can see without asking
+            await getDevices();
+
+            // Check if we already have permissions stored in browser
+            try {
+                if (navigator.permissions && (navigator.permissions as any).query) {
+                    const results = await Promise.all([
+                        navigator.permissions.query({ name: 'camera' as any }),
+                        navigator.permissions.query({ name: 'microphone' as any })
+                    ]);
+
+                    if (results.every(r => r.state === 'granted')) {
+                        setPermissionsGranted(true);
+                        await getDevices();
+                    }
+                }
+            } catch (e) {
+                // Background permission query not supported in all browsers
+                console.log("Permission query not supported");
+            }
+
+            setIsLoading(false);
         };
 
-        getDevices();
-    }, []);
+        checkInitialStatus();
+    }, [getDevices]);
 
     // Attach stream to video element when it changes
     useEffect(() => {
@@ -94,23 +155,33 @@ export default function TelehealthSetupPage() {
     const startTest = async () => {
         try {
             setPermissionError(null);
+            setErrorType(null);
 
             // Stop any existing stream first
             if (testStream) {
                 testStream.getTracks().forEach(track => track.stop());
             }
 
+            // Ensure we don't pass dummy IDs
+            const videoConstraint = selectedCamera && selectedCamera !== "No cameras found"
+                ? { deviceId: { exact: selectedCamera } }
+                : true;
+            const audioConstraint = selectedMic && selectedMic !== "No microphones found"
+                ? { deviceId: { exact: selectedMic } }
+                : true;
+
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: selectedCamera ? { deviceId: { exact: selectedCamera } } : true,
-                audio: selectedMic ? { deviceId: { exact: selectedMic } } : true
+                video: videoConstraint,
+                audio: audioConstraint
             });
 
             setTestStream(stream);
             setTestActive(true);
 
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error starting test:", err);
-            setPermissionError("Could not access camera or microphone. Please check permissions.");
+            setErrorType(err.name);
+            setPermissionError(`Could not access devices: ${err.message || err.name}`);
         }
     };
 
@@ -156,11 +227,32 @@ export default function TelehealthSetupPage() {
             />
 
             <div className="flex-1 overflow-y-auto p-6 lg:px-10 lg:py-8 max-w-4xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                {/* Permission Error */}
+                {/* Permission Error / Diagnostic */}
                 {permissionError && (
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                        <p className="text-sm text-red-600 dark:text-red-400 font-medium">{permissionError}</p>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 flex flex-col gap-4 animate-in fade-in zoom-in duration-300">
+                        <div className="flex items-center gap-3">
+                            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                            <p className="text-sm text-red-600 dark:text-red-400 font-black uppercase tracking-tight">Access Denied</p>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">{permissionError}</p>
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={requestPermissions}
+                                className="px-4 py-2 bg-red-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+                            >
+                                Re-request Permissions
+                            </button>
+                            {errorType === "NotAllowedError" && (
+                                <a
+                                    href="https://support.google.com/chrome/answer/2693767"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition-all"
+                                >
+                                    Browser Help
+                                </a>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -180,55 +272,73 @@ export default function TelehealthSetupPage() {
                                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Camera Source</label>
-                                    <select
-                                        value={selectedCamera}
-                                        onChange={(e) => setSelectedCamera(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                    >
-                                        {cameras.length === 0 && <option>No cameras found</option>}
-                                        {cameras.map(cam => (
-                                            <option key={cam.deviceId} value={cam.deviceId}>{cam.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Microphone Source</label>
-                                    <select
-                                        value={selectedMic}
-                                        onChange={(e) => setSelectedMic(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                    >
-                                        {microphones.length === 0 && <option>No microphones found</option>}
-                                        {microphones.map(mic => (
-                                            <option key={mic.deviceId} value={mic.deviceId}>{mic.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Speaker Output</label>
-                                    <select
-                                        value={selectedSpeaker}
-                                        onChange={(e) => setSelectedSpeaker(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                                    >
-                                        {speakers.length === 0 && <option>Default Speaker</option>}
-                                        {speakers.map(spk => (
-                                            <option key={spk.deviceId} value={spk.deviceId}>{spk.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
+                            <>
+                                {!permissionsGranted && (
+                                    <div className="p-6 bg-primary/5 border border-primary/20 rounded-2xl text-center space-y-4">
+                                        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                                            Permissions are required to list and select specific devices.
+                                        </p>
+                                        <button
+                                            onClick={requestPermissions}
+                                            className="px-6 py-3 bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                                        >
+                                            Enable Camera & Mic
+                                        </button>
+                                    </div>
+                                )}
+
+                                {permissionsGranted && (
+                                    <div className="space-y-4 animate-in fade-in duration-500">
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Camera Source</label>
+                                            <select
+                                                value={selectedCamera}
+                                                onChange={(e) => setSelectedCamera(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-701 bg-slate-50 dark:bg-slate-800 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                            >
+                                                {cameras.length === 0 && <option>No cameras found</option>}
+                                                {cameras.map(cam => (
+                                                    <option key={cam.deviceId} value={cam.deviceId}>{cam.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Microphone Source</label>
+                                            <select
+                                                value={selectedMic}
+                                                onChange={(e) => setSelectedMic(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-701 bg-slate-50 dark:bg-slate-800 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                            >
+                                                {microphones.length === 0 && <option>No microphones found</option>}
+                                                {microphones.map(mic => (
+                                                    <option key={mic.deviceId} value={mic.deviceId}>{mic.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Speaker Output</label>
+                                            <select
+                                                value={selectedSpeaker}
+                                                onChange={(e) => setSelectedSpeaker(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-701 bg-slate-50 dark:bg-slate-800 text-sm font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                            >
+                                                {speakers.length === 0 && <option>Default Speaker</option>}
+                                                {speakers.map(spk => (
+                                                    <option key={spk.deviceId} value={spk.deviceId}>{spk.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         <button
                             onClick={handleTest}
                             disabled={isLoading}
                             className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all flex items-center justify-center gap-2 ${testActive
-                                    ? "bg-red-500 text-white hover:bg-red-600"
-                                    : "bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800"
+                                ? "bg-red-500 text-white hover:bg-red-600"
+                                : "bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800"
                                 } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             {testActive ? (
