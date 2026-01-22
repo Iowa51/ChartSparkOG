@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Header } from "@/components/layout";
 import {
     Search,
@@ -46,21 +47,23 @@ function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
         .slice(0, 5);
 
     const [statusFilter, setStatusFilter] = useState<string | null>(isPendingOnly ? "Pending" : null);
+    const [codeFilter, setCodeFilter] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
 
     const allClaims = [
-        { id: "C-1004", patient: "Sarah Connor", patientId: "p1", service: "Hypertension F/U", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
-        { id: "C-1005", patient: "Michael Reese", patientId: "p2", service: "Seasonal Allergies", date: "Today", amount: 165.00, status: "Missing ICD-10", type: "Pending" },
-        { id: "C-1001", patient: "Elena Fisher", patientId: "p3", service: "Anxiety F/U", date: "Oct 20, 2023", amount: 150.00, status: "Paid", type: "Paid" },
-        { id: "C-1002", patient: "Nathan Drake", patientId: "p4", service: "Back Pain Eval", date: "Oct 15, 2023", amount: 200.00, status: "Overdue", type: "Overdue" },
-        { id: "C-1003", patient: "Victor Jones", patientId: "p5", service: "Initial Consultation", date: "Oct 12, 2023", amount: 250.00, status: "Paid", type: "Paid" },
+        { id: "C-1004", patient: "Sarah Connor", patientId: "p1", service: "Hypertension F/U", code: "99214", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
+        { id: "C-1005", patient: "Michael Reese", patientId: "p2", service: "Seasonal Allergies", code: "90834", date: "Today", amount: 165.00, status: "Missing ICD-10", type: "Pending" },
+        { id: "C-1001", patient: "Elena Fisher", patientId: "p3", service: "Anxiety F/U", code: "99213", date: "Oct 20, 2023", amount: 150.00, status: "Paid", type: "Paid" },
+        { id: "C-1002", patient: "Nathan Drake", patientId: "p4", service: "Back Pain Eval", code: "99214", date: "Oct 15, 2023", amount: 200.00, status: "Overdue", type: "Overdue" },
+        { id: "C-1003", patient: "Victor Jones", patientId: "p5", service: "Initial Consultation", code: "90837", date: "Oct 12, 2023", amount: 250.00, status: "Paid", type: "Paid" },
     ];
 
     const filteredClaims = allClaims.filter(c => {
         const matchesStatus = !statusFilter || c.type === statusFilter;
+        const matchesCode = !codeFilter || c.code === codeFilter;
         const matchesSearch = c.patient.toLowerCase().includes(searchQuery.toLowerCase()) ||
             c.id.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesStatus && matchesSearch;
+        return matchesStatus && matchesCode && matchesSearch;
     });
 
     const exportToCSV = () => {
@@ -91,65 +94,97 @@ function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
     return (
         <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-card rounded-xl p-6 border border-border">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-primary/10">
-                            <FileText className="h-6 w-6 text-primary" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                <button
+                    type="button"
+                    onClick={() => { setStatusFilter("Pending"); setCodeFilter(null); }}
+                    className={`cursor-pointer text-left bg-card rounded-xl p-6 border transition-all hover:shadow-lg active:scale-[0.98] relative overflow-hidden z-50 pointer-events-auto group ${statusFilter === "Pending" ? "border-primary ring-1 ring-primary/20 bg-primary/5" : "border-border hover:border-primary/50"}`}
+                >
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className={`p-3 rounded-xl transition-colors ${statusFilter === "Pending" ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white"}`}>
+                            <FileText className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Notes Generated</p>
+                            <p className="text-sm text-muted-foreground group-hover:text-primary transition-colors font-medium">Notes Generated</p>
                             <p className="text-2xl font-bold text-foreground">{stats.notes_generated}</p>
                         </div>
                     </div>
-                </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
-                            <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setStatusFilter("Paid"); setCodeFilter(null); }}
+                    className={`cursor-pointer text-left bg-card rounded-xl p-6 border transition-all hover:shadow-lg active:scale-[0.98] relative overflow-hidden z-50 pointer-events-auto group ${statusFilter === "Paid" ? "border-emerald-500 ring-1 ring-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-500/5" : "border-border hover:border-emerald-500/50"}`}
+                >
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className={`p-3 rounded-xl transition-colors ${statusFilter === "Paid" ? "bg-emerald-500 text-white" : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white"}`}>
+                            <DollarSign className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Total Billing</p>
+                            <p className="text-sm text-muted-foreground group-hover:text-emerald-500 transition-colors font-medium">Total Billing</p>
                             <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.total_billing)}</p>
                         </div>
                     </div>
-                </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30">
-                            <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    {statusFilter === "Paid" && (
+                        <div className="absolute right-4 top-4">
+                            <CheckCircle className="h-4 w-4 text-emerald-500" />
+                        </div>
+                    )}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => { setStatusFilter(null); setCodeFilter(null); setSearchQuery(""); }}
+                    className="cursor-pointer text-left bg-card rounded-xl p-6 border border-border transition-all hover:shadow-lg active:scale-[0.98] hover:border-blue-500 group relative overflow-hidden z-50 pointer-events-auto"
+                >
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30 group-hover:bg-blue-500 transition-colors">
+                            <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400 group-hover:text-white" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Avg Per Note</p>
+                            <p className="text-sm text-muted-foreground group-hover:text-blue-500 transition-colors font-medium">Avg Per Note</p>
                             <p className="text-2xl font-bold text-foreground">
                                 {formatCurrency(stats.total_billing / stats.notes_generated)}
                             </p>
                         </div>
                     </div>
-                </div>
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* CPT Codes Used */}
                 <div className="bg-card rounded-xl p-6 border border-border h-full">
-                    <h3 className="font-bold text-foreground mb-4 flex items-center gap-2">
-                        <BarChart3 className="h-5 w-5 text-primary" />
-                        Top Codes
-                    </h3>
-                    <div className="space-y-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-foreground flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5 text-primary" />
+                            Top Codes
+                        </h3>
+                        {codeFilter && (
+                            <button
+                                onClick={() => setCodeFilter(null)}
+                                className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                    <div className="space-y-4 relative z-10">
                         {topCodes.map(([code, count]) => (
-                            <div key={code} className="space-y-1">
-                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                                    <span>{code}</span>
+                            <button
+                                type="button"
+                                key={code}
+                                onClick={() => setCodeFilter(codeFilter === code ? null : code)}
+                                className={`cursor-pointer w-full text-left space-y-1 group transition-all p-1 rounded-lg -m-1 hover:bg-muted/50 relative z-50 pointer-events-auto ${codeFilter === code ? "bg-primary/5 ring-1 ring-primary/20" : ""}`}
+                            >
+                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">
+                                    <span className={codeFilter === code ? "text-primary" : ""}>{code}</span>
                                     <span>{count} uses</span>
                                 </div>
                                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-primary rounded-full"
+                                        className={`h-full rounded-full transition-all ${codeFilter === code ? "bg-primary" : "bg-primary/60 group-hover:bg-primary"}`}
                                         style={{ width: `${(count / Math.max(...Object.values(stats.codes_used))) * 100}%` }}
                                     />
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
                 </div>
@@ -182,9 +217,9 @@ function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
                                     </button>
                                 ))}
                             </div>
-                            {(statusFilter || searchQuery) && (
+                            {(statusFilter || searchQuery || codeFilter) && (
                                 <button
-                                    onClick={() => { setStatusFilter(null); setSearchQuery(""); }}
+                                    onClick={() => { setStatusFilter(null); setSearchQuery(""); setCodeFilter(null); }}
                                     className="p-2 text-muted-foreground hover:text-red-500 transition-colors"
                                     title="Reset filters"
                                 >
@@ -310,47 +345,55 @@ function AdminBillingView() {
     return (
         <div className="space-y-6">
             {/* Org Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="bg-card rounded-xl p-6 border border-border">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative z-10">
+                <button
+                    type="button"
+                    onClick={() => setStatusFilter("all")}
+                    className={`cursor-pointer text-left bg-card rounded-xl p-6 border transition-all hover:shadow-lg active:scale-[0.98] relative z-50 pointer-events-auto ${statusFilter === "all" ? "border-primary ring-1 ring-primary/20 bg-primary/5" : "border-border hover:border-primary/50"}`}
+                >
                     <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-primary/10">
-                            <Users className="h-6 w-6 text-primary" />
+                        <div className={`p-3 rounded-xl transition-colors ${statusFilter === "all" ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                            <Users className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Team Members</p>
+                            <p className="text-sm text-muted-foreground font-medium">Team Members</p>
                             <p className="text-2xl font-bold text-foreground">{stats.total_users}</p>
                         </div>
                     </div>
-                </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setStatusFilter("active")}
+                    className={`cursor-pointer text-left bg-card rounded-xl p-6 border transition-all hover:shadow-lg active:scale-[0.98] relative z-50 pointer-events-auto ${statusFilter === "active" ? "border-blue-500 ring-1 ring-blue-500/20 bg-blue-50/50 dark:bg-blue-500/5" : "border-border hover:border-blue-500/50"}`}
+                >
                     <div className="flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30">
-                            <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        <div className={`p-3 rounded-xl transition-colors ${statusFilter === "active" ? "bg-blue-500 text-white" : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"}`}>
+                            <FileText className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Total Notes</p>
+                            <p className="text-sm text-muted-foreground font-medium">Total Notes</p>
                             <p className="text-2xl font-bold text-foreground">{stats.total_notes}</p>
                         </div>
                     </div>
-                </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
+                </button>
+                <div className="bg-card rounded-xl p-6 border border-border group">
                     <div className="flex items-center gap-4">
                         <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
                             <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Org Revenue</p>
+                            <p className="text-sm text-muted-foreground font-medium">Org Revenue</p>
                             <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.total_billing)}</p>
                         </div>
                     </div>
                 </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
+                <div className="bg-card rounded-xl p-6 border border-border group">
                     <div className="flex items-center gap-4">
                         <div className="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/30">
                             <Percent className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                         </div>
                         <div>
-                            <p className="text-sm text-muted-foreground">Platform Fees</p>
+                            <p className="text-sm text-muted-foreground font-medium">Platform Fees</p>
                             <p className="text-2xl font-bold text-foreground">{formatCurrency(stats.total_fees)}</p>
                         </div>
                     </div>
@@ -480,27 +523,44 @@ function SuperAdminBillingView() {
     return (
         <div className="space-y-6">
             {/* Platform-wide Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div className="bg-gradient-to-br from-primary to-primary/80 rounded-xl p-6 text-primary-foreground">
-                    <p className="text-sm opacity-80">Platform Revenue</p>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 relative z-10">
+                <button
+                    type="button"
+                    onClick={() => setOrgStatusFilter("all")}
+                    className={`cursor-pointer text-left bg-gradient-to-br from-primary to-primary/80 rounded-xl p-6 text-primary-foreground transition-all hover:shadow-lg active:scale-[0.98] relative z-50 pointer-events-auto ${orgStatusFilter === "all" ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
+                >
+                    <p className="text-sm opacity-80 font-medium">Platform Revenue</p>
                     <p className="text-3xl font-bold">{formatCurrency(stats.total_billing)}</p>
-                </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
-                    <p className="text-sm text-muted-foreground">Fees Collected</p>
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setOrgStatusFilter("high_volume")}
+                    className={`cursor-pointer text-left bg-card rounded-xl p-6 border transition-all hover:shadow-lg active:scale-[0.98] relative z-50 pointer-events-auto ${orgStatusFilter === "high_volume" ? "border-emerald-500 ring-1 ring-emerald-500/20" : "border-border hover:border-emerald-500/50"}`}
+                >
+                    <p className="text-sm text-muted-foreground font-medium">Fees Collected</p>
                     <p className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.total_fees_collected)}</p>
-                </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
+                </button>
+                <button
+                    type="button"
+                    className="text-left bg-card rounded-xl p-6 border border-border transition-all hover:shadow-md"
+                >
                     <p className="text-sm text-muted-foreground">Organizations</p>
                     <p className="text-2xl font-bold text-foreground">{stats.total_organizations}</p>
-                </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
+                </button>
+                <button
+                    type="button"
+                    className="text-left bg-card rounded-xl p-6 border border-border transition-all hover:shadow-md"
+                >
                     <p className="text-sm text-muted-foreground">Total Users</p>
                     <p className="text-2xl font-bold text-foreground">{stats.total_users}</p>
-                </div>
-                <div className="bg-card rounded-xl p-6 border border-border">
+                </button>
+                <button
+                    type="button"
+                    className="text-left bg-card rounded-xl p-6 border border-border transition-all hover:shadow-md"
+                >
                     <p className="text-sm text-muted-foreground">Total Notes</p>
                     <p className="text-2xl font-bold text-foreground">{stats.total_notes.toLocaleString()}</p>
-                </div>
+                </button>
             </div>
 
             {/* Organizations Table */}
