@@ -16,6 +16,11 @@ export default function LicensingPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [hasLoaded, setHasLoaded] = useState(false);
+    const [hasMounted, setHasMounted] = useState(false);
+
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
 
     const [licenses, setLicenses] = useState([
         { id: '1', type: 'State Medical License', number: 'NP-77821-NY', expiry: '2026-12-15' },
@@ -53,6 +58,8 @@ export default function LicensingPage() {
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
     };
+
+    if (!hasMounted) return null;
 
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
