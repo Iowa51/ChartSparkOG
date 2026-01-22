@@ -61,6 +61,28 @@ const recentPrescriptions = [
         date: "Jan 3, 2024",
         status: "filled",
         pharmacy: "Walmart Pharmacy"
+    },
+    {
+        id: 5,
+        medication: "Venlafaxine 75mg",
+        patient: "Michael Chen",
+        dosage: "75mg",
+        frequency: "Once daily",
+        duration: "30 days",
+        date: "Jan 12, 2024",
+        status: "alerts",
+        pharmacy: "Walgreens - Oak Avenue"
+    },
+    {
+        id: 6,
+        medication: "Lorazepam 1mg",
+        patient: "Sarah Johnson",
+        dosage: "1mg",
+        frequency: "As needed",
+        duration: "10 days",
+        date: "Jan 11, 2024",
+        status: "alerts",
+        pharmacy: "CVS Pharmacy - Main Street"
     }
 ];
 
@@ -129,15 +151,18 @@ export default function EPrescribePage() {
                             <p className="text-2xl font-black text-slate-900 dark:text-white">112</p>
                         </div>
                     </button>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5 opacity-60">
+                    <button
+                        onClick={() => setActiveTab("alerts")}
+                        className={`bg-white dark:bg-slate-900 p-6 rounded-[2rem] border transition-all text-left shadow-sm flex items-center gap-5 ${activeTab === "alerts" ? "border-red-500 ring-2 ring-red-500/20 shadow-lg shadow-red-500/10" : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"}`}
+                    >
                         <div className="h-14 w-14 rounded-2xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
                             <AlertCircle className="h-7 w-7" />
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Alerts</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">3</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">2</p>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -276,7 +301,7 @@ export default function EPrescribePage() {
 
                             {/* Status Filter Tabs */}
                             <div className="px-8 pt-4 flex items-center gap-1">
-                                {["all", "sent", "filled"].map((t) => (
+                                {["all", "sent", "filled", "alerts"].map((t) => (
                                     <button
                                         key={t}
                                         onClick={() => setActiveTab(t)}
@@ -285,7 +310,7 @@ export default function EPrescribePage() {
                                             : "text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                                             }`}
                                     >
-                                        {t}
+                                        {t === "alerts" ? "alert" : t}
                                     </button>
                                 ))}
                             </div>
@@ -300,9 +325,11 @@ export default function EPrescribePage() {
                                                 </div>
                                                 <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${rx.status === "filled"
                                                     ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                                                    : "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                                                    : rx.status === "alerts"
+                                                        ? "bg-red-500/10 text-red-600 border-red-500/20"
+                                                        : "bg-blue-500/10 text-blue-600 border-blue-500/20"
                                                     }`}>
-                                                    {rx.status}
+                                                    {rx.status === "alerts" ? "alert" : rx.status}
                                                 </span>
                                             </div>
                                             <div className="space-y-1">
