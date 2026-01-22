@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import {
   LayoutDashboard,
   Users,
@@ -67,11 +68,32 @@ const bottomNavItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [hasMounted, setHasMounted] = useState(false);
+  const supabase = createClient();
 
   useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  const handleLogout = async () => {
+    // 1. Clear Demo Mode session data
+    localStorage.removeItem("demoMode");
+    document.cookie = "demoMode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+
+    // 2. Perform Supabase Sign Out if available
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+
+    // 3. Clear application states
+    localStorage.removeItem("cs_notifications");
+    localStorage.removeItem("cs_licenses");
+
+    // 4. Force navigation and refresh
+    router.push("/login");
+    router.refresh();
+  };
 
   if (!hasMounted) return null;
 
@@ -176,15 +198,13 @@ export function Sidebar() {
               <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-tight">Active Session</p>
             </div>
           </div>
-          <form action="/api/auth/signout" method="POST">
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-slate-100 dark:border-slate-800 hover:border-red-100 dark:hover:border-red-900/30"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Logout
-            </button>
-          </form>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-slate-100 dark:border-slate-800 hover:border-red-100 dark:hover:border-red-900/30"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Logout
+          </button>
         </div>
       </div>
     </aside>
