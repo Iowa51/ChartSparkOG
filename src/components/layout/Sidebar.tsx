@@ -63,8 +63,6 @@ const navSections = [
 
 const bottomNavItems: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings },
-  { label: "Admin Console", href: "/admin", icon: Shield },
-  { label: "Super Admin", href: "/super-admin", icon: LayoutDashboard },
 ];
 
 export function Sidebar() {
