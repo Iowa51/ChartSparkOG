@@ -139,6 +139,32 @@ export default function NewNotePage() {
     const [newPhrase, setNewPhrase] = useState("");
     const [showPhraseModal, setShowPhraseModal] = useState(false);
     const [phraseCategory, setPhraseCategory] = useState<"Subjective" | "Objective" | "Assessment" | "Plan">("Subjective");
+    const [userDotPhrases, setUserDotPhrases] = useState<{ id: string, shortcut: string, expansion: string }[]>([]);
+
+    // Load user dot phrases from localStorage
+    useEffect(() => {
+        const savedDots = localStorage.getItem('cs_dot_phrases');
+        if (savedDots) {
+            try { setUserDotPhrases(JSON.parse(savedDots)); } catch (e) { }
+        }
+    }, []);
+
+    // DOT phrase expansion logic
+    const expandDotPhrases = (text: string) => {
+        if (!text.endsWith(' ')) return text;
+
+        const words = text.split(' ');
+        const lastWord = words[words.length - 2]; // Get the word before the space
+
+        if (lastWord && lastWord.startsWith('.')) {
+            const match = userDotPhrases.find(p => p.shortcut.toLowerCase() === lastWord.toLowerCase());
+            if (match) {
+                words[words.length - 2] = match.expansion;
+                return words.join(' ');
+            }
+        }
+        return text;
+    };
 
     // Updated SOAP/Note state to be dynamic
     const [noteSections, setNoteSections] = useState<Record<string, string>>({});
@@ -545,7 +571,8 @@ Prognosis: Favorable with continued treatment adherence.`;
     }, [noteSections]);
 
     const handleSectionChange = (id: string, value: string) => {
-        setNoteSections((prev) => ({ ...prev, [id]: value }));
+        const expandedValue = expandDotPhrases(value);
+        setNoteSections((prev) => ({ ...prev, [id]: expandedValue }));
     };
 
     const handleRegenerateSection = async (id: string) => {
@@ -1158,7 +1185,10 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                 </div>
                                                 <textarea
                                                     value={clinicianInput}
-                                                    onChange={(e) => setClinicianInput(e.target.value)}
+                                                    onChange={(e) => {
+                                                        const expanded = expandDotPhrases(e.target.value);
+                                                        setClinicianInput(expanded);
+                                                    }}
                                                     placeholder="Type your clinical observations here...
 
 Example: 45yo male, depression follow-up. Reports improved mood on current medication. Sleeping better, 7-8 hours. No side effects. Appetite normal. Denies SI/HI. Continue current treatment plan."

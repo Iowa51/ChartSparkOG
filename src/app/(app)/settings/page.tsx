@@ -73,21 +73,6 @@ export default function SettingsPage() {
         { id: '2', shortcut: '.resp', expansion: 'Lungs clear to auscultation bilaterally. No wheezes, rales, or rhonchi noted.' },
         { id: '3', shortcut: '.neuro', expansion: 'CN II-XII grossly intact. Alert and oriented x3. Motor strength 5/5 in all extremities.' }
     ]);
-    const [licenses, setLicenses] = useState([
-        { id: '1', type: 'State Medical License', number: 'NP-77821-NY', expiry: '2026-12-15' },
-        { id: '2', type: 'DEA Registration', number: 'AB1234567', expiry: '2026-03-01' },
-        { id: '3', type: 'ANCC Certification', number: '20230192', expiry: '2026-01-30' }
-    ]);
-
-    const getLicenseStatus = (expiry: string) => {
-        const today = new Date('2026-01-22'); // Using today's fixed date for alignment
-        const expiryDate = new Date(expiry);
-        const diffDays = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) return { label: 'Expired', color: 'bg-red-500/10 text-red-600 border-red-500/20' };
-        if (diffDays < 30) return { label: 'Expiring Soon', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' };
-        return { label: 'Active', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' };
-    };
 
     const syncLogs = [
         { id: '1', patient: 'Sarah Johnson', status: 'Success', timestamp: 'Today, 10:45 AM', reference: 'EPIC-99214' },
@@ -109,9 +94,6 @@ export default function SettingsPage() {
         if (savedDots) {
             try { setDotPhrases(JSON.parse(savedDots)); } catch (e) { }
         }
-        if (savedLicenses) {
-            try { setLicenses(JSON.parse(savedLicenses)); } catch (e) { }
-        }
         setHasLoaded(true);
     }, []);
 
@@ -121,8 +103,7 @@ export default function SettingsPage() {
         if (profileImage) localStorage.setItem('cs_profile_image', profileImage);
         localStorage.setItem('cs_paired_devices', JSON.stringify(devices));
         localStorage.setItem('cs_dot_phrases', JSON.stringify(dotPhrases));
-        localStorage.setItem('cs_licenses', JSON.stringify(licenses));
-    }, [profileImage, devices, dotPhrases, licenses, hasLoaded]);
+    }, [profileImage, devices, dotPhrases, hasLoaded]);
 
     const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -183,7 +164,6 @@ export default function SettingsPage() {
                             { id: 'appearance', label: 'Appearance', icon: Palette },
                             { id: 'ehr', label: 'EHR Sync Settings', icon: Database },
                             { id: 'templates', label: 'Clinical Templates', icon: FileText },
-                            { id: 'licensing', label: 'Credential Tracking', icon: Award },
                             { id: 'mobility', label: 'Mobile Access', icon: Smartphone },
                             { id: 'ehr-logs', label: 'EHR Sync History', icon: History },
                         ].map((item) => {
@@ -490,46 +470,6 @@ export default function SettingsPage() {
                                             <p className="text-sm text-foreground/80 font-medium leading-relaxed italic">"{phrase.expansion}"</p>
                                         </div>
                                     ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Credential Tracking */}
-                        {activeTab === 'licensing' && (
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
-                                <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
-                                    <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
-                                        <Award className="h-4 w-4 text-primary" />
-                                        Medical Licenses & Certifications
-                                    </h2>
-                                </div>
-                                <div className="p-6 space-y-4">
-                                    {licenses.map((license) => {
-                                        const status = getLicenseStatus(license.expiry);
-                                        return (
-                                            <div key={license.id} className="flex items-center justify-between p-5 bg-muted/10 border border-border rounded-2xl hover:border-primary/20 transition-all">
-                                                <div className="space-y-1">
-                                                    <h3 className="text-sm font-black text-foreground uppercase tracking-tight">{license.type}</h3>
-                                                    <p className="text-[10px] font-mono text-muted-foreground">{license.number}</p>
-                                                </div>
-                                                <div className="flex items-center gap-6">
-                                                    <div className="text-right">
-                                                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Expires</p>
-                                                        <p className="text-xs font-bold">{license.expiry}</p>
-                                                    </div>
-                                                    <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${status.color}`}>
-                                                        {status.label}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    <div className="mt-4 p-4 bg-primary/5 border border-primary/10 rounded-xl flex items-start gap-3">
-                                        <AlertTriangle className="h-4 w-4 text-primary mt-0.5" />
-                                        <p className="text-[10px] text-primary font-bold uppercase tracking-widest leading-relaxed">
-                                            Compliance Alert: Your ANCC Certification expires in less than 30 days. Please initiate renewal to avoid interruption.
-                                        </p>
-                                    </div>
                                 </div>
                             </div>
                         )}
