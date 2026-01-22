@@ -12,8 +12,13 @@ import {
     Save,
     CheckCircle2,
     Palette,
-    Globe
+    Globe,
+    QrCode,
+    X,
+    Laptop,
+    Camera
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
@@ -39,26 +44,69 @@ export default function SettingsPage() {
     const [theme, setTheme] = useState<'Light' | 'Dark' | 'System'>('System');
     const [compactMode, setCompactMode] = useState(false);
 
-    // EHR settings
     const [ehrAutoSync, setEhrAutoSync] = useState(true);
+
+    // Profile photo state
+    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [hasLoaded, setHasLoaded] = useState(false);
 
     // Mobile device settings
     const [devices, setDevices] = useState([
         { id: '1', name: 'iPhone 14 Pro', lastActive: 'Today, 10:30 AM' },
         { id: '2', name: 'iPad Pro', lastActive: 'Yesterday, 4:15 PM' }
     ]);
+    const [isPairingModalOpen, setIsPairingModalOpen] = useState(false);
+
+    // Load from localStorage on mount
+    useEffect(() => {
+        const savedPhoto = localStorage.getItem('cs_profile_image');
+        const savedDevices = localStorage.getItem('cs_paired_devices');
+        if (savedPhoto) setProfileImage(savedPhoto);
+        if (savedDevices) {
+            try {
+                setDevices(JSON.parse(savedDevices));
+            } catch (e) {
+                console.error("Failed to parse saved devices", e);
+            }
+        }
+        setHasLoaded(true);
+    }, []);
+
+    // Save to localStorage when things change
+    useEffect(() => {
+        if (!hasLoaded) return;
+        if (profileImage) localStorage.setItem('cs_profile_image', profileImage);
+        localStorage.setItem('cs_paired_devices', JSON.stringify(devices));
+    }, [profileImage, devices, hasLoaded]);
+
+    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProfileImage(reader.result as string);
+                setSaved(true);
+                setTimeout(() => setSaved(false), 2000);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleRemoveDevice = (id: string) => {
         setDevices(prev => prev.filter(d => d.id !== id));
     };
 
-    const handleAddDevice = () => {
+    const confirmPairing = () => {
         const newDevice = {
             id: Math.random().toString(36).substr(2, 9),
-            name: 'New Authorized Device',
+            name: 'New Authorized Phone',
             lastActive: 'Just Now'
         };
         setDevices(prev => [...prev, newDevice]);
+        setIsPairingModalOpen(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
     };
 
     const handleSave = async () => {
@@ -127,11 +175,26 @@ export default function SettingsPage() {
                                     </div>
                                     <div className="p-6 space-y-6">
                                         <div className="flex items-center gap-6 mb-4">
-                                            <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl border-2 border-primary/20">
-                                                SK
+                                            <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-2xl border-2 border-primary/20 overflow-hidden">
+                                                {profileImage ? (
+                                                    <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
+                                                ) : (
+                                                    "SK"
+                                                )}
                                             </div>
                                             <div>
-                                                <button className="text-xs font-black uppercase tracking-widest text-primary hover:underline px-4 py-2 bg-primary/5 rounded-lg border border-primary/10">
+                                                <input
+                                                    type="file"
+                                                    ref={fileInputRef}
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={handlePhotoUpload}
+                                                />
+                                                <button
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="text-xs font-black uppercase tracking-widest text-primary hover:underline px-4 py-2 bg-primary/5 rounded-lg border border-primary/10 flex items-center gap-2 group transition-all"
+                                                >
+                                                    <Camera className="h-4 w-4 group-hover:scale-110 transition-transform" />
                                                     Change Photo
                                                 </button>
                                                 <p className="text-[10px] text-muted-foreground mt-2 font-medium">JPG, GIF or PNG. 1MB Max.</p>
@@ -376,12 +439,44 @@ export default function SettingsPage() {
                                     )}
 
                                     <button
-                                        onClick={handleAddDevice}
+                                        onClick={() => setIsPairingModalOpen(true)}
                                         className="w-full py-4 text-sm font-bold text-primary hover:bg-primary/5 rounded-xl border-2 border-dashed border-primary/30 transition-all flex items-center justify-center gap-2 group active:scale-[0.99]"
                                     >
                                         <Smartphone className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                                        + Add New Device
+                                        + Pair New Device
                                     </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Pairing Modal */}
+                        {isPairingModalOpen && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                                <div className="bg-white dark:bg-slate-950 w-full max-w-md rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                                    <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                        <h3 className="text-lg font-black uppercase tracking-tight">Pair New Device</h3>
+                                        <button onClick={() => setIsPairingModalOpen(false)} className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-red-500 transition-colors">
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                    <div className="p-8 space-y-8 text-center">
+                                        <div className="mx-auto w-48 h-48 bg-slate-50 dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center relative group">
+                                            <div className="absolute inset-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center">
+                                                <QrCode className="h-32 w-32 text-slate-900 dark:text-white" />
+                                            </div>
+                                            <div className="absolute inset-0 bg-primary/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm font-bold text-slate-900 dark:text-white">Scan this code with the ChartSpark Mobile App</p>
+                                            <p className="text-xs text-slate-500 font-medium">To authorize this device for clinical access and 2FA.</p>
+                                        </div>
+                                        <button
+                                            onClick={confirmPairing}
+                                            className="w-full py-4 bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-primary/90 shadow-xl shadow-primary/20 transition-all active:scale-95"
+                                        >
+                                            Confirm Pairing Complete
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
