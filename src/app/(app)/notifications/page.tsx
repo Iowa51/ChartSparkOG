@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     Bell,
@@ -133,9 +133,55 @@ const allNotifications: Notification[] = [
 
 export default function NotificationsPage() {
     const router = useRouter();
-    const [notifications, setNotifications] = useState(allNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [hasLoaded, setHasLoaded] = useState(false);
     const [filter, setFilter] = useState<"all" | "unread">("all");
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Sync notifications with localStorage
+    useEffect(() => {
+        const loadNotifications = () => {
+            const saved = localStorage.getItem('cs_notifications');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Re-attach icons because they can't be stringified
+                    const withIcons = parsed.map((n: any) => ({
+                        ...n,
+                        icon: getIconForType(n.type)
+                    }));
+                    setNotifications(withIcons);
+                } catch (e) { }
+            } else {
+                // Initialize with demo data if empty
+                setNotifications(allNotifications);
+                localStorage.setItem('cs_notifications', JSON.stringify(allNotifications));
+            }
+            setHasLoaded(true);
+        };
+
+        loadNotifications();
+        window.addEventListener('notificationsUpdated', loadNotifications);
+        return () => window.removeEventListener('notificationsUpdated', loadNotifications);
+    }, []);
+
+    // Helper to get icons (since they aren't persisted in JSON)
+    function getIconForType(type: string) {
+        switch (type) {
+            case "patient": return UserPlus;
+            case "appointment": return Calendar;
+            case "billing": return CreditCard;
+            case "document": return FileText;
+            case "system": return Settings;
+            default: return Bell;
+        }
+    }
+
+    const updateStorage = (updated: Notification[]) => {
+        setNotifications(updated);
+        localStorage.setItem('cs_notifications', JSON.stringify(updated));
+        window.dispatchEvent(new Event('notificationsUpdated'));
+    };
 
     const filteredNotifications = notifications
         .filter(n => filter === "all" || !n.read)
@@ -148,18 +194,19 @@ export default function NotificationsPage() {
 
     const markAsRead = (id: number, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
-        setNotifications(prev =>
-            prev.map(n => n.id === id ? { ...n, read: true } : n)
-        );
+        const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
+        updateStorage(updated);
     };
 
     const markAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        const updated = notifications.map(n => ({ ...n, read: true }));
+        updateStorage(updated);
     };
 
     const deleteNotification = (id: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        setNotifications(prev => prev.filter(n => n.id !== id));
+        const updated = notifications.filter(n => n.id !== id);
+        updateStorage(updated);
     };
 
     const handleNotificationClick = (notification: Notification) => {
@@ -198,13 +245,11 @@ export default function NotificationsPage() {
                         </span>
                     )}
                     <button
-                        onClick={() => {
-                            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-                        }}
+                        onClick={markAllAsRead}
                         disabled={unreadCount === 0}
                         className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${unreadCount === 0
-                                ? 'text-slate-400 cursor-not-allowed'
-                                : 'text-primary hover:bg-primary/10'
+                            ? 'text-slate-400 cursor-not-allowed'
+                            : 'text-primary hover:bg-primary/10'
                             }`}
                     >
                         Mark all as read
