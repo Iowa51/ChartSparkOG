@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
     LayoutDashboard,
     Building2,
@@ -14,27 +15,66 @@ import {
     Shield,
     TrendingUp,
     DollarSign,
+    Award,
+    Pill,
+    Video,
+    Calendar,
+    BookOpen,
+    ClipboardList,
+    LogOut,
+    CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const adminNavItems = [
-    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { label: "Admin Home", href: "/admin", icon: LayoutDashboard },
     { label: "Organizations", href: "/admin/organizations", icon: Building2 },
     { label: "Users", href: "/admin/users", icon: Users },
-    { label: "Submissions", href: "/submissions", icon: FileText },
-    { label: "Billing", href: "/admin/billing", icon: FileText },
+    { label: "Submissions", href: "/admin/submissions", icon: FileText },
+    { label: "Billing Console", href: "/admin/billing", icon: FileText },
     { label: "System Health", href: "/admin/system-health", icon: Stethoscope },
-    { label: "Settings", href: "/admin/settings", icon: Settings },
+    { label: "Admin Settings", href: "/admin/settings", icon: Settings },
 ];
 
-// Super Admin uses anchor links since it's a single-page dashboard
 const superAdminNavItems = [
-    { label: "Overview", href: "#overview", icon: LayoutDashboard },
-    { label: "Organizations", href: "#organizations", icon: Building2 },
-    { label: "Users", href: "#users", icon: Users },
-    { label: "Insurance Claims", href: "#claims", icon: Shield },
-    { label: "All Submissions", href: "/submissions", icon: FileText },
-    { label: "Revenue", href: "#revenue", icon: DollarSign },
+    { label: "Platform Overview", href: "/super-admin", icon: LayoutDashboard },
+    { label: "All Organizations", href: "/super-admin/organizations", icon: Building2 },
+    { label: "Platform Users", href: "/super-admin/users", icon: Users },
+    { label: "Auditors Hub", href: "/super-admin/auditors", icon: Shield },
+    { label: "Platform Billing", href: "/super-admin/financials", icon: DollarSign },
+    { label: "Audit Logs", href: "/super-admin/audit-logs", icon: ClipboardList },
+];
+
+const clinicianNavSections = [
+    {
+        title: "Care Standards",
+        items: [
+            { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+            { label: "Patients", href: "/patients", icon: Users },
+            { label: "Encounters", href: "/encounters", icon: ClipboardList },
+            { label: "Templates", href: "/templates", icon: FileText },
+            { label: "References", href: "/references", icon: BookOpen },
+        ]
+    },
+    {
+        title: "Intelligence & Hub",
+        items: [
+            { label: "Clinical AI", href: "/ai-assistant", icon: Stethoscope, tier: "complete" },
+            { label: "Treatment Plan", href: "/treatment-planner", icon: ClipboardList, tier: "complete" },
+            { label: "Integration", href: "/integrations", icon: Settings, tier: "complete" },
+        ]
+    },
+    {
+        title: "Practice Operations",
+        items: [
+            { label: "E-Prescribe", href: "/e-prescribe", icon: Pill, tier: "complete" },
+            { label: "License Tracking", href: "/licensing", icon: Award, tier: "pro" },
+            { label: "Billing", href: "/billing", icon: CreditCard },
+            { label: "Calendar", href: "/calendar", icon: Calendar, tier: "pro" },
+            { label: "Telehealth", href: "/telehealth", icon: Video, tier: "pro" },
+        ]
+    }
 ];
 
 interface AdminSidebarProps {
@@ -44,25 +84,44 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebarProps) {
     const pathname = usePathname();
+    const router = useRouter();
+    const [hasMounted, setHasMounted] = useState(false);
+    const supabase = createClient();
+
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
+    const handleLogout = async () => {
+        // 1. Clear Demo Mode session data
+        localStorage.removeItem("demoMode");
+        document.cookie = "demoMode=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+
+        // 2. Perform Supabase Sign Out if available
+        if (supabase) {
+            await supabase.auth.signOut();
+        }
+
+        // 3. Clear application states
+        localStorage.removeItem("cs_notifications");
+        localStorage.removeItem("cs_licenses");
+
+        // 4. Force navigation and refresh
+        router.push("/login");
+        router.refresh();
+    };
+
+    if (!hasMounted) return null;
 
     // Use different nav items based on context
-    const navItems = context === "super-admin" ? superAdminNavItems : adminNavItems;
-
-    const handleAnchorClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-        if (href.startsWith("#")) {
-            e.preventDefault();
-            const element = document.querySelector(href);
-            if (element) {
-                element.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-        }
-    };
+    const primaryNavItems = context === "super-admin" ? superAdminNavItems : adminNavItems;
 
     return (
         <aside className={cn(
-            "hidden lg:flex flex-col w-60 h-screen sticky top-0 text-white transition-colors duration-300",
+            "hidden lg:flex flex-col w-64 h-screen sticky top-0 text-white transition-colors duration-300 shadow-2xl z-40",
             context === "super-admin" ? "bg-slate-950" : "bg-slate-900"
         )}>
+            {/* Logo area */}
             <div className="px-6 pb-6 pt-6">
                 <Link href={context === "super-admin" ? "/super-admin" : "/admin"} className="block mb-6 -ml-1">
                     <div className="relative h-14 w-full flex items-center pt-2">
@@ -74,96 +133,124 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
                         />
                     </div>
                 </Link>
-                <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest ml-1 opacity-70">
-                    <Shield className={cn("h-3 w-3", context === "super-admin" ? "text-purple-500" : "text-primary")} />
-                    <span>{context === "super-admin" ? "Platform Command" : "Admin Console"}</span>
+                <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] ml-1 opacity-70">
+                    <Shield className={cn("h-3.5 w-3.5", context === "super-admin" ? "text-purple-500" : "text-primary")} />
+                    <span>{context === "super-admin" ? "Platform Control" : "Administrative Console"}</span>
                 </div>
             </div>
 
-            {/* Main Navigation */}
-            <nav className="flex-1 px-4 space-y-1">
-                {navItems.map((item, index) => {
-                    const isActive = context === "super-admin"
-                        ? index === 0 // First item is always "active" for super-admin since it's single page
-                        : (pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href)));
-                    const Icon = item.icon;
+            {/* Scrollable Navigation Area */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-4">
+                {/* Admin/SuperAdmin Specific Section */}
+                <div className="mb-8 mt-2">
+                    <h3 className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">
+                        {context === "super-admin" ? "Platform Master" : "Management Console"}
+                    </h3>
+                    <div className="space-y-1">
+                        {primaryNavItems.map((item) => {
+                            const isActive = pathname === item.href || (item.href !== "/admin" && item.href !== "/super-admin" && pathname.startsWith(item.href));
+                            const Icon = item.icon;
 
-                    if (context === "super-admin") {
-                        // Use regular anchor for super-admin (smooth scroll)
-                        return (
-                            <a
-                                key={item.href}
-                                href={item.href}
-                                onClick={(e) => handleAnchorClick(e, item.href)}
-                                className={cn(
-                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm cursor-pointer",
-                                    index === 0
-                                        ? "bg-purple-600 text-white font-bold"
-                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                                )}
-                            >
-                                <Icon className="h-5 w-5" />
-                                <span>{item.label}</span>
-                            </a>
-                        );
-                    }
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={cn(
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm group relative",
+                                        isActive
+                                            ? (context === "super-admin" ? "bg-purple-600/20 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(147,51,234,0.1)]" : "bg-primary/20 text-primary border border-primary/20 shadow-[0_0_15px_rgba(37,99,235,0.1)]")
+                                            : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
+                                    )}
+                                >
+                                    {isActive && (
+                                        <div className={cn(
+                                            "absolute left-0 w-1 h-5 rounded-r-full shadow-lg",
+                                            context === "super-admin" ? "bg-purple-500 shadow-purple-500/40" : "bg-primary shadow-primary/40"
+                                        )} />
+                                    )}
+                                    <Icon className={cn("h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110", isActive ? (context === "super-admin" ? "text-purple-400" : "text-primary") : "text-slate-500")} />
+                                    <span className="font-bold tracking-tight">{item.label}</span>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
 
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={cn(
-                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm",
-                                isActive
-                                    ? "bg-primary text-white font-bold"
-                                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                            )}
-                        >
-                            <Icon className="h-5 w-5" />
-                            <span>{item.label}</span>
-                        </Link>
-                    );
-                })}
-            </nav>
+                {/* Mirrored Clinician Sections */}
+                {clinicianNavSections.map((section) => (
+                    <div key={section.title} className="mb-6">
+                        <h3 className="px-4 text-[10px] font-black text-slate-600 dark:text-slate-500 uppercase tracking-[0.2em] mb-3">
+                            {section.title}
+                        </h3>
+                        <div className="space-y-1">
+                            {section.items.map((item) => {
+                                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                                const Icon = item.icon;
 
-            {/* Back to App Link */}
-            <div className="p-4 border-t border-slate-700/50">
-                <Link
-                    href="/dashboard"
-                    className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                    Back to ChartSpark App
-                </Link>
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-[13px] group opacity-70 hover:opacity-100",
+                                            isActive
+                                                ? "bg-slate-700/50 text-white font-bold border border-slate-600/50"
+                                                : "text-slate-400 hover:bg-slate-800/50"
+                                        )}
+                                    >
+                                        <Icon className="h-4 w-4 shrink-0" />
+                                        <span className="font-semibold">{item.label}</span>
+                                        {item.tier && (
+                                            <span className={cn(
+                                                "ml-auto text-[8px] font-black px-1 py-0.5 rounded tracking-tighter opacity-80",
+                                                item.tier === "pro" ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400"
+                                            )}>
+                                                {item.tier === "complete" ? "ELITE" : "PRO"}
+                                            </span>
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
             </div>
 
-
-            {/* Admin Profile & Logout */}
-            <div className="p-4 border-t border-slate-700/50">
-                <div className="flex items-center gap-3 mb-3">
+            {/* User Profile & Global Actions */}
+            <div className="p-4 border-t border-slate-800 bg-black/20">
+                <div className="flex items-center gap-3 mb-4 px-2">
                     <div className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm",
-                        context === "super-admin" ? "bg-purple-600" : "bg-primary"
+                        "h-10 w-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-inner",
+                        context === "super-admin" ? "bg-gradient-to-br from-purple-600 to-indigo-700" : "bg-gradient-to-br from-blue-600 to-primary"
                     )}>
                         {role === "SUPER_ADMIN" ? "SA" : "AD"}
                     </div>
-                    <div className="flex flex-col">
-                        <p className="text-white text-sm font-semibold">
-                            {role === "SUPER_ADMIN" ? "Super Admin" : "Clinic Admin"}
+                    <div className="flex flex-col min-w-0">
+                        <p className="text-white text-[13px] font-black truncate leading-tight">
+                            {role === "SUPER_ADMIN" ? "Platform Admin" : "Clinic Director"}
                         </p>
-                        <p className="text-slate-400 text-xs truncate max-w-[120px]">
-                            {role === "SUPER_ADMIN" ? "admin@chartspark.io" : "ad@mountainview.com"}
+                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                            Authorized Session
                         </p>
                     </div>
                 </div>
-                <form action="/api/auth/signout" method="POST">
-                    <button
-                        type="submit"
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
+
+                <div className="grid grid-cols-1 gap-2">
+                    <Link
+                        href="/dashboard"
+                        className="flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition-all border border-slate-800 hover:border-slate-700"
                     >
-                        Sign Out
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                        Return to App
+                    </Link>
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-black uppercase tracking-[0.1em] text-red-500 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all border border-red-500/20 hover:border-red-500/40"
+                    >
+                        <LogOut className="h-3.5 w-3.5" />
+                        Terminate Session
                     </button>
-                </form>
+                </div>
             </div>
         </aside>
     );

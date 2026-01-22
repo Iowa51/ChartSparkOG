@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
@@ -76,76 +77,7 @@ export default async function SuperAdminLayout({
     return (
         <div className="flex min-h-screen bg-slate-950">
             {/* Sidebar */}
-            <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
-                {/* Logo */}
-                <div className="p-6 border-b border-slate-800">
-                    <Link href="/super-admin" className="block">
-                        <img
-                            src="/ChartSparkLogo.png"
-                            alt="ChartSpark"
-                            className="h-10 w-auto"
-                            style={{ filter: "brightness(0) invert(1)" }}
-                        />
-                    </Link>
-                    <div className="mt-3 flex items-center gap-2">
-                        <span className="px-2 py-1 text-xs font-bold rounded-full bg-purple-600 text-white">
-                            SUPER ADMIN
-                        </span>
-                        <span className="text-xs text-slate-500">Platform Control</span>
-                    </div>
-                </div>
-
-                {/* Navigation */}
-                <nav className="flex-1 p-4 space-y-1">
-                    {superAdminNavItems.map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                        >
-                            <item.icon className="h-5 w-5" />
-                            {item.label}
-                        </Link>
-                    ))}
-                </nav>
-
-                {/* Back to App */}
-                <div className="p-4 border-t border-slate-800">
-                    <Link
-                        href="/dashboard"
-                        className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        Back to ChartSpark App
-                    </Link>
-                </div>
-
-                {/* User Info & Logout */}
-                <div className="p-4 border-t border-slate-800">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center">
-                            <User className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">
-                                {displayName}
-                            </p>
-                            <p className="text-xs text-slate-400 truncate">
-                                {user?.email}
-                            </p>
-                        </div>
-                    </div>
-                    <form action="/api/auth/signout" method="POST">
-                        <button
-                            type="submit"
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-red-400 hover:bg-red-900/30 hover:text-red-300 transition-colors"
-                        >
-                            <LogOut className="h-4 w-4" />
-                            Sign Out
-                        </button>
-                    </form>
-                </div>
-            </aside>
+            <AdminSidebar role="SUPER_ADMIN" context="super-admin" />
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950">
