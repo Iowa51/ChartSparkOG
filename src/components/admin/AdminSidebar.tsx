@@ -10,7 +10,6 @@ import {
     FileText,
     Percent,
     Settings,
-    ChevronLeft,
     Stethoscope,
     Shield,
     TrendingUp,
@@ -197,16 +196,9 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
                 </div>
 
                 <div className="grid grid-cols-1 gap-2">
-                    <Link
-                        href="/dashboard"
-                        className="flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-bold text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-xl transition-all border border-slate-800 hover:border-slate-700"
-                    >
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                        Return to App
-                    </Link>
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-black uppercase tracking-[0.1em] text-red-500 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all border border-red-500/20 hover:border-red-500/40"
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-red-500 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all border border-red-500/20 hover:border-red-500/40"
                     >
                         <LogOut className="h-3.5 w-3.5" />
                         Terminate Session
