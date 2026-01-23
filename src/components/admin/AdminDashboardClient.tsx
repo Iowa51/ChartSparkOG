@@ -44,11 +44,16 @@ interface AdminDashboardClientProps {
 }
 
 export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboardClientProps) {
-    const [selectedFilter, setSelectedFilter] = useState<"all" | "pending" | "approved">("all");
+    const [selectedFilter, setSelectedFilter] = useState<"all" | "pending" | "approved" | "thisMonth">("all");
     const [showFeatureModal, setShowFeatureModal] = useState(false);
 
     const filteredSubmissions = useMemo(() => {
         if (selectedFilter === "all") return recentSubmissions;
+        if (selectedFilter === "thisMonth") {
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            return recentSubmissions.filter(s => new Date(s.created_at) >= startOfMonth);
+        }
         if (selectedFilter === "pending") {
             return recentSubmissions.filter(s =>
                 ['pending_audit', 'pending_approval'].includes(s.status)
@@ -112,7 +117,15 @@ export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboar
                     <p className="text-xs text-emerald-600 mt-3 font-bold">{stats.activeUsers} active</p>
                 </button>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 opacity-80">
+                <button
+                    onClick={() => setSelectedFilter("thisMonth")}
+                    className={cn(
+                        "text-left bg-white dark:bg-slate-900 rounded-2xl border p-6 transition-all duration-200",
+                        selectedFilter === "thisMonth"
+                            ? "border-teal-500 ring-2 ring-teal-500/10 shadow-lg scale-[1.02]"
+                            : "border-slate-200 dark:border-slate-800 hover:border-teal-300"
+                    )}
+                >
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center">
                             <FileText className="h-6 w-6 text-teal-600 dark:text-teal-400" />
@@ -124,7 +137,7 @@ export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboar
                             <p className="text-sm text-slate-500 font-bold">Notes This Month</p>
                         </div>
                     </div>
-                </div>
+                </button>
 
                 <button
                     onClick={() => setSelectedFilter("pending")}
