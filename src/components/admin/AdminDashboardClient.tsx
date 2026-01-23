@@ -10,9 +10,11 @@ import {
     TrendingUp,
     ArrowRight,
     Plus,
+    Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { FeaturePackageModal } from "./FeaturePackageModal";
 
 interface Submission {
     id: string;
@@ -43,6 +45,7 @@ interface AdminDashboardClientProps {
 
 export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboardClientProps) {
     const [selectedFilter, setSelectedFilter] = useState<"all" | "pending" | "approved">("all");
+    const [showFeatureModal, setShowFeatureModal] = useState(false);
 
     const filteredSubmissions = useMemo(() => {
         if (selectedFilter === "all") return recentSubmissions;
@@ -184,14 +187,21 @@ export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboar
                     <FileText className="h-5 w-5" />
                     <span className="font-bold">Review Submissions</span>
                 </Link>
-                <Link
-                    href="/admin/features"
-                    className="flex items-center gap-3 p-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl transition-colors shadow-lg shadow-teal-500/20"
+                <button
+                    onClick={() => setShowFeatureModal(true)}
+                    className="flex items-center gap-3 p-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl transition-all shadow-lg shadow-teal-500/20"
                 >
-                    <CheckCircle2 className="h-5 w-5" />
+                    <Zap className="h-5 w-5" />
                     <span className="font-bold">Assign Features</span>
-                </Link>
+                </button>
             </div>
+
+            {/* Feature Package Modal */}
+            <FeaturePackageModal
+                isOpen={showFeatureModal}
+                onClose={() => setShowFeatureModal(false)}
+                users={[]}
+            />
 
             {/* Recent Submissions Table */}
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">

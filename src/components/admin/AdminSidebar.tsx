@@ -140,9 +140,9 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
             </div>
 
             {/* Scrollable Navigation Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4">
                 {/* Admin/SuperAdmin Specific Section */}
-                <div className="mb-8 mt-2">
+                <div className="mb-6 mt-2">
                     <h3 className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">
                         {context === "super-admin" ? "Platform Master" : "Management Console"}
                     </h3>
@@ -175,45 +175,6 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
                         })}
                     </div>
                 </div>
-
-                {/* Mirrored Clinician Sections */}
-                {clinicianNavSections.map((section) => (
-                    <div key={section.title} className="mb-6">
-                        <h3 className="px-4 text-[10px] font-black text-slate-600 dark:text-slate-500 uppercase tracking-[0.2em] mb-3">
-                            {section.title}
-                        </h3>
-                        <div className="space-y-1">
-                            {section.items.map((item) => {
-                                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                                const Icon = item.icon;
-
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={cn(
-                                            "flex items-center gap-3 px-4 py-2 rounded-xl transition-all text-[13px] group opacity-70 hover:opacity-100",
-                                            isActive
-                                                ? "bg-slate-700/50 text-white font-bold border border-slate-600/50"
-                                                : "text-slate-400 hover:bg-slate-800/50"
-                                        )}
-                                    >
-                                        <Icon className="h-4 w-4 shrink-0" />
-                                        <span className="font-semibold">{item.label}</span>
-                                        {item.tier && (
-                                            <span className={cn(
-                                                "ml-auto text-[8px] font-black px-1 py-0.5 rounded tracking-tighter opacity-80",
-                                                item.tier === "pro" ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400"
-                                            )}>
-                                                {item.tier === "complete" ? "ELITE" : "PRO"}
-                                            </span>
-                                        )}
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
             </div>
 
             {/* User Profile & Global Actions */}

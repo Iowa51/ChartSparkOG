@@ -11,6 +11,7 @@ import {
     Activity,
 } from "lucide-react";
 import Link from "next/link";
+import { SuperAdminQuickActions } from "@/components/admin/SuperAdminQuickActions";
 
 // Local Card components for consistency
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -184,37 +185,8 @@ export default async function SuperAdminDashboard() {
                 </Card>
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-8">
-                <Link
-                    href="/super-admin/organizations?action=create"
-                    className="flex items-center gap-3 p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors"
-                >
-                    <Plus className="h-5 w-5" />
-                    <span className="font-medium">Create Organization</span>
-                </Link>
-                <Link
-                    href="/super-admin/users?action=create"
-                    className="flex items-center gap-3 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors"
-                >
-                    <Plus className="h-5 w-5" />
-                    <span className="font-medium">Create User</span>
-                </Link>
-                <Link
-                    href="/super-admin/auditors"
-                    className="flex items-center gap-3 p-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors"
-                >
-                    <UserCheck className="h-5 w-5" />
-                    <span className="font-medium">Assign Auditor</span>
-                </Link>
-                <Link
-                    href="/super-admin/financials"
-                    className="flex items-center gap-3 p-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors"
-                >
-                    <TrendingUp className="h-5 w-5" />
-                    <span className="font-medium">View Financials</span>
-                </Link>
-            </div>
+            {/* Quick Actions with Feature Assignment Modal */}
+            <SuperAdminQuickActions users={[]} />
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -245,8 +217,8 @@ export default async function SuperAdminDashboard() {
                                             </div>
                                             <div className="text-right">
                                                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${org.is_active
-                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                                                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                                                     }`}>
                                                     {org.is_active ? 'Active' : 'Inactive'}
                                                 </span>
