@@ -178,22 +178,25 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
 
             {/* User Profile & Global Actions */}
             <div className="p-4 border-t border-slate-800 bg-black/20">
-                <div className="flex items-center gap-3 mb-4 px-2">
+                <Link
+                    href={context === "super-admin" ? "/super-admin/settings" : "/admin/settings"}
+                    className="flex items-center gap-3 mb-4 px-2 py-2 -mx-2 rounded-xl hover:bg-slate-800/50 transition-colors cursor-pointer group"
+                >
                     <div className={cn(
                         "h-10 w-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-inner",
                         context === "super-admin" ? "bg-gradient-to-br from-purple-600 to-indigo-700" : "bg-gradient-to-br from-blue-600 to-primary"
                     )}>
                         {role === "SUPER_ADMIN" ? "SA" : "AD"}
                     </div>
-                    <div className="flex flex-col min-w-0">
-                        <p className="text-white text-[13px] font-black truncate leading-tight">
+                    <div className="flex flex-col min-w-0 flex-1">
+                        <p className="text-white text-[13px] font-black truncate leading-tight group-hover:text-primary transition-colors">
                             {role === "SUPER_ADMIN" ? "Platform Admin" : "Clinic Director"}
                         </p>
                         <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                            Authorized Session
+                            Click for Settings
                         </p>
                     </div>
-                </div>
+                </Link>
 
                 <div className="grid grid-cols-1 gap-2">
                     <button

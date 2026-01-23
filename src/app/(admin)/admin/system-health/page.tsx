@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity, Server, Database, Cloud, CheckCircle, AlertTriangle, XCircle, Clock, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { Activity, Server, Database, Cloud, CheckCircle, AlertTriangle, XCircle, Clock, RefreshCw, ArrowLeft } from "lucide-react";
 
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
@@ -170,11 +171,21 @@ export default function AdminSystemHealthPage() {
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
             <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">System Health</h1>
-                        <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest opacity-70">
-                            Live monitoring • Auto-refreshes every 30s
-                        </p>
+                    <div className="flex items-center gap-4">
+                        <Link
+                            href="/admin"
+                            className="flex items-center gap-2 px-3 py-2 text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            <span className="hidden sm:inline">Back to Dashboard</span>
+                        </Link>
+                        <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+                        <div>
+                            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">System Health</h1>
+                            <p className="text-xs font-bold text-slate-500 mt-0.5 uppercase tracking-widest opacity-70">
+                                Live monitoring • Auto-refreshes every 30s
+                            </p>
+                        </div>
                     </div>
                     <button
                         onClick={fetchHealth}
@@ -316,7 +327,7 @@ export default function AdminSystemHealthPage() {
                                             {healthData.activities.map((activity, i) => (
                                                 <div key={i} className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                                     <div className={`h-8 w-8 rounded-full flex items-center justify-center ${activity.status === 'success' ? 'bg-emerald-100' :
-                                                            activity.status === 'warning' ? 'bg-amber-100' : 'bg-red-100'
+                                                        activity.status === 'warning' ? 'bg-amber-100' : 'bg-red-100'
                                                         }`}>
                                                         {getActivityIcon(activity.status)}
                                                     </div>
