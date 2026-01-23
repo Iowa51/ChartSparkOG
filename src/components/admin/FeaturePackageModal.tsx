@@ -130,6 +130,14 @@ export function FeaturePackageModal({ isOpen, onClose, users }: FeaturePackageMo
         });
     };
 
+    const handleAssignAll = () => {
+        setSelectedPackages(["normal", "elite", "pro"]);
+    };
+
+    const handleResetToNormal = () => {
+        setSelectedPackages(["normal"]);
+    };
+
     const handleSave = async () => {
         if (!selectedUserId) return;
 
@@ -204,6 +212,35 @@ export function FeaturePackageModal({ isOpen, onClose, users }: FeaturePackageMo
                                 </option>
                             ))}
                         </select>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex flex-wrap gap-3 mb-6">
+                        <button
+                            onClick={handleAssignAll}
+                            disabled={selectedPackages.length === 3}
+                            className={cn(
+                                "px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
+                                selectedPackages.length === 3
+                                    ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                                    : "bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 shadow-lg"
+                            )}
+                        >
+                            <Crown className="h-4 w-4" />
+                            Assign All Packages
+                        </button>
+                        <button
+                            onClick={handleResetToNormal}
+                            disabled={selectedPackages.length === 1}
+                            className={cn(
+                                "px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                                selectedPackages.length === 1
+                                    ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600"
+                            )}
+                        >
+                            Reset to Normal Only
+                        </button>
                     </div>
 
                     {/* Package Cards */}
