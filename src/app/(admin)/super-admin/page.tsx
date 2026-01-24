@@ -9,6 +9,11 @@ import {
     Plus,
     ArrowRight,
     Activity,
+    CreditCard,
+    Receipt,
+    Settings,
+    Banknote,
+    ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { SuperAdminQuickActions } from "@/components/admin/SuperAdminQuickActions";
@@ -188,7 +193,163 @@ export default async function SuperAdminDashboard() {
             {/* Quick Actions with Feature Assignment Modal */}
             <SuperAdminQuickActions users={[]} />
 
-            {/* Main Content Grid */}
+            {/* NEW: Managed Billing & Subscriptions Section */}
+            <div className="mb-8">
+                <Card>
+                    <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
+                                    <Banknote className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900 dark:text-white">
+                                        Managed Billing & Subscriptions
+                                    </h3>
+                                    <p className="text-sm text-slate-500">
+                                        Platform billing, claims processing, and subscription management
+                                    </p>
+                                </div>
+                            </div>
+                            <span className="px-3 py-1 bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-400 text-xs font-bold rounded-full">
+                                NEW
+                            </span>
+                        </div>
+                    </div>
+                    <div className="p-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Managed Billing Dashboard */}
+                            <Link
+                                href="/super-admin/managed-billing"
+                                className="group p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all border border-transparent hover:border-teal-200 dark:hover:border-teal-800"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="h-10 w-10 rounded-lg bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center group-hover:bg-teal-500 transition-colors">
+                                        <DollarSign className="h-5 w-5 text-teal-600 dark:text-teal-400 group-hover:text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900 dark:text-white group-hover:text-teal-600">Billing Dashboard</p>
+                                        <p className="text-xs text-slate-500">Overview & stats</p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            {/* Claims */}
+                            <Link
+                                href="/super-admin/managed-billing/claims"
+                                className="group p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                                        <ClipboardList className="h-5 w-5 text-blue-600 dark:text-blue-400 group-hover:text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900 dark:text-white group-hover:text-blue-600">All Claims</p>
+                                        <p className="text-xs text-slate-500">View & manage claims</p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            {/* ERA Payments */}
+                            <Link
+                                href="/super-admin/managed-billing/era"
+                                className="group p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center group-hover:bg-emerald-500 transition-colors">
+                                        <Receipt className="h-5 w-5 text-emerald-600 dark:text-emerald-400 group-hover:text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900 dark:text-white group-hover:text-emerald-600">ERA Payments</p>
+                                        <p className="text-xs text-slate-500">Payment remittances</p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            {/* Clearinghouse Settings */}
+                            <Link
+                                href="/super-admin/managed-billing/clearinghouse"
+                                className="group p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all border border-transparent hover:border-purple-200 dark:hover:border-purple-800"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:bg-purple-500 transition-colors">
+                                        <Settings className="h-5 w-5 text-purple-600 dark:text-purple-400 group-hover:text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900 dark:text-white group-hover:text-purple-600">Clearinghouse</p>
+                                        <p className="text-xs text-slate-500">API configuration</p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            {/* Unmatched Payments */}
+                            <Link
+                                href="/super-admin/managed-billing/unmatched"
+                                className="group p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all border border-transparent hover:border-amber-200 dark:hover:border-amber-800"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center group-hover:bg-amber-500 transition-colors">
+                                        <FileText className="h-5 w-5 text-amber-600 dark:text-amber-400 group-hover:text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900 dark:text-white group-hover:text-amber-600">Unmatched</p>
+                                        <p className="text-xs text-slate-500">Reconcile payments</p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            {/* Subscriptions */}
+                            <Link
+                                href="/pricing"
+                                className="group p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-all border border-transparent hover:border-pink-200 dark:hover:border-pink-800"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="h-10 w-10 rounded-lg bg-pink-100 dark:bg-pink-900/40 flex items-center justify-center group-hover:bg-pink-500 transition-colors">
+                                        <CreditCard className="h-5 w-5 text-pink-600 dark:text-pink-400 group-hover:text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900 dark:text-white group-hover:text-pink-600">Pricing Page</p>
+                                        <p className="text-xs text-slate-500">View subscription tiers</p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            {/* Financials */}
+                            <Link
+                                href="/super-admin/financials"
+                                className="group p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center group-hover:bg-indigo-500 transition-colors">
+                                        <TrendingUp className="h-5 w-5 text-indigo-600 dark:text-indigo-400 group-hover:text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600">Financials</p>
+                                        <p className="text-xs text-slate-500">Platform revenue</p>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            {/* Fees */}
+                            <Link
+                                href="/super-admin/fees"
+                                className="group p-4 bg-slate-50 dark:bg-slate-800 rounded-xl hover:bg-cyan-50 dark:hover:bg-cyan-900/20 transition-all border border-transparent hover:border-cyan-200 dark:hover:border-cyan-800"
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="h-10 w-10 rounded-lg bg-cyan-100 dark:bg-cyan-900/40 flex items-center justify-center group-hover:bg-cyan-500 transition-colors">
+                                        <DollarSign className="h-5 w-5 text-cyan-600 dark:text-cyan-400 group-hover:text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-slate-900 dark:text-white group-hover:text-cyan-600">Platform Fees</p>
+                                        <p className="text-xs text-slate-500">Configure fees</p>
+                                    </div>
+                                </div>
+                            </Link>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Recent Organizations */}
                 <div className="lg:col-span-2">
