@@ -332,7 +332,7 @@ CREATE INDEX IF NOT EXISTS idx_era_payments_claim ON era_payments(claim_id);
 -- Seed subscription tiers
 INSERT INTO subscription_tiers (code, name, description, monthly_price, annual_price, features) VALUES
 ('STARTER', 'Starter', 'Essential features for solo practitioners', 9900, 95000, '["Basic AI notes", "Up to 50 patients", "Email support"]'),
-('ELITE', 'Elite', 'Full-featured for growing practices', 29900, 287000, '["Advanced AI notes", "Unlimited patients", "Priority support", "Custom templates", "Analytics dashboard", "Managed billing option"]')
+('ELITE', 'Elite', 'Full-featured for growing practices', 19900, 191000, '["Advanced AI notes", "Unlimited patients", "Priority support", "Custom templates", "Analytics dashboard", "Managed billing option"]')
 ON CONFLICT (code) DO UPDATE SET
     monthly_price = EXCLUDED.monthly_price,
     annual_price = EXCLUDED.annual_price,
