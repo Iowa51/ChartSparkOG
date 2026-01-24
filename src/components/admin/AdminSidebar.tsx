@@ -22,6 +22,7 @@ import {
     ClipboardList,
     LogOut,
     CreditCard,
+    Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -32,6 +33,7 @@ const adminNavItems = [
     { label: "Users", href: "/admin/users", icon: Users },
     { label: "Submissions", href: "/admin/submissions", icon: FileText },
     { label: "Billing Console", href: "/admin/billing", icon: FileText },
+    { label: "Managed Billing", href: "/admin/managed-billing", icon: Receipt },
     { label: "System Health", href: "/admin/system-health", icon: Stethoscope },
     { label: "Admin Settings", href: "/admin/settings", icon: Settings },
 ];
@@ -41,6 +43,7 @@ const superAdminNavItems = [
     { label: "All Organizations", href: "/super-admin/organizations", icon: Building2 },
     { label: "Platform Users", href: "/super-admin/users", icon: Users },
     { label: "Auditors Hub", href: "/super-admin/auditors", icon: Shield },
+    { label: "Managed Billing", href: "/super-admin/managed-billing", icon: Receipt },
     { label: "Platform Billing", href: "/super-admin/financials", icon: DollarSign },
     { label: "Audit Logs", href: "/super-admin/audit-logs", icon: ClipboardList },
 ];

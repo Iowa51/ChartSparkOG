@@ -195,7 +195,7 @@ export async function GET(req: NextRequest) {
                 .limit(5);
 
             if (logs && logs.length > 0) {
-                logs.forEach(log => {
+                logs.forEach((log: { action: string; entity_type: string; created_at: string }) => {
                     activities.push({
                         time: log.created_at,
                         event: `${log.action} ${log.entity_type}`,

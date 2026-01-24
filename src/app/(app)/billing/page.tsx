@@ -19,6 +19,7 @@ import {
     BarChart3,
     Percent,
     X,
+    ChevronRight,
 } from "lucide-react";
 import {
     currentUserBillingStats,
@@ -768,6 +769,22 @@ function BillingContent() {
             />
 
             <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
+                {/* Revenue Dashboard Link */}
+                <Link
+                    href="/billing/revenue"
+                    className="mb-6 flex items-center justify-between p-4 bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border border-teal-200 dark:border-teal-800 rounded-xl hover:shadow-md transition-all group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-teal-500 rounded-lg">
+                            <BarChart3 className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <span className="font-semibold text-teal-700 dark:text-teal-300">Revenue Dashboard</span>
+                            <p className="text-sm text-teal-600 dark:text-teal-400">View your billing performance and collections</p>
+                        </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-teal-500 group-hover:translate-x-1 transition-transform" />
+                </Link>
 
                 {/* Role-based Content */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
