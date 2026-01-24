@@ -11,7 +11,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PricingCard, PricingComparison } from '@/components/subscriptions';
-import { ArrowLeft, Sparkles, Check } from 'lucide-react';
+import { ArrowLeft, Sparkles, Check, Receipt, FileText, TrendingUp, Shield, Zap } from 'lucide-react';
 
 const STARTER_FEATURES = [
     'AI-Powered Clinical Notes',
@@ -34,6 +34,7 @@ const ELITE_FEATURES = [
     'Advanced Analytics Dashboard',
     'E-Prescribe Integration',
     'EHR Integration Hub',
+    'Managed Billing (Add-on Available)',
     'API Access',
     'Priority Support',
     'Custom Integrations',
@@ -54,6 +55,7 @@ const COMPARISON_FEATURES = [
     { name: 'Advanced Analytics', starter: false, elite: true },
     { name: 'E-Prescribe', starter: false, elite: true },
     { name: 'EHR Integration', starter: false, elite: true },
+    { name: 'Managed Billing', starter: false, elite: 'Add-on' },
     { name: 'API Access', starter: false, elite: true },
     { name: 'Support', starter: 'Standard', elite: 'Priority' },
 ];
@@ -157,6 +159,88 @@ export default function PricingPage() {
                         onSelect={() => handleSelectPlan('ELITE')}
                         loading={loading === 'ELITE'}
                     />
+                </div>
+            </section>
+
+            {/* Managed Billing Add-on */}
+            <section className="max-w-5xl mx-auto px-6 pb-16">
+                <div className="relative overflow-hidden bg-gradient-to-br from-teal-600 via-emerald-600 to-teal-700 rounded-3xl p-8 md:p-12">
+                    {/* Background Pattern */}
+                    <div className="absolute inset-0 opacity-10">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
+                    </div>
+
+                    <div className="relative z-10">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+                            <div className="flex-1">
+                                <div className="inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium mb-4">
+                                    <Receipt className="h-4 w-4" />
+                                    Elite Add-on
+                                </div>
+                                <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+                                    Managed Billing Service
+                                </h2>
+                                <p className="text-lg text-teal-100 mb-6 max-w-xl">
+                                    Let us handle your medical billing so you can focus on patient care.
+                                    Full claims management, ERA processing, and revenue optimization.
+                                </p>
+
+                                <div className="grid sm:grid-cols-2 gap-4 mb-8">
+                                    {[
+                                        { icon: FileText, text: 'Automated Claims Generation' },
+                                        { icon: Zap, text: 'Real-time Claim Validation' },
+                                        { icon: Receipt, text: 'ERA/835 Payment Processing' },
+                                        { icon: TrendingUp, text: 'Revenue Analytics Dashboard' },
+                                        { icon: Shield, text: 'Clearinghouse Integration' },
+                                        { icon: Check, text: 'Denial Management & Appeals' },
+                                    ].map((feature, index) => (
+                                        <div key={index} className="flex items-center gap-3 text-white">
+                                            <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                                                <feature.icon className="h-4 w-4" />
+                                            </div>
+                                            <span className="text-sm font-medium">{feature.text}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-2xl p-6 shadow-2xl min-w-[280px]">
+                                <div className="text-center mb-6">
+                                    <p className="text-sm text-slate-500 mb-1">Starting at</p>
+                                    <div className="flex items-center justify-center gap-1">
+                                        <span className="text-5xl font-black text-slate-900">5%</span>
+                                    </div>
+                                    <p className="text-slate-600 mt-1">of collections</p>
+                                </div>
+
+                                <div className="space-y-3 mb-6 text-sm">
+                                    <div className="flex items-center gap-2 text-slate-700">
+                                        <Check className="h-4 w-4 text-teal-500" />
+                                        No setup fees
+                                    </div>
+                                    <div className="flex items-center gap-2 text-slate-700">
+                                        <Check className="h-4 w-4 text-teal-500" />
+                                        No minimum commitment
+                                    </div>
+                                    <div className="flex items-center gap-2 text-slate-700">
+                                        <Check className="h-4 w-4 text-teal-500" />
+                                        Cancel anytime
+                                    </div>
+                                </div>
+
+                                <Link
+                                    href="/contact"
+                                    className="block w-full py-3 px-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-semibold rounded-xl text-center hover:from-teal-600 hover:to-emerald-600 transition-all shadow-lg hover:shadow-xl"
+                                >
+                                    Get Started
+                                </Link>
+                                <p className="text-xs text-slate-500 text-center mt-3">
+                                    Requires Elite subscription
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
