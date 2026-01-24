@@ -2,7 +2,7 @@
  * Pricing Page
  * Public page displaying subscription tiers and pricing
  * 
- * NOTE: This is a NEW page.
+ * 4 Tiers: Normal, Pro, Elite, Managed Billing
  */
 
 'use client';
@@ -10,10 +10,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { PricingCard, PricingComparison } from '@/components/subscriptions';
-import { ArrowLeft, Sparkles, Check, Receipt, FileText, TrendingUp, Shield, Zap } from 'lucide-react';
+import { ArrowLeft, Sparkles, Check, Receipt, FileText, TrendingUp, Shield, Zap, Brain, Stethoscope, Building2 } from 'lucide-react';
 
-const STARTER_FEATURES = [
+// Feature lists for each tier
+const NORMAL_FEATURES = [
     'AI-Powered Clinical Notes',
     'Smart SOAP Documentation',
     'Voice-to-Text AI Scribe',
@@ -24,55 +24,64 @@ const STARTER_FEATURES = [
     'Quick Phrases',
     'Geriatric Assessments',
     'Basic Analytics',
+    'Email Support',
 ];
 
-const ELITE_FEATURES = [
-    'Everything in Starter, plus:',
+const PRO_FEATURES = [
+    'Everything in Normal, plus:',
     'AI Medical Coding (CPT/ICD-10)',
     'AI Treatment Planning',
     'AI Diagnostic Assistant',
     'Advanced Analytics Dashboard',
-    'E-Prescribe Integration',
-    'EHR Integration Hub',
-    'Managed Billing (Add-on Available)',
-    'API Access',
-    'Priority Support',
-    'Custom Integrations',
+    'Custom Report Builder',
+    'Priority Email Support',
 ];
 
-const COMPARISON_FEATURES = [
-    { name: 'AI Clinical Notes', starter: true, elite: true },
-    { name: 'Voice-to-Text AI Scribe', starter: true, elite: true },
-    { name: 'Patient Management', starter: true, elite: true },
-    { name: 'Appointment Calendar', starter: true, elite: true },
-    { name: 'Telehealth', starter: true, elite: true },
-    { name: 'Clinical Templates', starter: true, elite: true },
-    { name: 'Quick Phrases', starter: true, elite: true },
-    { name: 'Geriatric Tools', starter: true, elite: true },
-    { name: 'AI Medical Coding', starter: false, elite: true },
-    { name: 'AI Treatment Planning', starter: false, elite: true },
-    { name: 'AI Diagnostic Assistant', starter: false, elite: true },
-    { name: 'Advanced Analytics', starter: false, elite: true },
-    { name: 'E-Prescribe', starter: false, elite: true },
-    { name: 'EHR Integration', starter: false, elite: true },
-    { name: 'Managed Billing', starter: false, elite: 'Add-on' },
-    { name: 'API Access', starter: false, elite: true },
-    { name: 'Support', starter: 'Standard', elite: 'Priority' },
+const ELITE_FEATURES = [
+    'Everything in Pro, plus:',
+    'E-Prescribe Integration',
+    'EHR Integration Hub',
+    'API Access',
+    'Custom Integrations',
+    'Dedicated Account Manager',
+    'Priority Phone Support',
+    'Custom Branding',
 ];
+
+const MANAGED_BILLING_FEATURES = [
+    'Automated Claims Generation',
+    'Real-time Claim Validation',
+    'Clearinghouse Integration',
+    'ERA/835 Payment Processing',
+    'Revenue Analytics Dashboard',
+    'Denial Management & Appeals',
+    'Monthly Financial Reports',
+    'Dedicated Billing Specialist',
+];
+
+type TierCode = 'NORMAL' | 'PRO' | 'ELITE' | 'MANAGED_BILLING';
 
 export default function PricingPage() {
     const router = useRouter();
-    const [loading, setLoading] = useState<'STARTER' | 'ELITE' | null>(null);
+    const [loading, setLoading] = useState<TierCode | null>(null);
 
-    async function handleSelectPlan(tierCode: 'STARTER' | 'ELITE') {
+    async function handleSelectPlan(tierCode: TierCode) {
         setLoading(tierCode);
 
         try {
-            // In production, this would create a checkout session
-            // For now, redirect to signup with tier preselected
-            const priceId = tierCode === 'STARTER'
-                ? process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID
-                : process.env.NEXT_PUBLIC_STRIPE_ELITE_PRICE_ID;
+            // For Managed Billing, redirect to contact
+            if (tierCode === 'MANAGED_BILLING') {
+                router.push('/contact?plan=managed-billing');
+                return;
+            }
+
+            const priceIdMap: Record<string, string | undefined> = {
+                NORMAL: process.env.NEXT_PUBLIC_STRIPE_NORMAL_PRICE_ID || process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID,
+                PRO: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
+                ELITE: process.env.NEXT_PUBLIC_STRIPE_ELITE_PRICE_ID,
+            };
+
+            const priceId = priceIdMap[tierCode];
 
             const response = await fetch('/api/subscriptions/create-checkout', {
                 method: 'POST',
@@ -130,127 +139,216 @@ export default function PricingPage() {
                     7-Day Free Trial • No Credit Card Required
                 </div>
                 <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-4">
-                    Simple, Transparent Pricing
+                    Choose Your Plan
                 </h1>
                 <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    Choose the plan that fits your practice. Upgrade or downgrade anytime.
+                    From solo practitioners to full billing operations. Find the perfect fit for your practice.
                 </p>
             </section>
 
-            {/* Pricing Cards */}
-            <section className="max-w-5xl mx-auto px-6 pb-16">
-                <div className="grid md:grid-cols-2 gap-8">
-                    <PricingCard
-                        tierCode="STARTER"
-                        name="Starter"
-                        price={99}
-                        description="Essential AI tools for your practice"
-                        features={STARTER_FEATURES}
-                        onSelect={() => handleSelectPlan('STARTER')}
-                        loading={loading === 'STARTER'}
-                    />
-                    <PricingCard
-                        tierCode="ELITE"
-                        name="Elite"
-                        price={199}
-                        description="Advanced clinical intelligence"
-                        features={ELITE_FEATURES}
-                        highlighted
-                        onSelect={() => handleSelectPlan('ELITE')}
-                        loading={loading === 'ELITE'}
-                    />
-                </div>
-            </section>
-
-            {/* Managed Billing Add-on */}
-            <section className="max-w-5xl mx-auto px-6 pb-16">
-                <div className="relative overflow-hidden bg-gradient-to-br from-teal-600 via-emerald-600 to-teal-700 rounded-3xl p-8 md:p-12">
-                    {/* Background Pattern */}
-                    <div className="absolute inset-0 opacity-10">
-                        <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
-                    </div>
-
-                    <div className="relative z-10">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
-                            <div className="flex-1">
-                                <div className="inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium mb-4">
-                                    <Receipt className="h-4 w-4" />
-                                    Elite Add-on
-                                </div>
-                                <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
-                                    Managed Billing Service
-                                </h2>
-                                <p className="text-lg text-teal-100 mb-6 max-w-xl">
-                                    Let us handle your medical billing so you can focus on patient care.
-                                    Full claims management, ERA processing, and revenue optimization.
-                                </p>
-
-                                <div className="grid sm:grid-cols-2 gap-4 mb-8">
-                                    {[
-                                        { icon: FileText, text: 'Automated Claims Generation' },
-                                        { icon: Zap, text: 'Real-time Claim Validation' },
-                                        { icon: Receipt, text: 'ERA/835 Payment Processing' },
-                                        { icon: TrendingUp, text: 'Revenue Analytics Dashboard' },
-                                        { icon: Shield, text: 'Clearinghouse Integration' },
-                                        { icon: Check, text: 'Denial Management & Appeals' },
-                                    ].map((feature, index) => (
-                                        <div key={index} className="flex items-center gap-3 text-white">
-                                            <div className="h-8 w-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-                                                <feature.icon className="h-4 w-4" />
-                                            </div>
-                                            <span className="text-sm font-medium">{feature.text}</span>
-                                        </div>
-                                    ))}
-                                </div>
+            {/* Pricing Cards - 4 Tiers */}
+            <section className="max-w-7xl mx-auto px-6 pb-16">
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {/* Normal Tier */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col">
+                        <div className="mb-6">
+                            <div className="h-12 w-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+                                <Stethoscope className="h-6 w-6 text-slate-600 dark:text-slate-400" />
                             </div>
-
-                            <div className="bg-white rounded-2xl p-6 shadow-2xl min-w-[280px]">
-                                <div className="text-center mb-6">
-                                    <p className="text-sm text-slate-500 mb-1">Starting at</p>
-                                    <div className="flex items-center justify-center gap-1">
-                                        <span className="text-5xl font-black text-slate-900">5%</span>
-                                    </div>
-                                    <p className="text-slate-600 mt-1">of collections</p>
-                                </div>
-
-                                <div className="space-y-3 mb-6 text-sm">
-                                    <div className="flex items-center gap-2 text-slate-700">
-                                        <Check className="h-4 w-4 text-teal-500" />
-                                        No setup fees
-                                    </div>
-                                    <div className="flex items-center gap-2 text-slate-700">
-                                        <Check className="h-4 w-4 text-teal-500" />
-                                        No minimum commitment
-                                    </div>
-                                    <div className="flex items-center gap-2 text-slate-700">
-                                        <Check className="h-4 w-4 text-teal-500" />
-                                        Cancel anytime
-                                    </div>
-                                </div>
-
-                                <Link
-                                    href="/contact"
-                                    className="block w-full py-3 px-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white font-semibold rounded-xl text-center hover:from-teal-600 hover:to-emerald-600 transition-all shadow-lg hover:shadow-xl"
-                                >
-                                    Get Started
-                                </Link>
-                                <p className="text-xs text-slate-500 text-center mt-3">
-                                    Requires Elite subscription
-                                </p>
-                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Normal</h3>
+                            <p className="text-sm text-slate-500 mt-1">Essential clinical tools</p>
                         </div>
+                        <div className="mb-6">
+                            <span className="text-4xl font-black text-slate-900 dark:text-white">$99</span>
+                            <span className="text-slate-500">/month</span>
+                        </div>
+                        <ul className="space-y-3 mb-8 flex-1">
+                            {NORMAL_FEATURES.map((feature, index) => (
+                                <li key={index} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                    <Check className="h-4 w-4 text-teal-500 mt-0.5 flex-shrink-0" />
+                                    {feature}
+                                </li>
+                            ))}
+                        </ul>
+                        <button
+                            onClick={() => handleSelectPlan('NORMAL')}
+                            disabled={loading === 'NORMAL'}
+                            className="w-full py-3 px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                        >
+                            {loading === 'NORMAL' ? 'Loading...' : 'Start Free Trial'}
+                        </button>
+                    </div>
+
+                    {/* Pro Tier */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-blue-500 p-6 flex flex-col relative">
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                            <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">POPULAR</span>
+                        </div>
+                        <div className="mb-6">
+                            <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mb-4">
+                                <Brain className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Pro</h3>
+                            <p className="text-sm text-slate-500 mt-1">AI-powered intelligence</p>
+                        </div>
+                        <div className="mb-6">
+                            <span className="text-4xl font-black text-slate-900 dark:text-white">$149</span>
+                            <span className="text-slate-500">/month</span>
+                        </div>
+                        <ul className="space-y-3 mb-8 flex-1">
+                            {PRO_FEATURES.map((feature, index) => (
+                                <li key={index} className={`flex items-start gap-2 text-sm ${index === 0 ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>
+                                    <Check className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                    {feature}
+                                </li>
+                            ))}
+                        </ul>
+                        <button
+                            onClick={() => handleSelectPlan('PRO')}
+                            disabled={loading === 'PRO'}
+                            className="w-full py-3 px-4 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition-colors disabled:opacity-50"
+                        >
+                            {loading === 'PRO' ? 'Loading...' : 'Start Free Trial'}
+                        </button>
+                    </div>
+
+                    {/* Elite Tier */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col">
+                        <div className="mb-6">
+                            <div className="h-12 w-12 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center mb-4">
+                                <Sparkles className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white">Elite</h3>
+                            <p className="text-sm text-slate-500 mt-1">Full integration suite</p>
+                        </div>
+                        <div className="mb-6">
+                            <span className="text-4xl font-black text-slate-900 dark:text-white">$199</span>
+                            <span className="text-slate-500">/month</span>
+                        </div>
+                        <ul className="space-y-3 mb-8 flex-1">
+                            {ELITE_FEATURES.map((feature, index) => (
+                                <li key={index} className={`flex items-start gap-2 text-sm ${index === 0 ? 'text-purple-600 dark:text-purple-400 font-medium' : 'text-slate-600 dark:text-slate-400'}`}>
+                                    <Check className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                                    {feature}
+                                </li>
+                            ))}
+                        </ul>
+                        <button
+                            onClick={() => handleSelectPlan('ELITE')}
+                            disabled={loading === 'ELITE'}
+                            className="w-full py-3 px-4 bg-purple-500 text-white font-semibold rounded-xl hover:bg-purple-600 transition-colors disabled:opacity-50"
+                        >
+                            {loading === 'ELITE' ? 'Loading...' : 'Start Free Trial'}
+                        </button>
+                    </div>
+
+                    {/* Managed Billing Tier */}
+                    <div className="bg-gradient-to-br from-teal-600 to-emerald-600 rounded-2xl p-6 flex flex-col text-white">
+                        <div className="mb-6">
+                            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                                <Receipt className="h-6 w-6 text-white" />
+                            </div>
+                            <h3 className="text-xl font-bold">Managed Billing</h3>
+                            <p className="text-sm text-teal-100 mt-1">Full-service billing</p>
+                        </div>
+                        <div className="mb-6">
+                            <span className="text-4xl font-black">$149</span>
+                            <span className="text-teal-100">/mo</span>
+                            <div className="text-sm text-teal-100 mt-1">+ 3% of collections</div>
+                        </div>
+                        <ul className="space-y-3 mb-8 flex-1">
+                            {MANAGED_BILLING_FEATURES.map((feature, index) => (
+                                <li key={index} className="flex items-start gap-2 text-sm text-teal-50">
+                                    <Check className="h-4 w-4 text-white mt-0.5 flex-shrink-0" />
+                                    {feature}
+                                </li>
+                            ))}
+                        </ul>
+                        <button
+                            onClick={() => handleSelectPlan('MANAGED_BILLING')}
+                            disabled={loading === 'MANAGED_BILLING'}
+                            className="w-full py-3 px-4 bg-white text-teal-600 font-semibold rounded-xl hover:bg-teal-50 transition-colors disabled:opacity-50"
+                        >
+                            {loading === 'MANAGED_BILLING' ? 'Loading...' : 'Contact Sales'}
+                        </button>
                     </div>
                 </div>
             </section>
 
-            {/* Feature Comparison */}
-            <section className="max-w-4xl mx-auto px-6 pb-16">
+            {/* Feature Comparison Table */}
+            <section className="max-w-7xl mx-auto px-6 pb-16">
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-8">
-                    Compare Plans
+                    Compare All Features
                 </h2>
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
-                    <PricingComparison features={COMPARISON_FEATURES} />
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-slate-200 dark:border-slate-700">
+                                    <th className="text-left p-4 font-semibold text-slate-900 dark:text-white">Feature</th>
+                                    <th className="text-center p-4 font-semibold text-slate-600 dark:text-slate-400">Normal</th>
+                                    <th className="text-center p-4 font-semibold text-blue-600">Pro</th>
+                                    <th className="text-center p-4 font-semibold text-purple-600">Elite</th>
+                                    <th className="text-center p-4 font-semibold text-teal-600">Managed Billing</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {[
+                                    { name: 'AI Clinical Notes', normal: true, pro: true, elite: true, billing: false },
+                                    { name: 'Voice-to-Text AI Scribe', normal: true, pro: true, elite: true, billing: false },
+                                    { name: 'Patient Management', normal: true, pro: true, elite: true, billing: false },
+                                    { name: 'Appointment Calendar', normal: true, pro: true, elite: true, billing: false },
+                                    { name: 'Telehealth', normal: true, pro: true, elite: true, billing: false },
+                                    { name: 'Clinical Templates', normal: true, pro: true, elite: true, billing: false },
+                                    { name: 'AI Medical Coding', normal: false, pro: true, elite: true, billing: false },
+                                    { name: 'AI Treatment Planning', normal: false, pro: true, elite: true, billing: false },
+                                    { name: 'AI Diagnostic Assistant', normal: false, pro: true, elite: true, billing: false },
+                                    { name: 'Advanced Analytics', normal: false, pro: true, elite: true, billing: false },
+                                    { name: 'E-Prescribe Integration', normal: false, pro: false, elite: true, billing: false },
+                                    { name: 'EHR Integration', normal: false, pro: false, elite: true, billing: false },
+                                    { name: 'API Access', normal: false, pro: false, elite: true, billing: false },
+                                    { name: 'Claims Generation', normal: false, pro: false, elite: false, billing: true },
+                                    { name: 'Claim Validation', normal: false, pro: false, elite: false, billing: true },
+                                    { name: 'ERA Processing', normal: false, pro: false, elite: false, billing: true },
+                                    { name: 'Clearinghouse Integration', normal: false, pro: false, elite: false, billing: true },
+                                    { name: 'Revenue Dashboard', normal: false, pro: false, elite: false, billing: true },
+                                    { name: 'Denial Management', normal: false, pro: false, elite: false, billing: true },
+                                ].map((feature, index) => (
+                                    <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                        <td className="p-4 text-sm text-slate-700 dark:text-slate-300">{feature.name}</td>
+                                        <td className="p-4 text-center">
+                                            {feature.normal ? (
+                                                <Check className="h-5 w-5 text-teal-500 mx-auto" />
+                                            ) : (
+                                                <span className="text-slate-300 dark:text-slate-600">—</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            {feature.pro ? (
+                                                <Check className="h-5 w-5 text-blue-500 mx-auto" />
+                                            ) : (
+                                                <span className="text-slate-300 dark:text-slate-600">—</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            {feature.elite ? (
+                                                <Check className="h-5 w-5 text-purple-500 mx-auto" />
+                                            ) : (
+                                                <span className="text-slate-300 dark:text-slate-600">—</span>
+                                            )}
+                                        </td>
+                                        <td className="p-4 text-center">
+                                            {feature.billing ? (
+                                                <Check className="h-5 w-5 text-teal-500 mx-auto" />
+                                            ) : (
+                                                <span className="text-slate-300 dark:text-slate-600">—</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
@@ -296,6 +394,10 @@ export default function PricingPage() {
                         {
                             q: 'What happens when my trial ends?',
                             a: 'Your account enters read-only mode. You can still view your data but cannot create new records. Choose a plan to restore full access.',
+                        },
+                        {
+                            q: 'Can I combine Managed Billing with other plans?',
+                            a: 'Yes! Managed Billing can be added to any plan. Contact our sales team to set up a custom bundle.',
                         },
                         {
                             q: 'Is my data secure?',
