@@ -34,7 +34,8 @@ const demoEmailRoles: Record<string, string> = {
 };
 
 // SEC-MFA: Roles that require MFA for HIPAA compliance
-const mfaRequiredRoles = ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
+// TEMPORARILY DISABLED - Re-enable after MFA enrollment is set up
+const mfaRequiredRoles: string[] = []; // Was: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
 
 // Paths that are allowed without MFA (for MFA setup itself)
 const mfaExemptPaths = [
