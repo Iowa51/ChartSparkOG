@@ -10,7 +10,9 @@ import {
     UserCheck,
     UserX,
     X,
+    ArrowLeft
 } from "lucide-react";
+import Link from "next/link";
 
 interface User {
     id: string;
@@ -80,6 +82,15 @@ export default function AdminUsersPage() {
     const [formData, setFormData] = useState({
         first_name: "",
         last_name: "",
+        specialty: "both",
+    });
+
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createFormData, setCreateFormData] = useState({
+        email: "",
+        first_name: "",
+        last_name: "",
+        role: "USER",
         specialty: "both",
     });
 
@@ -202,6 +213,26 @@ export default function AdminUsersPage() {
         }
     };
 
+    const handleCreateUser = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!createFormData.email.trim()) return;
+
+        const newUser: User = {
+            id: `new-user-${Date.now()}`,
+            email: createFormData.email,
+            first_name: createFormData.first_name || null,
+            last_name: createFormData.last_name || null,
+            role: createFormData.role,
+            specialty: createFormData.specialty,
+            is_active: true,
+            last_login: null,
+        };
+
+        setUsers(prev => [newUser, ...prev]);
+        setShowCreateModal(false);
+        setCreateFormData({ email: "", first_name: "", last_name: "", role: "USER", specialty: "both" });
+    };
+
     const filteredUsers = users.filter(user =>
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (user.first_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -212,23 +243,39 @@ export default function AdminUsersPage() {
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                        Users
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Manage users in your organization
-                    </p>
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/admin"
+                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                    >
+                        <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                    </Link>
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                            Users
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1">
+                            Manage users in your organization
+                        </p>
+                    </div>
                 </div>
+                <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium transition-colors"
+                >
+                    <Plus className="h-4 w-4" />
+                    Add User
+                </button>
             </div>
 
-            {/* Info Banner */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 mb-6">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Note:</strong> New users are created through Supabase Auth.
-                    Contact your Super Admin to add new users to the organization.
-                </p>
-            </div>
+            {/* Info Banner - only show if not demo */}
+            {!isDemo && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 mb-6">
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                        <strong>Note:</strong> Users created here are added to your organization.
+                    </p>
+                </div>
+            )}
 
             {/* Search */}
             <div className="mb-6">
@@ -400,6 +447,108 @@ export default function AdminUsersPage() {
                                     className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
                                 >
                                     Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Create User Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl">
+                        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                                Add New User
+                            </h2>
+                            <button
+                                onClick={() => setShowCreateModal(false)}
+                                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                    Email *
+                                </label>
+                                <input
+                                    type="email"
+                                    required
+                                    value={createFormData.email}
+                                    onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                                    placeholder="user@organization.com"
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        First Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={createFormData.first_name}
+                                        onChange={(e) => setCreateFormData({ ...createFormData, first_name: e.target.value })}
+                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Last Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={createFormData.last_name}
+                                        onChange={(e) => setCreateFormData({ ...createFormData, last_name: e.target.value })}
+                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Role
+                                    </label>
+                                    <select
+                                        value={createFormData.role}
+                                        onChange={(e) => setCreateFormData({ ...createFormData, role: e.target.value })}
+                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                                    >
+                                        <option value="USER">User</option>
+                                        <option value="ADMIN">Admin</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                        Specialty
+                                    </label>
+                                    <select
+                                        value={createFormData.specialty}
+                                        onChange={(e) => setCreateFormData({ ...createFormData, specialty: e.target.value })}
+                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
+                                    >
+                                        <option value="mental_health">Mental Health</option>
+                                        <option value="geriatric">Geriatric</option>
+                                        <option value="both">Both</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium transition-colors"
+                                >
+                                    Create User
                                 </button>
                             </div>
                         </form>

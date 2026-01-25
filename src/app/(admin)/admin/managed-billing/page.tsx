@@ -108,18 +108,21 @@ export default function AdminManagedBillingDashboard() {
             value: formatCurrency(stats.totalBilled),
             subtitle: 'All submitted claims',
             color: 'text-blue-600',
+            href: '/admin/managed-billing/claims?status=submitted',
         },
         {
             title: 'Total Collected',
             value: formatCurrency(stats.totalPaid),
             subtitle: 'Payments received',
             color: 'text-green-600',
+            href: '/admin/managed-billing/claims?status=paid',
         },
         {
             title: 'Outstanding',
             value: formatCurrency(stats.totalPending),
             subtitle: 'Awaiting payment',
             color: 'text-yellow-600',
+            href: '/admin/managed-billing/claims?status=pending',
         },
     ];
 
@@ -148,14 +151,15 @@ export default function AdminManagedBillingDashboard() {
             {/* Financial Summary */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {financialCards.map((card) => (
-                    <div
+                    <Link
                         key={card.title}
-                        className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6"
+                        href={card.href}
+                        className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 hover:shadow-md hover:border-teal-300 transition-all cursor-pointer"
                     >
                         <p className="text-sm text-slate-500 dark:text-slate-400">{card.title}</p>
                         <p className={`text-3xl font-bold mt-1 ${card.color}`}>{card.value}</p>
                         <p className="text-xs text-slate-400 mt-1">{card.subtitle}</p>
-                    </div>
+                    </Link>
                 ))}
             </div>
 

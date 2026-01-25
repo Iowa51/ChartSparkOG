@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Activity, Server, Database, Cloud, CheckCircle, AlertTriangle, XCircle, Clock, RefreshCw, ArrowLeft } from "lucide-react";
 
-const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
+const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
+    <div onClick={onClick} className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
 );
 const CardHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={`p-6 pb-2 ${className}`}>{children}</div>
@@ -281,7 +281,7 @@ export default function AdminSystemHealthPage() {
 
                             {/* Metrics */}
                             <div className="grid gap-4 md:grid-cols-3">
-                                <Card>
+                                <Card className="cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all" onClick={() => alert(`Response Time: ${healthData.metrics.responseTime}ms\n\nThis is the current latency for health check API calls.`)}>
                                     <CardHeader>
                                         <CardTitle className="text-sm font-medium text-muted-foreground">Response Time</CardTitle>
                                     </CardHeader>
@@ -292,7 +292,7 @@ export default function AdminSystemHealthPage() {
                                         <p className="text-xs text-muted-foreground mt-1">Current health check latency</p>
                                     </CardContent>
                                 </Card>
-                                <Card>
+                                <Card className="cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all" onClick={() => alert(`System Availability: ${(100 - healthData.metrics.errorRate).toFixed(1)}%\n\n${healthData.systems.filter(s => s.status === 'operational').length} of ${healthData.systems.length} systems are operational.`)}>
                                     <CardHeader>
                                         <CardTitle className="text-sm font-medium text-muted-foreground">System Availability</CardTitle>
                                     </CardHeader>
@@ -303,7 +303,7 @@ export default function AdminSystemHealthPage() {
                                         <p className="text-xs text-muted-foreground mt-1">Systems operational</p>
                                     </CardContent>
                                 </Card>
-                                <Card>
+                                <Card className="cursor-pointer hover:shadow-md hover:border-blue-300 transition-all" onClick={() => alert(`Active Users: ${healthData.metrics.activeSessions}\n\nTotal registered users in the database.`)}>
                                     <CardHeader>
                                         <CardTitle className="text-sm font-medium text-muted-foreground">Active Users</CardTitle>
                                     </CardHeader>

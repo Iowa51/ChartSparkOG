@@ -1,10 +1,11 @@
 "use client";
 
-import { CreditCard, DollarSign, TrendingUp, FileText, Download, Filter } from "lucide-react";
+import { CreditCard, DollarSign, TrendingUp, FileText, Download, Filter, ArrowLeft } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
-const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-    <div className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
+const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
+    <div onClick={onClick} className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm ${className}`}>{children}</div>
 );
 const CardHeader = ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <div className={`p-6 pb-2 ${className}`}>{children}</div>
@@ -30,11 +31,19 @@ export default function AdminBillingPage() {
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
             <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Billing</h1>
-                        <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest opacity-70">
-                            Subscription & invoice management
-                        </p>
+                    <div className="flex items-center gap-4">
+                        <Link
+                            href="/admin"
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                        >
+                            <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                        </Link>
+                        <div>
+                            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Billing</h1>
+                            <p className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-widest opacity-70">
+                                Subscription & invoice management
+                            </p>
+                        </div>
                     </div>
                     <button className="bg-primary text-white text-xs font-bold px-4 py-2 rounded-lg shadow-lg shadow-primary/20 flex items-center gap-2">
                         <Download className="h-4 w-4" />
@@ -47,7 +56,7 @@ export default function AdminBillingPage() {
                 <div className="max-w-7xl mx-auto space-y-6">
                     {/* Stats */}
                     <div className="grid gap-4 md:grid-cols-3">
-                        <Card>
+                        <Card className="cursor-pointer hover:shadow-md hover:border-blue-300 transition-all" onClick={() => alert('Current Plan: Enterprise\n\nContact your Super Admin to discuss plan changes.')}>
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Current Plan</CardTitle>
                                 <CreditCard className="h-4 w-4 text-slate-400" />
@@ -57,7 +66,7 @@ export default function AdminBillingPage() {
                                 <p className="text-xs text-muted-foreground">$2,450/month</p>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="cursor-pointer hover:shadow-md hover:border-emerald-300 transition-all" onClick={() => setFilter('all')}>
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Total Spent (YTD)</CardTitle>
                                 <DollarSign className="h-4 w-4 text-slate-400" />
@@ -67,7 +76,7 @@ export default function AdminBillingPage() {
                                 <p className="text-xs text-muted-foreground">12 invoices</p>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="cursor-pointer hover:shadow-md hover:border-purple-300 transition-all" onClick={() => alert('Next payment of $2,450.00 due on Feb 15, 2024')}>
                             <CardHeader className="flex flex-row items-center justify-between pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">Next Payment</CardTitle>
                                 <TrendingUp className="h-4 w-4 text-slate-400" />

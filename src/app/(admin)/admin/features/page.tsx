@@ -12,6 +12,7 @@ import {
     ChevronRight,
     Search,
     RefreshCw,
+    ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
 import { FeatureBadge } from "@/components/FeatureGate";
@@ -157,13 +158,21 @@ export default function AdminFeaturesPage() {
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                        Feature Management
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Assign features to users in your organization
-                    </p>
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/admin"
+                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                    >
+                        <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                    </Link>
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                            Feature Management
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1">
+                            Assign features to users in your organization
+                        </p>
+                    </div>
                 </div>
                 <button
                     onClick={fetchData}
