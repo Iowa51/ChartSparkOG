@@ -1,26 +1,74 @@
+// src/app/api/patients/route.ts
+// SEC-009: HIPAA-compliant patient API with full audit logging
+
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 export async function GET(request: NextRequest) {
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
-        if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        if (!user) {
+            await logAuditEvent({
+                eventType: 'UNAUTHORIZED_ACCESS',
+                ipAddress,
+                userAgent,
+                details: { path: '/api/patients', method: 'GET' },
+                phiAccessed: false,
+                riskLevel: 'HIGH',
+            });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('organization_id, email, role')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile) {
+            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        }
 
         const searchParams = request.nextUrl.searchParams;
         const status = searchParams.get('status');
         const search = searchParams.get('search');
 
-        let query = supabase.from('patients').select('*').eq('organization_id', profile.organization_id).order('last_name', { ascending: true });
+        let query = supabase
+            .from('patients')
+            .select('*')
+            .eq('organization_id', profile.organization_id)
+            .order('last_name', { ascending: true });
 
         if (status && status !== 'all') query = query.eq('status', status);
         if (search) query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
 
         const { data: patients, error } = await query;
+
         if (error) throw error;
+
+        // Log PHI access - viewing patient list
+        await logAuditEvent({
+            eventType: 'PATIENT_SEARCH',
+            userId: user.id,
+            userEmail: user.email,
+            userRole: profile.role,
+            organizationId: profile.organization_id,
+            ipAddress,
+            userAgent,
+            details: {
+                search: search || null,
+                statusFilter: status || 'all',
+                resultCount: patients?.length || 0,
+            },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
 
         return NextResponse.json({ patients });
     } catch (error) {
@@ -30,30 +78,60 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const { ipAddress, userAgent } = getRequestMetadata(request);
+
     try {
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
-        if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        if (!user) {
+            await logAuditEvent({
+                eventType: 'UNAUTHORIZED_ACCESS',
+                ipAddress,
+                userAgent,
+                details: { path: '/api/patients', method: 'POST' },
+                phiAccessed: false,
+                riskLevel: 'HIGH',
+            });
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('organization_id, email, role')
+            .eq('id', user.id)
+            .single();
+
+        if (!profile) {
+            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        }
 
         const patientData = await request.json();
-        const { data: patient, error } = await supabase.from('patients').insert([{
-            ...patientData,
-            organization_id: profile.organization_id,
-            created_by: user.id
-        }]).select().single();
+
+        const { data: patient, error } = await supabase
+            .from('patients')
+            .insert([{
+                ...patientData,
+                organization_id: profile.organization_id,
+                created_by: user.id
+            }])
+            .select()
+            .single();
 
         if (error) throw error;
 
-        await supabase.from('audit_logs').insert({
-            user_id: user.id,
-            organization_id: profile.organization_id,
-            action: 'create',
-            resource_type: 'patient',
-            resource_id: patient.id
-        });
+        // Log PHI creation with full HIPAA fields
+        await logPHIAccess(
+            user.id,
+            user.email || '',
+            profile.role || 'USER',
+            profile.organization_id,
+            'PATIENT',
+            patient.id,
+            'CREATE',
+            ipAddress,
+            userAgent
+        );
 
         return NextResponse.json({ patient }, { status: 201 });
     } catch (error) {

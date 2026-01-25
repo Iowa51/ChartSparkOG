@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 import {
     ArrowLeft,
     Shield,
@@ -41,76 +42,6 @@ interface AuditLogEntry {
     riskLevel: RiskLevel;
 }
 
-// Demo data for when Supabase is unavailable
-const DEMO_AUDIT_LOGS: AuditLogEntry[] = [
-    {
-        id: '1',
-        timestamp: new Date(Date.now() - 1000 * 60 * 5),
-        eventType: 'UNAUTHORIZED_ACCESS',
-        userEmail: 'bob@clinic.com',
-        userRole: 'USER',
-        ipAddress: '192.168.1.100',
-        details: { path: '/super-admin', reason: 'Insufficient permissions' },
-        phiAccessed: false,
-        riskLevel: 'CRITICAL',
-    },
-    {
-        id: '2',
-        timestamp: new Date(Date.now() - 1000 * 60 * 15),
-        eventType: 'PHI_EXPORT',
-        userEmail: 'jane@clinic.com',
-        userRole: 'ADMIN',
-        ipAddress: '192.168.1.50',
-        resourceType: 'patients',
-        details: { count: 45 },
-        phiAccessed: true,
-        riskLevel: 'HIGH',
-    },
-    {
-        id: '3',
-        timestamp: new Date(Date.now() - 1000 * 60 * 30),
-        eventType: 'PATIENT_VIEW',
-        userEmail: 'jane@clinic.com',
-        userRole: 'USER',
-        ipAddress: '192.168.1.50',
-        resourceType: 'patient',
-        resourceId: 'abc-123',
-        phiAccessed: true,
-        riskLevel: 'MEDIUM',
-    },
-    {
-        id: '4',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60),
-        eventType: 'LOGIN_SUCCESS',
-        userEmail: 'jane@clinic.com',
-        userRole: 'USER',
-        ipAddress: '192.168.1.50',
-        details: { mfaVerified: true },
-        phiAccessed: false,
-        riskLevel: 'LOW',
-    },
-    {
-        id: '5',
-        timestamp: new Date(Date.now() - 1000 * 60 * 90),
-        eventType: 'LOGIN_FAILURE',
-        userEmail: 'unknown@attacker.com',
-        ipAddress: '45.33.32.156',
-        details: { reason: 'Invalid credentials', attempt: 3 },
-        phiAccessed: false,
-        riskLevel: 'MEDIUM',
-    },
-    {
-        id: '6',
-        timestamp: new Date(Date.now() - 1000 * 60 * 120),
-        eventType: 'ROLE_CHANGED',
-        userEmail: 'admin@clinic.com',
-        userRole: 'SUPER_ADMIN',
-        details: { targetUser: 'newadmin@clinic.com', oldRole: 'USER', newRole: 'ADMIN' },
-        phiAccessed: false,
-        riskLevel: 'HIGH',
-    },
-];
-
 const RISK_COLORS: Record<RiskLevel, { bg: string; text: string; icon: any }> = {
     CRITICAL: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400', icon: AlertCircle },
     HIGH: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', icon: AlertTriangle },
@@ -119,8 +50,10 @@ const RISK_COLORS: Record<RiskLevel, { bg: string; text: string; icon: any }> = 
 };
 
 export default function AuditLogsPage() {
+    const supabase = createClient();
     const [logs, setLogs] = useState<AuditLogEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRisk, setSelectedRisk] = useState<RiskLevel | 'ALL'>('ALL');
     const [phiOnly, setPhiOnly] = useState(false);
@@ -132,9 +65,41 @@ export default function AuditLogsPage() {
 
     const loadLogs = async () => {
         setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setLogs(DEMO_AUDIT_LOGS);
-        setLoading(false);
+        setError(null);
+        try {
+            const { data, error: fetchError } = await supabase
+                .from('audit_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(100);
+
+            if (fetchError) throw fetchError;
+
+            // Transform database records to our interface
+            const transformedLogs: AuditLogEntry[] = (data || []).map((row: any) => ({
+                id: row.id,
+                timestamp: new Date(row.created_at),
+                eventType: row.event_type || row.action || 'UNKNOWN',
+                userId: row.user_id,
+                userEmail: row.user_email,
+                userRole: row.user_role,
+                organizationId: row.organization_id,
+                ipAddress: row.ip_address,
+                userAgent: row.user_agent,
+                resourceType: row.resource_type,
+                resourceId: row.resource_id,
+                details: row.details,
+                phiAccessed: row.phi_accessed || false,
+                riskLevel: (row.risk_level as RiskLevel) || 'LOW',
+            }));
+
+            setLogs(transformedLogs);
+        } catch (err) {
+            console.error('Error loading audit logs:', err);
+            setError('Failed to load audit logs. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const filteredLogs = logs.filter(log => {

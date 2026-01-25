@@ -23,18 +23,28 @@ import {
     LogOut,
     CreditCard,
     Receipt,
+    Activity,
+    UserPlus,
+    Plug,
+    BarChart3,
+    Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
 const adminNavItems = [
     { label: "Admin Home", href: "/admin", icon: LayoutDashboard },
-    { label: "Organizations", href: "/admin/organizations", icon: Building2 },
+    { label: "Analytics", href: "/admin/analytics", icon: Activity },
     { label: "Users", href: "/admin/users", icon: Users },
-    { label: "Submissions", href: "/admin/submissions", icon: FileText },
-    { label: "Billing Console", href: "/admin/billing", icon: FileText },
-    { label: "Managed Billing", href: "/admin/managed-billing", icon: Receipt },
-    { label: "System Health", href: "/admin/system-health", icon: Stethoscope },
+    { label: "Invitations", href: "/admin/invitations", icon: UserPlus },
+    { label: "Templates", href: "/admin/templates", icon: FileText },
+    { label: "Submissions", href: "/admin/submissions", icon: ClipboardList },
+    { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+    { label: "Scheduled Reports", href: "/admin/scheduled-reports", icon: Calendar },
+    { label: "Webhooks", href: "/admin/webhooks", icon: Webhook },
+    { label: "Security Logs", href: "/admin/security/audit-logs", icon: Shield },
+    { label: "Integrations", href: "/admin/integrations", icon: Plug },
+    { label: "Billing Console", href: "/admin/billing", icon: CreditCard },
     { label: "Admin Settings", href: "/admin/settings", icon: Settings },
 ];
 
@@ -42,10 +52,17 @@ const superAdminNavItems = [
     { label: "Platform Overview", href: "/super-admin", icon: LayoutDashboard },
     { label: "All Organizations", href: "/super-admin/organizations", icon: Building2 },
     { label: "Platform Users", href: "/super-admin/users", icon: Users },
-    { label: "Auditors Hub", href: "/super-admin/auditors", icon: Shield },
+    { label: "Analytics", href: "/super-admin/analytics", icon: Activity },
+    { label: "Invitations", href: "/super-admin/invitations", icon: UserPlus },
+    { label: "Templates", href: "/super-admin/templates", icon: FileText },
+    { label: "Reports", href: "/super-admin/reports", icon: BarChart3 },
+    { label: "Scheduled Reports", href: "/super-admin/scheduled-reports", icon: Calendar },
+    { label: "Webhooks", href: "/super-admin/webhooks", icon: Webhook },
+    { label: "Security Logs", href: "/super-admin/audit-logs", icon: Shield },
+    { label: "Auditors Hub", href: "/super-admin/auditors", icon: ClipboardList },
+    { label: "Integrations", href: "/super-admin/integrations", icon: Plug },
     { label: "Managed Billing", href: "/super-admin/managed-billing", icon: Receipt },
     { label: "Platform Billing", href: "/super-admin/financials", icon: DollarSign },
-    { label: "Audit Logs", href: "/super-admin/audit-logs", icon: ClipboardList },
 ];
 
 const clinicianNavSections = [
@@ -214,4 +231,3 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
         </aside>
     );
 }
-

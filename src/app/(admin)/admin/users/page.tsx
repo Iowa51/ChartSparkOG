@@ -25,50 +25,6 @@ interface User {
     last_login: string | null;
 }
 
-// Demo users for fallback when database unavailable
-const demoUsers: User[] = [
-    {
-        id: "demo-user-1",
-        email: "sarah.k@mountainview.clinic",
-        first_name: "Sarah",
-        last_name: "Kowalski",
-        role: "USER",
-        specialty: "Mental Health",
-        is_active: true,
-        last_login: new Date().toISOString()
-    },
-    {
-        id: "demo-user-2",
-        email: "michael.r@mountainview.clinic",
-        first_name: "Michael",
-        last_name: "Reynolds",
-        role: "USER",
-        specialty: "Geriatric",
-        is_active: true,
-        last_login: new Date(Date.now() - 86400000).toISOString()
-    },
-    {
-        id: "demo-user-3",
-        email: "admin@chartspark.com",
-        first_name: "Clinic",
-        last_name: "Admin",
-        role: "ADMIN",
-        specialty: "Both",
-        is_active: true,
-        last_login: new Date().toISOString()
-    },
-    {
-        id: "demo-user-4",
-        email: "lisa.t@mountainview.clinic",
-        first_name: "Lisa",
-        last_name: "Thompson",
-        role: "USER",
-        specialty: "Mental Health",
-        is_active: false,
-        last_login: new Date(Date.now() - 604800000).toISOString()
-    },
-];
-
 export default function AdminUsersPage() {
     const supabase = createClient();
     const [users, setUsers] = useState<User[]>([]);
@@ -77,7 +33,7 @@ export default function AdminUsersPage() {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [organizationId, setOrganizationId] = useState<string | null>(null);
-    const [isDemo, setIsDemo] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
         first_name: "",
@@ -114,29 +70,23 @@ export default function AdminUsersPage() {
                     setOrganizationId(profile.organization_id);
                     fetchUsers(profile.organization_id);
                 } else {
-                    // No org found, use demo data
-                    console.log("[Admin Users] No organization found, using demo data");
-                    setIsDemo(true);
-                    setUsers(demoUsers);
+                    setError("No organization found. Please contact support.");
                     setLoading(false);
                 }
             } else {
-                // No user, use demo data
-                console.log("[Admin Users] No user session, using demo data");
-                setIsDemo(true);
-                setUsers(demoUsers);
+                setError("Please log in to view users.");
                 setLoading(false);
             }
         } catch (error) {
-            console.error("[Admin Users] Error fetching org, using demo data:", error);
-            setIsDemo(true);
-            setUsers(demoUsers);
+            console.error("[Admin Users] Error fetching org:", error);
+            setError("Failed to load organization data.");
             setLoading(false);
         }
     };
 
     const fetchUsers = async (orgId: string) => {
         setLoading(true);
+        setError(null);
         try {
             const { data, error } = await supabase
                 .from('users')
@@ -147,18 +97,10 @@ export default function AdminUsersPage() {
 
             if (error) throw error;
 
-            if (data && data.length > 0) {
-                setUsers(data);
-            } else {
-                // No users found, use demo data
-                console.log("[Admin Users] No users in database, using demo data");
-                setIsDemo(true);
-                setUsers(demoUsers);
-            }
+            setUsers(data || []);
         } catch (error) {
-            console.error("[Admin Users] Error fetching users, using demo data:", error);
-            setIsDemo(true);
-            setUsers(demoUsers);
+            console.error("[Admin Users] Error fetching users:", error);
+            setError("Failed to load users. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -268,12 +210,17 @@ export default function AdminUsersPage() {
                 </button>
             </div>
 
-            {/* Info Banner - only show if not demo */}
-            {!isDemo && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 mb-6">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
-                        <strong>Note:</strong> Users created here are added to your organization.
-                    </p>
+            {/* Info Banner */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 mb-6">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Note:</strong> Users created here are added to your organization.
+                </p>
+            </div>
+
+            {/* Error State */}
+            {error && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 mb-6">
+                    <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
                 </div>
             )}
 

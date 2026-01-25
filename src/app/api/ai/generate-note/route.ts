@@ -1,9 +1,12 @@
 // src/app/api/ai/generate-note/route.ts
-// AI-powered clinical note generation from clinician input and preset phrases
+// SEC-004: AI-powered clinical note generation from clinician input
+// SEC-009: HIPAA-compliant audit logging for AI PHI processing
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
+import { logAuditEvent } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 interface GenerateNoteRequest {
     clinicianInput: string;
@@ -13,6 +16,8 @@ interface GenerateNoteRequest {
 }
 
 async function handler(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
+
     try {
         const body: GenerateNoteRequest = await context.request.json();
         const { clinicianInput, selectedPhrases, templateId, templateFormat } = body;
@@ -36,6 +41,27 @@ async function handler(context: AuthContext) {
             clinicianInput ? `Clinician Notes: ${clinicianInput}` : '',
             phraseContext ? `Selected Observations:\n${phraseContext}` : ''
         ].filter(Boolean).join('\n\n');
+
+        // Log AI clinical note generation - highly sensitive PHI
+        await logAuditEvent({
+            eventType: 'NOTE_CREATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'ai_generate_note',
+            details: {
+                action: 'AI_CLINICAL_NOTE_GENERATION',
+                templateId,
+                templateFormat,
+                inputLength: fullInput.length,
+                phraseCount: Object.values(selectedPhrases || {}).flat().length,
+            },
+            phiAccessed: true, // Clinical notes are PHI
+            riskLevel: 'MEDIUM',
+        });
 
         // Prepare session data for AI
         const sessionData = {
@@ -93,6 +119,20 @@ async function handler(context: AuthContext) {
 
     } catch (error: unknown) {
         console.error('Error generating note:', error);
+
+        await logAuditEvent({
+            eventType: 'API_ERROR',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'ai_generate_note',
+            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            phiAccessed: false,
+            riskLevel: 'LOW',
+        });
+
         return NextResponse.json(
             { error: 'Failed to generate clinical note' },
             { status: 500 }
@@ -100,7 +140,7 @@ async function handler(context: AuthContext) {
     }
 }
 
-// Requires authentication (feature requirement removed for demo mode)
+// Requires authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
 });

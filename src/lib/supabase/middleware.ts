@@ -33,6 +33,16 @@ const demoEmailRoles: Record<string, string> = {
     'clinician@chartspark.com': 'USER',
 };
 
+// SEC-MFA: Roles that require MFA for HIPAA compliance
+const mfaRequiredRoles = ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
+
+// Paths that are allowed without MFA (for MFA setup itself)
+const mfaExemptPaths = [
+    '/settings/security/mfa',
+    '/api/auth',
+    '/logout',
+];
+
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
@@ -150,6 +160,33 @@ export async function updateSession(request: NextRequest) {
             // Redirect to their appropriate dashboard
             const redirectPath = roleRedirects[userRole] || '/dashboard';
             return NextResponse.redirect(new URL(redirectPath, request.url));
+        }
+
+        // SEC-MFA: Check MFA requirement for high-privilege roles
+        const isMFAExemptPath = mfaExemptPaths.some(exempt => path.startsWith(exempt));
+
+        if (mfaRequiredRoles.includes(userRole) && !isMFAExemptPath) {
+            // Check MFA status
+            const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+            if (mfaError) {
+                console.error('Middleware: MFA check failed', mfaError);
+                // Fail closed - require MFA setup
+                return NextResponse.redirect(new URL('/settings/security/mfa?required=true', request.url));
+            }
+
+            // If user needs AAL2 but only has AAL1, redirect to MFA setup/challenge
+            if (mfaData.currentLevel !== 'aal2') {
+                // Check if they have enrolled but not verified this session
+                if (mfaData.nextLevel === 'aal2') {
+                    // They have MFA enrolled, need to verify
+                    return NextResponse.redirect(new URL('/auth/mfa-challenge?redirect=' + encodeURIComponent(path), request.url));
+                } else {
+                    // No MFA enrolled, send to enrollment
+                    console.warn('Middleware: MFA required but not enrolled', user.email);
+                    return NextResponse.redirect(new URL('/settings/security/mfa?required=true&role=' + userRole, request.url));
+                }
+            }
         }
     }
 

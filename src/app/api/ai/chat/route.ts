@@ -1,11 +1,16 @@
 // src/app/api/ai/chat/route.ts
 // SEC-004: Secured AI chat endpoint with authentication and validation
+// SEC-009: HIPAA-compliant audit logging for AI PHI processing
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
+import { logAuditEvent } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handler(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
+
     try {
         const body = await context.request.json();
         const { message, conversationHistory = [] } = body;
@@ -32,6 +37,25 @@ async function handler(context: AuthContext) {
             );
         }
 
+        // Log AI chat - may contain PHI in questions
+        await logAuditEvent({
+            eventType: 'NOTE_VIEW', // User querying AI about clinical data
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'ai_chat',
+            details: {
+                action: 'AI_CLINICAL_CHAT',
+                messageLength: message.length,
+                historyLength: conversationHistory.length,
+            },
+            phiAccessed: true, // Chat may contain patient information
+            riskLevel: 'LOW',
+        });
+
         // Use safe Azure OpenAI wrapper (falls back to demo if not configured)
         const response = await safeAzureOpenAI.chat(message, conversationHistory);
 
@@ -43,6 +67,20 @@ async function handler(context: AuthContext) {
 
     } catch (error: unknown) {
         console.error('Error in AI chat API:', error);
+
+        await logAuditEvent({
+            eventType: 'API_ERROR',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'ai_chat',
+            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            phiAccessed: false,
+            riskLevel: 'LOW',
+        });
+
         return NextResponse.json(
             { error: 'Failed to get AI response' },
             { status: 500 }
@@ -50,7 +88,7 @@ async function handler(context: AuthContext) {
     }
 }
 
-// SEC-004: Export with authentication (feature requirement removed for demo mode)
+// SEC-004: Export with authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
 });

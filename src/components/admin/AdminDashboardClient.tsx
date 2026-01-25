@@ -11,6 +11,9 @@ import {
     ArrowRight,
     Plus,
     Zap,
+    Shield,
+    BarChart3,
+    Activity,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -185,13 +188,13 @@ export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboar
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
                 <Link
-                    href="/admin/users?action=create"
+                    href="/admin/invitations"
                     className="flex items-center gap-3 p-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shadow-lg shadow-blue-500/20"
                 >
                     <Plus className="h-5 w-5" />
-                    <span className="font-bold">Add User</span>
+                    <span className="font-bold">Invite User</span>
                 </Link>
                 <Link
                     href="/admin/submissions"
@@ -199,6 +202,27 @@ export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboar
                 >
                     <FileText className="h-5 w-5" />
                     <span className="font-bold">Review Submissions</span>
+                </Link>
+                <Link
+                    href="/admin/analytics"
+                    className="flex items-center gap-3 p-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors shadow-lg shadow-indigo-500/20"
+                >
+                    <Activity className="h-5 w-5" />
+                    <span className="font-bold">Analytics</span>
+                </Link>
+                <Link
+                    href="/admin/security/audit-logs"
+                    className="flex items-center gap-3 p-4 bg-slate-700 hover:bg-slate-800 text-white rounded-xl transition-colors shadow-lg shadow-slate-500/20"
+                >
+                    <Shield className="h-5 w-5" />
+                    <span className="font-bold">Security Logs</span>
+                </Link>
+                <Link
+                    href="/admin/reports"
+                    className="flex items-center gap-3 p-4 bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors shadow-lg shadow-purple-500/20"
+                >
+                    <BarChart3 className="h-5 w-5" />
+                    <span className="font-bold">Reports</span>
                 </Link>
                 <button
                     onClick={() => setShowFeatureModal(true)}
