@@ -266,10 +266,10 @@ export default function ERAPage() {
                     <div
                         key={toast.id}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg border animate-in slide-in-from-right duration-300 ${toast.type === 'success'
-                                ? 'bg-green-50 border-green-200 text-green-800'
-                                : toast.type === 'error'
-                                    ? 'bg-red-50 border-red-200 text-red-800'
-                                    : 'bg-blue-50 border-blue-200 text-blue-800'
+                            ? 'bg-green-50 border-green-200 text-green-800'
+                            : toast.type === 'error'
+                                ? 'bg-red-50 border-red-200 text-red-800'
+                                : 'bg-blue-50 border-blue-200 text-blue-800'
                             }`}
                     >
                         {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-green-600" />}
@@ -307,10 +307,10 @@ export default function ERAPage() {
                             onDrop={handleDrop}
                             onClick={() => fileInputRef.current?.click()}
                             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${dragActive
-                                    ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
-                                    : selectedFile
-                                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                                        : 'border-slate-300 dark:border-slate-600 hover:border-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                                : selectedFile
+                                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                    : 'border-slate-300 dark:border-slate-600 hover:border-teal-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                                 }`}
                         >
                             <input
@@ -384,7 +384,7 @@ export default function ERAPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link
-                        href="/super-admin/managed-billing"
+                        href="/super-admin"
                         className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5" />

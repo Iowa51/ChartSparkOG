@@ -21,6 +21,9 @@ import {
     CreditCard,
     Video,
     HeartPulse,
+    Receipt,
+    DollarSign,
+    AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -89,6 +92,21 @@ const PACKAGES = {
             { name: "Telehealth", icon: Video },
         ],
     },
+    managed_billing: {
+        name: "Managed Billing",
+        description: "Full-service billing operations",
+        icon: Receipt,
+        color: "from-emerald-500 to-teal-600",
+        borderColor: "border-emerald-400",
+        bgColor: "bg-emerald-50 dark:bg-emerald-900/20",
+        included: false,
+        features: [
+            { name: "Claims Generation", icon: FileText },
+            { name: "ERA Processing", icon: Receipt },
+            { name: "Revenue Dashboard", icon: DollarSign },
+            { name: "Denial Management", icon: AlertCircle },
+        ],
+    },
 };
 
 // Demo users for testing
@@ -131,7 +149,7 @@ export function FeaturePackageModal({ isOpen, onClose, users }: FeaturePackageMo
     };
 
     const handleAssignAll = () => {
-        setSelectedPackages(["normal", "elite", "pro"]);
+        setSelectedPackages(["normal", "elite", "pro", "managed_billing"]);
     };
 
     const handleResetToNormal = () => {
@@ -218,10 +236,10 @@ export function FeaturePackageModal({ isOpen, onClose, users }: FeaturePackageMo
                     <div className="flex flex-wrap gap-3 mb-6">
                         <button
                             onClick={handleAssignAll}
-                            disabled={selectedPackages.length === 3}
+                            disabled={selectedPackages.length === 4}
                             className={cn(
                                 "px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2",
-                                selectedPackages.length === 3
+                                selectedPackages.length === 4
                                     ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
                                     : "bg-gradient-to-r from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700 shadow-lg"
                             )}

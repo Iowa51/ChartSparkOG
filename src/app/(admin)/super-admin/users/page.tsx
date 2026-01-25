@@ -13,7 +13,9 @@ import {
     Mail,
     Building2,
     Shield,
+    ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 
 interface User {
     id: string;
@@ -115,9 +117,21 @@ export default function UsersPage() {
 
                 if (error) throw error;
             } else {
-                // For demo, we'll just create in the users table
-                // In production, you'd use Supabase Admin API to create auth user first
-                alert("Note: In production, this would create the user in auth.users as well. For demo, user must already exist in auth.");
+                // For demo mode, create a mock user locally
+                const newUser: User = {
+                    id: `demo-${Date.now()}`,
+                    email: formData.email,
+                    first_name: formData.first_name || null,
+                    last_name: formData.last_name || null,
+                    role: formData.role,
+                    organization_id: formData.organization_id || null,
+                    subscription_tier: formData.subscription_tier,
+                    specialty: formData.specialty,
+                    is_active: true,
+                    last_login: null,
+                    organizations: null,
+                };
+                setUsers(prev => [newUser, ...prev]);
             }
 
             setShowCreateModal(false);
@@ -188,13 +202,21 @@ export default function UsersPage() {
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                        Users
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Manage all users across the platform
-                    </p>
+                <div className="flex items-center gap-4">
+                    <Link
+                        href="/super-admin"
+                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                    >
+                        <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                    </Link>
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                            Users
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1">
+                            Manage all users across the platform
+                        </p>
+                    </div>
                 </div>
                 <button
                     onClick={() => {
@@ -235,8 +257,8 @@ export default function UsersPage() {
                             key={role}
                             onClick={() => setRoleFilter(role)}
                             className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${roleFilter === role
-                                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-                                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                                 }`}
                         >
                             {role === 'ALL' ? 'All' : role.replace('_', ' ')}
@@ -278,8 +300,8 @@ export default function UsersPage() {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
                                             <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${user.role === 'SUPER_ADMIN' ? 'bg-purple-600' :
-                                                    user.role === 'ADMIN' ? 'bg-blue-600' :
-                                                        user.role === 'AUDITOR' ? 'bg-amber-600' : 'bg-teal-600'
+                                                user.role === 'ADMIN' ? 'bg-blue-600' :
+                                                    user.role === 'AUDITOR' ? 'bg-amber-600' : 'bg-teal-600'
                                                 }`}>
                                                 {user.first_name?.[0] || user.email[0].toUpperCase()}
                                                 {user.last_name?.[0] || ''}
@@ -309,8 +331,8 @@ export default function UsersPage() {
                                         <button
                                             onClick={() => handleToggleActive(user)}
                                             className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-colors ${user.is_active
-                                                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400'
-                                                    : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400'
+                                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400'
+                                                : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400'
                                                 }`}
                                         >
                                             {user.is_active ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
@@ -337,16 +359,16 @@ export default function UsersPage() {
                 </table>
             </div>
 
-            {/* Edit Modal */}
-            {showCreateModal && editingUser && (
+            {/* Create/Edit Modal */}
+            {showCreateModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl">
                         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
                             <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                                Edit User
+                                {editingUser ? 'Edit User' : 'Create User'}
                             </h2>
                             <button
-                                onClick={() => setShowCreateModal(false)}
+                                onClick={() => { setShowCreateModal(false); setEditingUser(null); }}
                                 className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"
                             >
                                 <X className="h-5 w-5" />
@@ -379,13 +401,16 @@ export default function UsersPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Email (read-only)
+                                    Email {editingUser && '(read-only)'}
                                 </label>
                                 <input
                                     type="email"
                                     value={formData.email}
-                                    disabled
-                                    className="w-full px-4 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500"
+                                    onChange={(e) => !editingUser && setFormData({ ...formData, email: e.target.value })}
+                                    disabled={!!editingUser}
+                                    required={!editingUser}
+                                    className={`w-full px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl ${editingUser ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 'bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-blue-500 outline-none'}`}
+                                    placeholder={editingUser ? '' : 'user@example.com'}
                                 />
                             </div>
                             <div>
@@ -451,7 +476,7 @@ export default function UsersPage() {
                             <div className="flex gap-3 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setShowCreateModal(false)}
+                                    onClick={() => { setShowCreateModal(false); setEditingUser(null); }}
                                     className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                                 >
                                     Cancel
@@ -460,7 +485,7 @@ export default function UsersPage() {
                                     type="submit"
                                     className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
                                 >
-                                    Save Changes
+                                    {editingUser ? 'Save Changes' : 'Create User'}
                                 </button>
                             </div>
                         </form>

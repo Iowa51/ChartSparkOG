@@ -144,7 +144,7 @@ export default function UnmatchedPaymentsPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Link
-                        href="/super-admin/managed-billing"
+                        href="/super-admin"
                         className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -223,8 +223,8 @@ export default function UnmatchedPaymentsPage() {
                                     key={payment.id}
                                     onClick={() => handleSelectPayment(payment)}
                                     className={`px-6 py-4 cursor-pointer transition-colors ${selectedPayment?.id === payment.id
-                                            ? 'bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-500'
-                                            : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                                        ? 'bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-500'
+                                        : 'hover:bg-slate-50 dark:hover:bg-slate-800'
                                         }`}
                                 >
                                     <div className="flex items-center justify-between mb-2">

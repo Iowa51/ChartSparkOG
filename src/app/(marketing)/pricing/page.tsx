@@ -45,7 +45,6 @@ const ELITE_FEATURES = [
     'Custom Integrations',
     'Dedicated Account Manager',
     'Priority Phone Support',
-    'Custom Branding',
 ];
 
 const MANAGED_BILLING_FEATURES = [

@@ -53,6 +53,7 @@ export default function FinancialsPage() {
         outstanding: 0,
     });
     const [orgRevenue, setOrgRevenue] = useState<any[]>([]);
+    const [activeFilter, setActiveFilter] = useState<'all' | 'monthly' | 'fees' | 'outstanding'>('all');
 
     useEffect(() => {
         fetchFinancialData();
@@ -133,9 +134,12 @@ export default function FinancialsPage() {
                 </button>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats Cards - Now Clickable */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <div
+                    onClick={() => setActiveFilter(activeFilter === 'all' ? 'all' : 'all')}
+                    className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all cursor-pointer hover:shadow-lg ${activeFilter === 'all' ? 'border-emerald-400 ring-2 ring-emerald-100 dark:ring-emerald-900' : 'border-slate-200 dark:border-slate-800'} p-6`}
+                >
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-slate-500 mb-1">Total Revenue</p>
@@ -153,7 +157,10 @@ export default function FinancialsPage() {
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <div
+                    onClick={() => setActiveFilter(activeFilter === 'monthly' ? 'all' : 'monthly')}
+                    className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all cursor-pointer hover:shadow-lg ${activeFilter === 'monthly' ? 'border-blue-400 ring-2 ring-blue-100 dark:ring-blue-900' : 'border-slate-200 dark:border-slate-800'} p-6`}
+                >
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-slate-500 mb-1">This Month</p>
@@ -165,9 +172,13 @@ export default function FinancialsPage() {
                             <Calendar className="h-6 w-6 text-blue-600" />
                         </div>
                     </div>
+                    {activeFilter === 'monthly' && <p className="text-xs text-blue-600 mt-3">Showing current month only</p>}
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <div
+                    onClick={() => setActiveFilter(activeFilter === 'fees' ? 'all' : 'fees')}
+                    className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all cursor-pointer hover:shadow-lg ${activeFilter === 'fees' ? 'border-purple-400 ring-2 ring-purple-100 dark:ring-purple-900' : 'border-slate-200 dark:border-slate-800'} p-6`}
+                >
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-slate-500 mb-1">Platform Fees</p>
@@ -179,9 +190,13 @@ export default function FinancialsPage() {
                             <TrendingUp className="h-6 w-6 text-purple-600" />
                         </div>
                     </div>
+                    {activeFilter === 'fees' && <p className="text-xs text-purple-600 mt-3">Highlighting fee column</p>}
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <div
+                    onClick={() => setActiveFilter(activeFilter === 'outstanding' ? 'all' : 'outstanding')}
+                    className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all cursor-pointer hover:shadow-lg ${activeFilter === 'outstanding' ? 'border-amber-400 ring-2 ring-amber-100 dark:ring-amber-900' : 'border-slate-200 dark:border-slate-800'} p-6`}
+                >
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-slate-500 mb-1">Outstanding</p>
@@ -193,6 +208,7 @@ export default function FinancialsPage() {
                             <Building2 className="h-6 w-6 text-amber-600" />
                         </div>
                     </div>
+                    {activeFilter === 'outstanding' && <p className="text-xs text-amber-600 mt-3">Showing unpaid only</p>}
                 </div>
             </div>
 

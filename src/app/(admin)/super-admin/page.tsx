@@ -115,79 +115,87 @@ export default async function SuperAdminDashboard() {
                 </p>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats Cards - Now Clickable */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <Card>
-                    <div className="p-6">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                                <Building2 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                <Link href="/super-admin/organizations" className="group">
+                    <Card className="transition-all hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-700 cursor-pointer">
+                        <div className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-900/60 transition-colors">
+                                    <Building2 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                        {stats.totalOrganizations}
+                                    </p>
+                                    <p className="text-sm text-slate-500">Organizations</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    {stats.totalOrganizations}
-                                </p>
-                                <p className="text-sm text-slate-500">Organizations</p>
-                            </div>
+                            <p className="text-xs text-emerald-600 mt-3">{stats.activeOrganizations} active</p>
                         </div>
-                        <p className="text-xs text-emerald-600 mt-3">{stats.activeOrganizations} active</p>
-                    </div>
-                </Card>
+                    </Card>
+                </Link>
 
-                <Card>
-                    <div className="p-6">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                                <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <Link href="/super-admin/users" className="group">
+                    <Card className="transition-all hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-700 cursor-pointer">
+                        <div className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors">
+                                    <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                        {stats.totalUsers}
+                                    </p>
+                                    <p className="text-sm text-slate-500">Total Users</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    {stats.totalUsers}
-                                </p>
-                                <p className="text-sm text-slate-500">Total Users</p>
+                            <div className="flex gap-2 mt-3 text-xs">
+                                <span className="text-purple-600">{stats.usersByRole.SUPER_ADMIN} SA</span>
+                                <span className="text-blue-600">{stats.usersByRole.ADMIN} Admin</span>
+                                <span className="text-amber-600">{stats.usersByRole.AUDITOR} Auditor</span>
+                                <span className="text-teal-600">{stats.usersByRole.USER} Users</span>
                             </div>
                         </div>
-                        <div className="flex gap-2 mt-3 text-xs">
-                            <span className="text-purple-600">{stats.usersByRole.SUPER_ADMIN} SA</span>
-                            <span className="text-blue-600">{stats.usersByRole.ADMIN} Admin</span>
-                            <span className="text-amber-600">{stats.usersByRole.AUDITOR} Auditor</span>
-                            <span className="text-teal-600">{stats.usersByRole.USER} Users</span>
-                        </div>
-                    </div>
-                </Card>
+                    </Card>
+                </Link>
 
-                <Card>
-                    <div className="p-6">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                                <FileText className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    {stats.pendingSubmissions}
-                                </p>
-                                <p className="text-sm text-slate-500">Pending Submissions</p>
+                <Link href="/super-admin/managed-billing/claims" className="group">
+                    <Card className="transition-all hover:shadow-lg hover:border-amber-300 dark:hover:border-amber-700 cursor-pointer">
+                        <div className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center group-hover:bg-amber-200 dark:group-hover:bg-amber-900/60 transition-colors">
+                                    <FileText className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                        {stats.pendingSubmissions}
+                                    </p>
+                                    <p className="text-sm text-slate-500">Pending Submissions</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </Card>
+                    </Card>
+                </Link>
 
-                <Card>
-                    <div className="p-6">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-                                <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                <Link href="/super-admin/financials" className="group">
+                    <Card className="transition-all hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-700 cursor-pointer">
+                        <div className="p-6">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/60 transition-colors">
+                                    <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                                </div>
+                                <div>
+                                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                        ${stats.totalRevenue.toLocaleString()}
+                                    </p>
+                                    <p className="text-sm text-slate-500">Total Revenue</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    ${stats.totalRevenue.toLocaleString()}
-                                </p>
-                                <p className="text-sm text-slate-500">Total Revenue</p>
-                            </div>
+                            <p className="text-xs text-emerald-600 mt-3">${stats.platformFees.toLocaleString()} in fees</p>
                         </div>
-                        <p className="text-xs text-emerald-600 mt-3">${stats.platformFees.toLocaleString()} in fees</p>
-                    </div>
-                </Card>
+                    </Card>
+                </Link>
             </div>
 
             {/* Quick Actions with Feature Assignment Modal */}

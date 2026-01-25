@@ -198,21 +198,33 @@ export default function AuditLogsPage() {
                 </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats - Now Clickable */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
+                <div
+                    onClick={() => { setSelectedRisk('ALL'); setPhiOnly(false); }}
+                    className={`bg-white dark:bg-slate-900 rounded-xl border transition-all cursor-pointer hover:shadow-md ${selectedRisk === 'ALL' && !phiOnly ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-slate-200 dark:border-slate-800'} p-4`}
+                >
                     <p className="text-sm text-slate-500">Total Events</p>
                     <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.total}</p>
                 </div>
-                <div className="bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900/30 p-4">
+                <div
+                    onClick={() => { setSelectedRisk('CRITICAL'); setPhiOnly(false); }}
+                    className={`rounded-xl border transition-all cursor-pointer hover:shadow-md ${selectedRisk === 'CRITICAL' ? 'border-red-500 ring-2 ring-red-200 dark:ring-red-800' : 'border-red-100 dark:border-red-900/30'} bg-red-50 dark:bg-red-900/20 p-4`}
+                >
                     <p className="text-sm text-red-600">Critical</p>
                     <p className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.critical}</p>
                 </div>
-                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-100 dark:border-orange-900/30 p-4">
+                <div
+                    onClick={() => { setSelectedRisk('HIGH'); setPhiOnly(false); }}
+                    className={`rounded-xl border transition-all cursor-pointer hover:shadow-md ${selectedRisk === 'HIGH' ? 'border-orange-500 ring-2 ring-orange-200 dark:ring-orange-800' : 'border-orange-100 dark:border-orange-900/30'} bg-orange-50 dark:bg-orange-900/20 p-4`}
+                >
                     <p className="text-sm text-orange-600">High</p>
                     <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">{stats.high}</p>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-900/30 p-4">
+                <div
+                    onClick={() => { setPhiOnly(true); setSelectedRisk('ALL'); }}
+                    className={`rounded-xl border transition-all cursor-pointer hover:shadow-md ${phiOnly ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800' : 'border-blue-100 dark:border-blue-900/30'} bg-blue-50 dark:bg-blue-900/20 p-4`}
+                >
                     <p className="text-sm text-blue-600">PHI Access</p>
                     <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.phiAccess}</p>
                 </div>
@@ -270,7 +282,24 @@ export default function AuditLogsPage() {
                                 </div>
                                 {isExpanded && log.details && (
                                     <div className="mt-4 ml-14 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                                        <pre className="font-mono text-xs overflow-auto">{JSON.stringify(log.details, null, 2)}</pre>
+                                        <p className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wider">Event Details</p>
+                                        <div className="space-y-2">
+                                            {Object.entries(log.details).map(([key, value]) => (
+                                                <div key={key} className="flex items-start gap-3 text-sm">
+                                                    <span className="font-medium text-slate-600 dark:text-slate-400 min-w-[120px] capitalize">
+                                                        {key.replace(/_/g, ' ')}:
+                                                    </span>
+                                                    <span className="text-slate-800 dark:text-slate-200">
+                                                        {typeof value === 'boolean'
+                                                            ? (value ? 'Yes' : 'No')
+                                                            : typeof value === 'object'
+                                                                ? JSON.stringify(value)
+                                                                : String(value)
+                                                        }
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
