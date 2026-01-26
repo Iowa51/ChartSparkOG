@@ -106,13 +106,20 @@ export default async function SuperAdminDashboard() {
     return (
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                    Platform Command Center
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-1">
-                    Manage organizations, users, and platform-wide settings
-                </p>
+            <div className="mb-8 flex items-start justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                        Platform Command Center
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">
+                        Manage organizations, users, and platform-wide settings
+                    </p>
+                </div>
+                <img
+                    src="/assets/logo.svg"
+                    alt="ChartSpark"
+                    className="h-12 w-auto hidden md:block"
+                />
             </div>
 
             {/* Stats Cards - Now Clickable */}

@@ -99,17 +99,8 @@ export function Sidebar() {
 
   return (
     <aside className="hidden lg:flex flex-col w-60 bg-surface border-r border-border h-screen sticky top-0">
-      {/* Logo & Brand */}
+      {/* Navigation */}
       <div className="px-6 pb-4 pt-6">
-        <Link href="/dashboard" className="block mb-4">
-          <div className="relative h-10 w-full flex items-center">
-            <img
-              src="/assets/logo.svg"
-              alt="ChartSpark"
-              className="h-10 w-auto max-w-full"
-            />
-          </div>
-        </Link>
 
         {/* Navigation Sections */}
         <nav className="flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar max-h-[calc(100vh-320px)]">

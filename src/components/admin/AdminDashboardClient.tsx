@@ -86,13 +86,20 @@ export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboar
     return (
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                    Admin Dashboard
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-1">
-                    Manage your organization's users and submissions
-                </p>
+            <div className="mb-8 flex items-start justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                        Admin Dashboard
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-1">
+                        Manage your organization's users and submissions
+                    </p>
+                </div>
+                <img
+                    src="/assets/logo.svg"
+                    alt="ChartSpark"
+                    className="h-12 w-auto hidden md:block"
+                />
             </div>
 
             {/* Stats Cards / Tabs */}

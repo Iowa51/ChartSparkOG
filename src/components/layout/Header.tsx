@@ -86,13 +86,20 @@ export function Header({ title, description, breadcrumbs, actions }: HeaderProps
 
                 {/* Title Row */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div>
-                        <h1 className="text-foreground text-2xl md:text-3xl font-bold tracking-tight">
-                            {title}
-                        </h1>
-                        {description && (
-                            <p className="text-muted-foreground text-base mt-1">{description}</p>
-                        )}
+                    <div className="flex items-start gap-4">
+                        <div>
+                            <h1 className="text-foreground text-2xl md:text-3xl font-bold tracking-tight">
+                                {title}
+                            </h1>
+                            {description && (
+                                <p className="text-muted-foreground text-base mt-1">{description}</p>
+                            )}
+                        </div>
+                        <img
+                            src="/assets/logo.svg"
+                            alt="ChartSpark"
+                            className="h-10 w-auto hidden lg:block ml-auto"
+                        />
                     </div>
 
                     <div className="flex items-center gap-3">

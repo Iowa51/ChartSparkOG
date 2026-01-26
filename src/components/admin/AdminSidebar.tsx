@@ -140,18 +140,8 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
             "hidden lg:flex flex-col w-64 h-screen sticky top-0 text-white transition-colors duration-300 shadow-2xl z-40",
             context === "super-admin" ? "bg-slate-950" : "bg-slate-900"
         )}>
-            {/* Logo area */}
+            {/* Header label */}
             <div className="px-6 pb-4 pt-6">
-                <Link href={context === "super-admin" ? "/super-admin" : "/admin"} className="block mb-4">
-                    <div className="relative h-10 w-full flex items-center">
-                        <img
-                            src="/assets/logo.svg"
-                            alt="ChartSpark"
-                            className="h-10 w-auto max-w-full"
-                            style={{ filter: "brightness(0) invert(1)" }}
-                        />
-                    </div>
-                </Link>
                 <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] opacity-70">
                     <Shield className={cn("h-3.5 w-3.5", context === "super-admin" ? "text-purple-500" : "text-primary")} />
                     <span>{context === "super-admin" ? "Platform Control" : "Administrative Console"}</span>
