@@ -62,7 +62,7 @@ export default async function AuditorLayout({
     return (
         <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
             {/* Sidebar */}
-            <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
+            <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-screen sticky top-0">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-2">
