@@ -89,19 +89,22 @@ export default async function AuditorLayout({
 
                 {/* User Info & Logout */}
                 <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-3 px-4 py-2">
-                        <div className="h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                    <Link
+                        href="/auditor/settings"
+                        className="flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group"
+                    >
+                        <div className="h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center group-hover:ring-2 ring-amber-400 transition-all">
                             <User className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
+                            <p className="text-sm font-medium text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                                 {displayName}
                             </p>
                             <p className="text-xs text-slate-500 truncate">
                                 {user?.email}
                             </p>
                         </div>
-                    </div>
+                    </Link>
                     <form action="/api/auth/signout" method="POST">
                         <button
                             type="submit"

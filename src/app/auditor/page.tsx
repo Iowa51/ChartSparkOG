@@ -22,12 +22,15 @@ export default async function AuditorDashboard() {
 
     let assignedOrgs: { id: string; name: string }[] = [];
     let pendingSubmissions: any[] = [];
+    let auditorId: string | null = null;
 
     if (supabase) {
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
             if (user) {
+                auditorId = user.id;
+
                 // Get assigned organizations
                 const { data: orgsData } = await supabase
                     .from('auditor_organizations')
@@ -42,18 +45,62 @@ export default async function AuditorDashboard() {
                     })).filter((o: any) => o.id);
                 }
 
-                // Get pending audits count
                 const orgIds = assignedOrgs.map(o => o.id);
+
                 if (orgIds.length > 0) {
+                    // 1. Get pending audits count
                     const { count: pendingCount } = await supabase
                         .from('submissions')
                         .select('*', { count: 'exact', head: true })
                         .in('organization_id', orgIds)
                         .eq('status', 'pending_audit');
-
                     stats.pendingAudits = pendingCount || 0;
 
-                    // Get submissions for preview
+                    // 2. Get audited TODAY (resets at midnight UTC)
+                    const today = new Date();
+                    today.setUTCHours(0, 0, 0, 0);
+                    const todayISO = today.toISOString();
+
+                    const { count: auditedTodayCount } = await supabase
+                        .from('submissions')
+                        .select('*', { count: 'exact', head: true })
+                        .in('organization_id', orgIds)
+                        .in('status', ['approved', 'rejected', 'flagged'])
+                        .gte('updated_at', todayISO);
+                    stats.auditedToday = auditedTodayCount || 0;
+
+                    // 3. Get flags raised by this auditor
+                    const { count: flagsCount } = await supabase
+                        .from('audit_flags')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('auditor_id', user.id);
+                    stats.flagsRaised = flagsCount || 0;
+
+                    // 4. Calculate pass rate (approved / total audited this month)
+                    const monthStart = new Date();
+                    monthStart.setUTCDate(1);
+                    monthStart.setUTCHours(0, 0, 0, 0);
+                    const monthStartISO = monthStart.toISOString();
+
+                    const { count: approvedCount } = await supabase
+                        .from('submissions')
+                        .select('*', { count: 'exact', head: true })
+                        .in('organization_id', orgIds)
+                        .eq('status', 'approved')
+                        .gte('updated_at', monthStartISO);
+
+                    const { count: totalAuditedMonth } = await supabase
+                        .from('submissions')
+                        .select('*', { count: 'exact', head: true })
+                        .in('organization_id', orgIds)
+                        .in('status', ['approved', 'rejected', 'flagged'])
+                        .gte('updated_at', monthStartISO);
+
+                    if (totalAuditedMonth && totalAuditedMonth > 0) {
+                        stats.passRate = Math.round(((approvedCount || 0) / totalAuditedMonth) * 100);
+                    }
+
+                    // Get submissions for pending queue preview
                     const { data: submissionsData } = await supabase
                         .from('submissions')
                         .select(`
@@ -97,11 +144,11 @@ export default async function AuditorDashboard() {
                 />
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats Cards - Clickable */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <Link href="/auditor/submissions?status=pending_audit" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-amber-400 hover:shadow-lg transition-all cursor-pointer group">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
                             <ClipboardCheck className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                         </div>
                         <div>
@@ -111,11 +158,11 @@ export default async function AuditorDashboard() {
                             <p className="text-sm text-slate-500">Pending Audits</p>
                         </div>
                     </div>
-                </div>
+                </Link>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <Link href="/auditor/submissions?audited_today=true" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-emerald-400 hover:shadow-lg transition-all cursor-pointer group">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
                             <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                         </div>
                         <div>
@@ -125,11 +172,11 @@ export default async function AuditorDashboard() {
                             <p className="text-sm text-slate-500">Audited Today</p>
                         </div>
                     </div>
-                </div>
+                </Link>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <Link href="/auditor/flags" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-red-400 hover:shadow-lg transition-all cursor-pointer group">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
                             <Flag className="h-6 w-6 text-red-600 dark:text-red-400" />
                         </div>
                         <div>
@@ -139,11 +186,11 @@ export default async function AuditorDashboard() {
                             <p className="text-sm text-slate-500">Flags Raised</p>
                         </div>
                     </div>
-                </div>
+                </Link>
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+                <Link href="/auditor/reports" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer group">
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                        <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
                             <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
@@ -153,7 +200,7 @@ export default async function AuditorDashboard() {
                             <p className="text-sm text-slate-500">Pass Rate</p>
                         </div>
                     </div>
-                </div>
+                </Link>
             </div>
 
             {/* Assigned Organizations */}
