@@ -98,7 +98,7 @@ export function AdminDashboardClient({ stats, recentSubmissions }: AdminDashboar
                 <img
                     src="/assets/logo.svg"
                     alt="ChartSpark"
-                    className="h-12 w-auto hidden md:block"
+                    className="h-24 w-auto hidden md:block"
                 />
             </div>
 

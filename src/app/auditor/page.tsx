@@ -93,7 +93,7 @@ export default async function AuditorDashboard() {
                 <img
                     src="/assets/logo.svg"
                     alt="ChartSpark"
-                    className="h-12 w-auto hidden md:block"
+                    className="h-24 w-auto hidden md:block"
                 />
             </div>
 

@@ -86,7 +86,7 @@ export function Header({ title, description, breadcrumbs, actions }: HeaderProps
 
                 {/* Title Row */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1">
                         <div>
                             <h1 className="text-foreground text-2xl md:text-3xl font-bold tracking-tight">
                                 {title}
@@ -98,7 +98,7 @@ export function Header({ title, description, breadcrumbs, actions }: HeaderProps
                         <img
                             src="/assets/logo.svg"
                             alt="ChartSpark"
-                            className="h-10 w-auto hidden lg:block ml-auto"
+                            className="h-24 w-auto hidden lg:block ml-auto"
                         />
                     </div>
 
