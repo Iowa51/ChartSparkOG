@@ -65,14 +65,14 @@ export default async function AuditorLayout({
             <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
                 {/* Logo */}
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800">
-                    <Link href="/auditor" className="flex items-center gap-3">
+                    <Link href="/auditor" className="block mb-4">
                         <img
                             src="/assets/logo.svg"
                             alt="ChartSpark"
-                            className="h-10 w-auto"
+                            className="h-12 w-auto"
                         />
                     </Link>
-                    <div className="mt-3 flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <span className="px-2 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
                             AUDITOR
                         </span>

@@ -100,13 +100,13 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-60 bg-surface border-r border-border h-screen sticky top-0">
       {/* Logo & Brand */}
-      <div className="px-6 pb-6 pt-6">
-        <Link href="/dashboard" className="block mb-6 -ml-1">
-          <div className="relative h-14 w-full flex items-center pt-2">
+      <div className="px-6 pb-4 pt-6">
+        <Link href="/dashboard" className="block mb-4">
+          <div className="relative h-10 w-full flex items-center">
             <img
               src="/assets/logo.svg"
               alt="ChartSpark"
-              className="w-[140%] h-auto max-w-none -translate-x-4"
+              className="h-10 w-auto max-w-full"
             />
           </div>
         </Link>
