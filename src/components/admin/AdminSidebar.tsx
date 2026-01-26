@@ -28,6 +28,7 @@ import {
     Plug,
     BarChart3,
     Webhook,
+    UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -36,6 +37,7 @@ const adminNavItems = [
     { label: "Admin Home", href: "/admin", icon: LayoutDashboard },
     { label: "Analytics", href: "/admin/analytics", icon: Activity },
     { label: "Users", href: "/admin/users", icon: Users },
+    { label: "Profile Approvals", href: "/admin/profile-approvals", icon: UserCog },
     { label: "Invitations", href: "/admin/invitations", icon: UserPlus },
     { label: "Templates", href: "/admin/templates", icon: FileText },
     { label: "Submissions", href: "/admin/submissions", icon: ClipboardList },
