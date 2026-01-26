@@ -104,7 +104,7 @@ export function Sidebar() {
         <Link href="/dashboard" className="block mb-6 -ml-1">
           <div className="relative h-14 w-full flex items-center pt-2">
             <img
-              src="/ChartSparkLogo.png"
+              src="/assets/logo.svg"
               alt="ChartSpark"
               className="w-[140%] h-auto max-w-none -translate-x-4"
             />

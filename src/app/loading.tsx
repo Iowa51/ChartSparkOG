@@ -5,7 +5,7 @@ export default function Loading() {
         <div className="fixed inset-0 bg-white dark:bg-slate-950 z-[100] flex flex-col items-center justify-center p-4">
             <div className="relative flex flex-col items-center animate-pulse -translate-y-12">
                 <img
-                    src="/ChartSparkLogo.png"
+                    src="/assets/logo.svg"
                     alt="ChartSpark Loading..."
                     className="h-32 w-auto object-contain"
                 />

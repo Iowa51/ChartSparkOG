@@ -145,7 +145,7 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
                 <Link href={context === "super-admin" ? "/super-admin" : "/admin"} className="block mb-6 -ml-1">
                     <div className="relative h-14 w-full flex items-center pt-2">
                         <img
-                            src="/ChartSparkLogo.png"
+                            src="/assets/logo.svg"
                             alt="ChartSpark"
                             className="w-[140%] h-auto max-w-none -translate-x-4"
                             style={{ filter: "brightness(0) invert(1)" }}

@@ -67,7 +67,7 @@ export default async function AuditorLayout({
                 <div className="p-6 border-b border-slate-100 dark:border-slate-800">
                     <Link href="/auditor" className="flex items-center gap-3">
                         <img
-                            src="/ChartSparkLogo.png"
+                            src="/assets/logo.svg"
                             alt="ChartSpark"
                             className="h-10 w-auto"
                         />

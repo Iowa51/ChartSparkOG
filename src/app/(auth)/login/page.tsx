@@ -199,11 +199,11 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
             {/* Logo */}
-            <div className="flex flex-col items-center mb-6 translate-x-2">
+            <div className="flex flex-col items-center mb-6">
                 <img
-                    src="/ChartSparkLogo.png"
+                    src="/assets/logo.svg"
                     alt="ChartSpark"
-                    className="h-28 w-auto object-contain"
+                    className="h-24 w-auto object-contain"
                 />
             </div>
 

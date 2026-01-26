@@ -32,7 +32,7 @@ export default function RootNotFound() {
             <div className="max-w-md w-full bg-card rounded-3xl border border-border p-8 shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-500">
                 <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <img
-                        src="/ChartSparkLogo.png"
+                        src="/assets/logo.svg"
                         alt="ChartSpark"
                         className="h-8 w-auto grayscale brightness-0 dark:invert"
                     />
