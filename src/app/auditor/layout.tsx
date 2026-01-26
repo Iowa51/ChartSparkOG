@@ -8,10 +8,10 @@ import {
     BarChart3,
     Flag,
     Settings,
-    LogOut,
     User,
     Building2,
 } from "lucide-react";
+import { LogoutButton } from "@/components/LogoutButton";
 
 const auditorNavItems = [
     { label: "Dashboard", href: "/auditor", icon: LayoutDashboard },
@@ -105,15 +105,7 @@ export default async function AuditorLayout({
                             </p>
                         </div>
                     </Link>
-                    <form action="/api/auth/signout" method="POST">
-                        <button
-                            type="submit"
-                            className="w-full mt-2 flex items-center gap-3 px-4 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        >
-                            <LogOut className="h-5 w-5" />
-                            Sign Out
-                        </button>
-                    </form>
+                    <LogoutButton />
                 </div>
             </aside>
 
