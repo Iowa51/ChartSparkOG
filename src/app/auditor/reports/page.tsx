@@ -56,7 +56,7 @@ export default async function AuditorReportsPage() {
                     name: ao.organizations?.name,
                 })).filter((o: any) => o.id) || [];
 
-                const orgIds = assignedOrgs.map(o => o.id);
+                const orgIds = assignedOrgs.map((o: { id: string; name: string }) => o.id);
 
                 if (orgIds.length > 0) {
                     // Get this month's date range
@@ -284,7 +284,7 @@ export default async function AuditorReportsPage() {
                                 <div key={i} className="px-5 py-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <span className={`w-2 h-2 rounded-full ${issue.severity === 'high' ? 'bg-red-500' :
-                                                issue.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
+                                            issue.severity === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
                                             }`} />
                                         <p className="text-slate-700 dark:text-slate-300">{issue.reason}</p>
                                     </div>
