@@ -54,9 +54,10 @@ export async function updateSession(request: NextRequest) {
     const isProduction = process.env.NODE_ENV === 'production';
     const isDemoMode = !isProduction && process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-    // CRITICAL: Fail hard if demo mode somehow enabled in production
-    if (isProduction && process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-        console.error('SECURITY: Demo mode cannot be enabled in production');
+    // SEC-REMEDIATION: Allow demo mode in production ONLY if Supabase is configured
+    // This enables demo features while still having real authentication
+    if (isProduction && process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (!supabaseUrl || !supabaseAnonKey)) {
+        console.error('SECURITY: Demo mode requires Supabase configuration in production');
         return NextResponse.json(
             { error: 'Security configuration error' },
             { status: 500 }
