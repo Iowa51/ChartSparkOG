@@ -1,8 +1,8 @@
 // src/app/api/auth/record-attempt/route.ts
-// SEC-014: Server-side login attempt recording
+// SEC-REMEDIATION: Server-side login attempt recording with service role client
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 
 export async function POST(request: NextRequest) {
     try {
@@ -13,10 +13,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
         }
 
-        const supabase = await createClient();
+        // SEC-REMEDIATION: Use service role client for recording attempts
+        // This bypasses RLS since we need to record before user is authenticated
+        const supabase = createServiceRoleClient();
+
         if (!supabase) {
             // In demo mode without Supabase, just acknowledge
-            return NextResponse.json({ recorded: true, demo: true });
+            const isDemoMode = process.env.NODE_ENV !== 'production' &&
+                process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+            if (isDemoMode) {
+                return NextResponse.json({ recorded: true, demo: true });
+            }
+            // In production without service client, log error but don't block
+            console.error('SECURITY: Cannot record login attempt - service role not configured');
+            return NextResponse.json({ recorded: false, error: 'Service unavailable' });
         }
 
         const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
@@ -24,7 +34,7 @@ export async function POST(request: NextRequest) {
             'unknown';
         const userAgent = request.headers.get('user-agent') || 'unknown';
 
-        // Record the attempt in login_attempts table (if it exists)
+        // Record the attempt in login_attempts table
         try {
             await supabase.from('login_attempts').insert({
                 email: email.toLowerCase(),
@@ -44,11 +54,11 @@ export async function POST(request: NextRequest) {
                     .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // Older than 24h
             }
         } catch (dbError) {
-            // Table might not exist yet - log but don't fail
-            console.warn('login_attempts table not available:', dbError);
+            // Log but don't fail - recording is important but not blocking
+            console.error('Failed to record login attempt:', dbError);
         }
 
-        // Also log to audit_logs
+        // Also log to audit_logs for HIPAA compliance
         try {
             await supabase.from('audit_logs').insert({
                 event_type: success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILURE',
@@ -59,7 +69,7 @@ export async function POST(request: NextRequest) {
                 created_at: new Date().toISOString(),
             });
         } catch {
-            // Audit log table might not exist
+            // Audit log failure is not blocking
         }
 
         return NextResponse.json({ recorded: true });

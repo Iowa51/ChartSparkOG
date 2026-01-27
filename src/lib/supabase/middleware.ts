@@ -33,9 +33,8 @@ const demoEmailRoles: Record<string, string> = {
     'clinician@chartspark.com': 'USER',
 };
 
-// SEC-MFA: Roles that require MFA for HIPAA compliance
-// TEMPORARILY DISABLED - Re-enable after MFA enrollment is set up
-const mfaRequiredRoles: string[] = []; // Was: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
+// SEC-REMEDIATION: MFA enforcement for privileged roles (HIPAA compliance)
+const mfaRequiredRoles: string[] = ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'];
 
 // Paths that are allowed without MFA (for MFA setup itself)
 const mfaExemptPaths = [
@@ -51,8 +50,18 @@ export async function updateSession(request: NextRequest) {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
+    // SEC-REMEDIATION: Demo mode requires explicit opt-in AND non-production environment
     const isProduction = process.env.NODE_ENV === 'production';
+    const isDemoMode = !isProduction && process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
+    // CRITICAL: Fail hard if demo mode somehow enabled in production
+    if (isProduction && process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+        console.error('SECURITY: Demo mode cannot be enabled in production');
+        return NextResponse.json(
+            { error: 'Security configuration error' },
+            { status: 500 }
+        );
+    }
 
     // SEC-003: Fail closed in production if Supabase not configured
     if (!supabaseUrl || !supabaseAnonKey) {

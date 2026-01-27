@@ -52,7 +52,9 @@ async function handler(context: AuthContext) {
             riskLevel: 'MEDIUM',
         });
 
-        console.log('[Treatment Plan] Generating plan for:', patientProfile.name || 'Unknown patient');
+        // SEC-REMEDIATION: Removed PHI from logs - patient name was being logged
+        // Audit logs capture the access for HIPAA compliance without console logging PHI
+        console.log('[Treatment Plan] Generating plan (see audit_logs for details)');
 
         // Use safe Azure OpenAI wrapper (falls back to demo if not configured)
         const result = await safeAzureOpenAI.generateTreatmentPlan(patientProfile, diagnoses);

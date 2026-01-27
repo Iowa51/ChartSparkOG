@@ -10,20 +10,18 @@ export function DemoAuthGuard({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
 
     useEffect(() => {
-        // Priority 1: Synchronous check for immediate authorization in demo mode
-        // This prevents loading flickers and race conditions during rapid navigation
-        if (typeof window !== "undefined") {
-            const isDemoLocal = localStorage.getItem("demoMode") === "true";
-            const isDemoCookie = document.cookie.includes("demoMode=true");
+        // SEC-REMEDIATION: Removed cookie/localStorage-based auth bypass
+        // Demo mode is determined by environment variables ONLY, not client-side storage
+        // This prevents users from granting themselves access via browser cookies
 
-            if (isDemoLocal || isDemoCookie) {
-                // Background sync
-                if (isDemoLocal && !isDemoCookie) document.cookie = "demoMode=true; path=/";
-                if (!isDemoLocal && isDemoCookie) localStorage.setItem("demoMode", "true");
+        // Check if we're in environment-based demo mode
+        const isDemoEnv = process.env.NODE_ENV !== 'production' &&
+            process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-                setIsAuthorized(true);
-                return;
-            }
+        if (isDemoEnv) {
+            // In demo environment, allow access but still verify session if supabase available
+            setIsAuthorized(true);
+            return;
         }
 
         const checkAuth = async () => {

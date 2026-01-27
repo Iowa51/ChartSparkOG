@@ -9,11 +9,33 @@ const scryptAsync = promisify(scrypt);
 // Get encryption key from environment (must be 32+ characters)
 const getEncryptionKey = (): string => {
     const key = process.env.PHI_ENCRYPTION_KEY;
+    const isProduction = process.env.NODE_ENV === 'production';
+
     if (!key) {
-        console.warn('PHI_ENCRYPTION_KEY not set - using fallback for development');
-        // Fallback for development only - NEVER use in production
-        return 'development-key-do-not-use-in-prod-32chars!';
+        // SEC-REMEDIATION: FAIL HARD in production - no fallback allowed
+        if (isProduction) {
+            throw new Error(
+                'SECURITY CRITICAL: PHI_ENCRYPTION_KEY must be set in production. ' +
+                'Application cannot start without it. ' +
+                'Generate one with: openssl rand -base64 32'
+            );
+        }
+
+        // In development, throw error with helpful message
+        throw new Error(
+            'PHI_ENCRYPTION_KEY not set. This is required for encrypting patient data. ' +
+            'Generate one with: openssl rand -base64 32 and add to .env.local'
+        );
     }
+
+    // Validate key length (should be at least 32 chars for AES-256)
+    if (key.length < 32) {
+        throw new Error(
+            'PHI_ENCRYPTION_KEY must be at least 32 characters. ' +
+            'Generate a proper key with: openssl rand -base64 32'
+        );
+    }
+
     return key;
 };
 

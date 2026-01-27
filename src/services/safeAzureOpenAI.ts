@@ -110,7 +110,7 @@ class SafeAzureOpenAIService {
 
             console.log('[Azure OpenAI] Response received in', processingTime);
             console.log('[Azure OpenAI] Content length:', content.length);
-            console.log('[Azure OpenAI] Content preview:', content.substring(0, 200));
+            // SEC-REMEDIATION: Content preview removed - contains PHI
 
             // Try to parse as JSON, otherwise return raw content
             try {
@@ -136,7 +136,7 @@ class SafeAzureOpenAIService {
                 };
             } catch (parseError) {
                 console.error('[Azure OpenAI] JSON parse error:', parseError);
-                console.log('[Azure OpenAI] Raw content:', content);
+                // SEC-REMEDIATION: Raw content removed from logs - contains PHI
                 return {
                     rawAnalysis: content,
                     fromCache: false,

@@ -1,8 +1,8 @@
 // src/app/api/auth/check-lockout/route.ts
-// SEC-014: Check if account is locked due to failed login attempts
+// SEC-REMEDIATION: Brute-force lockout check with fail-closed security
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 
 const LOCKOUT_CONFIG = {
     maxAttempts: 5,
@@ -19,23 +19,45 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Email required' }, { status: 400 });
         }
 
-        const supabase = await createClient();
+        // SEC-REMEDIATION: Use service role client for lockout checks
+        // This bypasses RLS since we need to check before user is authenticated
+        const supabase = createServiceRoleClient();
+
         if (!supabase) {
-            // In demo mode without Supabase, no lockout
-            return NextResponse.json({ locked: false, remainingAttempts: 5 });
+            // Demo mode - allow login attempts
+            const isDemoMode = process.env.NODE_ENV !== 'production' &&
+                process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+            if (isDemoMode) {
+                return NextResponse.json({ locked: false, remainingAttempts: 5 });
+            }
+            // SEC-REMEDIATION: FAIL CLOSED in production
+            console.error('SECURITY: Lockout check cannot access database');
+            return NextResponse.json(
+                { locked: true, error: 'Security check unavailable' },
+                { status: 503 }
+            );
         }
 
         // Get recent failed attempts
         const cutoff = new Date(Date.now() - LOCKOUT_CONFIG.resetAttemptsAfter);
 
         try {
-            const { data: attempts } = await supabase
+            const { data: attempts, error } = await supabase
                 .from('login_attempts')
                 .select('created_at')
                 .eq('email', email.toLowerCase())
                 .eq('success', false)
                 .gt('created_at', cutoff.toISOString())
                 .order('created_at', { ascending: false });
+
+            if (error) {
+                // SEC-REMEDIATION: FAIL CLOSED on database errors
+                console.error('Lockout check database error:', error);
+                return NextResponse.json(
+                    { locked: true, error: 'Security check failed' },
+                    { status: 500 }
+                );
+            }
 
             const failedCount = attempts?.length || 0;
 
@@ -62,14 +84,20 @@ export async function POST(request: NextRequest) {
                 remainingAttempts: Math.max(0, LOCKOUT_CONFIG.maxAttempts - failedCount),
             });
         } catch (dbError) {
-            // Table might not exist - no lockout
-            console.warn('login_attempts table not available for lockout check');
-            return NextResponse.json({ locked: false, remainingAttempts: 5 });
+            // SEC-REMEDIATION: FAIL CLOSED - don't allow login on errors
+            console.error('login_attempts table error:', dbError);
+            return NextResponse.json(
+                { locked: true, error: 'Security check failed' },
+                { status: 500 }
+            );
         }
 
     } catch (error) {
         console.error('Check lockout error:', error);
-        // Fail open - don't lock user out due to check error
-        return NextResponse.json({ locked: false, remainingAttempts: 5 });
+        // SEC-REMEDIATION: FAIL CLOSED
+        return NextResponse.json(
+            { locked: true, error: 'Security check failed' },
+            { status: 500 }
+        );
     }
 }

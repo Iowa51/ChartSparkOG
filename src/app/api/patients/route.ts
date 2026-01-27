@@ -45,8 +45,25 @@ export async function GET(request: NextRequest) {
             .eq('organization_id', profile.organization_id)
             .order('last_name', { ascending: true });
 
-        if (status && status !== 'all') query = query.eq('status', status);
-        if (search) query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
+        // Apply status filter
+        if (status && status !== 'all') {
+            query = query.eq('status', status);
+        }
+
+        // SEC-REMEDIATION: Sanitize search to prevent filter injection
+        if (search) {
+            // Remove dangerous characters that could be used for injection
+            const sanitized = search
+                .replace(/[<>'"`;\\]/g, '')  // Remove dangerous chars
+                .replace(/%/g, '\\%')        // Escape wildcards
+                .replace(/,/g, '')           // Remove commas (filter separator)
+                .trim()
+                .substring(0, 100);          // Limit length
+
+            if (sanitized) {
+                query = query.or(`first_name.ilike.%${sanitized}%,last_name.ilike.%${sanitized}%`);
+            }
+        }
 
         const { data: patients, error } = await query;
 

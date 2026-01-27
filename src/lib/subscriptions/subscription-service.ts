@@ -257,8 +257,10 @@ export async function checkFeatureAccess(
         .maybeSingle();
 
     if (error || !data) {
-        // No explicit assignment or error - default to enabled for demo compatibility
-        return true;
+        // SEC-REMEDIATION: FAIL CLOSED - deny access on error
+        // This prevents attackers from exploiting database errors to bypass feature gates
+        console.error('Feature access check failed - DENYING ACCESS:', error);
+        return false;
     }
 
     // Check if feature has expired

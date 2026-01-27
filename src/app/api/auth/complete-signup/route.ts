@@ -1,12 +1,14 @@
 // src/app/api/auth/complete-signup/route.ts
-// SEC-013: Complete user registration with organization creation
+// SEC-REMEDIATION: Fixed privilege escalation vulnerability
+// CRITICAL: Now uses authenticated user's ID, never trusts client-provided userId
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 
 interface SignupData {
-    userId: string;
-    email: string;
+    // SEC-REMEDIATION: userId and email are now IGNORED from request body
+    // We get these from the authenticated session instead
     firstName: string;
     lastName: string;
     organizationName: string;
@@ -16,12 +18,46 @@ export async function POST(request: NextRequest) {
     try {
         const body: SignupData = await request.json();
 
-        // Validate required fields
-        const { userId, email, firstName, lastName, organizationName } = body;
-
-        if (!userId || !email || !firstName || !lastName || !organizationName) {
+        // SEC-REMEDIATION: Get authenticated user from session, NEVER trust client-provided userId
+        const supabase = await createClient();
+        if (!supabase) {
+            // Demo mode - return success without database operations
+            const isDemoMode = process.env.NODE_ENV !== 'production' &&
+                process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+            if (isDemoMode) {
+                return NextResponse.json({
+                    success: true,
+                    organizationId: 'demo-org-id',
+                    demo: true,
+                });
+            }
             return NextResponse.json(
-                { error: 'All fields are required' },
+                { error: 'Database not configured' },
+                { status: 503 }
+            );
+        }
+
+        // CRITICAL SECURITY FIX: Get user from authenticated session
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return NextResponse.json(
+                { error: 'Unauthorized - must be logged in to complete signup' },
+                { status: 401 }
+            );
+        }
+
+        // Use AUTHENTICATED user's data - this is the security fix
+        // Any userId/email in request body is completely ignored
+        const userId = user.id;
+        const email = user.email;
+
+        // Validate required fields from body (but NOT userId/email)
+        const { firstName, lastName, organizationName } = body;
+
+        if (!firstName || !lastName || !organizationName) {
+            return NextResponse.json(
+                { error: 'First name, last name, and organization name are required' },
                 { status: 400 }
             );
         }
@@ -34,12 +70,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const supabase = await createClient();
-        if (!supabase) {
-            return NextResponse.json(
-                { error: 'Database not configured' },
-                { status: 503 }
-            );
+        // Use service role client for privileged database operations
+        const serviceSupabase = createServiceRoleClient();
+        if (!serviceSupabase) {
+            // Demo mode fallback
+            return NextResponse.json({
+                success: true,
+                organizationId: 'demo-org-id',
+                demo: true,
+            });
         }
 
         // Create organization slug from name
@@ -50,7 +89,7 @@ export async function POST(request: NextRequest) {
             .substring(0, 50);
 
         // Create organization first
-        const { data: org, error: orgError } = await supabase
+        const { data: org, error: orgError } = await serviceSupabase
             .from('organizations')
             .insert({
                 name: organizationName,
@@ -70,11 +109,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Create user profile linked to auth user and organization
-        const { error: userError } = await supabase
+        const { error: userError } = await serviceSupabase
             .from('users')
             .insert({
-                id: userId, // Must match Supabase Auth user ID
-                email: email.toLowerCase(),
+                id: userId, // From authenticated session, NOT from request body
+                email: email?.toLowerCase(),
                 first_name: firstName.trim(),
                 last_name: lastName.trim(),
                 role: 'ADMIN', // First user becomes admin of their org
@@ -85,7 +124,7 @@ export async function POST(request: NextRequest) {
         if (userError) {
             console.error('User creation error:', userError);
             // Rollback organization creation
-            await supabase.from('organizations').delete().eq('id', org.id);
+            await serviceSupabase.from('organizations').delete().eq('id', org.id);
             return NextResponse.json(
                 { error: 'Failed to create user profile' },
                 { status: 500 }
@@ -94,7 +133,7 @@ export async function POST(request: NextRequest) {
 
         // Assign default features for STARTER tier
         try {
-            const { data: features } = await supabase
+            const { data: features } = await serviceSupabase
                 .from('features')
                 .select('id')
                 .or('tier_required.eq.STARTER,tier_required.is.null');
@@ -107,25 +146,29 @@ export async function POST(request: NextRequest) {
                     granted_by: userId,
                 }));
 
-                await supabase.from('user_features').insert(userFeatures);
+                await serviceSupabase.from('user_features').insert(userFeatures);
             }
         } catch (featureError) {
             // Non-critical - log but don't fail registration
             console.warn('Feature assignment warning:', featureError);
         }
 
-        // Audit log
-        await supabase.from('audit_logs').insert({
-            event_type: 'USER_CREATED',
-            user_id: userId,
-            user_email: email,
-            user_role: 'ADMIN',
-            organization_id: org.id,
-            ip_address: request.headers.get('x-forwarded-for') || 'unknown',
-            user_agent: request.headers.get('user-agent') || 'unknown',
-            risk_level: 'LOW',
-            details: { organizationName, isNewOrg: true },
-        }).catch(() => { });
+        // Audit log - SEC-REMEDIATION: No PHI in details
+        try {
+            await serviceSupabase.from('audit_logs').insert({
+                event_type: 'USER_CREATED',
+                user_id: userId,
+                user_email: email,
+                user_role: 'ADMIN',
+                organization_id: org.id,
+                ip_address: request.headers.get('x-forwarded-for') || 'unknown',
+                user_agent: request.headers.get('user-agent') || 'unknown',
+                risk_level: 'LOW',
+                details: { isNewOrg: true },
+            });
+        } catch {
+            // Non-critical - audit log failure shouldn't fail registration
+        }
 
         return NextResponse.json({
             success: true,
