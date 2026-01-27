@@ -22,12 +22,21 @@ ON public.login_attempts(ip_address, created_at DESC);
 ALTER TABLE public.login_attempts ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Service role can do everything (needed for lockout checks)
-CREATE POLICY IF NOT EXISTS "Service role full access" 
-ON public.login_attempts 
-FOR ALL 
-TO service_role 
-USING (true) 
-WITH CHECK (true);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE tablename = 'login_attempts' 
+        AND policyname = 'Service role full access'
+    ) THEN
+        CREATE POLICY "Service role full access" 
+        ON public.login_attempts 
+        FOR ALL 
+        TO service_role 
+        USING (true) 
+        WITH CHECK (true);
+    END IF;
+END $$;
 
 -- Clean up old entries (keep last 30 days)
 CREATE OR REPLACE FUNCTION public.cleanup_old_login_attempts()

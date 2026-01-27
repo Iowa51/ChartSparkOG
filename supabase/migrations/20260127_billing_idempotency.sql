@@ -20,6 +20,11 @@ BEGIN
     END IF;
 END $$;
 
+-- Drop any existing versions of the function first
+DROP FUNCTION IF EXISTS public.create_invoice_idempotent(TEXT, UUID, UUID, UUID, DECIMAL, TEXT);
+DROP FUNCTION IF EXISTS public.create_invoice_idempotent(TEXT, UUID, UUID, UUID, NUMERIC, TEXT);
+DROP FUNCTION IF EXISTS public.create_invoice_idempotent(TEXT, UUID, UUID);
+
 -- Create idempotent invoice creation function
 CREATE OR REPLACE FUNCTION public.create_invoice_idempotent(
     p_idempotency_key TEXT,
