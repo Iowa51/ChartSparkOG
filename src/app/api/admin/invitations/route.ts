@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getClientIP } from '@/lib/utils/get-client-ip';
+import { sendInvitationEmail, isEmailConfigured } from '@/lib/email/resend';
 
 export async function GET(request: NextRequest) {
     const supabase = await createClient();
@@ -215,9 +216,51 @@ export async function POST(request: NextRequest) {
             userAgent,
         });
 
-        // TODO: Send email using Resend when API key is available
-        // For now, return the invitation URL for manual sharing
-        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/accept-invite?token=${token}`;
+        // Get organization name for the email
+        const { data: org } = await supabase
+            .from('organizations')
+            .select('name')
+            .eq('id', profile.organization_id)
+            .single();
+
+        // Get inviter name
+        const { data: inviter } = await supabase
+            .from('users')
+            .select('first_name, last_name')
+            .eq('id', user.id)
+            .single();
+
+        const inviterName = inviter
+            ? `${inviter.first_name || ''} ${inviter.last_name || ''}`.trim() || user.email
+            : user.email || 'Your organization';
+
+        const organizationName = org?.name || 'Your organization';
+
+        // Send invitation email via Resend
+        let emailSent = false;
+        let emailError: string | undefined;
+
+        if (isEmailConfigured()) {
+            const emailResult = await sendInvitationEmail({
+                recipientEmail: email.toLowerCase(),
+                inviterName,
+                organizationName,
+                role,
+                invitationToken: token,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            });
+
+            emailSent = emailResult.success;
+            emailError = emailResult.error;
+
+            if (!emailSent) {
+                console.warn('Failed to send invitation email:', emailError);
+            }
+        } else {
+            console.warn('Email service not configured - invitation created but email not sent');
+        }
+
+        const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://chart-spark-og.vercel.app'}/auth/accept-invite?token=${token}`;
 
         return NextResponse.json({
             invitation: {
@@ -229,7 +272,10 @@ export async function POST(request: NextRequest) {
                 created_at: invitation.created_at,
             },
             inviteUrl,
-            message: 'Invitation created. Share the invite URL with the user.',
+            emailSent,
+            message: emailSent
+                ? 'Invitation sent successfully! The user will receive an email shortly.'
+                : 'Invitation created. Email could not be sent - please share the invite URL manually.',
         });
 
     } catch (error: any) {
