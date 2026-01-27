@@ -1397,7 +1397,7 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                             <span className="text-[9px] text-muted-foreground">Level of Service</span>
                                         </div>
                                         <div className="flex flex-wrap gap-3">
-                                            {suggestedCodes.cpt.length > 0 ? (
+                                            {(suggestedCodes?.cpt?.length ?? 0) > 0 ? (
                                                 suggestedCodes.cpt.map((code) => (
                                                     <button
                                                         key={code}
@@ -1443,7 +1443,7 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                             <span className="text-[9px] text-muted-foreground">Clinical Diagnoses</span>
                                         </div>
                                         <div className="flex flex-wrap gap-3">
-                                            {suggestedCodes.icd10.length > 0 ? (
+                                            {(suggestedCodes?.icd10?.length ?? 0) > 0 ? (
                                                 suggestedCodes.icd10.map((code) => (
                                                     <button
                                                         key={code}

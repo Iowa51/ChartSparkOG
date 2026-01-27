@@ -99,12 +99,11 @@ async function handler(context: AuthContext) {
             }
         }
 
-        // Add suggested codes based on assessment
-        const suggestedCodes = [
-            { code: '90834', description: 'Psychotherapy, 45 minutes', selected: false },
-            { code: '90837', description: 'Psychotherapy, 60 minutes', selected: false },
-            { code: 'F32.1', description: 'Major depressive disorder, moderate', selected: false }
-        ];
+        // Add suggested codes based on assessment - format matches frontend expectation
+        const suggestedCodes = {
+            cpt: ['90834', '90837', '99214'],
+            icd10: ['F32.1', 'F41.1']
+        };
 
         return NextResponse.json({
             success: true,
