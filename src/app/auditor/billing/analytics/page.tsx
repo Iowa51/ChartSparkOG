@@ -14,7 +14,8 @@ import {
     Activity,
     Brain,
     Clock,
-    User
+    User,
+    ShieldAlert
 } from "lucide-react";
 import { useState } from "react";
 
@@ -68,8 +69,8 @@ export default function RevenueAnalyticsPage() {
                             key={t}
                             onClick={() => setTimeframe(t)}
                             className={`px-4 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${timeframe === t
-                                    ? "bg-primary text-white shadow-lg shadow-primary/20"
-                                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                                 }`}
                         >
                             {t}
@@ -245,8 +246,8 @@ export default function RevenueAnalyticsPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${p.status === "Optimal" ? "bg-emerald-500/10 text-emerald-600" :
-                                                p.status === "Stable" ? "bg-blue-500/10 text-blue-600" :
-                                                    "bg-amber-500/10 text-amber-600"
+                                            p.status === "Stable" ? "bg-blue-500/10 text-blue-600" :
+                                                "bg-amber-500/10 text-amber-600"
                                             }`}>
                                             {p.status}
                                         </span>
