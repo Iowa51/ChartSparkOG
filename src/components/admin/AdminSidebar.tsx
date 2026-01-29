@@ -29,6 +29,11 @@ import {
     BarChart3,
     Webhook,
     UserCog,
+    PieChart,
+    ShieldAlert,
+    Database,
+    Fingerprint,
+    Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -63,7 +68,12 @@ const superAdminNavItems = [
     { label: "Security Logs", href: "/super-admin/audit-logs", icon: Shield },
     { label: "Auditors Hub", href: "/super-admin/auditors", icon: ClipboardList },
     { label: "Integrations", href: "/super-admin/integrations", icon: Plug },
-    { label: "Managed Billing", href: "/super-admin/managed-billing", icon: Receipt },
+    { label: "Billing Overview", href: "/super-admin/managed-billing", icon: Receipt },
+    { label: "Revenue Analytics", href: "/super-admin/managed-billing/analytics", icon: PieChart },
+    { label: "Denial Forensics", href: "/super-admin/managed-billing/denials", icon: ShieldAlert },
+    { label: "Fee Schedules", href: "/super-admin/managed-billing/schedules", icon: Database },
+    { label: "ERA Verification", href: "/super-admin/managed-billing/era-audit", icon: Fingerprint },
+    { label: "Org Benchmarking", href: "/super-admin/managed-billing/organizations", icon: Layers },
     { label: "Platform Billing", href: "/super-admin/financials", icon: DollarSign },
 ];
 
