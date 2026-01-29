@@ -10,17 +10,31 @@ import {
     Settings,
     User,
     Building2,
+    PieChart,
+    ShieldAlert,
+    Database,
+    Fingerprint,
+    Layers,
+    SearchCode,
+    Activity,
 } from "lucide-react";
 import { LogoutButton } from "@/components/LogoutButton";
 
 const auditorNavItems = [
-    { label: "Dashboard", href: "/auditor", icon: LayoutDashboard },
+    { label: "General Dashboard", href: "/auditor", icon: LayoutDashboard },
     { label: "Submissions Queue", href: "/auditor/submissions", icon: ClipboardCheck },
     { label: "Notes Review", href: "/auditor/notes", icon: FileText },
-    { label: "Financial Audit", href: "/auditor/billing", icon: BarChart3 },
-    { label: "Compliance Reports", href: "/auditor/reports", icon: BarChart3 },
     { label: "My Flags", href: "/auditor/flags", icon: Flag },
-    { label: "Settings", href: "/auditor/settings", icon: Settings },
+];
+
+const financialNavItems = [
+    { label: "Audit Overview", href: "/auditor/billing", icon: BarChart3 },
+    { label: "Integrity Analytics", href: "/auditor/billing/analytics", icon: PieChart },
+    { label: "Denial Forensics", href: "/auditor/billing/denials", icon: ShieldAlert },
+    { label: "Fee Schedule Audit", href: "/auditor/billing/schedules", icon: Database },
+    { label: "Matching Oversight", href: "/auditor/billing/era-audit", icon: Fingerprint },
+    { label: "Benchmarking", href: "/auditor/billing/organizations", icon: Layers },
+    { label: "Compliance Reports", href: "/auditor/reports", icon: Activity },
 ];
 
 export default async function AuditorLayout({
@@ -75,17 +89,44 @@ export default async function AuditorLayout({
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 p-4 space-y-1">
-                    {auditorNavItems.map((item) => (
+                <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+                    <div className="space-y-1">
+                        <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Clinical Oversight</p>
+                        {auditorNavItems.map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
+                            >
+                                <item.icon className="h-5 w-5" />
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
+
+                    <div className="space-y-1">
+                        <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Financial Suite</p>
+                        {financialNavItems.map((item) => (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
+                            >
+                                <item.icon className="h-5 w-5" />
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                         <Link
-                            key={item.href}
-                            href={item.href}
+                            href="/auditor/settings"
                             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
                         >
-                            <item.icon className="h-5 w-5" />
-                            {item.label}
+                            <Settings className="h-5 w-5" />
+                            System Settings
                         </Link>
-                    ))}
+                    </div>
                 </nav>
 
                 {/* User Info & Logout */}
