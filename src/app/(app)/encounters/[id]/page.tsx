@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { SuperbillWidget } from "@/components/billing/SuperbillWidget";
 
 export default function EncounterDetailPage() {
     const params = useParams();
@@ -152,6 +153,9 @@ export default function EncounterDetailPage() {
 
                     {/* Vitals Sidebar */}
                     <div className="space-y-6">
+                        {/* Superbill Widget */}
+                        <SuperbillWidget />
+
                         <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
                             <div className="flex items-center gap-2 mb-6">
                                 <Activity className="h-5 w-5 text-primary" />

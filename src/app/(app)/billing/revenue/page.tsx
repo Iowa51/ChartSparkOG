@@ -1,34 +1,32 @@
-/**
- * Clinician Revenue Dashboard
- * Shows billing performance and revenue tracking for clinicians
- * 
- * This page is accessible from the main billing page for clinicians
- * to view their own billing statistics and pending claims.
- */
+"use client";
 
-'use client';
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
     DollarSign,
     TrendingUp,
     Clock,
-    CheckCircle,
-    AlertTriangle,
+    CheckCircle2,
+    AlertCircle,
     FileText,
     ArrowLeft,
     Calendar,
     BarChart3,
-    ChevronRight
+    ChevronRight,
+    ArrowUpRight,
+    ArrowDownRight,
+    Sparkles,
+    ShieldCheck,
+    Briefcase,
+    History
 } from 'lucide-react';
+import { Header } from "@/components/layout";
 
-// Demo data for revenue dashboard
 const demoStats = {
-    mtdCollected: 12450,
-    mtdSubmitted: 15800,
-    ytdCollected: 142500,
-    ytdSubmitted: 168000,
+    mtdCollected: 1245000, // in cents
+    mtdSubmitted: 1580000,
+    ytdCollected: 14250000,
+    ytdSubmitted: 16800000,
     avgDaysToPayment: 23,
     collectionRate: 85,
 };
@@ -42,17 +40,16 @@ const demoClaims = [
 ];
 
 const demoMonthlyData = [
-    { month: 'Aug', submitted: 14200, collected: 12100 },
-    { month: 'Sep', submitted: 15800, collected: 13400 },
-    { month: 'Oct', submitted: 16500, collected: 14200 },
-    { month: 'Nov', submitted: 14900, collected: 12800 },
-    { month: 'Dec', submitted: 17200, collected: 14900 },
-    { month: 'Jan', submitted: 15800, collected: 12450 },
+    { month: 'Aug', submitted: 1420000, collected: 1210000 },
+    { month: 'Sep', submitted: 1580000, collected: 1340000 },
+    { month: 'Oct', submitted: 1650000, collected: 1420000 },
+    { month: 'Nov', submitted: 1490000, collected: 1280000 },
+    { month: 'Dec', submitted: 1720000, collected: 1490000 },
+    { month: 'Jan', submitted: 1580000, collected: 1245000 },
 ];
 
 export default function RevenueDashboardPage() {
     const [timeRange, setTimeRange] = useState<'mtd' | 'ytd'>('mtd');
-    const [loading] = useState(false);
 
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -68,285 +65,226 @@ export default function RevenueDashboardPage() {
         });
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'paid': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
-            case 'submitted': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
-            case 'pending': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
-            case 'denied': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-            default: return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400';
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            {/* Header */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Link
-                                href="/billing"
-                                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                            >
-                                <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                            </Link>
-                            <div>
-                                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                                    Revenue Dashboard
-                                </h1>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    Track your billing performance and collections
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-                                <button
-                                    onClick={() => setTimeRange('mtd')}
-                                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${timeRange === 'mtd'
-                                            ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow'
-                                            : 'text-slate-600 dark:text-slate-400'
-                                        }`}
-                                >
-                                    This Month
-                                </button>
-                                <button
-                                    onClick={() => setTimeRange('ytd')}
-                                    className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${timeRange === 'ytd'
-                                            ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow'
-                                            : 'text-slate-600 dark:text-slate-400'
-                                        }`}
-                                >
-                                    Year to Date
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div className="flex flex-col min-h-screen bg-slate-50/50 dark:bg-slate-950/50">
+            <Header
+                title="Revenue Dashboard"
+                description="Track collection rates, reimbursement trends, and financial performance across the practice."
+                breadcrumbs={[
+                    { label: "Dashboard", href: "/dashboard" },
+                    { label: "Billing", href: "/billing" },
+                    { label: "Revenue" },
+                ]}
+            />
 
-            <div className="max-w-7xl mx-auto px-6 py-8">
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                                <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <main className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+                {/* Triage Dashboard Section */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col justify-between group hover:border-emerald-500/50 transition-colors">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-emerald-500 rounded-xl text-white">
+                                <DollarSign className="h-5 w-5" />
                             </div>
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                {timeRange === 'mtd' ? 'MTD' : 'YTD'} Collected
+                            <span className="text-[10px] font-black text-emerald-600 flex items-center gap-1">
+                                +14% <ArrowUpRight className="h-3 w-3" />
                             </span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {formatCurrency(timeRange === 'mtd' ? demoStats.mtdCollected : demoStats.ytdCollected)}
-                        </div>
-                        <div className="mt-2 flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
-                            <TrendingUp className="h-4 w-4" />
-                            <span>12% vs last period</span>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-emerald-500 transition-colors">MTD Reimbursed</p>
+                            <h4 className="text-3xl font-black text-foreground">{formatCurrency(demoStats.mtdCollected)}</h4>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <div className="bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col justify-between group hover:border-blue-500/50 transition-colors">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-blue-500 rounded-xl text-white">
+                                <FileText className="h-5 w-5" />
                             </div>
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                {timeRange === 'mtd' ? 'MTD' : 'YTD'} Submitted
+                            <span className="text-[10px] font-black text-blue-600 flex items-center gap-1">
+                                92 Claims <ChevronRight className="h-3 w-3" />
                             </span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {formatCurrency(timeRange === 'mtd' ? demoStats.mtdSubmitted : demoStats.ytdSubmitted)}
-                        </div>
-                        <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                            {Math.round((timeRange === 'mtd' ? demoStats.mtdCollected / demoStats.mtdSubmitted : demoStats.ytdCollected / demoStats.ytdSubmitted) * 100)}% collection rate
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-blue-500 transition-colors">In-Flight Revenue</p>
+                            <h4 className="text-3xl font-black text-foreground">{formatCurrency(demoStats.mtdSubmitted - demoStats.mtdCollected)}</h4>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                                <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    <div className="bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col justify-between group hover:border-amber-500/50 transition-colors">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-amber-500 rounded-xl text-white">
+                                <Clock className="h-5 w-5" />
                             </div>
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                Avg Days to Payment
+                            <span className="text-[10px] font-black text-amber-600 flex items-center gap-1">
+                                -2 Days <ArrowDownRight className="h-3 w-3" />
                             </span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {demoStats.avgDaysToPayment} days
-                        </div>
-                        <div className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">
-                            2 days faster than avg
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-amber-500 transition-colors">Avg Payment Cycle</p>
+                            <h4 className="text-3xl font-black text-foreground">{demoStats.avgDaysToPayment} Days</h4>
                         </div>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-                                <CheckCircle className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <div className="bg-card rounded-2xl p-6 border border-border shadow-sm flex flex-col justify-between group hover:border-primary/50 transition-colors">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-2 bg-primary rounded-xl text-white">
+                                <CheckCircle2 className="h-5 w-5" />
                             </div>
-                            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                Collection Rate
+                            <span className="text-[10px] font-black text-primary flex items-center gap-1">
+                                Top Dist. <ShieldCheck className="h-3 w-3" />
                             </span>
                         </div>
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {demoStats.collectionRate}%
-                        </div>
-                        <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                            Industry avg: 82%
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Collection Rate</p>
+                            <h4 className="text-3xl font-black text-foreground">{demoStats.collectionRate}%</h4>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid lg:grid-cols-3 gap-6">
-                    {/* Chart Section */}
-                    <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                                6-Month Revenue Trend
-                            </h2>
-                            <BarChart3 className="h-5 w-5 text-slate-400" />
-                        </div>
-                        <div className="h-64 flex items-end gap-4">
-                            {demoMonthlyData.map((month, index) => {
-                                const maxValue = Math.max(...demoMonthlyData.map(m => m.submitted));
-                                const submittedHeight = (month.submitted / maxValue) * 100;
-                                const collectedHeight = (month.collected / maxValue) * 100;
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                                return (
-                                    <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                                        <div className="w-full flex gap-1 items-end h-48">
-                                            <div
-                                                className="flex-1 bg-blue-200 dark:bg-blue-900/50 rounded-t"
-                                                style={{ height: `${submittedHeight}%` }}
-                                                title={`Submitted: ${formatCurrency(month.submitted)}`}
-                                            />
-                                            <div
-                                                className="flex-1 bg-emerald-400 dark:bg-emerald-500 rounded-t"
-                                                style={{ height: `${collectedHeight}%` }}
-                                                title={`Collected: ${formatCurrency(month.collected)}`}
-                                            />
-                                        </div>
-                                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                                            {month.month}
-                                        </span>
+                    {/* Primary Chart Area */}
+                    <div className="lg:col-span-2 space-y-8">
+                        <section className="bg-card rounded-3xl border border-border shadow-sm p-8">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="space-y-1">
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Revenue Collection Matrix</h3>
+                                    <p className="text-xs text-muted-foreground">Rolling 6-month comparison of billed vs. collected revenue.</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg text-[10px] font-black text-muted-foreground uppercase">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500" /> Billed
                                     </div>
-                                );
-                            })}
-                        </div>
-                        <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-blue-200 dark:bg-blue-900/50 rounded" />
-                                <span className="text-sm text-slate-600 dark:text-slate-400">Submitted</span>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-lg text-[10px] font-black text-muted-foreground uppercase">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500" /> Collected
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-emerald-400 dark:bg-emerald-500 rounded" />
-                                <span className="text-sm text-slate-600 dark:text-slate-400">Collected</span>
+
+                            <div className="h-64 flex items-end gap-6 pb-2">
+                                {demoMonthlyData.map((data, idx) => {
+                                    const maxVal = Math.max(...demoMonthlyData.map(d => d.submitted));
+                                    const billedHeight = (data.submitted / maxVal) * 100;
+                                    const collHeight = (data.collected / maxVal) * 100;
+
+                                    return (
+                                        <div key={idx} className="flex-1 flex flex-col items-center gap-3">
+                                            <div className="w-full flex gap-1.5 items-end justify-center h-48">
+                                                <div
+                                                    className="w-4 bg-blue-500/20 dark:bg-blue-500/10 rounded-t-lg transition-all hover:bg-blue-500/30"
+                                                    style={{ height: `${billedHeight}%` }}
+                                                />
+                                                <div
+                                                    className="w-4 bg-emerald-500 rounded-t-lg transition-all hover:scale-x-110"
+                                                    style={{ height: `${collHeight}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{data.month}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        </div>
+                        </section>
+
+                        <section className="space-y-4">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                                <History className="h-4 w-4 text-primary" />
+                                Recent High-Value Adjustments
+                            </h3>
+                            <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-border bg-slate-50/50 dark:bg-slate-900/50 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                            <th className="px-6 py-4">Patient</th>
+                                            <th className="px-6 py-4">Payer</th>
+                                            <th className="px-6 py-4">Service Date</th>
+                                            <th className="px-6 py-4">Amount</th>
+                                            <th className="px-6 py-4">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {demoClaims.map((claim) => (
+                                            <tr key={claim.id} className="group hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all font-medium">
+                                                <td className="px-6 py-4 text-sm font-black text-foreground">{claim.patient}</td>
+                                                <td className="px-6 py-4 text-xs text-muted-foreground uppercase italic">{claim.payer}</td>
+                                                <td className="px-6 py-4 text-xs text-muted-foreground">{formatDate(claim.date)}</td>
+                                                <td className="px-6 py-4 text-sm font-black text-foreground">{formatCurrency(claim.amount)}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border ${claim.status === 'paid' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                                                        claim.status === 'denied' ? 'bg-red-500/10 text-red-600 border-red-500/20' :
+                                                            'bg-blue-500/10 text-blue-600 border-blue-500/20'
+                                                        }`}>
+                                                        {claim.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
                     </div>
 
-                    {/* Quick Actions */}
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
-                            Quick Actions
-                        </h2>
-                        <div className="space-y-3">
-                            <Link
-                                href="/billing/claims"
-                                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <FileText className="h-5 w-5 text-blue-600" />
-                                    <span className="font-medium text-slate-700 dark:text-slate-300">View All Claims</span>
+                    {/* Revenue AI Sidebar */}
+                    <aside className="space-y-8">
+                        <section className="bg-slate-900 dark:bg-white rounded-3xl p-8 text-white dark:text-slate-900 shadow-2xl relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform">
+                                <Sparkles className="h-24 w-24" />
+                            </div>
+                            <div className="relative space-y-6">
+                                <div className="flex items-center gap-2 px-3 py-1 bg-white/10 dark:bg-slate-900/10 rounded-full w-fit">
+                                    <Sparkles className="h-3 w-3 text-amber-400" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">Revenue AI Preview</span>
                                 </div>
-                                <ChevronRight className="h-4 w-4 text-slate-400" />
-                            </Link>
-                            <Link
-                                href="/encounters"
-                                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <Calendar className="h-5 w-5 text-teal-600" />
-                                    <span className="font-medium text-slate-700 dark:text-slate-300">Unbilled Encounters</span>
+                                <div className="space-y-2">
+                                    <h3 className="text-2xl font-black leading-tight italic">Maximize Your Reimbursements.</h3>
+                                    <p className="text-xs text-white/70 dark:text-slate-900/70 leading-relaxed">
+                                        Our upcoming AI layer analyzes clinical documentation to auto-suggest optimized CPT codes.
+                                    </p>
                                 </div>
-                                <span className="text-sm text-amber-600 font-medium">3</span>
-                            </Link>
-                            <Link
-                                href="/billing/denials"
-                                className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                                    <span className="font-medium text-slate-700 dark:text-slate-300">Denied Claims</span>
+                                <div className="space-y-3">
+                                    <div className="p-3 bg-white/5 dark:bg-slate-900/5 rounded-xl border border-white/10 dark:border-slate-900/10">
+                                        <p className="text-[10px] font-black uppercase tracking-widest mb-1">Medical Necessity Guard</p>
+                                        <p className="text-[10px] opacity-70">Flags claims missing key clinical justification before submission.</p>
+                                    </div>
+                                    <div className="p-3 bg-white/5 dark:bg-slate-900/5 rounded-xl border border-white/10 dark:border-slate-900/10">
+                                        <p className="text-[10px] font-black uppercase tracking-widest mb-1">Payer Pattern Analysis</p>
+                                        <p className="text-[10px] opacity-70">Predicts denial risk based on real-time payer behavior data.</p>
+                                    </div>
                                 </div>
-                                <span className="text-sm text-red-600 font-medium">1</span>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
+                                <button className="w-full py-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] transition-transform active:scale-95">
+                                    Join the Beta
+                                </button>
+                            </div>
+                        </section>
 
-                {/* Recent Claims Table */}
-                <div className="mt-6 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
-                    <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-                            Recent Claims
-                        </h2>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-slate-50 dark:bg-slate-800">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        Patient
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        Service Date
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        Payer
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        Amount
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                {demoClaims.map((claim) => (
-                                    <tr
-                                        key={claim.id}
-                                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="font-medium text-slate-900 dark:text-white">
-                                                {claim.patient}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
-                                            {formatDate(claim.date)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-slate-600 dark:text-slate-400">
-                                            {claim.payer}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap font-medium text-slate-900 dark:text-white">
-                                            {formatCurrency(claim.amount)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${getStatusColor(claim.status)}`}>
-                                                {claim.status}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                        <section className="bg-card rounded-3xl border border-border shadow-sm p-8 space-y-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                                <Briefcase className="h-4 w-4 text-primary" />
+                                Operational Shortcuts
+                            </h3>
+                            <div className="grid gap-3">
+                                <Link href="/billing/fee-schedule" className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-border hover:border-primary/30 transition-all group">
+                                    <span className="text-xs font-bold text-foreground">Manage Fee Schedule</span>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                </Link>
+                                <Link href="/billing/era-inbox" className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-border hover:border-primary/30 transition-all group">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold text-foreground">ERA Matcher</span>
+                                        <span className="px-1.5 py-0.5 bg-red-500 text-white text-[9px] font-black rounded-full">3</span>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                </Link>
+                                <button className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-border hover:border-primary/30 transition-all group">
+                                    <span className="text-xs font-bold text-foreground">Financial Audit Trail</span>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                </button>
+                            </div>
+                        </section>
+                    </aside>
                 </div>
-            </div>
+            </main>
         </div>
     );
 }

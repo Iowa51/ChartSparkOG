@@ -6,6 +6,7 @@ import {
     TrendingUp,
     Building2,
     ArrowRight,
+    DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -198,6 +199,20 @@ export default async function AuditorDashboard() {
                                 {stats.passRate}%
                             </p>
                             <p className="text-sm text-slate-500">Pass Rate</p>
+                        </div>
+                    </div>
+                </Link>
+
+                <Link href="/auditor/billing" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-emerald-500 hover:shadow-lg transition-all cursor-pointer group lg:col-span-1 md:col-span-2">
+                    <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                Financial
+                            </p>
+                            <p className="text-sm text-slate-500">Billing Compliance</p>
                         </div>
                     </div>
                 </Link>

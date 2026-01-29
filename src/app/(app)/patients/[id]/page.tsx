@@ -39,8 +39,10 @@ import {
     TrendingDown,
     TrendingUp,
     Shield,
-    CheckCircle2
+    CheckCircle2,
+    CreditCard
 } from "lucide-react";
+import { InsuranceForm } from "@/components/patients/InsuranceForm";
 
 // Local Component Definitions for Consistency
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -113,6 +115,7 @@ export default function PatientDetailPage() {
     const tabs = [
         { id: "overview", label: "Overview", icon: Activity },
         { id: "encounters", label: "Encounters", icon: Calendar },
+        { id: "insurance", label: "Insurance", icon: CreditCard },
         { id: "medications", label: "Medications", icon: Pill },
         { id: "risk", label: "Risk Assessment", icon: Shield },
         { id: "history", label: "History", icon: History },
@@ -479,6 +482,10 @@ export default function PatientDetailPage() {
                                     ))}
                                 </div>
                             </section>
+                        )}
+
+                        {activeTab === "insurance" && (
+                            <InsuranceForm patientId={patientId} />
                         )}
 
                         {activeTab === "medications" && (

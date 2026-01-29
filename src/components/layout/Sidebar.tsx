@@ -56,6 +56,7 @@ const navSections = [
       { label: "E-Prescribe", href: "/e-prescribe", icon: Pill, tier: "complete" },
       { label: "License Tracking", href: "/licensing", icon: Award, tier: "pro" },
       { label: "Billing", href: "/billing", icon: CreditCard },
+      { label: "Claims Manager", href: "/billing/claims", icon: ClipboardList, tier: "complete" },
       { label: "Calendar", href: "/calendar", icon: Calendar, tier: "pro" },
       { label: "Telehealth", href: "/telehealth", icon: Video, tier: "pro" },
     ]

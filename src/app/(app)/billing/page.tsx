@@ -20,6 +20,7 @@ import {
     Percent,
     X,
     ChevronRight,
+    History,
 } from "lucide-react";
 import {
     currentUserBillingStats,
@@ -769,22 +770,76 @@ function BillingContent() {
             />
 
             <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
-                {/* Revenue Dashboard Link */}
-                <Link
-                    href="/billing/revenue"
-                    className="mb-6 flex items-center justify-between p-4 bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border border-teal-200 dark:border-teal-800 rounded-xl hover:shadow-md transition-all group"
-                >
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-teal-500 rounded-lg">
-                            <BarChart3 className="h-5 w-5 text-white" />
+                {/* Action Cards Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {/* Revenue Dashboard Link */}
+                    <Link
+                        href="/billing/revenue"
+                        className="flex items-center justify-between p-6 bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border border-teal-200 dark:border-teal-800 rounded-2xl hover:shadow-md transition-all group"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-teal-500 rounded-xl">
+                                <BarChart3 className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <span className="text-lg font-bold text-teal-700 dark:text-teal-300">Revenue Dashboard</span>
+                                <p className="text-sm text-teal-600 dark:text-teal-400">Collections performance & KPI tracking</p>
+                            </div>
                         </div>
-                        <div>
-                            <span className="font-semibold text-teal-700 dark:text-teal-300">Revenue Dashboard</span>
-                            <p className="text-sm text-teal-600 dark:text-teal-400">View your billing performance and collections</p>
+                        <ChevronRight className="h-5 w-5 text-teal-500 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+
+                    {/* Claims Manager Link */}
+                    <Link
+                        href="/billing/claims"
+                        className="flex items-center justify-between p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-indigo-800 rounded-2xl hover:shadow-md transition-all group"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-500 rounded-xl">
+                                <FileText className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <span className="text-lg font-bold text-blue-700 dark:text-blue-300">Claims Manager</span>
+                                <p className="text-sm text-blue-600 dark:text-blue-400">Manage worklists & EDI transmission status</p>
+                            </div>
                         </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-teal-500 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                        <ChevronRight className="h-5 w-5 text-blue-500 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+
+                    {/* ERA Inbox Link */}
+                    <Link
+                        href="/billing/era-inbox"
+                        className="flex items-center justify-between p-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-orange-800 rounded-2xl hover:shadow-md transition-all group"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-amber-500 rounded-xl">
+                                <History className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <span className="text-lg font-bold text-amber-700 dark:text-amber-300">ERA Triage Inbox</span>
+                                <p className="text-sm text-amber-600 dark:text-amber-400">Match electronic remittances manually</p>
+                            </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-amber-500 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+
+                    {/* Fee Schedule Link */}
+                    <Link
+                        href="/billing/fee-schedule"
+                        className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800/50 dark:to-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-2xl hover:shadow-md transition-all group"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-slate-600 rounded-xl">
+                                <DollarSign className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <span className="text-lg font-bold text-slate-700 dark:text-slate-300">Fee Schedule Manager</span>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Manage CPT pricing & payer contracts</p>
+                            </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-slate-500 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                </div>
 
                 {/* Role-based Content */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">

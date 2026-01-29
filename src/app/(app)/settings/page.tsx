@@ -25,9 +25,11 @@ import {
     Trash2,
     Calendar,
     AlertTriangle,
-    LifeBuoy
+    LifeBuoy,
+    CreditCard
 } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { BillingSetup } from "@/components/billing/BillingSetup";
 
 export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
@@ -164,6 +166,7 @@ export default function SettingsPage() {
                             { id: 'appearance', label: 'Appearance', icon: Palette },
                             { id: 'ehr', label: 'EHR Sync Settings', icon: Database },
                             { id: 'templates', label: 'Clinical Templates', icon: FileText },
+                            { id: 'billing', label: 'Billing Setup', icon: CreditCard },
                             { id: 'mobility', label: 'Mobile Access', icon: Smartphone },
                             { id: 'ehr-logs', label: 'EHR Sync History', icon: History },
                         ].map((item) => {
@@ -517,6 +520,11 @@ export default function SettingsPage() {
                                     </button>
                                 </div>
                             </div>
+                        )}
+
+                        {/* Billing Setup Section */}
+                        {activeTab === 'billing' && (
+                            <BillingSetup />
                         )}
 
                         {/* Mobile Section */}

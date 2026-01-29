@@ -17,6 +17,7 @@ const auditorNavItems = [
     { label: "Dashboard", href: "/auditor", icon: LayoutDashboard },
     { label: "Submissions Queue", href: "/auditor/submissions", icon: ClipboardCheck },
     { label: "Notes Review", href: "/auditor/notes", icon: FileText },
+    { label: "Financial Audit", href: "/auditor/billing", icon: BarChart3 },
     { label: "Compliance Reports", href: "/auditor/reports", icon: BarChart3 },
     { label: "My Flags", href: "/auditor/flags", icon: Flag },
     { label: "Settings", href: "/auditor/settings", icon: Settings },
