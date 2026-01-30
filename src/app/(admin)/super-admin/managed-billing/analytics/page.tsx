@@ -16,33 +16,37 @@ import {
     Clock,
     User,
     ShieldAlert,
-    Globe
+    FileText,
+    Download
 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const analyticsData = {
     yieldTrends: [
-        { month: "Sep", yield: 82, billed: 420000, collected: 344400 },
-        { month: "Oct", yield: 85, billed: 485000, collected: 412250 },
-        { month: "Nov", yield: 81, billed: 460000, collected: 372600 },
-        { month: "Dec", yield: 88, billed: 520000, collected: 457600 },
-        { month: "Jan", yield: 84, billed: 515000, collected: 432600 },
+        { month: "Sep", yield: 82, billed: 120000, collected: 98400 },
+        { month: "Oct", yield: 85, billed: 145000, collected: 123250 },
+        { month: "Nov", yield: 81, billed: 130000, collected: 105300 },
+        { month: "Dec", yield: 88, billed: 160000, collected: 140800 },
+        { month: "Jan", yield: 84, billed: 155000, collected: 130200 },
     ],
     providerPerformance: [
-        { name: "Dr. Sarah Smith", organization: "Sunrise Clinic", specialty: "Psychiatry", yield: 92, status: "Optimal" },
-        { name: "Dr. Michael Chen", organization: "Metro Health", specialty: "Internal Med", yield: 78, status: "At Risk" },
-        { name: "Nurse Practitioner Jane Doe", organization: "Valley Care", specialty: "Geriatrics", yield: 85, status: "Stable" },
-        { name: "Dr. Robert Wilson", organization: "Sunrise Clinic", specialty: "Psychiatry", yield: 74, status: "Review Needed" },
+        { name: "Dr. Sarah Smith", specialty: "Psychiatry", yield: 92, status: "Optimal" },
+        { name: "Dr. Michael Chen", specialty: "Internal Med", yield: 78, status: "At Risk" },
+        { name: "Nurse Practitioner Jane Doe", specialty: "Geriatrics", yield: 85, status: "Stable" },
+        { name: "Dr. Robert Wilson", specialty: "Psychiatry", yield: 74, status: "Review Needed" },
     ],
     denialHotspots: [
-        { code: "CO-16", description: "Claim/service lacks information", count: 127, impact: "$25,400" },
-        { code: "PR-204", description: "This service/equipment is not covered", count: 84, impact: "$16,800" },
-        { code: "CO-45", description: "Charge exceeds fee schedule", count: 56, impact: "$11,200" },
+        { code: "CO-16", description: "Claim/service lacks information", count: 42, impact: "$8,400" },
+        { code: "PR-204", description: "This service/equipment is not covered", count: 28, impact: "$5,600" },
+        { code: "CO-45", description: "Charge exceeds fee schedule", count: 18, impact: "$3,600" },
     ]
 };
 
 export default function RevenueAnalyticsPage() {
     const [timeframe, setTimeframe] = useState("90d");
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const router = useRouter();
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("en-US", {
@@ -51,14 +55,26 @@ export default function RevenueAnalyticsPage() {
         }).format(amount);
     };
 
+    const handleMetricClick = (metricType: string) => {
+        alert(`📊 Detailed ${metricType} Breakdown\n\nClick OK to view comprehensive analysis with historical trends and drill-down capabilities.`);
+    };
+
+    const handleProviderAudit = (providerName: string) => {
+        alert(`🔍 Launching audit review for ${providerName}\n\nThis would navigate to their submission history and documentation review.`);
+    };
+
+    const handleDenialDrilldown = (code?: string) => {
+        const route = code ? `/super-admin/managed-billing/denials?code=${code}` : '/super-admin/managed-billing/denials';
+        router.push(route);
+    };
+
+    const handleMonthClick = (month: string, data: any) => {
+        setSelectedMonth(month);
+        alert(`📅 ${month} Performance Details\n\nGross Billed: ${formatCurrency(data.billed / 100)}\nNet Collected: ${formatCurrency(data.collected / 100)}\nYield: ${data.yield}%\n\nClick OK to filter providers by this period.`);
+    };
+
     return (
         <div className="flex-1 p-6 lg:p-8 overflow-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Platform-Wide Badge */}
-            <div className="bg-purple-500/10 border border-purple-500/20 p-3 rounded-xl flex items-center gap-2 text-purple-600 dark:text-purple-400">
-                <Globe className="h-4 w-4" />
-                <span className="text-xs font-black uppercase tracking-widest">Platform-Wide Financial Intelligence</span>
-            </div>
-
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -67,7 +83,7 @@ export default function RevenueAnalyticsPage() {
                         Revenue Integrity Analytics
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Platform-wide intelligence on collection yields, provider efficiency, and financial compliance.
+                        Deep-dive intelligence on collection yields, provider efficiency, and financial compliance.
                     </p>
                 </div>
                 <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -88,31 +104,31 @@ export default function RevenueAnalyticsPage() {
 
             {/* Top Metrics Hierarchy */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+                <button onClick={() => handleMetricClick('Net Yield')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-emerald-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <TrendingUp className="h-24 w-24 text-emerald-500" />
                     </div>
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Platform Net Yield</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Estimated Net Yield</p>
                     <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">84.2%</h2>
                     <div className="flex items-center gap-2 text-emerald-500 text-sm font-bold">
                         <ArrowUpRight className="h-4 w-4" />
                         <span>+2.4% vs last quarter</span>
                     </div>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+                <button onClick={() => handleMetricClick('Time to Settlement')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-blue-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Clock className="h-24 w-24 text-blue-500" />
                     </div>
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Avg Time to Settlement</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Time to Settlement</p>
                     <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">18d</h2>
-                    <div className="flex items-center gap-2 text-blue-500 text-sm font-bold">
+                    <div className=" flex items-center gap-2 text-blue-500 text-sm font-bold">
                         <Activity className="h-4 w-4" />
                         <span>-3 days improvement</span>
                     </div>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group border-amber-500/30">
+                <button onClick={() => handleMetricClick('Audit Fatigue')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group border-amber-500/30 hover:border-amber-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Brain className="h-24 w-24 text-amber-500" />
                     </div>
@@ -122,7 +138,7 @@ export default function RevenueAnalyticsPage() {
                         <Search className="h-4 w-4" />
                         <span>98% High-Fidelity documentation</span>
                     </div>
-                </div>
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -131,26 +147,28 @@ export default function RevenueAnalyticsPage() {
                     <div className="flex items-center justify-between mb-8">
                         <div>
                             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Yield & Collection Efficiency</h3>
-                            <p className="text-sm text-slate-500">Trailing 5-month platform performance</p>
+                            <p className="text-sm text-slate-500">Trailing 5-month performance</p>
                         </div>
                         <BarChart3 className="h-5 w-5 text-slate-400" />
                     </div>
 
                     <div className="flex items-end gap-2 h-48 mb-6">
                         {analyticsData.yieldTrends.map((d, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                            <button key={i} onClick={() => handleMonthClick(d.month, d)} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
                                 <div className="w-full relative flex items-end justify-center">
                                     <div
-                                        className="w-8/12 bg-slate-100 dark:bg-slate-800 rounded-t-lg absolute bottom-0"
-                                        style={{ height: `${(d.billed / 520000) * 100}%` }}
+                                        className="w-8/12 bg-slate-100 dark:bg-slate-800 rounded-t-lg absolute bottom-0 transition-all"
+                                        style={{ height: `${(d.billed / 160000) * 100}%` }}
+                                        title={`Gross Billed: ${formatCurrency(d.billed / 100)}`}
                                     />
                                     <div
-                                        className="w-8/12 bg-purple-500 rounded-t-lg relative z-10 transition-all group-hover:brightness-110"
-                                        style={{ height: `${(d.collected / 520000) * 100}%` }}
+                                        className="w-8/12 bg-purple-500 rounded-t-lg relative z-10 transition-all group-hover:brightness-110 group-hover:scale-105"
+                                        style={{ height: `${(d.collected / 160000) * 100}%` }}
+                                        title={`Net Collected: ${formatCurrency(d.collected / 100)}`}
                                     />
                                 </div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase">{d.month}</span>
-                            </div>
+                                <span className="text-[10px] font-black text-slate-400 uppercase group-hover:text-purple-500 transition-colors">{d.month}</span>
+                            </button>
                         ))}
                     </div>
 
@@ -178,25 +196,25 @@ export default function RevenueAnalyticsPage() {
 
                     <div className="space-y-4">
                         {analyticsData.denialHotspots.map((item, i) => (
-                            <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-red-500/30 transition-all">
+                            <button key={i} onClick={() => handleDenialDrilldown(item.code)} className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-red-500/50 hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all cursor-pointer text-left">
                                 <div className="flex items-center gap-4">
-                                    <div className="text-xs font-black p-2 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg w-14 text-center">
+                                    <div className="text-xs font-black p-2 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg w-14 text-center group-hover:scale-110 transition-transform">
                                         {item.code}
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-slate-900 dark:text-white">{item.description}</p>
-                                        <p className="text-xs text-slate-500">{item.count} occurrences detected across platform</p>
+                                        <p className="text-xs text-slate-500">{item.count} occurrences detected</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-sm font-black text-red-600">{item.impact}</p>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Leakage</p>
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
 
-                    <button className="w-full mt-6 py-3 bg-red-500/10 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all">
+                    <button onClick={() => handleDenialDrilldown()} className="w-full mt-6 py-3 bg-red-500/10 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all">
                         Launch Forensic Drilldown
                     </button>
                 </div>
@@ -220,10 +238,9 @@ export default function RevenueAnalyticsPage() {
                         <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
                             <tr>
                                 <th className="px-6 py-4">Clinician</th>
-                                <th className="px-6 py-4">Organization</th>
                                 <th className="px-6 py-4">Performance Index</th>
                                 <th className="px-6 py-4">Yield %</th>
-                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4">Compliance Status</th>
                                 <th className="px-6 py-4 text-right">Review</th>
                             </tr>
                         </thead>
@@ -240,9 +257,6 @@ export default function RevenueAnalyticsPage() {
                                                 <p className="text-xs text-slate-500">{p.specialty}</p>
                                             </div>
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{p.organization}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="w-32 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -264,7 +278,7 @@ export default function RevenueAnalyticsPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
+                                        <button onClick={() => handleProviderAudit(p.name)} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-purple-500 hover:text-white hover:border-purple-500 transition-all">
                                             Audit Docs
                                         </button>
                                     </td>

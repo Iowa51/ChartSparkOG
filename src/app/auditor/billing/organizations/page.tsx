@@ -60,6 +60,25 @@ export default function BenchmarkingPage() {
         }).format(cents / 100);
     };
 
+    const handleExportLeaderboard = () => {
+        alert(`📄 EXPORT LEADERBOARD\n\nDownloading Excel/CSV with:\n• Full performance rankings\n• Compliance scores\n• Yield percentages\n• Revenue totals\n\nFile: organization_leaderboard_2026_01_29.xlsx`);
+    };
+
+    const handleCrossOrgAudit = () => {
+        alert(`🔍 CROSS-ORGANIZATION AUDIT\n\nLaunching comparative audit planning tool.\n\nThis would:\n1. Select organizations to compare\n2. Define audit criteria\n3. Generate cross-org compliance report\n4. Flag variance patterns`);
+    };
+
+    const handleMetricClick = (metric: string, orgName?: string) => {
+        const msg = orgName
+            ? `🎯 ${metric}\n\nOrganization: ${orgName}\n\nDetailed performance metrics and drill-down capabilities.`
+            : `📊 ${metric} Details\n\nDetailed breakdown with historical trends.`;
+        alert(msg);
+    };
+
+    const handleOrgDrilldown = (orgName: string) => {
+        alert(`📊 ORGANIZATION DRILL-DOWN: ${orgName}\n\nNavigating to comprehensive financial dashboard:\n• Revenue analytics\n• Claim history\n• Provider performance\n• Denial patterns\n• Compliance timeline`);
+    };
+
     return (
         <div className="flex-1 p-6 lg:p-8 overflow-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
@@ -74,11 +93,11 @@ export default function BenchmarkingPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
+                    <button onClick={handleExportLeaderboard} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 hover:border-primary transition-all">
                         <BarChart3 className="h-4 w-4" />
                         Export Leaderboard
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+                    <button onClick={handleCrossOrgAudit} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
                         <SearchCode className="h-4 w-4" />
                         Cross-Org Audit
                     </button>
@@ -87,7 +106,7 @@ export default function BenchmarkingPage() {
 
             {/* High-Level Ranking */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <button onClick={() => handleMetricClick('Top Performer', 'Wellness Center')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Top Performer</p>
                     <div className="flex items-center gap-3 mt-4">
                         <div className="h-10 w-10 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 rounded-xl flex items-center justify-center">
@@ -98,9 +117,9 @@ export default function BenchmarkingPage() {
                             <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter">94% Compliance</p>
                         </div>
                     </div>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-red-500/20">
+                <button onClick={() => handleMetricClick('Least Efficient', 'Main Street Clinic')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-red-500/20 hover:border-red-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Least Efficient</p>
                     <div className="flex items-center gap-3 mt-4">
                         <div className="h-10 w-10 bg-red-100 dark:bg-red-900/40 text-red-600 rounded-xl flex items-center justify-center">
@@ -111,21 +130,21 @@ export default function BenchmarkingPage() {
                             <p className="text-[10px] text-red-600 font-bold uppercase tracking-tighter">74% Net Yield</p>
                         </div>
                     </div>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+                <button onClick={() => handleMetricClick('Avg. Yield Across Suite')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-primary/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg. Yield Across Suite</p>
                     <h2 className="text-4xl font-bold text-slate-900 dark:text-white mt-4">81.3%</h2>
                     <p className="text-[10px] text-slate-400 mt-1 italic font-medium">Industry Avg: 78.5%</p>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+                <button onClick={() => handleMetricClick('Audit Coverage')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-primary/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Audit Coverage</p>
                     <h2 className="text-4xl font-bold text-slate-900 dark:text-white mt-4">62.8%</h2>
                     <div className="mt-2 w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full bg-primary" style={{ width: "62.8%" }} />
                     </div>
-                </div>
+                </button>
             </div>
 
             {/* Performance Matrix Table */}
@@ -188,8 +207,8 @@ export default function BenchmarkingPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${org.compliance >= 90 ? "bg-emerald-500/10 text-emerald-600" :
-                                                org.compliance >= 80 ? "bg-blue-500/10 text-blue-600" :
-                                                    "bg-red-500/10 text-red-600"
+                                            org.compliance >= 80 ? "bg-blue-500/10 text-blue-600" :
+                                                "bg-red-500/10 text-red-600"
                                             }`}>
                                             {org.compliance}% Match
                                         </span>
@@ -217,7 +236,7 @@ export default function BenchmarkingPage() {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="p-2 hover:bg-primary/10 text-slate-400 hover:text-primary rounded-lg transition-colors">
+                                        <button onClick={() => handleOrgDrilldown(org.name)} className="p-2 hover:bg-primary/10 text-slate-400 hover:text-primary rounded-lg transition-colors">
                                             <ChevronRight className="h-4 w-4" />
                                         </button>
                                     </td>

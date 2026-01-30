@@ -59,13 +59,38 @@ export default function FeeScheduleAuditorPage() {
         }).format(cents / 100);
     };
 
+    const handleMetricClick = (metric: string) => {
+        alert(`📊 ${metric} Details\n\nThis would show a detailed breakdown with drill-down capabilities.`);
+    };
+
+    const handleMarketBenchmark = () => {
+        alert(`🌍 MARKET BENCHMARK DATA\n\nRegional Medicare Rates\nCommercial Payer Averages\nGeo-Adjusted Fee Comparisons\n\nThis would display comprehensive market rate analysis.`);
+    };
+
+    const handleCertifyRateCard = () => {
+        alert(`✅ RATE CARD CERTIFICATION\n\nThis would:\n1. Generate PDF certificate\n2. Timestamp the approval\n3. Track auditor who certified\n4. Lock rates for billing period\n\nReady to certify current rates?`);
+    };
+
+    const handleCodeClick = (code: string, description: string) => {
+        alert(`🔍 CPT CODE DETAIL: ${code}\n\n${description}\n\nThis would navigate to a detailed view showing:\n- All payer rates\n- Historical rate changes\n- Denial patterns for this code\n- Utilization statistics`);
+    };
+
+    const handleSyncBaseRates = () => {
+        alert(`🔄 SYNC BASE RATES\n\nThis would:\n1. Pull latest Medicare rates\n2. Update fee schedules across organizations\n3.Validate parity\n4. Generate sync report\n\nConfirm sync operation?`);
+    };
+
+    const handleGenerateOptimization = () => {
+        const reportContent = `REVENUE OPTIMIZATION REPORT\n\nExecutive Summary:\n• 18 codes below market rates\n• Potential revenue increase: $42,500/mo\n• Recommended adjustments for Mental Health services\n\nDownloading PDF report...`;
+        alert(`📄 ${reportContent}`);
+    };
+
     return (
         <div className="flex-1 p-6 lg:p-8 overflow-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Database className="h-8 w-8 text-purple-500" />
+                        <Database className="h-8 w-8 text-indigo-500" />
                         Fee Schedule Auditor
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">
@@ -73,11 +98,11 @@ export default function FeeScheduleAuditorPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
+                    <button onClick={handleMarketBenchmark} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 hover:border-indigo-500 transition-all">
                         <Globe className="h-4 w-4" />
                         Market Benchmark
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-purple-500/20 hover:bg-purple-600 transition-all">
+                    <button onClick={handleCertifyRateCard} className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-all">
                         <ShieldCheck className="h-4 w-4" />
                         Certify Rate Card
                     </button>
@@ -86,17 +111,17 @@ export default function FeeScheduleAuditorPage() {
 
             {/* Parity Overview Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group">
+                <button onClick={() => handleMetricClick('Total Codes Audited')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group hover:border-indigo-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Total Codes Audited</p>
                     <div className="flex items-end justify-between">
                         <h2 className="text-4xl font-bold text-slate-900 dark:text-white">124</h2>
-                        <div className="h-10 w-10 bg-purple-100 dark:bg-purple-900/40 rounded-xl flex items-center justify-center text-purple-600 group-hover:rotate-12 transition-transform">
+                        <div className="h-10 w-10 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 group-hover:rotate-12 transition-transform">
                             <Database className="h-5 w-5" />
                         </div>
                     </div>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group border-amber-500/30">
+                <button onClick={() => handleMetricClick('Price Variances')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group border-amber-500/30 hover:border-amber-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Price Variances</p>
                     <div className="flex items-end justify-between">
                         <h2 className="text-4xl font-bold text-slate-900 dark:text-white">18</h2>
@@ -104,9 +129,9 @@ export default function FeeScheduleAuditorPage() {
                             <AlertCircle className="h-5 w-5" />
                         </div>
                     </div>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group border-emerald-500/30">
+                <button onClick={() => handleMetricClick('Parity Score')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group border-emerald-500/30 hover:border-emerald-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Parity Score</p>
                     <div className="flex items-end justify-between">
                         <h2 className="text-4xl font-bold text-emerald-600">86%</h2>
@@ -114,7 +139,7 @@ export default function FeeScheduleAuditorPage() {
                             <TrendingUp className="h-5 w-5" />
                         </div>
                     </div>
-                </div>
+                </button>
             </div>
 
             {/* Parity Analysis Table */}
@@ -127,7 +152,7 @@ export default function FeeScheduleAuditorPage() {
                             <input
                                 type="text"
                                 placeholder="Search CPT Code..."
-                                className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium w-64 focus:ring-2 focus:ring-purple-500/20 outline-none"
+                                className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium w-64 focus:ring-2 focus:ring-indigo-500/20 outline-none"
                             />
                         </div>
                         <button className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100">
@@ -153,15 +178,15 @@ export default function FeeScheduleAuditorPage() {
                             {scheduleParityData.map((item, i) => (
                                 <tr key={i} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all">
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-9 w-9 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center font-black text-xs text-purple-500">
+                                        <button onClick={() => handleCodeClick(item.code, item.description)} className="flex items-center gap-3 text-left w-full hover:opacity-75 transition-opacity">
+                                            <div className="h-9 w-9 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center font-black text-xs text-purple-500 group-hover:scale-110 transition-transform">
                                                 {item.code}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-bold text-slate-900 dark:text-white">{item.code}</p>
                                                 <p className="text-[10px] text-slate-500 w-48 truncate">{item.description}</p>
                                             </div>
-                                        </div>
+                                        </button>
                                     </td>
                                     <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
                                         {formatCurrency(item.wellnessCenter)}
@@ -171,20 +196,20 @@ export default function FeeScheduleAuditorPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold text-purple-600">{formatCurrency(item.marketAvg)}</span>
+                                            <span className="text-sm font-bold text-indigo-600">{formatCurrency(item.marketAvg)}</span>
                                             <Globe className="h-3 w-3 text-slate-300" />
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${item.status === "Parity Match"
-                                                ? "bg-emerald-500/10 text-emerald-600"
-                                                : "bg-amber-500/10 text-amber-600"
+                                            ? "bg-emerald-500/10 text-emerald-600"
+                                            : "bg-amber-500/10 text-amber-600"
                                             }`}>
                                             {item.status}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900 text-slate-400 hover:text-purple-600 rounded-lg transition-colors">
+                                        <button className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-400 hover:text-indigo-600 rounded-lg transition-colors">
                                             <ArrowRight className="h-4 w-4" />
                                         </button>
                                     </td>
@@ -200,7 +225,7 @@ export default function FeeScheduleAuditorPage() {
                             <AlertCircle className="h-4 w-4 text-amber-500" />
                             <span>Variances detected in <strong>2</strong> essential billing codes. Review recommended to prevent lost revenue.</span>
                         </div>
-                        <button className="px-6 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
+                        <button onClick={handleSyncBaseRates} className="px-6 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 hover:border-indigo-500 transition-all">
                             Sync Base Rates
                         </button>
                     </div>
@@ -208,7 +233,7 @@ export default function FeeScheduleAuditorPage() {
             </div>
 
             {/* Market Opportunity Intelligence */}
-            <div className="p-8 bg-gradient-to-br from-indigo-500 to-primary rounded-3xl text-white shadow-xl shadow-purple-500/20 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group">
+            <div className="p-8 bg-gradient-to-br from-indigo-500 to-primary rounded-3xl text-white shadow-xl shadow-indigo-500/20 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group">
                 <div className="absolute -top-12 -right-12 h-64 w-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform" />
                 <div className="h-20 w-20 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
                     <TrendingUp className="h-10 w-10 text-white" />
@@ -217,10 +242,10 @@ export default function FeeScheduleAuditorPage() {
                     <h3 className="text-2xl font-bold">Revenue Optimization Opportunity</h3>
                     <p className="text-white/80 max-w-2xl text-sm">Our AI benchmarking suggests that current fee schedules for <strong>Mental Health</strong> services are <strong>12% below</strong> regional market rates. Adjusting to market parity could result in an estimated <strong>$42,500/mo</strong> increase in revenue.</p>
                 </div>
-                <button className="px-8 py-4 bg-white text-purple-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-lg flex-shrink-0">
+                <button onClick={handleGenerateOptimization} className="px-8 py-4 bg-white text-indigo-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all shadow-lg flex-shrink-0">
                     Generate Optimization Report
                 </button>
             </div>
-        </div>
+        </div >
     );
 }

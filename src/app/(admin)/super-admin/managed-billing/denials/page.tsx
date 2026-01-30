@@ -65,6 +65,18 @@ export default function DenialForensicsPage() {
         }).format(cents / 100);
     };
 
+    const handleViewFullHeader = () => {
+        alert(`🔍 CLAIM HEADER DETAILS\n\nClaim ID: ${selectedDenial.claimId}\nDenial Code: ${selectedDenial.code}\nPatient: ${selectedDenial.patient}\nOrg: ${selectedDenial.org}\nAmount: ${formatCurrency(selectedDenial.amount)}\nDate: ${selectedDenial.date}\n\nThis would show the complete X12 837P header with all patient demographics, billing provider info, and service line details.`);
+    };
+
+    const handleRequestTraining = () => {
+        alert(`📚 CLINICIAN TRAINING REQUEST\n\nInitiating training request for ${selectedDenial.org}\n\nTopic: PHQ-9/GAD-7 Integration for Behavioral Health Claims\nTriggered by: Denial ${selectedDenial.id} (${selectedDenial.code})\n\nThis would email the organization's clinical director with recommended training materials and template modifications.`);
+    };
+
+    const handleDeployGuardrail = () => {
+        alert(`✅ TEMPLATE GUARDRAIL DEPLOYMENT\n\nThis would:\n1. Update the encounter note template\n2. Add required fields for symptom severity scales\n3. Trigger validation rules\n4. Notify providers of template changes\n\nStatus: Ready to deploy to ${selectedDenial.org}`);
+    };
+
     return (
         <div className="flex-1 flex flex-col h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
             {/* Header */}
@@ -85,7 +97,7 @@ export default function DenialForensicsPage() {
                             <input
                                 type="text"
                                 placeholder="Search Denial ID or Code..."
-                                className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm w-64 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+                                className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm w-64 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                             />
                         </div>
                         <button className="p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500">
@@ -145,11 +157,11 @@ export default function DenialForensicsPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
+                            <button onClick={handleViewFullHeader} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 hover:border-purple-500 transition-all">
                                 <FileSearch className="h-4 w-4" />
                                 View Full Header
                             </button>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-500/20 hover:bg-purple-500/90 transition-all">
+                            <button onClick={handleRequestTraining} className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-500/20 hover:bg-purple-500/90 transition-all">
                                 <GraduationCap className="h-4 w-4" />
                                 Request Clinician Training
                             </button>
@@ -235,7 +247,7 @@ export default function DenialForensicsPage() {
                         <div className="bg-emerald-500 p-6 rounded-2xl shadow-xl shadow-emerald-500/20 text-white space-y-4">
                             <h3 className="font-bold uppercase tracking-widest text-[10px] text-white/80">Auditor Recommendation</h3>
                             <p className="text-sm font-medium">Auto-fix available: Suggest PHQ-9 integration for this organization's note template to prevent future rejections.</p>
-                            <button className="w-full py-3 bg-white text-emerald-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
+                            <button onClick={handleDeployGuardrail} className="w-full py-3 bg-white text-emerald-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all">
                                 Deploy Template Guard-rail
                             </button>
                         </div>

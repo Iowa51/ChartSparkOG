@@ -63,6 +63,26 @@ export default function MatchingOversightPage() {
         }).format(cents / 100);
     };
 
+    const handleFlagMatch = () => {
+        alert(`⚠️ FLAG MATCH FOR REVIEW\n\nThis would:\n1. Mark selected matches as requiring manual review\n2. Escalate to compliance team\n3. Lock from auto-processing\n\nSelect matches to flag.`);
+    };
+
+    const handleBulkCertify = () => {
+        alert(`✅ BULK CERTIFICATION\n\nReady to certify 31 verified matches totaling $337,500.\n\nThis action will:\n1. Lock the match assignments\n2. Update financial reporting\n3. Clear from pending queue\n\nProceed with bulk certification?`);
+    };
+
+    const handleMetricClick = (metric: string) => {
+        alert(`📊 ${metric} Details\n\nDetailed breakdown with drill-down capabilities.`);
+    };
+
+    const handleCertify = (matchId: string) => {
+        alert(`✅ CERTIFY MATCH ${matchId}\n\nConfirming this payment assignment as auditor-verified.\n\nThis action is permanent and will update the financial ledger.`);
+    };
+
+    const handleReviewWriteoffs = () => {
+        alert(`🗑️ REVIEW WRITE-OFFS\n\nShowing 8 manual write-offs requiring audit:\n\n• WRITEOFF-1: $1,240 - No denial code\n• WRITEOFF-2: $850 - Patient responsibility mismatch\n• WRITEOFF-3: $2,100 - Undocumented adjustment\n\nClick any to see full details and approve/reject.`);
+    };
+
     return (
         <div className="flex-1 p-6 lg:p-8 overflow-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
@@ -77,11 +97,11 @@ export default function MatchingOversightPage() {
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
+                    <button onClick={handleFlagMatch} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 hover:border-primary transition-all">
                         <ShieldAlert className="h-4 w-4" />
                         Flag Match For Review
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
+                    <button onClick={handleBulkCertify} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
                         <CheckCircle className="h-4 w-4" />
                         Bulk Certify Matches
                     </button>
@@ -90,25 +110,25 @@ export default function MatchingOversightPage() {
 
             {/* Oversight Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <button onClick={() => handleMetricClick('Total Manual Matches')} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-primary/50 hover:shadow-lg transition-all text-left cursor pointer">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Manual Matches</p>
                     <p className="text-2xl font-bold text-slate-900 dark:text-white">42</p>
-                </div>
-                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-amber-500/30">
+                </button>
+                <button onClick={() => handleMetricClick('Manual Write-offs')} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-amber-500/30 hover:border-amber-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Manual Write-offs</p>
                     <p className="text-2xl font-bold text-amber-600">8</p>
-                </div>
+                </button>
                 <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Auto-Match Rate</p>
                     <p className="text-2xl font-bold text-slate-900 dark:text-white">92%</p>
                 </div>
-                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-emerald-500/30">
+                <button onClick={() => handleMetricClick('Auditor Certified')} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-emerald-500/30 hover:border-emerald-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Auditor Certified</p>
                     <div className="flex items-center gap-2">
                         <p className="text-2xl font-bold text-emerald-600">31</p>
                         <span className="text-[10px] text-slate-400 italic">Today</span>
                     </div>
-                </div>
+                </button>
             </div>
 
             {/* Matching Ledger */}
@@ -164,18 +184,18 @@ export default function MatchingOversightPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${match.confidence === "Verified" ? "bg-emerald-500/10 text-emerald-600" :
-                                                match.confidence === "High" ? "bg-blue-500/10 text-blue-600" :
-                                                    "bg-amber-500/10 text-amber-600 animate-pulse"
+                                            match.confidence === "High" ? "bg-blue-500/10 text-blue-600" :
+                                                "bg-amber-500/10 text-amber-600 animate-pulse"
                                             }`}>
                                             {match.confidence}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            <button className="p-2 hover:bg-red-100 dark:hover:bg-red-900 text-slate-300 hover:text-red-500 rounded-lg transition-colors">
+                                            <button onClick={() => handleReviewWriteoffs()} title="Review Write-off" className="p-2 hover:bg-red-100 dark:hover:bg-red-900 text-slate-300 hover:text-red-500 rounded-lg transition-colors">
                                                 <Trash2 className="h-4 w-4" />
                                             </button>
-                                            <button className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-white transition-all">
+                                            <button onClick={() => handleCertify(match.id)} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 round ed-lg text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-white transition-all">
                                                 Certify
                                             </button>
                                         </div>
@@ -196,7 +216,7 @@ export default function MatchingOversightPage() {
                     <h4 className="text-lg font-bold text-slate-900 dark:text-white">Matching Integrity Warning</h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400">Our system observed **8 manual write-offs** in the last 24 hours that were not linked to verified insurance denial codes. Please audit these transactions for potential internal leakage.</p>
                 </div>
-                <button className="px-6 py-3 bg-amber-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-amber-700 transition-all shadow-lg shadow-amber-600/20">
+                <button onClick={handleReviewWriteoffs} className="px-6 py-3 bg-amber-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-amber-700 transition-all shadow-lg shadow-amber-600/20">
                     Review Write-offs
                 </button>
             </div>

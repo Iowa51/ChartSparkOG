@@ -15,9 +15,12 @@ import {
     Brain,
     Clock,
     User,
-    ShieldAlert
+    ShieldAlert,
+    FileText,
+    Download
 } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const analyticsData = {
     yieldTrends: [
@@ -42,12 +45,32 @@ const analyticsData = {
 
 export default function RevenueAnalyticsPage() {
     const [timeframe, setTimeframe] = useState("90d");
+    const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const router = useRouter();
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: "USD",
         }).format(amount);
+    };
+
+    const handleMetricClick = (metricType: string) => {
+        alert(`📊 Detailed ${metricType} Breakdown\n\nClick OK to view comprehensive analysis with historical trends and drill-down capabilities.`);
+    };
+
+    const handleProviderAudit = (providerName: string) => {
+        alert(`🔍 Launching audit review for ${providerName}\n\nThis would navigate to their submission history and documentation review.`);
+    };
+
+    const handleDenialDrilldown = (code?: string) => {
+        const route = code ? `/auditor/billing/denials?code=${code}` : '/auditor/billing/denials';
+        router.push(route);
+    };
+
+    const handleMonthClick = (month: string, data: any) => {
+        setSelectedMonth(month);
+        alert(`📅 ${month} Performance Details\n\nGross Billed: ${formatCurrency(data.billed / 100)}\nNet Collected: ${formatCurrency(data.collected / 100)}\nYield: ${data.yield}%\n\nClick OK to filter providers by this period.`);
     };
 
     return (
@@ -81,7 +104,7 @@ export default function RevenueAnalyticsPage() {
 
             {/* Top Metrics Hierarchy */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+                <button onClick={() => handleMetricClick('Net Yield')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-emerald-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <TrendingUp className="h-24 w-24 text-emerald-500" />
                     </div>
@@ -91,21 +114,21 @@ export default function RevenueAnalyticsPage() {
                         <ArrowUpRight className="h-4 w-4" />
                         <span>+2.4% vs last quarter</span>
                     </div>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+                <button onClick={() => handleMetricClick('Time to Settlement')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-blue-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Clock className="h-24 w-24 text-blue-500" />
                     </div>
                     <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Time to Settlement</p>
                     <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">18d</h2>
-                    <div className="flex items-center gap-2 text-blue-500 text-sm font-bold">
+                    <div className=" flex items-center gap-2 text-blue-500 text-sm font-bold">
                         <Activity className="h-4 w-4" />
                         <span>-3 days improvement</span>
                     </div>
-                </div>
+                </button>
 
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group border-amber-500/30">
+                <button onClick={() => handleMetricClick('Audit Fatigue')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group border-amber-500/30 hover:border-amber-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Brain className="h-24 w-24 text-amber-500" />
                     </div>
@@ -115,7 +138,7 @@ export default function RevenueAnalyticsPage() {
                         <Search className="h-4 w-4" />
                         <span>98% High-Fidelity documentation</span>
                     </div>
-                </div>
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -131,19 +154,21 @@ export default function RevenueAnalyticsPage() {
 
                     <div className="flex items-end gap-2 h-48 mb-6">
                         {analyticsData.yieldTrends.map((d, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                            <button key={i} onClick={() => handleMonthClick(d.month, d)} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
                                 <div className="w-full relative flex items-end justify-center">
                                     <div
-                                        className="w-8/12 bg-slate-100 dark:bg-slate-800 rounded-t-lg absolute bottom-0"
+                                        className="w-8/12 bg-slate-100 dark:bg-slate-800 rounded-t-lg absolute bottom-0 transition-all"
                                         style={{ height: `${(d.billed / 160000) * 100}%` }}
+                                        title={`Gross Billed: ${formatCurrency(d.billed / 100)}`}
                                     />
                                     <div
-                                        className="w-8/12 bg-primary rounded-t-lg relative z-10 transition-all group-hover:brightness-110"
+                                        className="w-8/12 bg-primary rounded-t-lg relative z-10 transition-all group-hover:brightness-110 group-hover:scale-105"
                                         style={{ height: `${(d.collected / 160000) * 100}%` }}
+                                        title={`Net Collected: ${formatCurrency(d.collected / 100)}`}
                                     />
                                 </div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase">{d.month}</span>
-                            </div>
+                                <span className="text-[10px] font-black text-slate-400 uppercase group-hover:text-primary transition-colors">{d.month}</span>
+                            </button>
                         ))}
                     </div>
 
@@ -171,9 +196,9 @@ export default function RevenueAnalyticsPage() {
 
                     <div className="space-y-4">
                         {analyticsData.denialHotspots.map((item, i) => (
-                            <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-red-500/30 transition-all">
+                            <button key={i} onClick={() => handleDenialDrilldown(item.code)} className="w-full p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:border-red-500/50 hover:bg-red-50/50 dark:hover:bg-red-950/20 transition-all cursor-pointer text-left">
                                 <div className="flex items-center gap-4">
-                                    <div className="text-xs font-black p-2 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg w-14 text-center">
+                                    <div className="text-xs font-black p-2 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-lg w-14 text-center group-hover:scale-110 transition-transform">
                                         {item.code}
                                     </div>
                                     <div>
@@ -185,11 +210,11 @@ export default function RevenueAnalyticsPage() {
                                     <p className="text-sm font-black text-red-600">{item.impact}</p>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Leakage</p>
                                 </div>
-                            </div>
+                            </button>
                         ))}
                     </div>
 
-                    <button className="w-full mt-6 py-3 bg-red-500/10 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all">
+                    <button onClick={() => handleDenialDrilldown()} className="w-full mt-6 py-3 bg-red-500/10 text-red-600 text-xs font-black uppercase tracking-widest rounded-xl hover:bg-red-500/20 transition-all">
                         Launch Forensic Drilldown
                     </button>
                 </div>
@@ -253,7 +278,7 @@ export default function RevenueAnalyticsPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 transition-all">
+                                        <button onClick={() => handleProviderAudit(p.name)} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-primary hover:text-white hover:border-primary transition-all">
                                             Audit Docs
                                         </button>
                                     </td>
