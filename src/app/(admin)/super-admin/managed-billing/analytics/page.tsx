@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import DetailModal from "@/components/ui/DetailModal";
 
 const analyticsData = {
     yieldTrends: [
@@ -46,6 +47,8 @@ const analyticsData = {
 export default function RevenueAnalyticsPage() {
     const [timeframe, setTimeframe] = useState("90d");
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode; icon?: React.ReactNode }>({ title: "", content: null });
     const router = useRouter();
 
     const formatCurrency = (amount: number) => {
@@ -56,7 +59,77 @@ export default function RevenueAnalyticsPage() {
     };
 
     const handleMetricClick = (metricType: string) => {
-        alert(`📊 Detailed ${metricType} Breakdown\n\nClick OK to view comprehensive analysis with historical trends and drill-down capabilities.`);
+        let content;
+        let icon = <BarChart3 className="h-6 w-6" />;
+
+        if (metricType === "Estimated Net Yield") {
+            content = (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Current Yield</p>
+                            <p className="text-3xl font-bold text-primary">82.4%</p>
+                            <p className="text-xs text-emerald-600 font-bold mt-1">↑ 2.1% vs last period</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Industry Avg</p>
+                            <p className="text-3xl font-bold text-slate-600 dark:text-slate-400">78.5%</p>
+                            <p className="text-xs text-slate-500 mt-1">National benchmark</p>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">Historical Trend (Last 5 Months)</h4>
+                        {analyticsData.yieldTrends.map((d, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-slate-400 w-8">{d.month}</span>
+                                <div className="flex-1 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
+                                    <div className="h-full bg-primary rounded-lg transition-all" style={{ width: `${d.yield}%` }} />
+                                </div>
+                                <span className="text-sm font-bold text-slate-900 dark:text-white w-12">{d.yield}%</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        } else if (metricType === "Time to Settlement") {
+            content = (
+                <div className="space-y-4">
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">✓ Settlement time improved by 3 days compared to last quarter</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-2xl font-bold text-primary">18</p>
+                            <p className="text-xs text-slate-500">Current Avg (days)</p>
+                        </div>
+                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-2xl font-bold text-slate-600">21</p>
+                            <p className="text-xs text-slate-500">Previous (days)</p>
+                        </div>
+                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-2xl font-bold text-slate-600">24</p>
+                            <p className="text-xs text-slate-500">Industry Avg</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        } else {
+            content = (
+                <div className="space-y-4">
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                        <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">⚠ Low audit fatigue indicates healthy compliance patterns</p>
+                    </div>
+                    <div className="text-center p-6">
+                        <p className="text-5xl font-bold text-emerald-600">32</p>
+                        <p className="text-sm text-slate-500 mt-2">Audit Fatigue Score (out of 100)</p>
+                        <p className="text-xs text-slate-400 mt-1 italic">Lower is better</p>
+                    </div>
+                </div>
+            );
+        }
+
+        setModalContent({ title: metricType, content, icon });
+        setModalOpen(true);
     };
 
     const handleProviderAudit = (providerName: string) => {
@@ -64,7 +137,7 @@ export default function RevenueAnalyticsPage() {
     };
 
     const handleDenialDrilldown = (code?: string) => {
-        const route = code ? `/super-admin/managed-billing/denials?code=${code}` : '/super-admin/managed-billing/denials';
+        const route = code ? `/auditor/billing/denials?code=${code}` : '/auditor/billing/denials';
         router.push(route);
     };
 
@@ -79,7 +152,7 @@ export default function RevenueAnalyticsPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <PieChart className="h-8 w-8 text-purple-500" />
+                        <PieChart className="h-8 w-8 text-primary" />
                         Revenue Integrity Analytics
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-1">
@@ -92,7 +165,7 @@ export default function RevenueAnalyticsPage() {
                             key={t}
                             onClick={() => setTimeframe(t)}
                             className={`px-4 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all ${timeframe === t
-                                ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
+                                ? "bg-primary text-white shadow-lg shadow-primary/20"
                                 : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
                                 }`}
                         >
@@ -162,12 +235,12 @@ export default function RevenueAnalyticsPage() {
                                         title={`Gross Billed: ${formatCurrency(d.billed / 100)}`}
                                     />
                                     <div
-                                        className="w-8/12 bg-purple-500 rounded-t-lg relative z-10 transition-all group-hover:brightness-110 group-hover:scale-105"
+                                        className="w-8/12 bg-primary rounded-t-lg relative z-10 transition-all group-hover:brightness-110 group-hover:scale-105"
                                         style={{ height: `${(d.collected / 160000) * 100}%` }}
                                         title={`Net Collected: ${formatCurrency(d.collected / 100)}`}
                                     />
                                 </div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase group-hover:text-purple-500 transition-colors">{d.month}</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase group-hover:text-primary transition-colors">{d.month}</span>
                             </button>
                         ))}
                     </div>
@@ -178,7 +251,7 @@ export default function RevenueAnalyticsPage() {
                             <span className="text-xs font-bold text-slate-500">Gross Billed</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 rounded-full bg-purple-500" />
+                            <div className="h-3 w-3 rounded-full bg-primary" />
                             <span className="text-xs font-bold text-slate-500">Net Collected</span>
                         </div>
                     </div>
@@ -249,7 +322,7 @@ export default function RevenueAnalyticsPage() {
                                 <tr key={i} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500 font-bold text-xs uppercase">
+                                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-xs uppercase">
                                                 {p.name.split(" ").map(n => n[0]).join("")}
                                             </div>
                                             <div>
@@ -278,7 +351,7 @@ export default function RevenueAnalyticsPage() {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button onClick={() => handleProviderAudit(p.name)} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-purple-500 hover:text-white hover:border-purple-500 transition-all">
+                                        <button onClick={() => handleProviderAudit(p.name)} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-primary hover:text-white hover:border-primary transition-all">
                                             Audit Docs
                                         </button>
                                     </td>
@@ -288,6 +361,16 @@ export default function RevenueAnalyticsPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Detail Modal */}
+            <DetailModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title={modalContent.title}
+                icon={modalContent.icon}
+            >
+                {modalContent.content}
+            </DetailModal>
         </div>
     );
 }

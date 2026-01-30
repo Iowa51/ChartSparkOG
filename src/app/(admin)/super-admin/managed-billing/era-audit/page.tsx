@@ -21,6 +21,7 @@ import {
     CheckCircle
 } from "lucide-react";
 import { useState } from "react";
+import DetailModal from "@/components/ui/DetailModal";
 
 const matchedTransactions = [
     {
@@ -56,6 +57,9 @@ const matchedTransactions = [
 ];
 
 export default function MatchingOversightPage() {
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode }>({ title: "", content: null });
+
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat("en-US", {
             style: "currency",
@@ -64,139 +68,232 @@ export default function MatchingOversightPage() {
     };
 
     const handleFlagMatch = () => {
-        alert(`⚠️ FLAG MATCH FOR REVIEW\n\nThis would:\n1. Mark selected matches as requiring manual review\n2. Escalate to compliance team\n3. Lock from auto-processing\n\nSelect matches to flag.`);
+        setModalContent({
+            title: "Flag Match for Review",
+            content: (
+                <div className="space-y-4">
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                        <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">This will mark selected matches for manual review</p>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                        <p><strong>Actions:</strong></p>
+                        <ol className="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-400">
+                            <li>Mark matches as requiring manual review</li>
+                            <li>Escalate to compliance team</li>
+                            <li>Lock from auto-processing</li>
+                        </ol>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                        <button onClick={() => setModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm">Cancel</button>
+                        <button className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-bold text-sm">Flag Selected</button>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleBulkCertify = () => {
-        alert(`✅ BULK CERTIFICATION\n\nReady to certify 31 verified matches totaling $337,500.\n\nThis action will:\n1. Lock the match assignments\n2. Update financial reporting\n3. Clear from pending queue\n\nProceed with bulk certification?`);
+        setModalContent({
+            title: "Bulk Certification",
+            content: (
+                <div className="space-y-4">
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Ready to certify 31 verified matches totaling $337,500</p>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                        <p><strong>This action will:</strong></p>
+                        <ol className="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-400">
+                            <li>Lock the match assignments</li>
+                            <li>Update financial reporting</li>
+                            <li>Clear from pending queue</li>
+                        </ol>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                        <button onClick={() => setModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm">Cancel</button>
+                        <button className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold text-sm">Certify All</button>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleMetricClick = (metric: string) => {
-        alert(`📊 ${metric} Details\n\nDetailed breakdown with drill-down capabilities.`);
+        setModalContent({
+            title: metric,
+            content: (
+                <div className="text-center p-6">
+                    <p className="text-4xl font-bold text-primary mb-2">
+                        {metric === "Total Matches" ? "143" : metric === "Flagged" ? "7" : "31"}
+                    </p>
+                    <p className="text-sm text-slate-500">Detailed breakdown and historical trends available</p>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleCertify = (matchId: string) => {
-        alert(`✅ CERTIFY MATCH ${matchId}\n\nConfirming this payment assignment as auditor-verified.\n\nThis action is permanent and will update the financial ledger.`);
+        setModalContent({
+            title: `Certify Match ${matchId}`,
+            content: (
+                <div className="space-y-4">
+                    <p className="text-sm">Confirming this payment assignment as auditor-verified.</p>
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                        <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">This action is permanent and will update the financial ledger</p>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                        <button onClick={() => setModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm">Cancel</button>
+                        <button className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold text-sm">Certify</button>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
-    const handleReviewWriteoffs = () => {
-        alert(`🗑️ REVIEW WRITE-OFFS\n\nShowing 8 manual write-offs requiring audit:\n\n• WRITEOFF-1: $1,240 - No denial code\n• WRITEOFF-2: $850 - Patient responsibility mismatch\n• WRITEOFF-3: $2,100 - Undocumented adjustment\n\nClick any to see full details and approve/reject.`);
+    const handleViewHistory = (matchId: string) => {
+        setModalContent({
+            title: `Match History - ${matchId}`,
+            content: (
+                <div className="space-y-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Created</p>
+                        <p className="text-sm mt-1">Jan 29, 2026 at 2:30 PM by Admin Sarah</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Modified</p>
+                        <p className="text-sm mt-1">Jan 29, 2026 at 3:15 PM by Admin Sarah</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Status</p>
+                        <p className="text-sm mt-1">Pending Review</p>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     return (
-        <div className="flex-1 p-6 lg:p-8 overflow-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex-1 flex flex-col h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Fingerprint className="h-8 w-8 text-purple-500" />
-                        Matching & ERA Oversight
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Auditor verification for manual payment assignments and administrative write-offs.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={handleFlagMatch} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 hover:border-purple-500 transition-all">
-                        <ShieldAlert className="h-4 w-4" />
-                        Flag Match For Review
-                    </button>
-                    <button onClick={handleBulkCertify} className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-500/20 hover:bg-purple-500/90 transition-all">
-                        <CheckCircle className="h-4 w-4" />
-                        Bulk Certify Matches
-                    </button>
-                </div>
-            </div>
-
-            {/* Oversight Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <button onClick={() => handleMetricClick('Total Manual Matches')} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-purple-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Manual Matches</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">42</p>
-                </button>
-                <button onClick={() => handleMetricClick('Manual Write-offs')} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-amber-500/30 hover:border-amber-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Manual Write-offs</p>
-                    <p className="text-2xl font-bold text-amber-600">8</p>
-                </button>
-                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Auto-Match Rate</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">92%</p>
-                </div>
-                <button onClick={() => handleMetricClick('Auditor Certified')} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-emerald-500/30 hover:border-emerald-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Auditor Certified</p>
-                    <div className="flex items-center gap-2">
-                        <p className="text-2xl font-bold text-emerald-600">31</p>
-                        <span className="text-[10px] text-slate-400 italic">Today</span>
+            <div className="p-6 lg:p-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <Fingerprint className="h-8 w-8 text-violet-500" />
+                            ERA Matching Oversight
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1">
+                            Forensic review of payment-to-claim matching decisions
+                        </p>
                     </div>
-                </button>
+                </div>
             </div>
 
-            {/* Matching Ledger */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Audit Ledger: Payment Matching</h3>
-                    <div className="flex items-center gap-2">
-                        <div className="relative">
-                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search Claim ID or ERA..."
-                                className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest w-64 border-indigo-500/20"
-                            />
+            {/* Metrics Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+                <div onClick={() => handleMetricClick("Total Matches")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-violet-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Total Matches</p>
+                            <p className="text-3xl font-bold mt-2">143</p>
                         </div>
+                        <Database className="h-10 w-10 text-violet-500 opacity-50" />
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                <div onClick={() => handleMetricClick("Flagged")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-amber-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Flagged</p>
+                            <p className="text-3xl font-bold mt-2 text-amber-600">7</p>
+                        </div>
+                        <AlertCircle className="h-10 w-10 text-amber-500 opacity-50" />
+                    </div>
+                </div>
+
+                <div onClick={() => handleMetricClick("Pending Review")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Pending Review</p>
+                            <p className="text-3xl font-bold mt-2 text-blue-600">31</p>
+                        </div>
+                        <FileSearch className="h-10 w-10 text-blue-500 opacity-50" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Actions Bar */}
+            <div className="px-6 pb-4 flex flex-wrap gap-3">
+                <button onClick={handleFlagMatch} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-amber-500 hover:text-white hover:border-amber-500 transition-all flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4" />
+                    Flag Selected
+                </button>
+                <button onClick={handleBulkCertify} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    Bulk Certify
+                </button>
+            </div>
+
+            {/* Matches Table */}
+            <div className="flex-1 overflow-auto px-6 pb-6">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <table className="w-full">
+                        <thead className="border-b border-slate-200 dark:border-slate-800">
                             <tr>
-                                <th className="px-6 py-4">Assignment Status</th>
-                                <th className="px-6 py-4">Amount</th>
-                                <th className="px-6 py-4">Processor</th>
-                                <th className="px-6 py-4">Audit Confidence</th>
-                                <th className="px-6 py-4 text-right">Integrity Verification</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Match ID</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">ERA / Claim</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Matched By</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Method</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Confidence</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {matchedTransactions.map((match, i) => (
-                                <tr key={i} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all">
+                        <tbody>
+                            {matchedTransactions.map((match, index) => (
+                                <tr key={index} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-500">
-                                                <LinkIcon className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-900 dark:text-white">{match.claimId} <ArrowRight className="inline h-3 w-3 mx-1 text-slate-300" /> {match.eraId}</p>
-                                                <p className="text-[10px] font-black uppercase text-slate-400">{match.method}</p>
-                                            </div>
+                                        <span className="font-bold text-sm">{match.id}</span>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-violet-600 font-medium">{match.eraId}</span>
+                                            <span className="text-xs text-slate-500">{match.claimId}</span>
                                         </div>
                                     </td>
+                                    <td className="px-6 py-4 font-bold text-emerald-600">{formatCurrency(match.amount)}</td>
+                                    <td className="px-6 py-4 text-sm">{match.matchedBy}</td>
                                     <td className="px-6 py-4">
-                                        <p className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(match.amount)}</p>
-                                        <p className="text-[10px] text-slate-400 font-mono tracking-tighter">{match.date}</p>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${match.method === "Auto Match"
+                                                ? "bg-blue-500/10 text-blue-600"
+                                                : match.method === "Manual Match"
+                                                    ? "bg-violet-500/10 text-violet-600"
+                                                    : "bg-amber-500/10 text-amber-600"
+                                            }`}>
+                                            {match.method}
+                                        </span>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <User className="h-3 w-3 text-slate-400" />
-                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{match.matchedBy}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${match.confidence === "Verified" ? "bg-emerald-500/10 text-emerald-600" :
-                                            match.confidence === "High" ? "bg-blue-500/10 text-blue-600" :
-                                                "bg-amber-500/10 text-amber-600 animate-pulse"
+                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${match.confidence === "Verified"
+                                                ? "bg-emerald-500/10 text-emerald-600"
+                                                : match.confidence === "High"
+                                                    ? "bg-blue-500/10 text-blue-600"
+                                                    : "bg-amber-500/10 text-amber-600"
                                             }`}>
                                             {match.confidence}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button onClick={() => handleReviewWriteoffs()} title="Review Write-off" className="p-2 hover:bg-red-100 dark:hover:bg-red-900 text-slate-300 hover:text-red-500 rounded-lg transition-colors">
-                                                <Trash2 className="h-4 w-4" />
+                                    <td className="px-6 py-4">
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleCertify(match.id)} className="p-2 hover:bg-emerald-500/10 rounded-lg transition-all" title="Certify">
+                                                <CheckCircle className="h-4 w-4 text-emerald-600" />
                                             </button>
-                                            <button onClick={() => handleCertify(match.id)} className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 round ed-lg text-[10px] font-black uppercase tracking-widest text-purple-500 hover:bg-purple-500 hover:text-white transition-all">
-                                                Certify
+                                            <button onClick={() => handleViewHistory(match.id)} className="p-2 hover:bg-violet-500/10 rounded-lg transition-all" title="View History">
+                                                <History className="h-4 w-4 text-violet-600" />
                                             </button>
                                         </div>
                                     </td>
@@ -207,19 +304,14 @@ export default function MatchingOversightPage() {
                 </div>
             </div>
 
-            {/* Audit Warning Panel */}
-            <div className="bg-amber-500/5 border border-amber-500/20 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-6">
-                <div className="h-14 w-14 bg-amber-500/20 rounded-2xl flex items-center justify-center flex-shrink-0 animate-pulse">
-                    <ShieldAlert className="h-8 w-8 text-amber-600" />
-                </div>
-                <div className="flex-1 space-y-1 text-center md:text-left">
-                    <h4 className="text-lg font-bold text-slate-900 dark:text-white">Matching Integrity Warning</h4>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Our system observed **8 manual write-offs** in the last 24 hours that were not linked to verified insurance denial codes. Please audit these transactions for potential internal leakage.</p>
-                </div>
-                <button onClick={handleReviewWriteoffs} className="px-6 py-3 bg-amber-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-amber-700 transition-all shadow-lg shadow-amber-600/20">
-                    Review Write-offs
-                </button>
-            </div>
+            {/* Detail Modal */}
+            <DetailModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title={modalContent.title}
+            >
+                {modalContent.content}
+            </DetailModal>
         </div>
     );
 }
