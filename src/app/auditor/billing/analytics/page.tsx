@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import DetailModal from "@/components/ui/DetailModal";
 
 const analyticsData = {
     yieldTrends: [
@@ -46,6 +47,8 @@ const analyticsData = {
 export default function RevenueAnalyticsPage() {
     const [timeframe, setTimeframe] = useState("90d");
     const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode; icon?: React.ReactNode }>({ title: "", content: null });
     const router = useRouter();
 
     const formatCurrency = (amount: number) => {
@@ -56,7 +59,77 @@ export default function RevenueAnalyticsPage() {
     };
 
     const handleMetricClick = (metricType: string) => {
-        alert(`📊 Detailed ${metricType} Breakdown\n\nClick OK to view comprehensive analysis with historical trends and drill-down capabilities.`);
+        let content;
+        let icon = <BarChart3 className="h-6 w-6" />;
+
+        if (metricType === "Estimated Net Yield") {
+            content = (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Current Yield</p>
+                            <p className="text-3xl font-bold text-primary">82.4%</p>
+                            <p className="text-xs text-emerald-600 font-bold mt-1">↑ 2.1% vs last period</p>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                            <p className="text-xs font-bold text-slate-400 uppercase mb-1">Industry Avg</p>
+                            <p className="text-3xl font-bold text-slate-600 dark:text-slate-400">78.5%</p>
+                            <p className="text-xs text-slate-500 mt-1">National benchmark</p>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <h4 className="font-bold text-sm text-slate-700 dark:text-slate-300">Historical Trend (Last 5 Months)</h4>
+                        {analyticsData.yieldTrends.map((d, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-slate-400 w-8">{d.month}</span>
+                                <div className="flex-1 h-8 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
+                                    <div className="h-full bg-primary rounded-lg transition-all" style={{ width: `${d.yield}%` }} />
+                                </div>
+                                <span className="text-sm font-bold text-slate-900 dark:text-white w-12">{d.yield}%</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        } else if (metricType === "Time to Settlement") {
+            content = (
+                <div className="space-y-4">
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">✓ Settlement time improved by 3 days compared to last quarter</p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-2xl font-bold text-primary">18</p>
+                            <p className="text-xs text-slate-500">Current Avg (days)</p>
+                        </div>
+                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-2xl font-bold text-slate-600">21</p>
+                            <p className="text-xs text-slate-500">Previous (days)</p>
+                        </div>
+                        <div className="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-2xl font-bold text-slate-600">24</p>
+                            <p className="text-xs text-slate-500">Industry Avg</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        } else {
+            content = (
+                <div className="space-y-4">
+                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                        <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">⚠ Low audit fatigue indicates healthy compliance patterns</p>
+                    </div>
+                    <div className="text-center p-6">
+                        <p className="text-5xl font-bold text-emerald-600">32</p>
+                        <p className="text-sm text-slate-500 mt-2">Audit Fatigue Score (out of 100)</p>
+                        <p className="text-xs text-slate-400 mt-1 italic">Lower is better</p>
+                    </div>
+                </div>
+            );
+        }
+
+        setModalContent({ title: metricType, content, icon });
+        setModalOpen(true);
     };
 
     const handleProviderAudit = (providerName: string) => {
@@ -288,6 +361,16 @@ export default function RevenueAnalyticsPage() {
                     </table>
                 </div>
             </div>
+
+            {/* Detail Modal */}
+            <DetailModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title={modalContent.title}
+                icon={modalContent.icon}
+            >
+                {modalContent.content}
+            </DetailModal>
         </div>
     );
 }
