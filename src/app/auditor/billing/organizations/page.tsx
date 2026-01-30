@@ -18,6 +18,7 @@ import {
     BarChart3
 } from "lucide-react";
 import { useState } from "react";
+import DetailModal from "@/components/ui/DetailModal";
 
 const benchmarkData = [
     {
@@ -53,6 +54,9 @@ const benchmarkData = [
 ];
 
 export default function BenchmarkingPage() {
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode }>({ title: "", content: null });
+
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat("en-US", {
             style: "currency",
@@ -61,244 +65,230 @@ export default function BenchmarkingPage() {
     };
 
     const handleExportLeaderboard = () => {
-        alert(`📄 EXPORT LEADERBOARD\n\nDownloading Excel/CSV with:\n• Full performance rankings\n• Compliance scores\n• Yield percentages\n• Revenue totals\n\nFile: organization_leaderboard_2026_01_29.xlsx`);
+        setModalContent({
+            title: "Export Leaderboard",
+            content: (
+                <div className="space-y-4">
+                    <p className="text-sm">Downloading comprehensive performance report</p>
+                    <div className="space-y-2">
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Includes</p>
+                            <ul className="text-sm mt-1 space-y-1 list-disc list-inside">
+                                <li>Full performance rankings</li>
+                                <li>Compliance scores</li>
+                                <li>Yield percentages</li>
+                                <li>Revenue totals</li>
+                            </ul>
+                        </div>
+                        <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                            <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">File: organization_leaderboard_2026_01_29.xlsx</p>
+                        </div>
+                    </div>
+                    <button className="w-full px-4 py-2 bg-indigo-500 text-white rounded-lg font-bold text-sm">Download Excel</button>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleCrossOrgAudit = () => {
-        alert(`🔍 CROSS-ORGANIZATION AUDIT\n\nLaunching comparative audit planning tool.\n\nThis would:\n1. Select organizations to compare\n2. Define audit criteria\n3. Generate cross-org compliance report\n4. Flag variance patterns`);
+        setModalContent({
+            title: "Cross-Organization Audit",
+            content: (
+                <div className="space-y-4">
+                    <p className="text-sm">Launch comparative audit planning tool</p>
+                    <div className="space-y-2 text-sm">
+                        <p><strong>This tool will:</strong></p>
+                        <ol className="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-400">
+                            <li>Select organizations to compare</li>
+                            <li>Define audit criteria</li>
+                            <li>Generate cross-org compliance report</li>
+                            <li>Flag variance patterns</li>
+                        </ol>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                        <button onClick={() => setModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm">Cancel</button>
+                        <button className="flex-1 px-4 py-2 bg-indigo-500 text-white rounded-lg font-bold text-sm">Launch Audit</button>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleMetricClick = (metric: string, orgName?: string) => {
-        const msg = orgName
-            ? `🎯 ${metric}\n\nOrganization: ${orgName}\n\nDetailed performance metrics and drill-down capabilities.`
-            : `📊 ${metric} Details\n\nDetailed breakdown with historical trends.`;
-        alert(msg);
+        setModalContent({
+            title: orgName ? `${metric} - ${orgName}` : metric,
+            content: (
+                <div className="text-center p-6">
+                    <p className="text-4xl font-bold text-primary mb-2">
+                        {metric.includes("Compliance") ? "92%" : metric.includes("Yield") ? "81%" : "$3.5M"}
+                    </p>
+                    <p className="text-sm text-slate-500">{orgName ? `Organization: ${orgName}` : "Detailed performance metrics available"}</p>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleOrgDrilldown = (orgName: string) => {
-        alert(`📊 ORGANIZATION DRILL-DOWN: ${orgName}\n\nNavigating to comprehensive financial dashboard:\n• Revenue analytics\n• Claim history\n• Provider performance\n• Denial patterns\n• Compliance timeline`);
+        setModalContent({
+            title: `Organization Dashboard - ${orgName}`,
+            content: (
+                <div className="space-y-3">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">Navigate to comprehensive financial dashboard</p>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Revenue Analytics</p>
+                            <p className="text-sm mt-1">View trends</p>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Claim History</p>
+                            <p className="text-sm mt-1">All claims</p>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Provider Performance</p>
+                            <p className="text-sm mt-1">Staff stats</p>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Denial Patterns</p>
+                            <p className="text-sm mt-1">Analysis</p>
+                        </div>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     return (
-        <div className="flex-1 p-6 lg:p-8 overflow-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex-1 flex flex-col h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Layers className="h-8 w-8 text-primary" />
-                        Executive Benchmarking
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Comparative performance matrix and compliance ranking for all assigned organizations.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={handleExportLeaderboard} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-slate-50 hover:border-primary transition-all">
-                        <BarChart3 className="h-4 w-4" />
-                        Export Leaderboard
-                    </button>
-                    <button onClick={handleCrossOrgAudit} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
-                        <SearchCode className="h-4 w-4" />
-                        Cross-Org Audit
-                    </button>
+            <div className="p-6 lg:p-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <Layers className="h-8 w-8 text-cyan-500" />
+                            Organization Benchmarking
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1">
+                            Cross-organizational performance comparison and leaderboard analytics
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            {/* High-Level Ranking */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <button onClick={() => handleMetricClick('Top Performer', 'Wellness Center')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:border-emerald-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Top Performer</p>
-                    <div className="flex items-center gap-3 mt-4">
-                        <div className="h-10 w-10 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 rounded-xl flex items-center justify-center">
-                            <ShieldCheck className="h-6 w-6" />
-                        </div>
+            {/* Aggregated Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+                <div onClick={() => handleMetricClick("Avg Compliance")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">Wellness Center</p>
-                            <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-tighter">94% Compliance</p>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Avg Compliance</p>
+                            <p className="text-3xl font-bold mt-2 text-emerald-600">92%</p>
                         </div>
+                        <ShieldCheck className="h-10 w-10 text-emerald-500 opacity-50" />
                     </div>
-                </button>
+                </div>
 
-                <button onClick={() => handleMetricClick('Least Efficient', 'Main Street Clinic')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm border-red-500/20 hover:border-red-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Least Efficient</p>
-                    <div className="flex items-center gap-3 mt-4">
-                        <div className="h-10 w-10 bg-red-100 dark:bg-red-900/40 text-red-600 rounded-xl flex items-center justify-center">
-                            <AlertCircle className="h-6 w-6" />
-                        </div>
+                <div onClick={() => handleMetricClick("Avg Yield")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-cyan-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">Main Street Clinic</p>
-                            <p className="text-[10px] text-red-600 font-bold uppercase tracking-tighter">74% Net Yield</p>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Avg Yield</p>
+                            <p className="text-3xl font-bold mt-2 text-cyan-600">81%</p>
                         </div>
-                    </div>
-                </button>
-
-                <button onClick={() => handleMetricClick('Avg. Yield Across Suite')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-primary/50 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg. Yield Across Suite</p>
-                    <h2 className="text-4xl font-bold text-slate-900 dark:text-white mt-4">81.3%</h2>
-                    <p className="text-[10px] text-slate-400 mt-1 italic font-medium">Industry Avg: 78.5%</p>
-                </button>
-
-                <button onClick={() => handleMetricClick('Audit Coverage')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-primary/50 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Audit Coverage</p>
-                    <h2 className="text-4xl font-bold text-slate-900 dark:text-white mt-4">62.8%</h2>
-                    <div className="mt-2 w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: "62.8%" }} />
-                    </div>
-                </button>
-            </div>
-
-            {/* Performance Matrix Table */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Organization Performance Matrix</h3>
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search Organization..."
-                                className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest w-64 border-primary/20"
-                            />
-                        </div>
-                        <button className="p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500">
-                            <Filter className="h-4 w-4" />
-                        </button>
+                        <Activity className="h-10 w-10 text-cyan-500 opacity-50" />
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
-                            <tr>
-                                <th className="px-6 py-4">Organization</th>
-                                <th className="px-6 py-4">Financial Yield</th>
-                                <th className="px-6 py-4">Compliance Score</th>
-                                <th className="px-6 py-4">Audited Revenue</th>
-                                <th className="px-6 py-4">MOM Trend</th>
-                                <th className="px-6 py-4 text-right">Drill-down</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {benchmarkData.map((org, i) => (
-                                <tr key={i} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="h-8 w-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600">
-                                                <Building2 className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-900 dark:text-white">{org.name}</p>
-                                                <p className="text-[10px] text-slate-400 italic">#{org.id}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="space-y-1">
-                                            <div className="flex justify-between text-xs mb-1">
-                                                <span className="font-bold">{org.yield}%</span>
-                                            </div>
-                                            <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full ${org.yield >= 85 ? "bg-emerald-500" : org.yield >= 75 ? "bg-blue-500" : "bg-amber-500"}`}
-                                                    style={{ width: `${org.yield}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${org.compliance >= 90 ? "bg-emerald-500/10 text-emerald-600" :
-                                            org.compliance >= 80 ? "bg-blue-500/10 text-blue-600" :
-                                                "bg-red-500/10 text-red-600"
-                                            }`}>
-                                            {org.compliance}% Match
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(org.collected)}</p>
-                                        <p className="text-[10px] text-slate-400 font-medium">of {formatCurrency(org.billed)}</p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {org.trend === "up" ? (
-                                            <div className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-tighter">
-                                                <ArrowUpRight className="h-3 w-3" />
-                                                Accelerating
-                                            </div>
-                                        ) : org.trend === "down" ? (
-                                            <div className="flex items-center gap-1 text-red-600 text-[10px] font-black uppercase tracking-tighter">
-                                                <ArrowDownRight className="h-3 w-3" />
-                                                Decelerating
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-1 text-slate-400 text-[10px] font-black uppercase tracking-tighter">
-                                                <Activity className="h-3 w-3" />
-                                                Stable
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button onClick={() => handleOrgDrilldown(org.name)} className="p-2 hover:bg-primary/10 text-slate-400 hover:text-primary rounded-lg transition-colors">
-                                            <ChevronRight className="h-4 w-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div onClick={() => handleMetricClick("Total Collected")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Total Collected</p>
+                            <p className="text-3xl font-bold mt-2">$3.5M</p>
+                        </div>
+                        <BarChart3 className="h-10 w-10 text-indigo-500 opacity-50" />
+                    </div>
                 </div>
             </div>
 
-            {/* Portfolio Intelligence */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
-                        <Users className="h-5 w-5 text-primary" />
-                        Auditor Portfolio Overview
-                    </h3>
-                    <div className="space-y-6">
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl flex items-center justify-between border border-primary/10">
-                            <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary">
-                                    <ShieldCheck className="h-5 w-5" />
+            {/* Actions Bar */}
+            <div className="px-6 pb-4 flex flex-wrap gap-3">
+                <button onClick={handleExportLeaderboard} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-all flex items-center gap-2">
+                    <SearchCode className="h-4 w-4" />
+                    Export Leaderboard
+                </button>
+                <button onClick={handleCrossOrgAudit} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-cyan-500 hover:text-white hover:border-cyan-500 transition-all flex items-center gap-2">
+                    <Layers className="h-4 w-4" />
+                    Cross-Org Audit
+                </button>
+            </div>
+
+            {/* Organizations Leaderboard */}
+            <div className="flex-1 overflow-auto px-6 pb-6">
+                <div className="space-y-4">
+                    {benchmarkData.map((org, index) => (
+                        <div key={index} onClick={() => handleOrgDrilldown(org.name)} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-cyan-500 hover:shadow-xl transition-all cursor-pointer">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black ${index === 0 ? "bg-amber-500/20 text-amber-600" :
+                                            index === 1 ? "bg-slate-400/20 text-slate-600" :
+                                                "bg-orange-500/20 text-orange-600"
+                                        }`}>
+                                        {index + 1}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-xl font-bold">{org.name}</h3>
+                                            {org.trend === "up" && <TrendingUp className="h-5 w-5 text-emerald-500" />}
+                                            {org.trend === "down" && <TrendingDown className="h-5 w-5 text-red-500" />}
+                                        </div>
+                                        <p className="text-sm text-slate-500">{org.id}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white">Assigned Organizations</p>
-                                    <p className="text-xs text-slate-500">Portfolio active & monitored</p>
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg ${org.status === "Elite"
+                                        ? "bg-emerald-500/10 text-emerald-600"
+                                        : org.status === "Stable"
+                                            ? "bg-blue-500/10 text-blue-600"
+                                            : "bg-amber-500/10 text-amber-600"
+                                    }`}>
+                                    {org.status}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div onClick={(e) => { e.stopPropagation(); handleMetricClick("Compliance Score", org.name); }} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer transition-all">
+                                    <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Compliance</p>
+                                    <p className="text-2xl font-bold text-emerald-600">{org.compliance}%</p>
+                                </div>
+
+                                <div onClick={(e) => { e.stopPropagation(); handleMetricClick("Net Yield", org.name); }} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl hover:bg-cyan-50 dark:hover:bg-cyan-900/20 cursor-pointer transition-all">
+                                    <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Net Yield</p>
+                                    <p className="text-2xl font-bold text-cyan-600">{org.yield}%</p>
+                                </div>
+
+                                <div onClick={(e) => { e.stopPropagation(); handleMetricClick("Billed", org.name); }} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-all">
+                                    <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Billed</p>
+                                    <p className="text-2xl font-bold">{formatCurrency(org.billed)}</p>
+                                </div>
+
+                                <div onClick={(e) => { e.stopPropagation(); handleMetricClick("Collected", org.name); }} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl hover:bg-violet-50 dark:hover:bg-violet-900/20 cursor-pointer transition-all">
+                                    <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Collected</p>
+                                    <p className="text-2xl font-bold text-violet-600">{formatCurrency(org.collected)}</p>
                                 </div>
                             </div>
-                            <span className="text-2xl font-black text-primary">3</span>
                         </div>
-
-                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl flex items-center justify-between border border-emerald-500/10">
-                            <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 bg-emerald-500/20 rounded-xl flex items-center justify-center text-emerald-600">
-                                    <Users className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-bold text-slate-900 dark:text-white">Active Clinicians</p>
-                                    <p className="text-xs text-slate-500">Under financial oversight</p>
-                                </div>
-                            </div>
-                            <span className="text-2xl font-black text-emerald-600">42</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-3xl text-white shadow-xl shadow-slate-900/20 relative overflow-hidden flex flex-col justify-center gap-4">
-                    <div className="absolute top-0 right-0 p-4 opacity-10">
-                        <BarChart3 className="h-48 w-48 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold">Portfolio Health Status</h3>
-                    <p className="text-slate-400 text-sm max-w-sm">The overall health of your assigned organizations is <span className="text-emerald-400 font-bold italic tracking-widest uppercase">Excellent</span>. No critical interventions required today.</p>
-                    <div className="flex gap-2 pt-4">
-                        <div className="px-4 py-2 bg-white/10 rounded-xl border border-white/10 text-xs font-black uppercase tracking-widest">
-                            32 Flagged
-                        </div>
-                        <div className="px-4 py-2 bg-white/10 rounded-xl border border-white/10 text-xs font-black uppercase tracking-widest">
-                            12k Audited
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </div>
+
+            {/* Detail Modal */}
+            <DetailModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title={modalContent.title}
+            >
+                {modalContent.content}
+            </DetailModal>
         </div>
     );
 }

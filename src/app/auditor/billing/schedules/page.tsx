@@ -15,6 +15,7 @@ import {
     ArrowRight
 } from "lucide-react";
 import { useState } from "react";
+import DetailModal from "@/components/ui/DetailModal";
 
 const scheduleParityData = [
     {
@@ -23,35 +24,38 @@ const scheduleParityData = [
         wellnessCenter: 18500,
         mainStreet: 21000,
         marketAvg: 19500,
-        status: "Variance Detected"
-    },
-    {
-        code: "90837",
-        description: "Psychotherapy, 60 min",
-        wellnessCenter: 16500,
-        mainStreet: 16500,
-        marketAvg: 16800,
         status: "Parity Match"
     },
     {
-        code: "90791",
-        description: "Psychiatric diagnostic evaluation",
-        wellnessCenter: 24500,
-        mainStreet: 22000,
-        marketAvg: 23500,
-        status: "Variance Detected"
+        code: "90834",
+        description: "Psychotherapy, 45 minutes",
+        wellnessCenter: 15000,
+        mainStreet: 18500,
+        marketAvg: 17500,
+        status: "Below Market"
     },
     {
-        code: "99441",
-        description: "Telehealth consult, 5-10 min",
-        wellnessCenter: 4500,
-        mainStreet: 4500,
-        marketAvg: 4800,
+        code: "96127",
+        description: "Brief emotional/behavioral assessment",
+        wellnessCenter: 8500,
+        mainStreet: 9200,
+        marketAvg: 9000,
         status: "Parity Match"
+    },
+    {
+        code: "99213",
+        description: "Office visit, established, 20-29 min",
+        wellnessCenter: 13000,
+        mainStreet: 14500,
+        marketAvg: 14000,
+        status: "Below Market"
     }
 ];
 
 export default function FeeScheduleAuditorPage() {
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode }>({ title: "", content: null });
+
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat("en-US", {
             style: "currency",
@@ -60,146 +64,224 @@ export default function FeeScheduleAuditorPage() {
     };
 
     const handleMetricClick = (metric: string) => {
-        alert(`📊 ${metric} Details\n\nThis would show a detailed breakdown with drill-down capabilities.`);
+        setModalContent({
+            title: metric,
+            content: (
+                <div className="text-center p-6">
+                    <p className="text-4xl font-bold text-primary mb-2">
+                        {metric === "Total Codes Audited" ? "124" : metric === "Price Variances" ? "18" : "86%"}
+                    </p>
+                    <p className="text-sm text-slate-500">Detailed breakdown and historical trends available</p>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleMarketBenchmark = () => {
-        alert(`🌍 MARKET BENCHMARK DATA\n\nRegional Medicare Rates\nCommercial Payer Averages\nGeo-Adjusted Fee Comparisons\n\nThis would display comprehensive market rate analysis.`);
+        setModalContent({
+            title: "Market Benchmark Data",
+            content: (
+                <div className="space-y-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Regional Medicare Rates</p>
+                        <p className="text-sm mt-1">Standard rates for your region</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Commercial Payer Averages</p>
+                        <p className="text-sm mt-1">Average rates across major payers</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Geo-Adjusted Fee Comparisons</p>
+                        <p className="text-sm mt-1">Location-adjusted market comparisons</p>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleCertifyRateCard = () => {
-        alert(`✅ RATE CARD CERTIFICATION\n\nThis would:\n1. Generate PDF certificate\n2. Timestamp the approval\n3. Track auditor who certified\n4. Lock rates for billing period\n\nReady to certify current rates?`);
+        setModalContent({
+            title: "Rate Card Certification",
+            content: (
+                <div className="space-y-4">
+                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                        <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Ready to certify current rate card</p>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                        <p><strong>This will:</strong></p>
+                        <ol className="list-decimal list-inside space-y-1 text-slate-600 dark:text-slate-400">
+                            <li>Generate PDF certificate</li>
+                            <li>Timestamp the approval</li>
+                            <li>Track auditor who certified</li>
+                            <li>Lock rates for billing period</li>
+                        </ol>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                        <button onClick={() => setModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm">Cancel</button>
+                        <button className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold text-sm">Certify</button>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleCodeClick = (code: string, description: string) => {
-        alert(`🔍 CPT CODE DETAIL: ${code}\n\n${description}\n\nThis would navigate to a detailed view showing:\n- All payer rates\n- Historical rate changes\n- Denial patterns for this code\n- Utilization statistics`);
+        setModalContent({
+            title: `CPT Code ${code}`,
+            content: (
+                <div className="space-y-4">
+                    <p className="text-sm font-medium">{description}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-xs font-bold text-slate-400 uppercase">All Payer Rates</p>
+                            <p className="text-sm mt-1">View all insurance rates</p>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Rate History</p>
+                            <p className="text-sm mt-1">Historical changes</p>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Denial Patterns</p>
+                            <p className="text-sm mt-1">Code-specific denials</p>
+                        </div>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Utilization Stats</p>
+                            <p className="text-sm mt-1">Usage statistics</p>
+                        </div>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleSyncBaseRates = () => {
-        alert(`🔄 SYNC BASE RATES\n\nThis would:\n1. Pull latest Medicare rates\n2. Update fee schedules across organizations\n3.Validate parity\n4. Generate sync report\n\nConfirm sync operation?`);
+        setModalContent({
+            title: "Sync Base Rates",
+            content: (
+                <div className="space-y-3">
+                    <p className="text-sm">This will pull the latest Medicare rates and update fee schedules across all organizations.</p>
+                    <div className="flex gap-2 pt-2">
+                        <button onClick={() => setModalOpen(false)} className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm">Cancel</button>
+                        <button className="flex-1 px-4 py-2 bg-indigo-500 text-white rounded-lg font-bold text-sm">Sync Now</button>
+                    </div>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     const handleGenerateOptimization = () => {
-        const reportContent = `REVENUE OPTIMIZATION REPORT\n\nExecutive Summary:\n• 18 codes below market rates\n• Potential revenue increase: $42,500/mo\n• Recommended adjustments for Mental Health services\n\nDownloading PDF report...`;
-        alert(`📄 ${reportContent}`);
+        setModalContent({
+            title: "Optimization Report",
+            content: (
+                <div className="space-y-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-sm"><strong>18 codes</strong> below market rates</p>
+                        <p className="text-sm"><strong>Potential increase:</strong> $42,500/mo</p>
+                        <p className="text-sm"><strong>Category:</strong> Mental Health services</p>
+                    </div>
+                    <button className="w-full px-4 py-2 bg-indigo-500 text-white rounded-lg font-bold text-sm">Download PDF Report</button>
+                </div>
+            )
+        });
+        setModalOpen(true);
     };
 
     return (
-        <div className="flex-1 p-6 lg:p-8 overflow-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="flex-1 flex flex-col h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <Database className="h-8 w-8 text-indigo-500" />
-                        Fee Schedule Auditor
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Cross-organization parity check. Ensure billing consistency and identify under-market pricing.
-                    </p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button onClick={handleMarketBenchmark} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 hover:border-indigo-500 transition-all">
-                        <Globe className="h-4 w-4" />
-                        Market Benchmark
-                    </button>
-                    <button onClick={handleCertifyRateCard} className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-600 transition-all">
-                        <ShieldCheck className="h-4 w-4" />
-                        Certify Rate Card
-                    </button>
+            <div className="p-6 lg:p-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <Database className="h-8 w-8 text-indigo-500" />
+                            Fee Schedule Auditor
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1">
+                            Parity verification and market benchmarking across organizational rate cards
+                        </p>
+                    </div>
                 </div>
             </div>
 
-            {/* Parity Overview Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <button onClick={() => handleMetricClick('Total Codes Audited')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group hover:border-indigo-500/50 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Total Codes Audited</p>
-                    <div className="flex items-end justify-between">
-                        <h2 className="text-4xl font-bold text-slate-900 dark:text-white">124</h2>
-                        <div className="h-10 w-10 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center text-indigo-600 group-hover:rotate-12 transition-transform">
-                            <Database className="h-5 w-5" />
+            {/* Metrics Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+                <div onClick={() => handleMetricClick("Total Codes Audited")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Total Codes Audited</p>
+                            <p className="text-3xl font-bold mt-2">124</p>
                         </div>
-                    </div>
-                </button>
-
-                <button onClick={() => handleMetricClick('Price Variances')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group border-amber-500/30 hover:border-amber-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Price Variances</p>
-                    <div className="flex items-end justify-between">
-                        <h2 className="text-4xl font-bold text-slate-900 dark:text-white">18</h2>
-                        <div className="h-10 w-10 bg-amber-100 dark:bg-amber-900/40 rounded-xl flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
-                            <AlertCircle className="h-5 w-5" />
-                        </div>
-                    </div>
-                </button>
-
-                <button onClick={() => handleMetricClick('Parity Score')} className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm group border-emerald-500/30 hover:border-emerald-500/70 hover:shadow-lg transition-all text-left cursor-pointer">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Parity Score</p>
-                    <div className="flex items-end justify-between">
-                        <h2 className="text-4xl font-bold text-emerald-600">86%</h2>
-                        <div className="h-10 w-10 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl flex items-center justify-center text-emerald-600 group-hover:-rotate-12 transition-transform">
-                            <TrendingUp className="h-5 w-5" />
-                        </div>
-                    </div>
-                </button>
-            </div>
-
-            {/* Parity Analysis Table */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Cross-Organization Rate Comparison</h3>
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search CPT Code..."
-                                className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium w-64 focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                            />
-                        </div>
-                        <button className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100">
-                            <Filter className="h-4 w-4" />
-                            Filters
-                        </button>
+                        <ShieldCheck className="h-10 w-10 text-indigo-500 opacity-50" />
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                <div onClick={() => handleMetricClick("Price Variances")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-amber-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Price Variances</p>
+                            <p className="text-3xl font-bold mt-2 text-amber-600">18</p>
+                        </div>
+                        <AlertCircle className="h-10 w-10 text-amber-500 opacity-50" />
+                    </div>
+                </div>
+
+                <div onClick={() => handleMetricClick("Parity Score")} className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-400 cursor-pointer transition-all">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Parity Score</p>
+                            <p className="text-3xl font-bold mt-2 text-emerald-600">86%</p>
+                        </div>
+                        <CheckCircle2 className="h-10 w-10 text-emerald-500 opacity-50" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Actions Bar */}
+            <div className="px-6 pb-4 flex flex-wrap gap-3">
+                <button onClick={handleMarketBenchmark} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-indigo-500 hover:text-white hover:border-indigo-500 transition-all flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Market Benchmark
+                </button>
+                <button onClick={handleCertifyRateCard} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4" />
+                    Certify Rate Card
+                </button>
+                <button onClick={handleSyncBaseRates} className="px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Sync Base Rates
+                </button>
+            </div>
+
+            {/* CPT Codes Table */}
+            <div className="flex-1 overflow-auto px-6 pb-6">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <table className="w-full">
+                        <thead className="border-b border-slate-200 dark:border-slate-800">
                             <tr>
-                                <th className="px-6 py-4">CPT Code</th>
-                                <th className="px-6 py-4">Wellness Center</th>
-                                <th className="px-6 py-4">Main Street Clinic</th>
-                                <th className="px-6 py-4">Market Benchmark</th>
-                                <th className="px-6 py-4">Parity Audit</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">CPT Code</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Wellness Center</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Main Street</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Market Avg</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {scheduleParityData.map((item, i) => (
-                                <tr key={i} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all">
+                        <tbody>
+                            {scheduleParityData.map((item, index) => (
+                                <tr key={index} onClick={() => handleCodeClick(item.code, item.description)} className="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-all">
                                     <td className="px-6 py-4">
-                                        <button onClick={() => handleCodeClick(item.code, item.description)} className="flex items-center gap-3 text-left w-full hover:opacity-75 transition-opacity">
-                                            <div className="h-9 w-9 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center font-black text-xs text-primary group-hover:scale-110 transition-transform">
-                                                {item.code}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-900 dark:text-white">{item.code}</p>
-                                                <p className="text-[10px] text-slate-500 w-48 truncate">{item.description}</p>
-                                            </div>
-                                        </button>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                                        {formatCurrency(item.wellnessCenter)}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">
-                                        {formatCurrency(item.mainStreet)}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold text-indigo-600">{formatCurrency(item.marketAvg)}</span>
-                                            <Globe className="h-3 w-3 text-slate-300" />
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-sm">{item.code}</span>
+                                            <span className="text-xs text-slate-500">{item.description}</span>
                                         </div>
                                     </td>
+                                    <td className="px-6 py-4 font-bold">{formatCurrency(item.wellnessCenter)}</td>
+                                    <td className="px-6 py-4 font-bold">{formatCurrency(item.mainStreet)}</td>
+                                    <td className="px-6 py-4 font-bold text-indigo-600">{formatCurrency(item.marketAvg)}</td>
                                     <td className="px-6 py-4">
                                         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg ${item.status === "Parity Match"
                                             ? "bg-emerald-500/10 text-emerald-600"
@@ -208,36 +290,15 @@ export default function FeeScheduleAuditorPage() {
                                             {item.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-400 hover:text-indigo-600 rounded-lg transition-colors">
-                                            <ArrowRight className="h-4 w-4" />
-                                        </button>
-                                    </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
-
-                <div className="p-6 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <AlertCircle className="h-4 w-4 text-amber-500" />
-                            <span>Variances detected in <strong>2</strong> essential billing codes. Review recommended to prevent lost revenue.</span>
-                        </div>
-                        <button onClick={handleSyncBaseRates} className="px-6 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 hover:border-indigo-500 transition-all">
-                            Sync Base Rates
-                        </button>
-                    </div>
-                </div>
             </div>
 
-            {/* Market Opportunity Intelligence */}
-            <div className="p-8 bg-gradient-to-br from-indigo-500 to-primary rounded-3xl text-white shadow-xl shadow-indigo-500/20 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden group">
-                <div className="absolute -top-12 -right-12 h-64 w-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform" />
-                <div className="h-20 w-20 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                    <TrendingUp className="h-10 w-10 text-white" />
-                </div>
+            {/* Revenue Optimization CTA */}
+            <div className="p-6 bg-gradient-to-r from-indigo-600 to-purple-600 mx-6 mb-6 rounded-3xl shadow-2xl text-white flex items-center justify-between">
                 <div className="flex-1 space-y-2">
                     <h3 className="text-2xl font-bold">Revenue Optimization Opportunity</h3>
                     <p className="text-white/80 max-w-2xl text-sm">Our AI benchmarking suggests that current fee schedules for <strong>Mental Health</strong> services are <strong>12% below</strong> regional market rates. Adjusting to market parity could result in an estimated <strong>$42,500/mo</strong> increase in revenue.</p>
@@ -246,6 +307,15 @@ export default function FeeScheduleAuditorPage() {
                     Generate Optimization Report
                 </button>
             </div>
-        </div >
+
+            {/* Detail Modal */}
+            <DetailModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title={modalContent.title}
+            >
+                {modalContent.content}
+            </DetailModal>
+        </div>
     );
 }
