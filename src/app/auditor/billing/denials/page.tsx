@@ -18,6 +18,7 @@ import {
     GraduationCap
 } from "lucide-react";
 import { useState } from "react";
+import DetailModal from "@/components/ui/DetailModal";
 
 const denialQueue = [
     {
@@ -57,6 +58,8 @@ const denialQueue = [
 
 export default function DenialForensicsPage() {
     const [selectedDenial, setSelectedDenial] = useState(denialQueue[0]);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalContent, setModalContent] = useState<{ title: string; content: React.ReactNode }>({ title: "", content: null });
 
     const formatCurrency = (cents: number) => {
         return new Intl.NumberFormat("en-US", {
@@ -66,15 +69,84 @@ export default function DenialForensicsPage() {
     };
 
     const handleViewFullHeader = () => {
-        alert(`🔍 CLAIM HEADER DETAILS\n\nClaim ID: ${selectedDenial.claimId}\nDenial Code: ${selectedDenial.code}\nPatient: ${selectedDenial.patient}\nOrg: ${selectedDenial.org}\nAmount: ${formatCurrency(selectedDenial.amount)}\nDate: ${selectedDenial.date}\n\nThis would show the complete X12 837P header with all patient demographics, billing provider info, and service line details.`);
+        const content = (
+            <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Claim Information</p>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-1">
+                            <p className="text-sm"><span className="font-bold">Claim ID:</span> {selectedDenial.claimId}</p>
+                            <p className="text-sm"><span className="font-bold">Denial Code:</span> {selectedDenial.code}</p>
+                            <p className="text-sm"><span className="font-bold">Date:</span> {selectedDenial.date}</p>
+                            <p className="text-sm"><span className="font-bold">Amount:</span> {formatCurrency(selectedDenial.amount)}</p>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Patient & Provider</p>
+                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-1">
+                            <p className="text-sm"><span className="font-bold">Patient:</span> {selectedDenial.patient}</p>
+                            <p className="text-sm"><span className="font-bold">Organization:</span> {selectedDenial.org}</p>
+                            <p className="text-sm"><span className="font-bold">Status:</span> <span className="text-red-600 font-bold">Denied</span></p>
+                        </div>
+                    </div>
+                </div>
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">ℹ Full X12 837P header available with complete patient demographics, billing provider NPI, and service line details.</p>
+                </div>
+            </div>
+        );
+        setModalContent({ title: "Claim Header Details", content });
+        setModalOpen(true);
     };
 
     const handleRequestTraining = () => {
-        alert(`📚 CLINICIAN TRAINING REQUEST\n\nInitiating training request for ${selectedDenial.org}\n\nTopic: PHQ-9/GAD-7 Integration for Behavioral Health Claims\nTriggered by: Denial ${selectedDenial.id} (${selectedDenial.code})\n\nThis would email the organization's clinical director with recommended training materials and template modifications.`);
+        const content = (
+            <div className="space-y-4">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">✓ Training request will be sent to {selectedDenial.org} clinical director</p>
+                </div>
+                <div className="space-y-3">
+                    <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Training Topic</p>
+                        <p className="text-sm font-bold">PHQ-9/GAD-7 Integration for Behavioral Health Claims</p>
+                    </div>
+                    <div>
+                        <p className="text-xs font-bold text-slate-400 uppercase mb-2">Triggered By</p>
+                        <p className="text-sm">Denial {selectedDenial.id} ({selectedDenial.code})</p>
+                    </div>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                        <p className="text-xs text-slate-600 dark:text-slate-400">This will email recommended training materials and template modifications to prevent future denials.</p>
+                    </div>
+                </div>
+            </div>
+        );
+        setModalContent({ title: "Clinician Training Request", content });
+        setModalOpen(true);
     };
 
     const handleDeployGuardrail = () => {
-        alert(`✅ TEMPLATE GUARDRAIL DEPLOYMENT\n\nThis would:\n1. Update the encounter note template\n2. Add required fields for symptom severity scales\n3. Trigger validation rules\n4. Notify providers of template changes\n\nStatus: Ready to deploy to ${selectedDenial.org}`);
+        const content = (
+            <div className="space-y-4">
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                    <p className="text-sm text-amber-700 dark:text-amber-300 font-medium">⚠ This will update the encounter note template for {selectedDenial.org}</p>
+                </div>
+                <div className="space-y-2">
+                    <p className="text-sm font-bold">Deployment Steps:</p>
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                        <li>Update the encounter note template</li>
+                        <li>Add required fields for symptom severity scales</li>
+                        <li>Trigger validation rules</li>
+                        <li>Notify providers of template changes</li>
+                    </ol>
+                </div>
+                <div className="flex gap-2 pt-2">
+                    <button className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-bold text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Cancel</button>
+                    <button className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg font-bold text-sm hover:bg-emerald-600 transition-colors">Deploy Now</button>
+                </div>
+            </div>
+        );
+        setModalContent({ title: "Template Guardrail Deployment", content });
+        setModalOpen(true);
     };
 
     return (
@@ -254,6 +326,15 @@ export default function DenialForensicsPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Detail Modal */}
+            <DetailModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title={modalContent.title}
+            >
+                {modalContent.content}
+            </DetailModal>
         </div>
     );
 }
