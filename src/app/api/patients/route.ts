@@ -1,10 +1,12 @@
 // src/app/api/patients/route.ts
 // SEC-009: HIPAA-compliant patient API with full audit logging
+// SEC-REMEDIATION: Using safe logger to prevent PHI in error logs
 
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export async function GET(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
@@ -89,7 +91,10 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ patients });
     } catch (error) {
-        console.error('Error fetching patients:', error);
+        logError({
+            action: 'FETCH_PATIENTS_ERROR',
+            error: sanitizeError(error),
+        });
         return NextResponse.json({ error: 'Failed to fetch patients' }, { status: 500 });
     }
 }
@@ -152,7 +157,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ patient }, { status: 201 });
     } catch (error) {
-        console.error('Error creating patient:', error);
+        logError({
+            action: 'CREATE_PATIENT_ERROR',
+            error: sanitizeError(error),
+        });
         return NextResponse.json({ error: 'Failed to create patient' }, { status: 500 });
     }
 }

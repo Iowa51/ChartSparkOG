@@ -16,8 +16,16 @@ export function validateOrigin(request: NextRequest): boolean {
         const referer = request.headers.get('referer');
         if (!referer) {
             // No origin or referer - could be a direct API call (e.g., curl, Postman)
-            // In development, we might want to allow this
-            return process.env.NODE_ENV !== 'production';
+            // SEC-REMEDIATION: Require explicit ALLOW_DIRECT_API_CALLS=true to bypass
+            if (process.env.NODE_ENV !== 'production') {
+                if (process.env.ALLOW_DIRECT_API_CALLS === 'true') {
+                    return true;
+                }
+                // Log warning when blocking direct API calls in development
+                console.warn('[CSRF] Blocked request without origin/referer. Set ALLOW_DIRECT_API_CALLS=true to allow direct API testing.');
+                return false;
+            }
+            return false;
         }
 
         // Validate referer matches host

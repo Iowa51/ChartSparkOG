@@ -1,6 +1,6 @@
 // src/lib/security/rate-limit.ts
 // SEC-010: Distributed rate limiting with Upstash Redis
-// Falls back to in-memory if Redis not configured
+// SEC-REMEDIATION: Fail-closed for auth endpoints, circuit breaker for persistent failures
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -11,30 +11,86 @@ const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 export interface RateLimitConfig {
     limit: number;      // Max requests
     window: number;     // Time window in milliseconds
+    failClosed?: boolean; // If true, deny requests on rate limit errors (default: false)
 }
 
 export const RATE_LIMITS: Record<string, RateLimitConfig> = {
     // General API: 100 requests per minute
-    api: { limit: 100, window: 60 * 1000 },
+    api: { limit: 100, window: 60 * 1000, failClosed: false },
 
     // Auth endpoints: 10 requests per minute (prevent brute force)
-    auth: { limit: 10, window: 60 * 1000 },
+    // SEC-REMEDIATION: Fail-closed for security-critical auth endpoints
+    auth: { limit: 10, window: 60 * 1000, failClosed: true },
 
     // AI endpoints: 20 requests per minute (expensive operations)
-    ai: { limit: 20, window: 60 * 1000 },
+    ai: { limit: 20, window: 60 * 1000, failClosed: false },
 
     // Export endpoints: 5 requests per minute
-    export: { limit: 5, window: 60 * 1000 },
+    export: { limit: 5, window: 60 * 1000, failClosed: false },
 
     // Login attempts: 5 per 15 minutes
-    login: { limit: 5, window: 15 * 60 * 1000 },
+    // SEC-REMEDIATION: Fail-closed for login to prevent brute force on errors
+    login: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
 
     // Telehealth: 50 room creations per hour (increased for demo)
-    telehealth: { limit: 50, window: 60 * 60 * 1000 },
+    telehealth: { limit: 50, window: 60 * 60 * 1000, failClosed: false },
 };
 
 // In-memory fallback store (for development/demo without Redis)
 const inMemoryStore = new Map<string, { count: number; resetTime: number }>();
+
+// Circuit breaker state for rate limit service failures
+interface CircuitBreakerState {
+    failures: number;
+    lastFailure: number;
+    isOpen: boolean;
+}
+
+const circuitBreaker: CircuitBreakerState = {
+    failures: 0,
+    lastFailure: 0,
+    isOpen: false,
+};
+
+// Circuit breaker config
+const CIRCUIT_BREAKER_THRESHOLD = 5;  // Open after 5 consecutive failures
+const CIRCUIT_BREAKER_RESET_MS = 30000; // Reset after 30 seconds
+
+/**
+ * Check circuit breaker state and update if needed
+ */
+function checkCircuitBreaker(): boolean {
+    const now = Date.now();
+
+    // Reset circuit breaker if enough time has passed
+    if (circuitBreaker.isOpen && (now - circuitBreaker.lastFailure) > CIRCUIT_BREAKER_RESET_MS) {
+        circuitBreaker.isOpen = false;
+        circuitBreaker.failures = 0;
+    }
+
+    return circuitBreaker.isOpen;
+}
+
+/**
+ * Record a rate limit service failure
+ */
+function recordFailure(): void {
+    circuitBreaker.failures++;
+    circuitBreaker.lastFailure = Date.now();
+
+    if (circuitBreaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
+        circuitBreaker.isOpen = true;
+        console.error('[RATE-LIMIT] Circuit breaker OPEN - rate limit service experiencing persistent failures');
+    }
+}
+
+/**
+ * Record a successful rate limit check
+ */
+function recordSuccess(): void {
+    circuitBreaker.failures = 0;
+    circuitBreaker.isOpen = false;
+}
 
 /**
  * Get rate limit configuration for a given path
@@ -163,6 +219,7 @@ async function checkUpstashRateLimit(identifier: string, pathname: string): Prom
 /**
  * Main rate limit check function
  * Uses Upstash if configured, otherwise falls back to in-memory
+ * SEC-REMEDIATION: Respects failClosed config per endpoint type
  */
 export async function checkRateLimit(
     request: NextRequest
@@ -172,23 +229,44 @@ export async function checkRateLimit(
         'anonymous';
 
     const pathname = request.nextUrl.pathname;
+    const config = getRateLimitConfig(pathname);
 
     let result: RateLimitResult;
 
     try {
-        if (UPSTASH_URL && UPSTASH_TOKEN) {
+        // Check circuit breaker first
+        if (checkCircuitBreaker()) {
+            // Circuit is open - use in-memory fallback
+            console.warn('[RATE-LIMIT] Circuit breaker open, using in-memory fallback');
+            result = checkInMemoryRateLimit(ip, pathname);
+        } else if (UPSTASH_URL && UPSTASH_TOKEN) {
             // Use Upstash Redis for distributed rate limiting
             result = await checkUpstashRateLimit(ip, pathname);
+            recordSuccess();
         } else {
             // Fall back to in-memory (single instance only)
             if (process.env.NODE_ENV === 'production') {
-                console.warn('Rate limiting: Upstash not configured, using in-memory fallback. This is not suitable for multi-instance deployments.');
+                console.warn('[RATE-LIMIT] Upstash not configured, using in-memory fallback. This is not suitable for multi-instance deployments.');
             }
             result = checkInMemoryRateLimit(ip, pathname);
         }
     } catch (error) {
-        console.error('Rate limit check error:', error);
-        // Fail open on rate limit errors (but log it)
+        recordFailure();
+        console.error('[RATE-LIMIT] Rate limit check error:', error instanceof Error ? error.message : 'Unknown error');
+
+        // SEC-REMEDIATION: Fail-closed for security-critical endpoints
+        if (config.failClosed) {
+            console.warn(`[RATE-LIMIT] Fail-closed: Denying request to ${pathname} due to rate limit service error`);
+            return {
+                success: false,
+                response: NextResponse.json(
+                    { error: 'Service temporarily unavailable. Please try again.' },
+                    { status: 503 }
+                ),
+            };
+        }
+
+        // Fail-open for non-critical endpoints (but log it)
         return { success: true };
     }
 
@@ -251,6 +329,13 @@ export function cleanupRateLimitStore(): void {
             inMemoryStore.delete(key);
         }
     }
+}
+
+/**
+ * Get circuit breaker status (for monitoring/debugging)
+ */
+export function getCircuitBreakerStatus(): { isOpen: boolean; failures: number; lastFailure: number } {
+    return { ...circuitBreaker };
 }
 
 // Run cleanup every 5 minutes (in-memory only)
