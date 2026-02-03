@@ -1,3 +1,5 @@
+"use client";
+
 import { Header } from "@/components/layout";
 import {
     TrendingUp,
@@ -12,6 +14,8 @@ import {
     ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import PatientQuickSelectModal from "@/components/notes/PatientQuickSelectModal";
 
 // Demo data
 const stats = [
@@ -95,6 +99,7 @@ const statusStyles = {
 export default function DashboardPage() {
     // TODO: Get actual user name from auth
     const userName = "Sarah";
+    const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
 
     return (
         <>
@@ -112,13 +117,13 @@ export default function DashboardPage() {
                     <div className="lg:col-span-2 bg-card rounded-xl p-8 border border-border relative overflow-hidden">
                         <div className="relative z-10">
                             <div className="flex flex-wrap gap-4">
-                                <Link
-                                    href="/notes/new"
+                                <button
+                                    onClick={() => setIsPatientModalOpen(true)}
                                     className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl font-semibold shadow-lg shadow-primary/30 flex items-center gap-2 transition-all active:scale-95"
                                 >
                                     <Plus className="h-5 w-5" />
                                     Start New Note
-                                </Link>
+                                </button>
                                 <Link
                                     href="/calendar"
                                     className="bg-card text-foreground border border-border px-6 py-3 rounded-xl font-medium hover:bg-muted/50 flex items-center gap-2 transition-colors"
@@ -301,6 +306,12 @@ export default function DashboardPage() {
                     </div>
                 </section>
             </div>
+
+            {/* Patient Quick Select Modal */}
+            <PatientQuickSelectModal
+                isOpen={isPatientModalOpen}
+                onClose={() => setIsPatientModalOpen(false)}
+            />
         </>
     );
 }

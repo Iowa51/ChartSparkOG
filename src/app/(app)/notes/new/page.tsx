@@ -20,9 +20,15 @@ import {
     Plus,
     AlertCircle,
     Trash2,
+    Phone,
+    Mail,
+    MapPin,
+    AlertTriangle,
+    Pill,
 } from "lucide-react";
 import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/templates";
 import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
+import { patients, getPatientById, Patient } from "@/lib/demo-data/patients";
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
     Subjective: [
@@ -64,27 +70,33 @@ export default function NewNotePage() {
     const router = useRouter();
     const templateId = searchParams.get("template") || "tpl-progress-note";
     const editId = searchParams.get("edit"); // Get the note ID being edited
+    const patientId = searchParams.get("patientId"); // Get patient ID from URL
     const template = getTemplateById(templateId) || getDefaultTemplate();
 
-    // Notes data for looking up patient info when editing
-    const allNotes: Record<string, {
-        patientName: string;
-        patientInitials: string;
-        date: string;
-        diagnosis: string;
-        diagnosisCode: string;
-    }> = {
-        "1": { patientName: "John Doe", patientInitials: "JD", date: "Oct 29, 2023", diagnosis: "Acute Pharyngitis", diagnosisCode: "J02.9" },
-        "2": { patientName: "Maria Rodriguez", patientInitials: "MR", date: "Oct 28, 2023", diagnosis: "Hypertension F/U", diagnosisCode: "I10" },
-        "3": { patientName: "Arthur Smith", patientInitials: "AS", date: "Oct 24, 2023", diagnosis: "T2DM Management", diagnosisCode: "E11.9" },
-        "4": { patientName: "Sarah Williams", patientInitials: "SW", date: "Oct 22, 2023", diagnosis: "Anxiety Screening", diagnosisCode: "F41.1" },
-        "5": { patientName: "David Miller", patientInitials: "DM", date: "Oct 20, 2023", diagnosis: "Lower Back Pain", diagnosisCode: "M54.5" },
-    };
+    // Fetch patient data based on patientId from URL
+    const [currentPatient, setCurrentPatient] = useState<Patient | null>(null);
+    const [showPatientInfo, setShowPatientInfo] = useState(true);
 
-    // Get patient info - use edit ID if available, otherwise default
-    const currentPatient = editId && allNotes[editId]
-        ? allNotes[editId]
-        : { patientName: "New Patient", patientInitials: "NP", date: new Date().toLocaleDateString(), diagnosis: "", diagnosisCode: "" };
+    useEffect(() => {
+        if (patientId) {
+            const patient = getPatientById(patientId);
+            setCurrentPatient(patient || null);
+        } else if (editId) {
+            // Fallback for edit mode - try to find patient from demo notes
+            const demoNotes: Record<string, string> = {
+                "1": "p1", // John Doe -> Sarah Connor
+                "2": "p1", // Maria Rodriguez -> Sarah Connor
+                "3": "p2", // Arthur Smith -> Michael Reese
+                "4": "p3", // Sarah Williams -> Elena Fisher
+                "5": "p4", // David Miller -> Nathan Drake
+            };
+            const linkedPatientId = demoNotes[editId];
+            if (linkedPatientId) {
+                const patient = getPatientById(linkedPatientId);
+                setCurrentPatient(patient || null);
+            }
+        }
+    }, [patientId, editId]);
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
@@ -669,99 +681,164 @@ Prognosis: Favorable with continued treatment adherence.`;
             </header>
 
             {/* Sub-header / Patient Info */}
-            <div className="flex-none bg-card border-b border-border px-6 py-4">
-                <div className="max-w-[1700px] mx-auto flex flex-wrap justify-between items-center gap-4">
-                    <div className="flex items-center gap-5">
-                        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-                            {currentPatient.patientInitials}
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                                    {currentPatient.patientName}
-                                </h1>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
-                                    {editId ? "Editing Note" : "New Note"}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                                <span className="flex items-center gap-1.5">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    {currentPatient.date}
-                                </span>
-                                {currentPatient.diagnosis && (
-                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-muted/50">
-                                        {currentPatient.diagnosis} ({currentPatient.diagnosisCode})
-                                    </span>
-                                )}
-                                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-muted text-foreground">
-                                    <select
-                                        value={template.id}
-                                        onChange={(e) => {
-                                            const editParam = editId ? `&edit=${editId}` : '';
-                                            const newPath = `/notes/new?template=${e.target.value}${editParam}`;
-                                            router.push(newPath);
-                                        }}
-                                        className="bg-transparent border-none text-xs font-bold outline-none cursor-pointer"
-                                    >
-                                        {templates.map(t => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                        ))}
-                                    </select>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+            {currentPatient ? (
+                <div className="flex-none bg-card border-b border-border">
+                    <div className="max-w-[1700px] mx-auto px-6 py-4">
+                        <div className="flex justify-between items-start gap-4">
+                            {/* Left: Patient Identity */}
+                            <div className="flex items-start gap-5 flex-1">
+                                <div className={`h-16 w-16 rounded-2xl ${currentPatient.avatarColor} flex items-center justify-center font-bold text-2xl shrink-0`}>
+                                    {currentPatient.initials}
+                                </div>
+                                <div className="flex flex-col gap-2 flex-1">
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+                                            {currentPatient.name}
+                                        </h1>
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
+                                            {editId ? "Editing Note" : "New Note"}
+                                        </span>
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${currentPatient.status === "Active"
+                                            ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                            }`}>
+                                            {currentPatient.status}
+                                        </span>
+                                    </div>
 
-                    <div className="flex items-center gap-3">
-                        {!showTranscript && (
-                            <button
-                                onClick={() => setShowTranscript(true)}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all shadow-sm group"
-                            >
-                                <Sparkles className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-                                <span>Reveal Input Hub</span>
-                            </button>
-                        )}
-                        <button
-                            onClick={handleGenerateNote}
-                            disabled={isGenerating}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground rounded-xl text-sm font-black shadow-lg shadow-primary/30 transition-all disabled:opacity-50 active:scale-95"
-                        >
-                            {isGenerating ? (
-                                <>
-                                    <RefreshCw className="h-5 w-5 animate-spin" />
-                                    Generating Clinical Note...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="h-5 w-5" />
-                                    Generate AI Note
-                                </>
-                            )}
-                        </button>
-                        <button
-                            onClick={copyFullNote}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95 ${noteCopied
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-muted hover:bg-muted/80 text-foreground border border-border'
-                                }`}
-                        >
-                            {noteCopied ? (
-                                <>
-                                    <CheckCircle className="h-4 w-4" />
-                                    Note Copied!
-                                </>
-                            ) : (
-                                <>
-                                    <Copy className="h-4 w-4" />
-                                    Copy Note
-                                </>
-                            )}
-                        </button>
+                                    {/* Demographics Row */}
+                                    <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground flex-wrap">
+                                        <span className="flex items-center gap-1.5">
+                                            <Calendar className="h-3.5 w-3.5" />
+                                            DOB: {currentPatient.dob}
+                                        </span>
+                                        <span>•</span>
+                                        <span>{currentPatient.gender}</span>
+                                        <span>•</span>
+                                        <span className="font-semibold">{currentPatient.mrn}</span>
+                                        {currentPatient.lastVisit !== "--" && (
+                                            <>
+                                                <span>•</span>
+                                                <span>Last visit: {currentPatient.lastVisit}</span>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Contact Info Row */}
+                                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                                        <span className="flex items-center gap-1.5">
+                                            <Phone className="h-3.5 w-3.5" />
+                                            {currentPatient.phone}
+                                        </span>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1.5">
+                                            <Mail className="h-3.5 w-3.5" />
+                                            {currentPatient.email}
+                                        </span>
+                                    </div>
+
+                                    {/* Collapsible Details */}
+                                    {showPatientInfo && (
+                                        <div className="mt-2 pt-2 border-t border-border grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {/* Allergies */}
+                                            <div>
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Allergies</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {currentPatient.allergies.map((allergy, idx) => (
+                                                        <span key={idx} className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs rounded-md border border-amber-200 dark:border-amber-800">
+                                                            {allergy}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Medications */}
+                                            <div>
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <Pill className="h-3.5 w-3.5 text-blue-600" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Medications</span>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    {currentPatient.medications.length > 0 ? (
+                                                        currentPatient.medications.map((med, idx) => (
+                                                            <div key={idx} className="text-xs text-foreground">• {med}</div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="text-xs text-muted-foreground italic">None</div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Active Problems */}
+                                            <div>
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <FileText className="h-3.5 w-3.5 text-primary" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Problems</span>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    {currentPatient.problems.map((problem, idx) => (
+                                                        <div key={idx} className="text-xs text-foreground">• {problem}</div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Toggle Button */}
+                                    <button
+                                        onClick={() => setShowPatientInfo(!showPatientInfo)}
+                                        className="text-xs text-primary hover:text-primary/80 font-semibold mt-1 self-start transition-colors"
+                                    >
+                                        {showPatientInfo ? "▼ Show Less" : "▶ Show More Details"}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Right: Template Selector */}
+                            <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-xs font-medium text-muted-foreground">Template:</span>
+                                <select
+                                    value={template.id}
+                                    onChange={(e) => {
+                                        const patientParam = patientId ? `&patientId=${patientId}` : '';
+                                        const editParam = editId ? `&edit=${editId}` : '';
+                                        const newPath = `/notes/new?template=${e.target.value}${patientParam}${editParam}`;
+                                        router.push(newPath);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-muted text-foreground text-xs font-bold outline-none cursor-pointer border border-border hover:border-primary transition-colors"
+                                >
+                                    {templates.map(t => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            ) : (
+                <div className="flex-none bg-card border-b border-border px-6 py-4">
+                    <div className="max-w-[1700px] mx-auto">
+                        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">No Patient Selected</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                                    Patient information will be added when you select a patient or complete the encounter.
+                                </p>
+                            </div>
+                            <Link
+                                href="/dashboard"
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors shrink-0"
+                            >
+                                Select Patient
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main Workspace */}
             <main className="flex-1 overflow-hidden flex bg-slate-50/30 dark:bg-slate-950/30">
@@ -1487,143 +1564,147 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                         </div>
                     </section>
                 </div>
-            </main>
+            </main >
 
             {/* Add Custom Phrase Modal */}
-            {showPhraseModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
-                        <div className="p-5 border-b border-border">
-                            <h3 className="text-lg font-bold">Add Custom Phrase</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Add to: <span className="font-bold text-primary">{phraseCategory}</span>
-                            </p>
-                        </div>
-                        <div className="p-5 space-y-4">
-                            <textarea
-                                value={newPhrase}
-                                onChange={(e) => setNewPhrase(e.target.value)}
-                                placeholder="Enter your custom phrase..."
-                                className="w-full h-24 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
-                                autoFocus
-                            />
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowPhraseModal(false)}
-                                    className="flex-1 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (newPhrase.trim()) {
-                                            const updated = {
-                                                ...customPhrases,
-                                                [phraseCategory]: [...(customPhrases[phraseCategory] || []), newPhrase.trim()]
-                                            };
-                                            setCustomPhrases(updated);
-                                            localStorage.setItem('customPhrases', JSON.stringify(updated));
-                                            setNewPhrase("");
-                                            setShowPhraseModal(false);
-                                        }
-                                    }}
-                                    disabled={!newPhrase.trim()}
-                                    className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
-                                >
-                                    Add Phrase
-                                </button>
+            {
+                showPhraseModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+                            <div className="p-5 border-b border-border">
+                                <h3 className="text-lg font-bold">Add Custom Phrase</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Add to: <span className="font-bold text-primary">{phraseCategory}</span>
+                                </p>
+                            </div>
+                            <div className="p-5 space-y-4">
+                                <textarea
+                                    value={newPhrase}
+                                    onChange={(e) => setNewPhrase(e.target.value)}
+                                    placeholder="Enter your custom phrase..."
+                                    className="w-full h-24 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
+                                    autoFocus
+                                />
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowPhraseModal(false)}
+                                        className="flex-1 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (newPhrase.trim()) {
+                                                const updated = {
+                                                    ...customPhrases,
+                                                    [phraseCategory]: [...(customPhrases[phraseCategory] || []), newPhrase.trim()]
+                                                };
+                                                setCustomPhrases(updated);
+                                                localStorage.setItem('customPhrases', JSON.stringify(updated));
+                                                setNewPhrase("");
+                                                setShowPhraseModal(false);
+                                            }
+                                        }}
+                                        disabled={!newPhrase.trim()}
+                                        className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+                                    >
+                                        Add Phrase
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Code Explanation Modal */}
-            {codeModalOpen && selectedCodeInfo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-                        <div className="sticky top-0 bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b border-border">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className={`text-lg font-black px-3 py-1.5 rounded-lg ${selectedCodeInfo.type === 'cpt'
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-primary text-white'
-                                            }`}>
-                                            {selectedCodeInfo.code}
-                                        </span>
-                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${selectedCodeInfo.type === 'cpt'
-                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                            : 'bg-primary/10 text-primary'
-                                            }`}>
-                                            {selectedCodeInfo.type === 'cpt' ? 'CPT Code' : 'ICD-10 Code'}
-                                        </span>
+            {
+                codeModalOpen && selectedCodeInfo && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+                            <div className="sticky top-0 bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b border-border">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className={`text-lg font-black px-3 py-1.5 rounded-lg ${selectedCodeInfo.type === 'cpt'
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-primary text-white'
+                                                }`}>
+                                                {selectedCodeInfo.code}
+                                            </span>
+                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${selectedCodeInfo.type === 'cpt'
+                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                                : 'bg-primary/10 text-primary'
+                                                }`}>
+                                                {selectedCodeInfo.type === 'cpt' ? 'CPT Code' : 'ICD-10 Code'}
+                                            </span>
+                                        </div>
+                                        <h2 className="text-xl font-bold text-foreground">{selectedCodeInfo.title}</h2>
                                     </div>
-                                    <h2 className="text-xl font-bold text-foreground">{selectedCodeInfo.title}</h2>
+                                    <button
+                                        onClick={() => setCodeModalOpen(false)}
+                                        className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-all"
+                                    >
+                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setCodeModalOpen(false)}
-                                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-all"
-                                >
-                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="p-6 space-y-6">
-                            <div>
-                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Description</h3>
-                                <p className="text-foreground leading-relaxed">{selectedCodeInfo.description}</p>
                             </div>
 
-                            <div>
-                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Key Details</h3>
-                                <ul className="space-y-2">
-                                    {selectedCodeInfo.details.map((detail, i) => (
-                                        <li key={i} className="flex items-start gap-3 text-sm">
-                                            <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                                            <span className="text-foreground/80">{detail}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                            <div className="p-6 space-y-6">
+                                <div>
+                                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Description</h3>
+                                    <p className="text-foreground leading-relaxed">{selectedCodeInfo.description}</p>
+                                </div>
 
-                            <div className="pt-4 border-t border-border flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        copyCodeToClipboard(selectedCodeInfo.code);
-                                    }}
-                                    className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedCodes.has(selectedCodeInfo.code)
-                                        ? 'bg-emerald-500 text-white'
-                                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                                        }`}
-                                >
-                                    {selectedCodes.has(selectedCodeInfo.code) ? (
-                                        <>
-                                            <CheckCircle className="h-4 w-4" />
-                                            Copied to Clipboard!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy className="h-4 w-4" />
-                                            Copy Code
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => setCodeModalOpen(false)}
-                                    className="px-6 py-3 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-all"
-                                >
-                                    Close
-                                </button>
+                                <div>
+                                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Key Details</h3>
+                                    <ul className="space-y-2">
+                                        {selectedCodeInfo.details.map((detail, i) => (
+                                            <li key={i} className="flex items-start gap-3 text-sm">
+                                                <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                                <span className="text-foreground/80">{detail}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <div className="pt-4 border-t border-border flex gap-3">
+                                    <button
+                                        onClick={() => {
+                                            copyCodeToClipboard(selectedCodeInfo.code);
+                                        }}
+                                        className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedCodes.has(selectedCodeInfo.code)
+                                            ? 'bg-emerald-500 text-white'
+                                            : 'bg-muted hover:bg-muted/80 text-foreground'
+                                            }`}
+                                    >
+                                        {selectedCodes.has(selectedCodeInfo.code) ? (
+                                            <>
+                                                <CheckCircle className="h-4 w-4" />
+                                                Copied to Clipboard!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy className="h-4 w-4" />
+                                                Copy Code
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setCodeModalOpen(false)}
+                                        className="px-6 py-3 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-all"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
 

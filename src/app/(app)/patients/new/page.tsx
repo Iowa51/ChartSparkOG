@@ -2,7 +2,7 @@
 
 import { Header } from "@/components/layout";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     User,
     Calendar,
@@ -19,20 +19,33 @@ import Link from "next/link";
 
 export default function NewPatientPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const returnTo = searchParams.get("returnTo");
+
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [newPatientId, setNewPatientId] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
+
+        // Generate a new patient ID (in production, this would come from the API)
+        const generatedId = `p${Date.now()}`;
+
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
+
+        setNewPatientId(generatedId);
         setIsSaving(false);
         setSaved(true);
-        // Faster redirect after showing success
-        setTimeout(() => {
-            router.push('/patients');
-        }, 1500);
+
+        // Only auto-redirect if NOT from note creation flow
+        if (!returnTo) {
+            setTimeout(() => {
+                router.push('/patients');
+            }, 1500);
+        }
     };
 
     return (
@@ -236,14 +249,37 @@ export default function NewPatientPage() {
                             <CheckCircle2 className="h-10 w-10 text-emerald-600" />
                         </div>
                         <h2 className="text-2xl font-black text-foreground mb-2 italic tracking-tight">Record Synchronized</h2>
-                        <p className="text-muted-foreground font-medium mb-8">Jane Doe has been successfully added to the EHR system.</p>
+                        <p className="text-muted-foreground font-medium mb-8">Patient has been successfully added to the EHR system.</p>
                         <div className="flex gap-4 justify-center">
-                            <Link href="/patients" className="px-6 py-3 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-bold transition-all">
-                                Done
-                            </Link>
-                            <Link href="/notes/new" className="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 transition-all">
-                                Start Initial Note
-                            </Link>
+                            {returnTo ? (
+                                <>
+                                    <Link
+                                        href="/patients"
+                                        className="px-6 py-3 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-semibold transition-all"
+                                    >
+                                        Done
+                                    </Link>
+                                    <Link
+                                        href={`/notes/new?patientId=${newPatientId}`}
+                                        className="px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground rounded-xl font-black shadow-lg shadow-primary/30 transition-all active:scale-95 flex items-center gap-2"
+                                    >
+                                        <FileText className="h-5 w-5" />
+                                        Start Initial Note
+                                    </Link>
+                                </>
+                            ) : (
+                                <>
+                                    <Link href="/patients" className="px-6 py-3 bg-muted hover:bg-muted/80 text-foreground rounded-xl font-bold transition-all">
+                                        Done
+                                    </Link>
+                                    <Link
+                                        href={`/notes/new?patientId=${newPatientId}`}
+                                        className="px-6 py-3 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 transition-all"
+                                    >
+                                        Start Initial Note
+                                    </Link>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
