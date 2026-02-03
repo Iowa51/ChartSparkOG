@@ -4,7 +4,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
+import { logAuditEvent, logAuditEventAsync, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
@@ -41,9 +41,22 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
         const search = searchParams.get('search');
 
+        // OPTIMIZATION: Select only columns needed for patient list view
         let query = supabase
             .from('patients')
-            .select('*')
+            .select(`
+                id,
+                first_name,
+                last_name,
+                date_of_birth,
+                gender,
+                status,
+                phone,
+                email,
+                insurance_provider,
+                created_at,
+                updated_at
+            `)
             .eq('organization_id', profile.organization_id)
             .order('last_name', { ascending: true });
 
@@ -71,8 +84,8 @@ export async function GET(request: NextRequest) {
 
         if (error) throw error;
 
-        // Log PHI access - viewing patient list
-        await logAuditEvent({
+        // OPTIMIZATION: Fire-and-forget audit logging - don't block response
+        logAuditEventAsync({
             eventType: 'PATIENT_SEARCH',
             userId: user.id,
             userEmail: user.email,

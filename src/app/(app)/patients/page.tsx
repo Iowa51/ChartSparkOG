@@ -1,7 +1,7 @@
 "use client";
 
 import { Header } from "@/components/layout";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
     Search,
@@ -32,16 +32,32 @@ const statusDots = {
 export default function PatientsPage() {
     const [localPatients, setLocalPatients] = useState<Patient[]>(initialPatients);
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    const filteredPatients = localPatients.filter(p => {
-        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.mrn.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = !statusFilter || p.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    // Debounce search input to avoid filtering on every keystroke
+    const handleSearchChange = useCallback((value: string) => {
+        setSearchQuery(value);
+        // Debounce the actual filtering
+        const timeoutId = setTimeout(() => {
+            setDebouncedSearch(value);
+        }, 150);
+        return () => clearTimeout(timeoutId);
+    }, []);
+
+    // OPTIMIZATION: Memoize filtered results to avoid recalculation on unrelated state changes
+    const filteredPatients = useMemo(() => {
+        const searchLower = debouncedSearch.toLowerCase();
+        return localPatients.filter(p => {
+            const matchesSearch = !searchLower ||
+                p.name.toLowerCase().includes(searchLower) ||
+                p.mrn.toLowerCase().includes(searchLower);
+            const matchesStatus = !statusFilter || p.status === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }, [localPatients, debouncedSearch, statusFilter]);
 
     const handleUpdatePatient = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -75,7 +91,8 @@ export default function PatientsPage() {
                 ]}
             />
 
-            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* OPTIMIZATION: Reduced animation to prevent layout thrashing */}
+            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full animate-in fade-in duration-300">
                 {/* Controls Toolbar */}
                 <div className="flex flex-col md:flex-row gap-4 mb-6 justify-between items-stretch md:items-center bg-card/40 p-4 rounded-2xl border border-border/50 backdrop-blur-sm shadow-sm ring-1 ring-border/5">
                     {/* Search */}
@@ -86,7 +103,7 @@ export default function PatientsPage() {
                         <input
                             type="text"
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => handleSearchChange(e.target.value)}
                             placeholder="Search by Name, MRN, or DOB..."
                             className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-card text-foreground shadow-sm ring-1 ring-inset ring-border placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-primary text-sm transition-all focus:shadow-md"
                         />
@@ -113,6 +130,7 @@ export default function PatientsPage() {
                             <button
                                 onClick={() => {
                                     setSearchQuery("");
+                                    setDebouncedSearch("");
                                     setStatusFilter(null);
                                 }}
                                 className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-red-500 transition-colors bg-muted/30 rounded-xl border border-border/50"

@@ -149,6 +149,17 @@ export function getRiskLevel(eventType: AuditEventType): RiskLevel {
 }
 
 /**
+ * Log an audit event (fire-and-forget for non-critical events)
+ * OPTIMIZATION: Non-blocking - doesn't wait for DB write to complete
+ */
+export function logAuditEventAsync(entry: AuditLogEntry): void {
+    // Fire and forget - don't await
+    logAuditEvent(entry).catch(err => {
+        console.error('Async audit log error:', err);
+    });
+}
+
+/**
  * Log an audit event
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {

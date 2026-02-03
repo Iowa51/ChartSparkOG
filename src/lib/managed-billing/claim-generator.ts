@@ -7,6 +7,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { devError } from '@/lib/logging/safe-logger';
 
 export interface GeneratedClaim {
     encounterId: string;
@@ -43,11 +44,17 @@ export async function generateClaimFromEncounter(
     }
 
     try {
-        // Get encounter with related data
+        // OPTIMIZATION: Select only required columns instead of *
         const { data: encounter, error: encounterError } = await supabase
             .from('encounters')
             .select(`
-                *,
+                id,
+                organization_id,
+                patient_id,
+                provider_id,
+                encounter_type,
+                status,
+                scheduled_start,
                 patients (
                     id, first_name, last_name, date_of_birth,
                     insurance_provider, insurance_id, insurance_group,
@@ -144,7 +151,7 @@ export async function generateClaimFromEncounter(
             .single();
 
         if (claimError) {
-            console.error('[ClaimGenerator] Insert error:', claimError);
+            devError('ClaimGenerator', 'Insert error:', claimError);
             return { success: false, error: 'Failed to create claim' };
         }
 
@@ -158,7 +165,7 @@ export async function generateClaimFromEncounter(
         };
 
     } catch (error) {
-        console.error('[ClaimGenerator] Error:', error);
+        devError('ClaimGenerator', 'Error:', error);
         return { success: false, error: 'Claim generation failed' };
     }
 }
@@ -208,17 +215,26 @@ export async function batchGenerateClaims(
         .in('encounter_id', encounters.map((e: { id: string }) => e.id));
 
     const existingEncounterIds = new Set(existingClaims?.map((c: { encounter_id: string }) => c.encounter_id) || []);
-    const unbilledEncounters = encounters.filter((e: { id: string }) => !existingEncounterIds.has(e.id));
+    const unbilledEncounters: Array<{ id: string }> = encounters.filter((e: { id: string }) => !existingEncounterIds.has(e.id));
 
     let generated = 0;
     const errors: string[] = [];
 
-    for (const encounter of unbilledEncounters) {
-        const result = await generateClaimFromEncounter(encounter.id);
-        if (result.success) {
-            generated++;
-        } else {
-            errors.push(`${encounter.id}: ${result.error || result.validationErrors?.join(', ')}`);
+    // OPTIMIZATION: Process claims in parallel with concurrency control
+    const CONCURRENCY_LIMIT = 5;
+    for (let i = 0; i < unbilledEncounters.length; i += CONCURRENCY_LIMIT) {
+        const batch = unbilledEncounters.slice(i, i + CONCURRENCY_LIMIT);
+        const results = await Promise.all(
+            batch.map(encounter => generateClaimFromEncounter(encounter.id))
+        );
+
+        for (let j = 0; j < results.length; j++) {
+            const result = results[j];
+            if (result.success) {
+                generated++;
+            } else {
+                errors.push(`${batch[j].id}: ${result.error || result.validationErrors?.join(', ')}`);
+            }
         }
     }
 
@@ -330,6 +346,7 @@ function generateClaimNumber(organizationId: string): string {
 
 /**
  * Calculate billed amount based on fee schedule
+ * OPTIMIZED: Batch fetches all CPT codes in a single query
  */
 async function calculateBilledAmount(
     supabase: Awaited<ReturnType<typeof createClient>>,
@@ -337,26 +354,35 @@ async function calculateBilledAmount(
     procedureCodes: string[],
     payerName?: string
 ): Promise<number> {
-    if (!supabase) return 0;
+    if (!supabase || procedureCodes.length === 0) return 0;
 
+    // OPTIMIZATION: Batch fetch all fee schedule items at once
+    const { data: feeItems } = await supabase
+        .from('fee_schedule_items')
+        .select(`
+            cpt_code,
+            allowed_amount,
+            fee_schedules!inner(organization_id, payer_name, is_default)
+        `)
+        .eq('fee_schedules.organization_id', organizationId)
+        .in('cpt_code', procedureCodes)
+        .order('fee_schedules.is_default', { ascending: true });
+
+    // Create lookup map for O(1) access
+    const feeMap = new Map<string, number>();
+    for (const item of feeItems || []) {
+        // Only set if not already present (respects the ordering by is_default)
+        if (!feeMap.has(item.cpt_code)) {
+            feeMap.set(item.cpt_code, item.allowed_amount);
+        }
+    }
+
+    // Calculate total using map lookups
     let totalAmount = 0;
-
     for (const code of procedureCodes) {
-        // Try to find fee schedule entry
-        const { data: feeItem } = await supabase
-            .from('fee_schedule_items')
-            .select(`
-                allowed_amount,
-                fee_schedules!inner(organization_id, payer_name, is_default)
-            `)
-            .eq('fee_schedules.organization_id', organizationId)
-            .eq('cpt_code', code)
-            .order('fee_schedules.is_default', { ascending: true })
-            .limit(1)
-            .maybeSingle();
-
-        if (feeItem) {
-            totalAmount += feeItem.allowed_amount;
+        const feeAmount = feeMap.get(code);
+        if (feeAmount !== undefined) {
+            totalAmount += feeAmount;
         } else {
             // Use default Medicare rates if no fee schedule
             totalAmount += getDefaultRate(code);

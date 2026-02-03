@@ -66,6 +66,30 @@ const defaultHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // OPTIMIZATION: Image optimization settings
+  images: {
+    // Use modern formats for better compression
+    formats: ['image/avif', 'image/webp'],
+    // Optimize images at these sizes
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    // Minimize layout shift
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+  },
+
+  // OPTIMIZATION: Enable compression
+  compress: true,
+
+  // OPTIMIZATION: Minimize bundle size
+  reactStrictMode: true,
+  poweredByHeader: false, // Remove X-Powered-By header
+
+  // OPTIMIZATION: Enable experimental features for better performance
+  experimental: {
+    // Optimize package imports to reduce bundle size
+    optimizePackageImports: ['lucide-react', 'recharts', '@radix-ui/react-icons'],
+  },
+
   // Apply security headers to all routes
   async headers() {
     return [

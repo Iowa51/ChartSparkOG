@@ -1,11 +1,12 @@
 /**
  * ERA (Electronic Remittance Advice) Service
  * Processes 835 files to automatically post payments
- * 
+ *
  * NOTE: This is INFRASTRUCTURE - inactive until clearinghouse is configured.
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { devLog, devError, devWarn } from '@/lib/logging/safe-logger';
 
 export interface ERAPayment {
     patientControlNumber: string;
@@ -68,57 +69,77 @@ export async function processERAFile(
         let matched = 0;
         let unmatched = 0;
 
-        // Process each payment
+        // OPTIMIZATION: Batch fetch all claims at once instead of N+1 queries
+        const claimNumbers = payments.map(p => p.patientControlNumber);
+        const { data: claims } = await supabase
+            .from('billing_claims')
+            .select('id, status, claim_number')
+            .eq('organization_id', organizationId)
+            .in('claim_number', claimNumbers);
+
+        // Create lookup map for O(1) access
+        type ClaimRecord = { id: string; status: string; claim_number: string };
+        const claimMap = new Map<string, ClaimRecord>(
+            (claims || []).map((c: ClaimRecord) => [c.claim_number, c])
+        );
+
+        // Prepare batch inserts for ERA payments
+        const eraPaymentsToInsert = payments.map(payment => {
+            const claim = claimMap.get(payment.patientControlNumber);
+            return {
+                era_file_id: eraFile.id,
+                claim_id: claim?.id || null,
+                payer_claim_number: payment.payerClaimNumber,
+                patient_control_number: payment.patientControlNumber,
+                service_date: payment.serviceDate,
+                billed_amount: payment.billedAmount,
+                allowed_amount: payment.allowedAmount,
+                paid_amount: payment.paidAmount,
+                patient_responsibility: payment.patientResponsibility,
+                adjustment_reason_codes: payment.adjustments,
+                matched_at: claim ? new Date().toISOString() : null,
+            };
+        });
+
+        // Batch insert all ERA payments
+        await supabase.from('era_payments').insert(eraPaymentsToInsert);
+
+        // Prepare batch updates for matched claims
+        const claimUpdates: Array<{ id: string; payment: ERAPayment }> = [];
         for (const payment of payments) {
-            // Try to match to our claim
-            const { data: claim } = await supabase
-                .from('billing_claims')
-                .select('id, status')
-                .eq('organization_id', organizationId)
-                .eq('claim_number', payment.patientControlNumber)
-                .single();
-
-            // Record ERA payment
-            await supabase
-                .from('era_payments')
-                .insert({
-                    era_file_id: eraFile.id,
-                    claim_id: claim?.id || null,
-                    payer_claim_number: payment.payerClaimNumber,
-                    patient_control_number: payment.patientControlNumber,
-                    service_date: payment.serviceDate,
-                    billed_amount: payment.billedAmount,
-                    allowed_amount: payment.allowedAmount,
-                    paid_amount: payment.paidAmount,
-                    patient_responsibility: payment.patientResponsibility,
-                    adjustment_reason_codes: payment.adjustments,
-                    matched_at: claim ? new Date().toISOString() : null,
-                });
-
+            const claim = claimMap.get(payment.patientControlNumber);
             if (claim) {
                 matched++;
-
-                // Auto-post payment to claim
-                await supabase
-                    .from('billing_claims')
-                    .update({
-                        status: 'paid',
-                        paid_amount: payment.paidAmount,
-                        allowed_amount: payment.allowedAmount,
-                        patient_responsibility: payment.patientResponsibility,
-                        adjustment_amount: payment.adjustments.reduce((sum, a) => sum + a.amount, 0),
-                        payer_claim_number: payment.payerClaimNumber,
-                        paid_at: new Date().toISOString(),
-                        era_received: true,
-                        era_received_at: new Date().toISOString(),
-                        era_file_id: eraFile.id,
-                        payment_verified: true,
-                    })
-                    .eq('id', claim.id);
-
+                claimUpdates.push({ id: claim.id, payment });
             } else {
                 unmatched++;
             }
+        }
+
+        // Update matched claims in parallel (with concurrency limit)
+        const BATCH_SIZE = 10;
+        for (let i = 0; i < claimUpdates.length; i += BATCH_SIZE) {
+            const batch = claimUpdates.slice(i, i + BATCH_SIZE);
+            await Promise.all(
+                batch.map(({ id, payment }) =>
+                    supabase
+                        .from('billing_claims')
+                        .update({
+                            status: 'paid',
+                            paid_amount: payment.paidAmount,
+                            allowed_amount: payment.allowedAmount,
+                            patient_responsibility: payment.patientResponsibility,
+                            adjustment_amount: payment.adjustments.reduce((sum, a) => sum + a.amount, 0),
+                            payer_claim_number: payment.payerClaimNumber,
+                            paid_at: new Date().toISOString(),
+                            era_received: true,
+                            era_received_at: new Date().toISOString(),
+                            era_file_id: eraFile.id,
+                            payment_verified: true,
+                        })
+                        .eq('id', id)
+                )
+            );
         }
 
         // Update ERA file status
@@ -135,7 +156,7 @@ export async function processERAFile(
         return { success: true, matched, unmatched };
 
     } catch (error) {
-        console.error('[ERA] Processing error:', error);
+        devError('ERA', 'Processing error:', error);
         return { success: false, matched: 0, unmatched: 0, error: 'Processing failed' };
     }
 }
@@ -341,7 +362,7 @@ export async function matchERAPaymentToClaim(
         return { success: true };
 
     } catch (error) {
-        console.error('[ERA] Match error:', error);
+        devError('ERA', 'Match error:', error);
         return { success: false, error: 'Failed to match payment' };
     }
 }
@@ -353,7 +374,7 @@ export async function pollForERAFiles(): Promise<void> {
     const supabase = await createClient();
 
     if (!supabase) {
-        console.warn('[ERA] No database - skipping poll');
+        devWarn('ERA', 'No database - skipping poll');
         return;
     }
 
@@ -366,9 +387,9 @@ export async function pollForERAFiles(): Promise<void> {
     for (const config of configs || []) {
         try {
             // Would connect to SFTP and download ERA files
-            console.log(`[ERA] Would poll from ${config.clearinghouse}`);
+            devLog('ERA', `Would poll from ${config.clearinghouse}`);
         } catch (error) {
-            console.error(`[ERA] Poll error for ${config.clearinghouse}:`, error);
+            devError('ERA', `Poll error for ${config.clearinghouse}:`, error);
         }
     }
 }

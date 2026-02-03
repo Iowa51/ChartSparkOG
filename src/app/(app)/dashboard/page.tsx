@@ -104,7 +104,8 @@ export default function DashboardPage() {
                 breadcrumbs={[{ label: "Dashboard" }]}
             />
 
-            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* OPTIMIZATION: Reduced animation duration and use GPU-accelerated transforms */}
+            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full space-y-8 animate-in fade-in duration-300">
                 {/* Hero Section with Stats */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Welcome Card */}
@@ -204,8 +205,8 @@ export default function DashboardPage() {
                     </div>
                 </section>
 
-                {/* Recent Notes */}
-                <section className="bg-card rounded-xl border border-border overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-600">
+                {/* Recent Notes - OPTIMIZATION: Simplified animation, removed layout-thrashing slide */}
+                <section className="bg-card rounded-xl border border-border overflow-hidden animate-in fade-in duration-300">
                     <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-muted/30">
                         <h2 className="text-lg font-semibold text-foreground">
                             Recent Notes

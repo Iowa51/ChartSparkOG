@@ -1,7 +1,7 @@
 "use client";
 
 import { Header } from "@/components/layout";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
     Search,
@@ -40,20 +40,42 @@ const statusStyles = {
 
 export default function EncountersPage() {
     const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
     const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-    const filteredEncounters = encounters.filter(e => {
-        const patient = patients.find(p => p.id === e.patientId);
-        const matchesSearch = patient?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            e.chiefComplaint.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = !statusFilter || e.status === statusFilter;
-        const matchesType = !typeFilter || e.type.toLowerCase().includes(typeFilter.toLowerCase());
-        return matchesSearch && matchesStatus && matchesType;
-    });
+    // OPTIMIZATION: Debounce search input to avoid filtering on every keystroke
+    const handleSearchChange = useCallback((value: string) => {
+        setSearchQuery(value);
+        const timeoutId = setTimeout(() => {
+            setDebouncedSearch(value);
+        }, 150);
+        return () => clearTimeout(timeoutId);
+    }, []);
+
+    // OPTIMIZATION: Create patient lookup map for O(1) access instead of O(n) find() calls
+    const patientMap = useMemo(() =>
+        new Map(patients.map(p => [p.id, p])),
+        [] // patients is static, no deps needed
+    );
+
+    // OPTIMIZATION: Memoize filtered results
+    const filteredEncounters = useMemo(() => {
+        const searchLower = debouncedSearch.toLowerCase();
+        return encounters.filter(e => {
+            const patient = patientMap.get(e.patientId);
+            const matchesSearch = !searchLower ||
+                patient?.name.toLowerCase().includes(searchLower) ||
+                e.chiefComplaint.toLowerCase().includes(searchLower);
+            const matchesStatus = !statusFilter || e.status === statusFilter;
+            const matchesType = !typeFilter || e.type.toLowerCase().includes(typeFilter.toLowerCase());
+            return matchesSearch && matchesStatus && matchesType;
+        });
+    }, [debouncedSearch, statusFilter, typeFilter, patientMap]);
 
     const resetFilters = () => {
         setSearchQuery("");
+        setDebouncedSearch("");
         setStatusFilter(null);
         setTypeFilter(null);
     };
@@ -69,7 +91,8 @@ export default function EncountersPage() {
                 ]}
             />
 
-            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {/* OPTIMIZATION: Reduced animation to prevent layout thrashing */}
+            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full animate-in fade-in duration-300">
                 {/* Controls Toolbar */}
                 <div className="flex flex-col gap-4 mb-6 bg-card/40 p-4 rounded-2xl border border-border/50 backdrop-blur-sm shadow-sm ring-1 ring-border/5">
                     <div className="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
@@ -81,7 +104,7 @@ export default function EncountersPage() {
                             <input
                                 type="text"
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 placeholder="Search by patient or concern..."
                                 className="block w-full pl-10 pr-3 py-2.5 border-none rounded-xl bg-card text-foreground shadow-sm ring-1 ring-inset ring-border placeholder:text-muted-foreground focus:ring-2 focus:ring-inset focus:ring-primary transition-all focus:shadow-md"
                             />
@@ -179,6 +202,8 @@ export default function EncountersPage() {
                             <tbody className="divide-y divide-border">
                                 {filteredEncounters.map((encounter) => {
                                     const statusConfig = statusStyles[encounter.status];
+                                    // OPTIMIZATION: Use map lookup instead of repeated find() calls
+                                    const patient = patientMap.get(encounter.patientId);
                                     return (
                                         <tr
                                             key={encounter.id}
@@ -186,14 +211,14 @@ export default function EncountersPage() {
                                         >
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${patients.find(p => p.id === encounter.patientId)?.avatarColor || "bg-primary/10 text-primary"}`}>
-                                                        {patients.find(p => p.id === encounter.patientId)?.initials || "??"}
+                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold ${patient?.avatarColor || "bg-primary/10 text-primary"}`}>
+                                                        {patient?.initials || "??"}
                                                     </div>
                                                     <Link
                                                         href={`/patients/${encounter.patientId}`}
                                                         className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors"
                                                     >
-                                                        {patients.find(p => p.id === encounter.patientId)?.name || "Unknown Patient"}
+                                                        {patient?.name || "Unknown Patient"}
                                                     </Link>
                                                 </div>
                                             </td>

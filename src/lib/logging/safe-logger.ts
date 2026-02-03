@@ -76,3 +76,25 @@ export function sanitizeError(error: unknown): string {
     }
     return 'Unknown error';
 }
+
+/**
+ * OPTIMIZATION: Development-only logging
+ * These logs are completely stripped in production for performance
+ */
+export function devLog(prefix: string, ...args: unknown[]): void {
+    if (!isProduction) {
+        console.log(`[${prefix}]`, ...args);
+    }
+}
+
+export function devWarn(prefix: string, ...args: unknown[]): void {
+    if (!isProduction) {
+        console.warn(`[${prefix}]`, ...args);
+    }
+}
+
+export function devError(prefix: string, ...args: unknown[]): void {
+    if (!isProduction) {
+        console.error(`[${prefix}]`, ...args);
+    }
+}

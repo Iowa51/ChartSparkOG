@@ -9,6 +9,7 @@
  */
 
 import { AzureOpenAI } from "openai";
+import { devLog, devWarn, devError } from '@/lib/logging/safe-logger';
 
 class SafeAzureOpenAIService {
     private client: AzureOpenAI | null = null;
@@ -31,13 +32,13 @@ class SafeAzureOpenAIService {
                 });
                 this.deploymentName = deploymentName;
                 this.isConfigured = true;
-                console.log('[Azure OpenAI] Service configured successfully');
+                devLog('Azure OpenAI', 'Service configured successfully');
             } catch (error) {
-                console.warn('[Azure OpenAI] Failed to initialize client:', error);
+                devWarn('Azure OpenAI', 'Failed to initialize client:', error);
                 this.isConfigured = false;
             }
         } else {
-            console.log('[Azure OpenAI] Running in DEMO mode - no Azure credentials configured');
+            devLog('Azure OpenAI', 'Running in DEMO mode - no Azure credentials configured');
             this.isConfigured = false;
         }
     }
@@ -92,7 +93,7 @@ class SafeAzureOpenAIService {
 
         try {
             const startTime = Date.now();
-            console.log('[Azure OpenAI] Starting diagnosis request...');
+            devLog('Azure OpenAI', 'Starting diagnosis request...');
 
             const response = await this.client!.chat.completions.create({
                 model: this.deploymentName,
@@ -108,8 +109,8 @@ class SafeAzureOpenAIService {
             const content = response.choices[0].message?.content || '';
             const processingTime = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
 
-            console.log('[Azure OpenAI] Response received in', processingTime);
-            console.log('[Azure OpenAI] Content length:', content.length);
+            devLog('Azure OpenAI', 'Response received in', processingTime);
+            devLog('Azure OpenAI', 'Content length:', content.length);
             // SEC-REMEDIATION: Content preview removed - contains PHI
 
             // Try to parse as JSON, otherwise return raw content
@@ -119,11 +120,11 @@ class SafeAzureOpenAIService {
                 const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
                     jsonContent = jsonMatch[1];
-                    console.log('[Azure OpenAI] Extracted JSON from code block');
+                    devLog('Azure OpenAI', 'Extracted JSON from code block');
                 }
 
                 const parsed = JSON.parse(jsonContent);
-                console.log('[Azure OpenAI] Successfully parsed JSON');
+                devLog('Azure OpenAI', 'Successfully parsed JSON');
 
                 // Normalize the response to ensure correct format
                 const normalized = this.normalizeDiagnosisResponse(parsed);
@@ -135,7 +136,7 @@ class SafeAzureOpenAIService {
                     processingTime
                 };
             } catch (parseError) {
-                console.error('[Azure OpenAI] JSON parse error:', parseError);
+                devError('Azure OpenAI', 'JSON parse error:', parseError);
                 // SEC-REMEDIATION: Raw content removed from logs - contains PHI
                 return {
                     rawAnalysis: content,
@@ -145,7 +146,7 @@ class SafeAzureOpenAIService {
                 };
             }
         } catch (error) {
-            console.error('[Azure OpenAI] Diagnose error:', error);
+            devError('Azure OpenAI', 'Diagnose error:', error);
             throw error;
         }
     }
@@ -232,7 +233,7 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
                 return { rawPlan: content, fromCache: false, modelUsed: this.deploymentName, processingTime };
             }
         } catch (error) {
-            console.error('[Azure OpenAI] Treatment plan error:', error);
+            devError('Azure OpenAI', 'Treatment plan error:', error);
             return this.getDemoTreatmentPlan();
         }
     }
@@ -265,8 +266,115 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
 
             return response.choices[0].message?.content || "I couldn't generate a response. Please try again.";
         } catch (error) {
-            console.error('[Azure OpenAI] Chat error:', error);
+            devError('Azure OpenAI', 'Chat error:', error);
             return "I encountered an error processing your request. Please try again.";
+        }
+    }
+
+    /**
+     * OPTIMIZATION: Streaming chat for real-time token display
+     * Returns an async generator that yields tokens as they arrive
+     */
+    async *chatStream(
+        userMessage: string,
+        conversationHistory: Array<{ role: string, content: string }> = []
+    ): AsyncGenerator<string, void, unknown> {
+        if (!this.isAvailable()) {
+            yield "I'm currently running in demo mode. Azure OpenAI is not configured.";
+            return;
+        }
+
+        try {
+            const messages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
+                {
+                    role: "system" as const,
+                    content: "You are ChartSpark AI, a clinical decision support assistant for mental health and geriatric care professionals. Provide evidence-based insights. For emergencies, always recommend contacting emergency services."
+                },
+                ...conversationHistory.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+                { role: "user" as const, content: userMessage }
+            ];
+
+            const stream = await this.client!.chat.completions.create({
+                model: this.deploymentName,
+                messages: messages,
+                max_tokens: 1000,
+                temperature: 0.7,
+                top_p: 0.95,
+                stream: true, // Enable streaming
+            });
+
+            for await (const chunk of stream) {
+                const content = chunk.choices[0]?.delta?.content;
+                if (content) {
+                    yield content;
+                }
+            }
+        } catch (error) {
+            devError('Azure OpenAI', 'Stream error:', error);
+            yield "I encountered an error processing your request.";
+        }
+    }
+
+    /**
+     * OPTIMIZATION: Streaming SOAP note generation
+     * Enables real-time display as the note is being generated
+     */
+    async *generateSOAPNoteStream(sessionData: {
+        subjective: string;
+        objective: string;
+        symptoms: string[];
+        assessment: string;
+    }): AsyncGenerator<string, void, unknown> {
+        if (!this.isAvailable()) {
+            yield this.getDemoSOAPNote(sessionData);
+            return;
+        }
+
+        const prompt = `You are a clinical documentation specialist. Generate a detailed, professional SOAP note for a mental health or primary care visit.
+
+Based on the following observations provided by the clinician:
+
+**Patient Observations:**
+- Subjective complaints: ${sessionData.subjective || 'General follow-up visit'}
+- Objective findings: ${sessionData.objective || 'To be assessed'}
+- Key symptoms noted: ${sessionData.symptoms.join(', ') || 'None specified'}
+- Initial clinical impression: ${sessionData.assessment || 'Stable condition'}
+
+**Instructions:**
+1. EXPAND on each observation with appropriate clinical detail and professional language
+2. Add realistic vital signs and mental status exam findings to the Objective section
+3. Include relevant ICD-10 codes in the Assessment
+4. Create a comprehensive treatment Plan with specific interventions
+5. Make the note sound natural and varied - avoid repetitive phrasing
+6. The note should be 200-400 words total, professionally formatted
+
+Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** sections.`;
+
+        try {
+            const stream = await this.client!.chat.completions.create({
+                model: this.deploymentName,
+                messages: [
+                    {
+                        role: "system",
+                        content: "You are an expert clinical documentation specialist who writes detailed, professional SOAP notes. Each note should be unique with varied phrasing. Never generate identical notes."
+                    },
+                    { role: "user", content: prompt }
+                ],
+                max_tokens: 1500,
+                temperature: 0.7,
+                top_p: 0.95,
+                stream: true,
+            });
+
+            for await (const chunk of stream) {
+                const content = chunk.choices[0]?.delta?.content;
+                if (content) {
+                    yield content;
+                }
+            }
+        } catch (error) {
+            devError('Azure OpenAI', 'SOAP stream error:', error);
+            yield this.getDemoSOAPNote(sessionData);
         }
     }
 
@@ -320,7 +428,7 @@ Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** se
 
             return response.choices[0].message?.content || this.getDemoSOAPNote(sessionData);
         } catch (error) {
-            console.error('[Azure OpenAI] SOAP note error:', error);
+            devError('Azure OpenAI', 'SOAP note error:', error);
             return this.getDemoSOAPNote(sessionData);
         }
     }
