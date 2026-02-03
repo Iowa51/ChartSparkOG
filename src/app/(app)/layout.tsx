@@ -9,8 +9,8 @@ export default function AppLayout({
 }: {
     children: React.ReactNode;
 }) {
-    // Only enable session timeout in production (when not in demo mode)
-    const enableTimeout = process.env.NEXT_PUBLIC_DEMO_MODE !== 'true';
+    // Phase 2: Session timeout always enabled for HIPAA compliance
+    const enableTimeout = true;
 
     return (
         <DemoAuthGuard>

@@ -174,24 +174,26 @@ export async function updateSession(request: NextRequest) {
         }
 
         // SEC-MFA: Check MFA requirement for high-privilege roles
-        // TEMPORARILY DISABLED - Re-enable when MFA is properly set up
-        // const isMFAExemptPath = mfaExemptPaths.some(exempt => path.startsWith(exempt));
-        // 
-        // if (mfaRequiredRoles.includes(userRole) && !isMFAExemptPath) {
-        //     const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        //     if (mfaError) {
-        //         console.error('Middleware: MFA check failed', mfaError);
-        //         return NextResponse.redirect(new URL('/settings/security/mfa?required=true', request.url));
-        //     }
-        //     if (mfaData.currentLevel !== 'aal2') {
-        //         if (mfaData.nextLevel === 'aal2') {
-        //             return NextResponse.redirect(new URL('/auth/mfa-challenge?redirect=' + encodeURIComponent(path), request.url));
-        //         } else {
-        //             console.warn('Middleware: MFA required but not enrolled', user.email);
-        //             return NextResponse.redirect(new URL('/settings/security/mfa?required=true&role=' + userRole, request.url));
-        //         }
-        //     }
-        // }
+        // Phase 2: MFA enforcement re-enabled for HIPAA compliance
+        const isMFAExemptPath = mfaExemptPaths.some(exempt => path.startsWith(exempt));
+
+        if (mfaRequiredRoles.includes(userRole) && !isMFAExemptPath) {
+            const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (mfaError) {
+                console.error('Middleware: MFA check failed', mfaError);
+                return NextResponse.redirect(new URL('/settings/security/mfa?required=true', request.url));
+            }
+            if (mfaData.currentLevel !== 'aal2') {
+                if (mfaData.nextLevel === 'aal2') {
+                    // User has MFA enrolled but hasn't verified this session
+                    return NextResponse.redirect(new URL('/auth/mfa-challenge?redirect=' + encodeURIComponent(path), request.url));
+                } else {
+                    // User needs to enroll in MFA
+                    console.warn('Middleware: MFA required but not enrolled', user.email);
+                    return NextResponse.redirect(new URL('/settings/security/mfa?required=true&role=' + userRole, request.url));
+                }
+            }
+        }
     }
 
     return supabaseResponse;

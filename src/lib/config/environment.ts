@@ -32,13 +32,13 @@ export function isDemoMode(): boolean {
     // Parse the demo mode setting
     const isExplicitlyEnabled = demoModeEnv === 'true' || demoModeEnv === '1';
 
-    // In production, log a warning if demo mode is enabled
-    // TODO (Phase 2): Enforce demo mode disabled in production
+    // Phase 2: Enforce demo mode disabled in production
     if (process.env.NODE_ENV === 'production' && isExplicitlyEnabled) {
-        console.warn(
-            '[SECURITY WARNING] Demo mode is enabled in production. ' +
-            'This bypasses security controls and should be disabled.'
+        console.error(
+            '[SECURITY BLOCK] Demo mode cannot be enabled in production. ' +
+            'Ignoring NEXT_PUBLIC_DEMO_MODE=true setting.'
         );
+        return false; // Force demo mode off in production
     }
 
     return isExplicitlyEnabled;
@@ -90,20 +90,20 @@ export function getEnvironmentConfig(): EnvironmentConfig {
             // Demo mode status
             demoMode,
 
-            // Security checks should be strict in production (unless demo mode override)
-            // TODO (Phase 2): Remove demo mode exception
-            strictSecurityChecks: production && !demoMode,
+            // Security checks should be strict in production
+            // Phase 2: Demo mode exception removed
+            strictSecurityChecks: production,
 
             // Audit logging should always be enabled in production
             auditLogging: production || appEnv === 'staging',
 
-            // MFA should be required in production (unless demo mode override)
-            // TODO (Phase 2): Remove demo mode exception
-            mfaRequired: production && !demoMode,
+            // MFA should be required in production
+            // Phase 2: Demo mode exception removed - MFA now enforced
+            mfaRequired: production,
 
-            // Session timeout should be enabled in production (unless demo mode override)
-            // TODO (Phase 2): Remove demo mode exception
-            sessionTimeout: production && !demoMode,
+            // Session timeout should be enabled in production
+            // Phase 2: Demo mode exception removed - timeout now enforced
+            sessionTimeout: production,
         },
     };
 }
