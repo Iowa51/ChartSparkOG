@@ -1,20 +1,45 @@
 /**
  * Stripe Webhook Handler
  * Processes Stripe events for subscription management
- * 
- * NOTE: This is a NEW API route.
+ *
+ * SEC-REMEDIATION: Added idempotency checking and webhook secret validation
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/subscriptions/stripe-client';
 import { activateSubscription } from '@/lib/subscriptions/subscription-service';
 import { createClient } from '@/lib/supabase/server';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import type Stripe from 'stripe';
+
+// In-memory idempotency store (use Redis in production for multi-instance deployments)
+const processedEvents = new Map<string, number>();
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Clean up old entries periodically
+function cleanupProcessedEvents() {
+    const now = Date.now();
+    for (const [eventId, timestamp] of processedEvents.entries()) {
+        if (now - timestamp > IDEMPOTENCY_TTL_MS) {
+            processedEvents.delete(eventId);
+        }
+    }
+}
 
 export async function POST(request: NextRequest) {
     if (!stripe) {
         console.warn('[Webhook] Stripe not configured');
         return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
+    }
+
+    // SEC-REMEDIATION: Validate webhook secret exists
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+        logError({
+            action: 'webhook_config_error',
+            error: 'STRIPE_WEBHOOK_SECRET not configured',
+        });
+        return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
     }
 
     const body = await request.text();
@@ -27,15 +52,24 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event;
 
     try {
-        event = stripe.webhooks.constructEvent(
-            body,
-            signature,
-            process.env.STRIPE_WEBHOOK_SECRET!
-        );
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
-        console.error('[Webhook] Signature verification failed:', err);
+        logError({
+            action: 'webhook_signature_error',
+            error: sanitizeError(err),
+        });
         return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
+
+    // SEC-REMEDIATION: Idempotency check - prevent duplicate event processing
+    if (processedEvents.has(event.id)) {
+        console.log(`[Webhook] Duplicate event ignored: ${event.id}`);
+        return NextResponse.json({ received: true, duplicate: true });
+    }
+
+    // Mark event as being processed
+    processedEvents.set(event.id, Date.now());
+    cleanupProcessedEvents();
 
     try {
         switch (event.type) {
@@ -61,6 +95,18 @@ export async function POST(request: NextRequest) {
                 // Handle subscription updates (e.g., plan changes, renewals)
                 const supabase = await createClient();
                 if (supabase) {
+                    // SEC-REMEDIATION: Verify subscription belongs to an existing org before updating
+                    const { data: existingSub } = await supabase
+                        .from('organization_subscriptions')
+                        .select('organization_id')
+                        .eq('stripe_subscription_id', subscription.id)
+                        .single();
+
+                    if (!existingSub) {
+                        console.warn(`[Webhook] Unknown subscription ID: ${subscription.id}`);
+                        break;
+                    }
+
                     const status = subscription.status === 'active' ? 'active'
                         : subscription.status === 'past_due' ? 'past_due'
                             : subscription.status === 'canceled' ? 'canceled'
@@ -77,7 +123,8 @@ export async function POST(request: NextRequest) {
                             current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
                             updated_at: new Date().toISOString(),
                         })
-                        .eq('stripe_subscription_id', subscription.id);
+                        .eq('stripe_subscription_id', subscription.id)
+                        .eq('organization_id', existingSub.organization_id); // Extra safety: ensure org match
                 }
                 break;
             }
@@ -149,7 +196,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
 
     } catch (error) {
-        console.error('[Webhook] Processing error:', error);
+        logError({
+            action: 'webhook_processing_error',
+            error: sanitizeError(error),
+            resourceType: 'stripe_webhook',
+        });
+        // Remove from processed events so it can be retried
+        processedEvents.delete(event.id);
         return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
     }
 }

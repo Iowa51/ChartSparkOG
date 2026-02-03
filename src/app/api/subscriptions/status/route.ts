@@ -53,13 +53,17 @@ export async function GET() {
         return NextResponse.json(status);
 
     } catch (error) {
-        console.error('[Subscription Status] Error:', error);
-        // On error, return active status (fail open for UX)
-        return NextResponse.json({
-            status: 'active',
-            tierCode: 'ELITE',
-            canAccess: true,
-            canEdit: true,
-        });
+        console.error('[Subscription Status] Error (fail-closed):', error);
+        // SECURITY: Fail-closed - return 503 Service Unavailable on errors
+        return NextResponse.json(
+            {
+                error: 'Subscription service temporarily unavailable',
+                status: 'none',
+                tierCode: null,
+                canAccess: false,
+                canEdit: false,
+            },
+            { status: 503 }
+        );
     }
 }

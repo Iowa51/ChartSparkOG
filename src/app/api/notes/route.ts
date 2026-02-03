@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { NoteCreateSchema, validateRequest } from '@/lib/validation/schemas';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export async function GET(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
@@ -38,6 +40,21 @@ export async function GET(request: NextRequest) {
         const searchParams = request.nextUrl.searchParams;
         const patientId = searchParams.get('patientId');
 
+        // SEC-REMEDIATION: Add pagination to prevent unbounded queries
+        const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+        const offset = (page - 1) * limit;
+
+        // First get total count for pagination metadata
+        let countQuery = supabase
+            .from('clinical_notes')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', profile.organization_id);
+
+        if (patientId) countQuery = countQuery.eq('patient_id', patientId);
+
+        const { count: totalCount } = await countQuery;
+
         let query = supabase
             .from('clinical_notes')
             .select(`
@@ -46,7 +63,8 @@ export async function GET(request: NextRequest) {
                 provider:profiles(id, first_name, last_name)
             `)
             .eq('organization_id', profile.organization_id)
-            .order('note_date', { ascending: false });
+            .order('note_date', { ascending: false })
+            .range(offset, offset + limit - 1);
 
         if (patientId) query = query.eq('patient_id', patientId);
 
@@ -73,9 +91,21 @@ export async function GET(request: NextRequest) {
             riskLevel: 'MEDIUM',
         });
 
-        return NextResponse.json({ notes });
+        return NextResponse.json({
+            notes,
+            pagination: {
+                page,
+                limit,
+                total: totalCount || 0,
+                totalPages: Math.ceil((totalCount || 0) / limit),
+            },
+        });
     } catch (error) {
-        console.error('Error fetching notes:', error);
+        logError({
+            action: 'notes_fetch_error',
+            error: sanitizeError(error),
+            resourceType: 'clinical_note',
+        });
         return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
     }
 }
@@ -109,12 +139,30 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
         }
 
-        const noteData = await request.json();
+        const rawData = await request.json();
+
+        // SEC-REMEDIATION: Validate input with Zod schema instead of spreading arbitrary data
+        const validation = validateRequest(NoteCreateSchema, rawData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const { data: note, error } = await supabase
             .from('clinical_notes')
             .insert([{
-                ...noteData,
+                patient_id: validatedData.patient_id,
+                encounter_id: validatedData.encounter_id,
+                type: validatedData.type,
+                content: validatedData.content,
+                template_id: validatedData.template_id,
+                is_signed: validatedData.is_signed,
+                is_locked: validatedData.is_locked,
+                note_date: rawData.note_date || new Date().toISOString().split('T')[0],
                 organization_id: profile.organization_id,
                 provider_id: user.id
             }])
@@ -127,9 +175,9 @@ export async function POST(request: NextRequest) {
         await supabase
             .from('patients')
             .update({
-                last_visit_date: noteData.note_date || new Date().toISOString().split('T')[0]
+                last_visit_date: rawData.note_date || new Date().toISOString().split('T')[0]
             })
-            .eq('id', noteData.patient_id);
+            .eq('id', validatedData.patient_id);
 
         // Log PHI creation - clinical note is highly sensitive
         await logPHIAccess(
@@ -146,7 +194,11 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ note }, { status: 201 });
     } catch (error) {
-        console.error('Error creating note:', error);
+        logError({
+            action: 'note_create_error',
+            error: sanitizeError(error),
+            resourceType: 'clinical_note',
+        });
         return NextResponse.json({ error: 'Failed to create note' }, { status: 500 });
     }
 }

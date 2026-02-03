@@ -57,16 +57,17 @@ export function useFeature(featureCode: FeatureCode): FeatureCheckResult {
                     .maybeSingle();
 
                 if (queryError) {
-                    console.warn('Feature check error, defaulting to enabled:', queryError);
-                    // Fallback to enabled in case of query issues (demo mode)
-                    setHasFeature(true);
+                    console.error('Feature check error, denying access (fail-closed):', queryError);
+                    // SECURITY: Fail-closed - deny access on database errors
+                    setHasFeature(false);
+                    setError(new Error('Feature check failed'));
                     setLoading(false);
                     return;
                 }
 
                 if (!data) {
-                    // No explicit assignment - default to enabled for demo
-                    setHasFeature(true);
+                    // No explicit feature assignment - deny access (fail-closed)
+                    setHasFeature(false);
                 } else {
                     // Check if feature has expired
                     if (data.expires_at && new Date(data.expires_at) < new Date()) {
@@ -78,10 +79,10 @@ export function useFeature(featureCode: FeatureCode): FeatureCheckResult {
 
                 setLoading(false);
             } catch (err) {
-                console.error('Feature check exception:', err);
+                console.error('Feature check exception, denying access (fail-closed):', err);
                 setError(err as Error);
-                // Fallback to enabled on error
-                setHasFeature(true);
+                // SECURITY: Fail-closed - deny access on exceptions
+                setHasFeature(false);
                 setLoading(false);
             }
         }
@@ -132,11 +133,12 @@ export function useFeatures(featureCodes: FeatureCode[]): FeaturesCheckResult {
                     .eq('enabled', true);
 
                 if (queryError) {
-                    console.warn('Features check error, defaulting to all enabled:', queryError);
-                    // Fallback to all enabled in case of query issues
-                    const allEnabled: Record<string, boolean> = {};
-                    featureCodes.forEach(code => { allEnabled[code] = true; });
-                    setFeatures(allEnabled);
+                    console.error('Features check error, denying all access (fail-closed):', queryError);
+                    // SECURITY: Fail-closed - deny all features on database errors
+                    const allDisabled: Record<string, boolean> = {};
+                    featureCodes.forEach(code => { allDisabled[code] = false; });
+                    setFeatures(allDisabled);
+                    setError(new Error('Features check failed'));
                     setLoading(false);
                     return;
                 }
@@ -154,20 +156,20 @@ export function useFeatures(featureCodes: FeatureCode[]): FeaturesCheckResult {
                             featureMap[code] = true;
                         }
                     } else {
-                        // No explicit assignment - default to enabled for demo
-                        featureMap[code] = true;
+                        // No explicit assignment - deny access (fail-closed)
+                        featureMap[code] = false;
                     }
                 }
 
                 setFeatures(featureMap);
                 setLoading(false);
             } catch (err) {
-                console.error('Features check exception:', err);
+                console.error('Features check exception, denying all access (fail-closed):', err);
                 setError(err as Error);
-                // Fallback to all enabled on error
-                const allEnabled: Record<string, boolean> = {};
-                featureCodes.forEach(code => { allEnabled[code] = true; });
-                setFeatures(allEnabled);
+                // SECURITY: Fail-closed - deny all features on exceptions
+                const allDisabled: Record<string, boolean> = {};
+                featureCodes.forEach(code => { allDisabled[code] = false; });
+                setFeatures(allDisabled);
                 setLoading(false);
             }
         }

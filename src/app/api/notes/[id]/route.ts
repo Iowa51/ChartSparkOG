@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { NoteUpdateSchema, validateRequest } from '@/lib/validation/schemas';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
@@ -107,11 +109,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             .eq('id', user.id)
             .single();
 
-        const updates = await request.json();
+        const rawData = await request.json();
+
+        // SEC-REMEDIATION: Validate input with Zod schema instead of spreading arbitrary data
+        const validation = validateRequest(NoteUpdateSchema, rawData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
+        }
+
+        const validatedUpdates = validation.data;
 
         const { data: note, error } = await supabase
             .from('clinical_notes')
-            .update(updates)
+            .update(validatedUpdates)
             .eq('id', id)
             .eq('organization_id', profile?.organization_id) // Ensure org isolation
             .select()
@@ -134,6 +147,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
         return NextResponse.json({ note });
     } catch (error) {
+        logError({
+            action: 'note_update_error',
+            error: sanitizeError(error),
+            resourceType: 'clinical_note',
+        });
         return NextResponse.json({ error: 'Failed to update note' }, { status: 500 });
     }
 }
@@ -188,6 +206,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
         return NextResponse.json({ success: true });
     } catch (error) {
+        logError({
+            action: 'note_delete_error',
+            error: sanitizeError(error),
+            resourceType: 'clinical_note',
+        });
         return NextResponse.json({ error: 'Failed to delete note' }, { status: 500 });
     }
 }

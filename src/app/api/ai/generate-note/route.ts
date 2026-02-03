@@ -7,6 +7,7 @@ import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 interface GenerateNoteRequest {
     clinicianInput: string;
@@ -117,7 +118,12 @@ async function handler(context: AuthContext) {
         });
 
     } catch (error: unknown) {
-        console.error('Error generating note:', error);
+        logError({
+            action: 'ai_generate_note_error',
+            error: sanitizeError(error),
+            resourceType: 'ai_generate_note',
+            userId: context.user.id,
+        });
 
         await logAuditEvent({
             eventType: 'API_ERROR',

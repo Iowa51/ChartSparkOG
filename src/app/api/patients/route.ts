@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent, logAuditEventAsync, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { PatientCreateSchema, validateRequest } from '@/lib/validation/schemas';
 
 export async function GET(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
@@ -41,6 +42,23 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
         const search = searchParams.get('search');
 
+        // SEC-REMEDIATION: Add pagination to prevent unbounded queries
+        const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+        const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
+        const offset = (page - 1) * limit;
+
+        // First get total count for pagination metadata
+        let countQuery = supabase
+            .from('patients')
+            .select('id', { count: 'exact', head: true })
+            .eq('organization_id', profile.organization_id);
+
+        if (status && status !== 'all') {
+            countQuery = countQuery.eq('status', status);
+        }
+
+        const { count: totalCount } = await countQuery;
+
         // OPTIMIZATION: Select only columns needed for patient list view
         let query = supabase
             .from('patients')
@@ -58,7 +76,8 @@ export async function GET(request: NextRequest) {
                 updated_at
             `)
             .eq('organization_id', profile.organization_id)
-            .order('last_name', { ascending: true });
+            .order('last_name', { ascending: true })
+            .range(offset, offset + limit - 1);
 
         // Apply status filter
         if (status && status !== 'all') {
@@ -102,7 +121,15 @@ export async function GET(request: NextRequest) {
             riskLevel: 'MEDIUM',
         });
 
-        return NextResponse.json({ patients });
+        return NextResponse.json({
+            patients,
+            pagination: {
+                page,
+                limit,
+                total: totalCount || 0,
+                totalPages: Math.ceil((totalCount || 0) / limit),
+            },
+        });
     } catch (error) {
         logError({
             action: 'FETCH_PATIENTS_ERROR',
@@ -141,12 +168,32 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
         }
 
-        const patientData = await request.json();
+        const rawData = await request.json();
+
+        // SEC-REMEDIATION: Validate input with Zod schema instead of spreading arbitrary data
+        const validation = validateRequest(PatientCreateSchema, rawData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
+        }
+
+        const validatedData = validation.data;
 
         const { data: patient, error } = await supabase
             .from('patients')
             .insert([{
-                ...patientData,
+                first_name: validatedData.first_name,
+                last_name: validatedData.last_name,
+                date_of_birth: validatedData.date_of_birth,
+                email: validatedData.email,
+                phone: validatedData.phone,
+                address: validatedData.address,
+                insurance_id: validatedData.insurance_id,
+                emergency_contact_name: validatedData.emergency_contact_name,
+                emergency_contact_phone: validatedData.emergency_contact_phone,
+                notes: validatedData.notes,
                 organization_id: profile.organization_id,
                 created_by: user.id
             }])

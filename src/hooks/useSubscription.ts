@@ -22,8 +22,8 @@ export interface SubscriptionState {
 const defaultState: SubscriptionState = {
     status: 'loading',
     tierCode: null,
-    canAccess: true,
-    canEdit: true, // Default to true while loading for better UX
+    canAccess: false, // SECURITY: Default to false while loading (fail-closed)
+    canEdit: false,   // SECURITY: Default to false while loading (fail-closed)
     trialEndsAt: null,
     daysRemaining: null,
     deletionScheduledAt: null,
@@ -38,13 +38,14 @@ export function useSubscription() {
                 const response = await fetch('/api/subscriptions/status');
 
                 if (!response.ok) {
-                    // On error, default to active (fail open for UX)
+                    // SECURITY: Fail-closed - deny access on API errors
+                    console.error('[useSubscription] API returned error status:', response.status);
                     setSubscription({
                         ...defaultState,
-                        status: 'active',
-                        tierCode: 'ELITE',
-                        canAccess: true,
-                        canEdit: true,
+                        status: 'none',
+                        tierCode: null,
+                        canAccess: false,
+                        canEdit: false,
                     });
                     return;
                 }
@@ -60,14 +61,14 @@ export function useSubscription() {
                     deletionScheduledAt: data.deletionScheduledAt || null,
                 });
             } catch (error) {
-                console.error('[useSubscription] Failed to fetch subscription:', error);
-                // On error, allow access (fail open for UX)
+                console.error('[useSubscription] Failed to fetch subscription (fail-closed):', error);
+                // SECURITY: Fail-closed - deny access on exceptions
                 setSubscription({
                     ...defaultState,
-                    status: 'active',
-                    tierCode: 'ELITE',
-                    canAccess: true,
-                    canEdit: true,
+                    status: 'none',
+                    tierCode: null,
+                    canAccess: false,
+                    canEdit: false,
                 });
             }
         }
