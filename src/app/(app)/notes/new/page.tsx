@@ -744,7 +744,6 @@ Prognosis: Favorable with continued treatment adherence.`;
                 content: fullContent || clinicianInput || 'No content provided',
                 template_id: undefined, // Optional
                 is_signed: markComplete,
-                is_locked: markComplete,
             };
 
             const url = editId ? `/api/notes/${editId}` : '/api/notes';

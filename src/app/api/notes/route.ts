@@ -189,7 +189,6 @@ export async function POST(request: NextRequest) {
                 content: validatedData.content,
                 template_id: validatedData.template_id,
                 is_signed: validatedData.is_signed,
-                is_locked: validatedData.is_locked,
                 note_date: rawData.note_date || new Date().toISOString().split('T')[0],
                 organization_id: profile.organization_id,
                 provider_id: user.id
