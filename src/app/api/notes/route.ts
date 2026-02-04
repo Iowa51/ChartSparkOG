@@ -73,8 +73,7 @@ export async function GET(request: NextRequest) {
             .from('clinical_notes')
             .select(`
                 *,
-                patient:patients(id, first_name, last_name),
-                provider:profiles(id, first_name, last_name)
+                patient:patients(id, first_name, last_name)
             `)
             .eq('organization_id', profile.organization_id)
             .order('created_at', { ascending: false })
