@@ -29,14 +29,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        // Try profiles table first, fallback to users table
+        let profile = null;
+        const { data: profileData } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
             .eq('id', user.id)
             .single();
 
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        if (profileData) {
+            profile = profileData;
+        } else {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('organization_id, email, role')
+                .eq('id', user.id)
+                .single();
+
+            if (userData) {
+                profile = userData;
+            } else {
+                return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+            }
         }
 
         // Get patient with all related details
@@ -93,14 +107,28 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        // Try profiles table first, fallback to users table
+        let profile = null;
+        const { data: profileData } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
             .eq('id', user.id)
             .single();
 
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        if (profileData) {
+            profile = profileData;
+        } else {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('organization_id, email, role')
+                .eq('id', user.id)
+                .single();
+
+            if (userData) {
+                profile = userData;
+            } else {
+                return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+            }
         }
 
         const updates = await request.json();
@@ -140,14 +168,28 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        // Try profiles table first, fallback to users table
+        let profile = null;
+        const { data: profileData } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
             .eq('id', user.id)
             .single();
 
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        if (profileData) {
+            profile = profileData;
+        } else {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('organization_id, email, role')
+                .eq('id', user.id)
+                .single();
+
+            if (userData) {
+                profile = userData;
+            } else {
+                return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+            }
         }
 
         // Soft delete - set status to archived
