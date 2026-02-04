@@ -380,7 +380,7 @@ export default function NotePage() {
                 {/* Footer */}
                 <div className="flex items-center justify-center gap-2 p-4 bg-muted/20 rounded-xl border border-dashed border-border text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    {note.is_signed && note.signed_at
+                    {note.status === 'signed' && note.signed_at
                         ? `Signed on ${new Date(note.signed_at).toLocaleString()}`
                         : `Last updated ${new Date(note.updated_at).toLocaleString()}`
                     }
