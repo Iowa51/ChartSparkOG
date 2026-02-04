@@ -221,8 +221,18 @@ export async function POST(request: NextRequest) {
         );
 
         return NextResponse.json({ note }, { status: 201 });
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    } catch (error: any) {
+        // Extract error message from various error types
+        let errorMessage = 'Unknown error';
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (error && typeof error === 'object') {
+            // Supabase errors have message, details, hint properties
+            errorMessage = error.message || error.details || error.hint || JSON.stringify(error);
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+
         logError({
             action: 'note_create_error',
             error: sanitizeError(error),
