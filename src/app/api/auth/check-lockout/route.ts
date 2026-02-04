@@ -6,7 +6,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 
 const LOCKOUT_CONFIG = {
     maxAttempts: 5,
-    lockoutDuration: 30 * 60 * 1000, // 30 minutes
+    lockoutDuration: 5 * 60 * 1000, // 5 minutes (reduced for demo/recovery)
     resetAttemptsAfter: 15 * 60 * 1000, // 15 minutes
 };
 
