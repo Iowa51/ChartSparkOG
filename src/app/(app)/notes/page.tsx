@@ -1,90 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout";
 import {
     Search,
-    Filter,
     ChevronRight,
-    FileText,
-    CheckCircle,
     Clock,
     AlertCircle,
-    Calendar,
-    User
+    User,
+    Loader2,
+    Plus
 } from "lucide-react";
 import Link from "next/link";
 
-// Mock data for notes (expanded from dashboard)
-const allNotes = [
-    {
-        id: "1",
-        patient: { name: "John Doe", initials: "JD", dob: "04/12/1985" },
-        diagnosis: { name: "Acute Pharyngitis", code: "J02.9" },
-        lastEdited: "Oct 29, 2023, 9:41 AM",
-        status: "Draft",
-        date: "2023-10-29",
-    },
-    {
-        id: "2",
-        patient: { name: "Maria Rodriguez", initials: "MR", dob: "11/22/1972" },
-        diagnosis: { name: "Hypertension F/U", code: "I10" },
-        lastEdited: "Oct 28, 2023, 3:15 PM",
-        status: "Signed",
-        date: "2023-10-28",
-    },
-    {
-        id: "3",
-        patient: { name: "Arthur Smith", initials: "AS", dob: "02/08/1954" },
-        diagnosis: { name: "T2DM Management", code: "E11.9" },
-        lastEdited: "Oct 24, 2023, 10:30 AM",
-        status: "Pending Review",
-        date: "2023-10-24",
-    },
-    {
-        id: "4",
-        patient: { name: "Sarah Williams", initials: "SW", dob: "06/15/1992" },
-        diagnosis: { name: "Anxiety Screening", code: "F41.1" },
-        lastEdited: "Oct 22, 2023, 2:15 PM",
-        status: "Signed",
-        date: "2023-10-22",
-    },
-    {
-        id: "5",
-        patient: { name: "David Miller", initials: "DM", dob: "09/30/1968" },
-        diagnosis: { name: "Lower Back Pain", code: "M54.5" },
-        lastEdited: "Oct 20, 2023, 11:45 AM",
-        status: "Signed",
-        date: "2023-10-20",
-    },
-];
+interface Note {
+    id: string;
+    patient_id: string;
+    content?: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    patient?: {
+        id: string;
+        first_name: string;
+        last_name: string;
+    };
+}
 
-const statusStyles = {
-    Draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-    Signed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
-    "Pending Review": "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+const statusStyles: Record<string, string> = {
+    draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    signed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+    completed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
 };
 
 export default function NotesHistoryPage() {
     const searchParams = useSearchParams();
     const statusFilter = searchParams.get("status");
     const [searchQuery, setSearchQuery] = useState("");
+    const [notes, setNotes] = useState<Note[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Filter notes based on status param and search query
-    const filteredNotes = allNotes.filter(note => {
-        const matchesSearch = note.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            note.diagnosis.name.toLowerCase().includes(searchQuery.toLowerCase());
+    useEffect(() => {
+        const fetchNotes = async () => {
+            try {
+                setLoading(true);
+                setError(null);
 
-        if (statusFilter === "completed" || statusFilter === "Signed") {
-            return matchesSearch && note.status === "Signed";
-        }
+                // Build query string
+                let url = '/api/notes?limit=50';
+                if (statusFilter) {
+                    url += `&status=${statusFilter}`;
+                }
 
-        if (statusFilter) {
-            return matchesSearch && note.status.toLowerCase() === statusFilter.toLowerCase();
-        }
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch notes');
+                }
+                const data = await response.json();
+                setNotes(data.notes || []);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load notes');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        return matchesSearch;
+        fetchNotes();
+    }, [statusFilter]);
+
+    // Filter notes based on search query (client-side filtering for search)
+    const filteredNotes = notes.filter(note => {
+        if (!searchQuery) return true;
+        const patientName = note.patient
+            ? `${note.patient.first_name} ${note.patient.last_name}`.toLowerCase()
+            : '';
+        const contentPreview = (note.content || '').toLowerCase();
+        return patientName.includes(searchQuery.toLowerCase()) ||
+            contentPreview.includes(searchQuery.toLowerCase());
     });
 
     return (
@@ -105,7 +99,7 @@ export default function NotesHistoryPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder="Search patients or diagnoses..."
+                            placeholder="Search patients or content..."
                             className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -121,11 +115,11 @@ export default function NotesHistoryPage() {
                             All Notes
                         </Link>
                         <Link
-                            href="/notes?status=completed"
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${statusFilter === "completed" ? "bg-primary text-white" : "bg-card border border-border text-muted-foreground hover:bg-muted"
+                            href="/notes?status=signed"
+                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${statusFilter === "signed" ? "bg-primary text-white" : "bg-card border border-border text-muted-foreground hover:bg-muted"
                                 }`}
                         >
-                            Completed
+                            Signed
                         </Link>
                         <Link
                             href="/notes?status=draft"
@@ -139,76 +133,102 @@ export default function NotesHistoryPage() {
 
                 {/* Notes List */}
                 <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-muted/50 border-b border-border">
-                                    <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Patient</th>
-                                    <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Clinical Context</th>
-                                    <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Last Activity</th>
-                                    <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Status</th>
-                                    <th className="px-6 py-4 text-right"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/50">
-                                {filteredNotes.length > 0 ? (
-                                    filteredNotes.map((note) => (
-                                        <tr key={note.id} className="hover:bg-muted/20 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                                                        {note.patient.initials}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-foreground">{note.patient.name}</div>
-                                                        <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                                            <User className="h-3 w-3" />
-                                                            DOB: {note.patient.dob}
+                    {loading ? (
+                        <div className="flex items-center justify-center py-16">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : error ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-destructive">
+                            <AlertCircle className="h-8 w-8 mb-2" />
+                            <p>{error}</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-muted/50 border-b border-border">
+                                        <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Patient</th>
+                                        <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Content Preview</th>
+                                        <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Last Updated</th>
+                                        <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Status</th>
+                                        <th className="px-6 py-4 text-right"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/50">
+                                    {filteredNotes.length > 0 ? (
+                                        filteredNotes.map((note) => (
+                                            <tr key={note.id} className="hover:bg-muted/20 transition-colors group">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                                            {note.patient?.first_name?.[0]}{note.patient?.last_name?.[0] || '?'}
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-bold text-foreground">
+                                                                {note.patient ? `${note.patient.first_name} ${note.patient.last_name}` : 'Unknown Patient'}
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                <User className="h-3 w-3" />
+                                                                Clinical Note
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm text-muted-foreground max-w-xs truncate">
+                                                        {note.content?.substring(0, 80) || 'No content'}
+                                                        {(note.content?.length || 0) > 80 ? '...' : ''}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm text-foreground flex items-center gap-1.5">
+                                                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                        {new Date(note.updated_at || note.created_at).toLocaleDateString('en-US', {
+                                                            month: 'short',
+                                                            day: 'numeric',
+                                                            year: 'numeric',
+                                                            hour: 'numeric',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusStyles[note.status] || statusStyles.draft}`}>
+                                                        {note.status || 'draft'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <Link
+                                                        href={`/notes/${note.id}`}
+                                                        className="inline-flex items-center gap-2 px-4 py-2 bg-muted/50 hover:bg-primary hover:text-white rounded-xl text-sm font-medium transition-all group-hover:scale-105"
+                                                    >
+                                                        {note.status === "signed" ? "View" : "Edit"}
+                                                        <ChevronRight className="h-4 w-4" />
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <AlertCircle className="h-8 w-8 opacity-20" />
+                                                    <p>No notes found.</p>
+                                                    <Link
+                                                        href="/notes/new"
+                                                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all"
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                        Create First Note
+                                                    </Link>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm font-medium text-foreground">{note.diagnosis.name}</div>
-                                                <div className="text-xs text-muted-foreground font-mono bg-muted inline-block px-1.5 py-0.5 rounded mt-1">
-                                                    {note.diagnosis.code}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-sm text-foreground flex items-center gap-1.5">
-                                                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                                                    {note.lastEdited}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusStyles[note.status as keyof typeof statusStyles]}`}>
-                                                    {note.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <Link
-                                                    href={`/notes/${note.id}`}
-                                                    className="inline-flex items-center gap-2 px-4 py-2 bg-muted/50 hover:bg-primary hover:text-white rounded-xl text-sm font-medium transition-all group-hover:scale-105"
-                                                >
-                                                    {note.status === "Signed" ? "View" : "Edit"}
-                                                    <ChevronRight className="h-4 w-4" />
-                                                </Link>
                                             </td>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <AlertCircle className="h-8 w-8 opacity-20" />
-                                                <p>No notes found matching your criteria.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
