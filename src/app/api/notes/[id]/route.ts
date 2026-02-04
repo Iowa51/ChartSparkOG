@@ -2,6 +2,7 @@
 // SEC-009: HIPAA-compliant clinical note detail API with full audit logging
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
@@ -256,14 +257,23 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             }
         }
 
-        // Hard delete the note (RLS policies handle authorization at DB level)
-        const { error, count } = await supabase
+        // Use service role client for delete (bypasses RLS after auth check above)
+        const adminClient = createServiceRoleClient();
+        if (!adminClient) {
+            throw new Error('Service role client not available');
+        }
+
+        const { error, data: deletedData } = await adminClient
             .from('clinical_notes')
             .delete()
             .eq('id', id)
             .select();
 
         if (error) throw error;
+
+        if (!deletedData || deletedData.length === 0) {
+            return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+        }
 
         // Log PHI deletion - HIGH risk event
         await logPHIAccess(

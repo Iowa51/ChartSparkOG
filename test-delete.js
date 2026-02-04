@@ -1,52 +1,53 @@
 require('dotenv').config({ path: '.env.local' });
 const { createClient } = require('@supabase/supabase-js');
 
+// Use SERVICE ROLE to bypass RLS
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 async function testDelete() {
-    // First get a note
+    // First get notes
     const { data: notes, error: fetchError } = await supabase
         .from('clinical_notes')
-        .select('id, status, organization_id')
-        .limit(1);
+        .select('id, status, organization_id, patient_id')
+        .limit(5);
 
-    if (fetchError) {
-        console.error('Fetch error:', fetchError);
-        return;
-    }
-
-    console.log('Found note:', notes[0]);
+    console.log('Current notes in database:');
+    console.log(JSON.stringify(notes, null, 2));
+    console.log('Fetch error:', fetchError);
+    console.log('Total notes found:', notes?.length || 0);
 
     if (!notes || notes.length === 0) {
-        console.log('No notes to test with');
+        console.log('\nNo notes to delete!');
         return;
     }
 
-    const noteId = notes[0].id;
-    const orgId = notes[0].organization_id;
+    // Try deleting the first note
+    const noteToDelete = notes[0];
+    console.log('\nAttempting to delete note:', noteToDelete.id);
 
-    // Try to update status
-    const { error: updateError } = await supabase
+    const { data: deleteResult, error: deleteError } = await supabase
         .from('clinical_notes')
-        .update({ status: 'deleted' })
-        .eq('id', noteId)
-        .eq('organization_id', orgId);
+        .delete()
+        .eq('id', noteToDelete.id)
+        .select();
 
-    if (updateError) {
-        console.error('Update error:', updateError);
+    console.log('Delete result:', deleteResult);
+    console.log('Delete error:', deleteError);
+
+    // Check if it was deleted
+    const { data: checkNotes } = await supabase
+        .from('clinical_notes')
+        .select('id')
+        .eq('id', noteToDelete.id);
+
+    if (checkNotes && checkNotes.length === 0) {
+        console.log('✅ Note was successfully deleted!');
     } else {
-        console.log('Update successful!');
-
-        // Restore it
-        await supabase
-            .from('clinical_notes')
-            .update({ status: 'draft' })
-            .eq('id', noteId);
-        console.log('Restored note to draft status');
+        console.log('❌ Note still exists after delete attempt');
     }
 }
 
-testDelete().then(() => process.exit(0));
+testDelete().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });
