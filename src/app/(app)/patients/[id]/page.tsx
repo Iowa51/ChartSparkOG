@@ -522,13 +522,14 @@ export default function PatientDetailPage() {
                                 ) : notes && notes.length > 0 ? (
                                     <div className="space-y-3">
                                         {notes.map((note: any) => (
-                                            <div
+                                            <Link
                                                 key={note.id}
-                                                className="p-4 bg-muted/50 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+                                                href={`/notes/${note.id}`}
+                                                className="block p-4 bg-muted/50 border border-border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer group"
                                             >
                                                 <div className="flex items-start justify-between mb-2">
                                                     <div>
-                                                        <p className="font-medium text-foreground">
+                                                        <p className="font-medium text-foreground group-hover:text-primary transition-colors">
                                                             Clinical Note
                                                         </p>
                                                         <p className="text-xs text-muted-foreground mt-1">
@@ -542,10 +543,10 @@ export default function PatientDetailPage() {
                                                         </p>
                                                     </div>
                                                     <span className={`text-xs px-2 py-1 rounded font-bold uppercase ${note.status === 'signed'
-                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                            : note.status === 'completed'
-                                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                        : note.status === 'completed'
+                                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                                         }`}>
                                                         {note.status || 'draft'}
                                                     </span>
@@ -554,7 +555,10 @@ export default function PatientDetailPage() {
                                                     {note.content?.substring(0, 200)}
                                                     {note.content?.length > 200 ? '...' : ''}
                                                 </p>
-                                            </div>
+                                                <p className="text-xs text-primary mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    Click to view and edit →
+                                                </p>
+                                            </Link>
                                         ))}
                                     </div>
                                 ) : (

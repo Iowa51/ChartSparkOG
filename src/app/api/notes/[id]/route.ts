@@ -28,18 +28,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        // Try profiles first, fallback to users
+        let profile = null;
+        const { data: profileData } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
             .eq('id', user.id)
             .single();
+        if (profileData) {
+            profile = profileData;
+        } else {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('organization_id, email, role')
+                .eq('id', user.id)
+                .single();
+            if (userData) {
+                profile = userData;
+            }
+        }
 
         const { data: note, error } = await supabase
             .from('clinical_notes')
             .select(`
                 *,
-                patient:patients(*),
-                provider:profiles(*)
+                patient:patients(id, first_name, last_name)
             `)
             .eq('id', id)
             .single();
@@ -103,16 +116,30 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        // Try profiles first, fallback to users
+        let profile = null;
+        const { data: profileData } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
             .eq('id', user.id)
             .single();
+        if (profileData) {
+            profile = profileData;
+        } else {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('organization_id, email, role')
+                .eq('id', user.id)
+                .single();
+            if (userData) {
+                profile = userData;
+            }
+        }
 
         // Get current note to check if it's signed
         const { data: currentNote } = await supabase
             .from('clinical_notes')
-            .select('is_signed, organization_id')
+            .select('status, organization_id')
             .eq('id', id)
             .single();
 
@@ -135,7 +162,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         }
 
         // Prevent editing signed notes
-        if (currentNote?.is_signed) {
+        if (currentNote?.status === 'signed') {
             return NextResponse.json(
                 { error: 'Cannot edit signed notes' },
                 { status: 403 }
@@ -209,11 +236,25 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        // Try profiles first, fallback to users
+        let profile = null;
+        const { data: profileData } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
             .eq('id', user.id)
             .single();
+        if (profileData) {
+            profile = profileData;
+        } else {
+            const { data: userData } = await supabase
+                .from('users')
+                .select('organization_id, email, role')
+                .eq('id', user.id)
+                .single();
+            if (userData) {
+                profile = userData;
+            }
+        }
 
         // Soft delete or archive - clinical notes should never be hard deleted
         const { error } = await supabase

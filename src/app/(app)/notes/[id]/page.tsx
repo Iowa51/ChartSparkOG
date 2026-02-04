@@ -22,16 +22,14 @@ import { useRouter } from "next/navigation";
 interface Note {
     id: string;
     patient_id: string;
-    note_date: string;
-    type: string;
+    type?: string;
     chief_complaint?: string;
     subjective?: string;
     objective?: string;
     assessment?: string;
     plan?: string;
     content?: string;
-    is_signed: boolean;
-    is_locked: boolean;
+    status: string; // 'draft', 'signed', 'completed', 'amended'
     signed_at?: string;
     signed_by?: string;
     created_at: string;
@@ -51,6 +49,7 @@ export default function NotePage() {
     const [note, setNote] = useState<Note | null>(null);
     const [loading, setLoading] = useState(true);
     const [signing, setSigning] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -74,7 +73,7 @@ export default function NotePage() {
     }, [id]);
 
     const handleSignNote = async () => {
-        if (!note || note.is_signed) return;
+        if (!note || note.status === 'signed') return;
 
         const confirmed = window.confirm(
             'Are you sure you want to sign this note? Once signed, it cannot be edited.'
@@ -84,8 +83,10 @@ export default function NotePage() {
 
         try {
             setSigning(true);
-            const response = await fetch(`/api/notes/${id}/sign`, {
-                method: 'POST',
+            const response = await fetch(`/api/notes/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_signed: true }),
             });
 
             if (!response.ok) {
@@ -100,6 +101,35 @@ export default function NotePage() {
             alert(err instanceof Error ? err.message : 'Failed to sign note');
         } finally {
             setSigning(false);
+        }
+    };
+
+    const handleDeleteNote = async () => {
+        if (!note) return;
+
+        const confirmed = window.confirm(
+            'Are you sure you want to delete this note? This action cannot be undone.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setDeleting(true);
+            const response = await fetch(`/api/notes/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to delete note');
+            }
+
+            alert('Note deleted successfully!');
+            router.push(`/patients/${note.patient_id}`);
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Failed to delete note');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -181,7 +211,7 @@ export default function NotePage() {
                         Back to Notes
                     </Link>
                     <div className="flex items-center gap-3">
-                        {note.is_signed ? (
+                        {note.status === 'signed' ? (
                             <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl text-sm font-bold text-emerald-700 dark:text-emerald-400">
                                 <Lock className="h-4 w-4" />
                                 Signed & Locked
@@ -214,6 +244,18 @@ export default function NotePage() {
                                 </button>
                             </>
                         )}
+                        <button
+                            onClick={handleDeleteNote}
+                            disabled={deleting}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
+                        >
+                            {deleting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Trash2 className="h-4 w-4" />
+                            )}
+                            Delete
+                        </button>
                     </div>
                 </div>
 
@@ -235,21 +277,21 @@ export default function NotePage() {
                         <div>
                             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Date</p>
                             <p className="text-base font-bold text-foreground">
-                                {new Date(note.note_date).toLocaleDateString()}
+                                {new Date(note.created_at).toLocaleDateString()}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className={`h-12 w-12 rounded-full flex items-center justify-center ${note.is_signed
-                                ? 'bg-emerald-500/10 text-emerald-500'
-                                : 'bg-amber-500/10 text-amber-500'
+                        <div className={`h-12 w-12 rounded-full flex items-center justify-center ${note.status === 'signed'
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-amber-500/10 text-amber-500'
                             }`}>
-                            {note.is_signed ? <Lock className="h-6 w-6" /> : <Clock className="h-6 w-6" />}
+                            {note.status === 'signed' ? <Lock className="h-6 w-6" /> : <Clock className="h-6 w-6" />}
                         </div>
                         <div>
                             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Status</p>
                             <p className="text-base font-bold text-foreground capitalize">
-                                {note.is_signed ? 'Signed' : 'Draft'}
+                                {note.status || 'draft'}
                             </p>
                         </div>
                     </div>
