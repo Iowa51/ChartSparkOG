@@ -256,10 +256,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             }
         }
 
-        // Soft delete or archive - clinical notes should never be hard deleted
+        // Soft delete - mark as deleted status
         const { error } = await supabase
             .from('clinical_notes')
-            .update({ status: 'deleted', deleted_at: new Date().toISOString() })
+            .update({ status: 'deleted' })
             .eq('id', id)
             .eq('organization_id', profile?.organization_id);
 
