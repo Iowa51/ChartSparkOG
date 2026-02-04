@@ -338,12 +338,22 @@ export async function createPatient(
             );
         }
 
-        // Wait for all related data insertions
+        // Wait for all related data insertions (non-blocking - log failures but don't fail patient creation)
         if (relatedDataPromises.length > 0) {
             const results = await Promise.allSettled(relatedDataPromises);
             results.forEach((result, index) => {
                 if (result.status === 'rejected') {
+                    // Log but don't fail - tables may not exist yet
                     safeLogger.warn(`Failed to create related data for patient: ${result.reason}`);
+                } else if (result.value && 'error' in result.value && result.value.error) {
+                    // Supabase returns { error } instead of throwing
+                    const error = result.value.error as { message?: string; code?: string };
+                    if (error.code === '42P01') {
+                        // Table doesn't exist - this is expected if migration not run
+                        safeLogger.warn(`Related table not found (run migrations): ${error.message}`);
+                    } else {
+                        safeLogger.warn(`Failed to insert related data: ${error.message}`);
+                    }
                 }
             });
         }

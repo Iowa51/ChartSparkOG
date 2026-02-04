@@ -133,11 +133,14 @@ export function validateEmail(email: string): boolean {
 }
 
 /**
- * Validate phone format (US)
+ * Validate phone format (US - flexible)
+ * Accepts: (555) 123-4567, 555-123-4567, 5551234567, +1 555 123 4567, etc.
  */
 export function validatePhone(phone: string): boolean {
-    const phoneRegex = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/;
-    return phoneRegex.test(phone);
+    // Remove all non-digit characters except + for country code
+    const digits = phone.replace(/[^\d+]/g, '');
+    // Must have 10 digits (US) or 11 digits with country code (1 for US)
+    return digits.length === 10 || (digits.length === 11 && digits.startsWith('1')) || (digits.length === 12 && digits.startsWith('+1'));
 }
 
 /**
