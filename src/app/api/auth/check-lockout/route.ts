@@ -19,6 +19,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Email required' }, { status: 400 });
         }
 
+        // TEMPORARY: Disable lockout in development/demo mode for easier testing
+        // Remove this block in production
+        const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
+        if (isDemoMode || process.env.NODE_ENV !== 'production') {
+            console.log('[LOCKOUT] Skipping lockout check - demo/dev mode');
+            return NextResponse.json({ locked: false, remainingAttempts: 99 });
+        }
+
         // SEC-REMEDIATION: Use service role client for lockout checks
         // This bypasses RLS since we need to check before user is authenticated
         let supabase;
