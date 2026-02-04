@@ -156,6 +156,7 @@ export default function NewNotePage() {
     }, [patientId, encounterId, editId]);
 
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [isRecordingVisible, setIsRecordingVisible] = useState(true);
     const [showTranscript, setShowTranscript] = useState(true);
@@ -699,6 +700,78 @@ Prognosis: Favorable with continued treatment adherence.`;
         }
     };
 
+    // Save note to database
+    const handleSaveNote = async (markComplete: boolean = false) => {
+        // Validate we have a patient
+        if (!currentPatient?.id) {
+            alert('No patient selected. Please select a patient before saving.');
+            return;
+        }
+
+        // Check if note has content
+        const hasContent = Object.values(noteSections).some(v => v && v.trim().length > 0);
+        if (!hasContent) {
+            alert('Please generate or write some note content before saving.');
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            // Prepare note data
+            const noteData = {
+                patient_id: currentPatient.id,
+                encounter_id: encounterId || currentEncounter?.id || null,
+                type: template.name || 'Progress Note',
+                note_date: new Date().toISOString().split('T')[0],
+                // Map sections to SOAP fields
+                subjective: noteSections['subjective'] || noteSections['sec-subjective'] || '',
+                objective: noteSections['objective'] || noteSections['sec-objective'] || '',
+                assessment: noteSections['assessment'] || noteSections['sec-assessment'] || '',
+                plan: noteSections['plan'] || noteSections['sec-plan'] || '',
+                // Full content for non-SOAP templates
+                content: Object.values(noteSections).filter(Boolean).join('\n\n'),
+                chief_complaint: clinicianInput || null,
+                is_signed: markComplete,
+                signed_at: markComplete ? new Date().toISOString() : null,
+            };
+
+            const url = editId ? `/api/notes/${editId}` : '/api/notes';
+            const method = editId ? 'PATCH' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(noteData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save note');
+            }
+
+            const savedNote = await response.json();
+
+            // Show success message
+            if (markComplete) {
+                alert('Note saved and marked as complete!');
+            } else {
+                setAutoSaved(new Date().toLocaleTimeString());
+                alert('Note saved successfully!');
+            }
+
+            // Redirect to patient chart or notes list
+            if (markComplete) {
+                router.push(currentPatient?.id ? `/patients/${currentPatient.id}` : '/notes');
+            }
+        } catch (error) {
+            console.error('Error saving note:', error);
+            alert(error instanceof Error ? error.message : 'Failed to save note. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen overflow-hidden bg-background">
             {/* Top Navigation */}
@@ -726,13 +799,21 @@ Prognosis: Favorable with continued treatment adherence.`;
                             Auto-saved {autoSaved}
                         </span>
                     )}
-                    <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-colors">
+                    <button
+                        onClick={() => handleSaveNote(false)}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                         <Save className="h-4 w-4" />
-                        Save Draft
+                        {isSaving ? 'Saving...' : 'Save Draft'}
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95">
+                    <button
+                        onClick={() => handleSaveNote(true)}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    >
                         <CheckCircle className="h-4 w-4" />
-                        Mark Complete
+                        {isSaving ? 'Saving...' : 'Mark Complete'}
                     </button>
                 </div>
             </header>
