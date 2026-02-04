@@ -4,6 +4,9 @@ import { SessionTimeout } from "@/components/SessionTimeout";
 import { TrialBanner } from "@/components/subscriptions/trial-banner";
 import { ReadOnlyBanner } from "@/components/subscriptions/read-only-banner";
 
+// Force dynamic rendering - app pages require authentication at runtime
+export const dynamic = 'force-dynamic';
+
 export default function AppLayout({
     children,
 }: {

@@ -1,10 +1,13 @@
 import { DemoAuthGuard } from "@/components/auth/DemoAuthGuard";
 import { SessionTimeout } from "@/components/SessionTimeout";
 
+// Force dynamic rendering - admin pages require authentication at runtime
+export const dynamic = 'force-dynamic';
+
 /**
  * Parent layout for admin route group.
- * Note: Individual child layouts (admin/layout.tsx, super-admin/layout.tsx) 
- * provide their own context-specific sidebars. This parent layout only 
+ * Note: Individual child layouts (admin/layout.tsx, super-admin/layout.tsx)
+ * provide their own context-specific sidebars. This parent layout only
  * provides the DemoAuthGuard wrapper to avoid duplicated sidebars.
  */
 export default async function AdminLayout({
