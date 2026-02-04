@@ -61,32 +61,33 @@ export default function LoginPage() {
         */
 
         try {
-            // Demo mode without Supabase: allow login for known demo emails
+            // Demo mode: allow login for known demo emails (bypass Supabase)
+            const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+            const demoRoleMap: Record<string, string> = {
+                'super@chartspark.com': 'SUPER_ADMIN',
+                'admin@chartspark.com': 'ADMIN',
+                'auditor@chartspark.com': 'AUDITOR',
+                'clinician@chartspark.com': 'USER',
+            };
+            const detectedDemoRole = demoRoleMap[email.toLowerCase()];
+
+            // If demo mode is enabled and using a demo email, skip Supabase auth
+            if (isDemoMode && detectedDemoRole) {
+                console.log('[LOGIN] Demo mode bypass for:', email);
+                const redirectPath = roleRoutes[detectedDemoRole] || defaultRedirect;
+                router.push(redirectPath);
+                return;
+            }
+
+            // If no Supabase is configured
             if (!supabase) {
-                const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
                 if (isDemoMode) {
-                    const demoRoleMap: Record<string, string> = {
-                        'super@chartspark.com': 'SUPER_ADMIN',
-                        'admin@chartspark.com': 'ADMIN',
-                        'auditor@chartspark.com': 'AUDITOR',
-                        'clinician@chartspark.com': 'USER',
-                    };
-                    const detectedRole = demoRoleMap[email.toLowerCase()];
-                    if (detectedRole) {
-                        // Demo login successful
-                        const redirectPath = roleRoutes[detectedRole] || defaultRedirect;
-                        router.push(redirectPath);
-                        return;
-                    } else {
-                        setError('Demo mode: Use a demo account (see buttons below)');
-                        setIsLoading(false);
-                        return;
-                    }
+                    setError('Demo mode: Use a demo account (see buttons below)');
                 } else {
                     setError('Authentication service not configured');
-                    setIsLoading(false);
-                    return;
                 }
+                setIsLoading(false);
+                return;
             }
 
             // 1. Authenticate with Supabase
