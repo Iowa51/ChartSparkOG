@@ -50,9 +50,9 @@ export async function updateSession(request: NextRequest) {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    // SEC-REMEDIATION: Demo mode requires explicit opt-in AND non-production environment
+    // Demo mode: allow explicit opt-in (NEXT_PUBLIC_DEMO_MODE=true)
     const isProduction = process.env.NODE_ENV === 'production';
-    const isDemoMode = !isProduction && process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
     // SEC-REMEDIATION: Allow demo mode in production ONLY if Supabase is configured
     // This enables demo features while still having real authentication
@@ -115,6 +115,12 @@ export async function updateSession(request: NextRequest) {
 
     // If accessing a protected route
     if (matchedRoute) {
+        // Demo mode: allow access without authentication
+        if (isDemoMode && !user) {
+            console.log('[MIDDLEWARE] Demo mode - allowing unauthenticated access to:', path);
+            return supabaseResponse;
+        }
+
         // Not authenticated - redirect to login
         if (!user) {
             const url = request.nextUrl.clone();
