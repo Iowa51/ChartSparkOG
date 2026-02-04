@@ -119,6 +119,8 @@ export default function NewPatientPage() {
             // Only auto-redirect if NOT from note creation flow
             if (!returnTo) {
                 setTimeout(() => {
+                    // Refresh router cache before navigating to ensure fresh data
+                    router.refresh();
                     router.push('/patients');
                 }, 1500);
             }
