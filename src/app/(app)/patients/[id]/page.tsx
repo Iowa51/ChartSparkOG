@@ -16,6 +16,7 @@ import {
     ChevronRight,
     Shield,
     Loader2,
+    ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -82,7 +83,9 @@ export default function PatientDetailPage() {
 
     const [patient, setPatient] = useState<PatientWithDetails | null>(null);
     const [encounters, setEncounters] = useState<any[]>([]);
+    const [notes, setNotes] = useState<any[]>([]);
     const [loadingEncounters, setLoadingEncounters] = useState(false);
+    const [loadingNotes, setLoadingNotes] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("overview");
@@ -133,6 +136,30 @@ export default function PatientDetailPage() {
         };
 
         fetchEncounters();
+    }, [patientId, activeTab]);
+
+    // Fetch notes when notes tab is opened
+    useEffect(() => {
+        const fetchNotes = async () => {
+            if (activeTab !== 'notes' || !patientId) return;
+
+            try {
+                setLoadingNotes(true);
+                const response = await fetch(`/api/notes?patient_id=${patientId}&limit=20`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch notes');
+                }
+                const data = await response.json();
+                setNotes(data.notes || []);
+            } catch (err) {
+                console.error('Error fetching notes:', err);
+                setNotes([]);
+            } finally {
+                setLoadingNotes(false);
+            }
+        };
+
+        fetchNotes();
     }, [patientId, activeTab]);
 
     if (loading) {
@@ -276,6 +303,7 @@ export default function PatientDetailPage() {
                     {[
                         { id: "overview", label: "Overview", icon: Activity },
                         { id: "encounters", label: "Encounters", icon: Calendar },
+                        { id: "notes", label: "Notes", icon: ClipboardList },
                         { id: "allergies", label: "Allergies", icon: AlertCircle },
                         { id: "medications", label: "Medications", icon: Pill },
                         { id: "problems", label: "Problems", icon: FileText },
@@ -444,10 +472,10 @@ export default function PatientDetailPage() {
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className={`text-xs px-2 py-1 rounded font-bold uppercase ${encounter.status === 'completed'
-                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                            : encounter.status === 'in_progress'
-                                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                        : encounter.status === 'in_progress'
+                                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                                         }`}>
                                                         {encounter.status.replace('_', ' ')}
                                                     </span>
@@ -471,6 +499,73 @@ export default function PatientDetailPage() {
                                         >
                                             <Plus className="h-4 w-4" />
                                             Create First Encounter
+                                        </Link>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {activeTab === "notes" && (
+                        <Card className="lg:col-span-3">
+                            <CardHeader>
+                                <CardTitle>
+                                    <ClipboardList className="h-4 w-4" />
+                                    Clinical Notes
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {loadingNotes ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                    </div>
+                                ) : notes && notes.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {notes.map((note: any) => (
+                                            <div
+                                                key={note.id}
+                                                className="p-4 bg-muted/50 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <div>
+                                                        <p className="font-medium text-foreground">
+                                                            Clinical Note
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground mt-1">
+                                                            {new Date(note.created_at).toLocaleDateString('en-US', {
+                                                                month: 'short',
+                                                                day: 'numeric',
+                                                                year: 'numeric',
+                                                                hour: 'numeric',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </p>
+                                                    </div>
+                                                    <span className={`text-xs px-2 py-1 rounded font-bold uppercase ${note.status === 'signed'
+                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                            : note.status === 'completed'
+                                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                        }`}>
+                                                        {note.status || 'draft'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground line-clamp-3">
+                                                    {note.content?.substring(0, 200)}
+                                                    {note.content?.length > 200 ? '...' : ''}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <p className="text-sm text-muted-foreground">No clinical notes on record</p>
+                                        <Link
+                                            href={`/notes/new?patientId=${patient.id}`}
+                                            className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Create First Note
                                         </Link>
                                     </div>
                                 )}
