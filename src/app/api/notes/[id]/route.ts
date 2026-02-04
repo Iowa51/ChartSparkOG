@@ -256,12 +256,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             }
         }
 
-        // Hard delete the note (the database constraint doesn't allow 'deleted' status)
-        const { error } = await supabase
+        // Hard delete the note (RLS policies handle authorization at DB level)
+        const { error, count } = await supabase
             .from('clinical_notes')
             .delete()
             .eq('id', id)
-            .eq('organization_id', profile?.organization_id);
+            .select();
 
         if (error) throw error;
 
