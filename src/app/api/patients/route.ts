@@ -24,14 +24,29 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { data: profile } = await supabase
+        // Try profiles table first, fallback to users table for RLS compatibility
+        let profile = null;
+        const { data: profileData } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
             .eq('id', user.id)
             .single();
 
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        if (profileData) {
+            profile = profileData;
+        } else {
+            // Fallback: Try users table (RLS policies use this table)
+            const { data: userData } = await supabase
+                .from('users')
+                .select('organization_id, email, role')
+                .eq('id', user.id)
+                .single();
+
+            if (userData) {
+                profile = userData;
+            } else {
+                return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+            }
         }
 
         const searchParams = request.nextUrl.searchParams;
