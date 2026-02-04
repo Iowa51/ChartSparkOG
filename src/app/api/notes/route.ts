@@ -222,11 +222,12 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ note }, { status: 201 });
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         logError({
             action: 'note_create_error',
             error: sanitizeError(error),
             resourceType: 'clinical_note',
         });
-        return NextResponse.json({ error: 'Failed to create note' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create note', details: errorMessage }, { status: 500 });
     }
 }

@@ -758,7 +758,8 @@ Prognosis: Favorable with continued treatment adherence.`;
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to save note');
+                const errorDetails = errorData.details ? `: ${errorData.details}` : '';
+                throw new Error((errorData.error || 'Failed to save note') + errorDetails);
             }
 
             const savedNote = await response.json();
