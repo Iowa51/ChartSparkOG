@@ -51,7 +51,12 @@ export async function POST(request: NextRequest) {
                 .order('created_at', { ascending: false });
 
             if (error) {
-                // SEC-REMEDIATION: FAIL CLOSED on database errors
+                // Handle missing table gracefully (table may not exist yet)
+                if (error.code === '42P01' || error.message?.includes('does not exist')) {
+                    console.warn('login_attempts table not found - allowing login (run migrations to enable lockout)');
+                    return NextResponse.json({ locked: false, remainingAttempts: 5 });
+                }
+                // SEC-REMEDIATION: FAIL CLOSED on other database errors
                 console.error('Lockout check database error:', error);
                 return NextResponse.json(
                     { locked: true, error: 'Security check failed' },
@@ -83,8 +88,13 @@ export async function POST(request: NextRequest) {
                 locked: false,
                 remainingAttempts: Math.max(0, LOCKOUT_CONFIG.maxAttempts - failedCount),
             });
-        } catch (dbError) {
-            // SEC-REMEDIATION: FAIL CLOSED - don't allow login on errors
+        } catch (dbError: any) {
+            // Handle missing table gracefully
+            if (dbError?.code === '42P01' || dbError?.message?.includes('does not exist')) {
+                console.warn('login_attempts table not found - allowing login');
+                return NextResponse.json({ locked: false, remainingAttempts: 5 });
+            }
+            // SEC-REMEDIATION: FAIL CLOSED - don't allow login on other errors
             console.error('login_attempts table error:', dbError);
             return NextResponse.json(
                 { locked: true, error: 'Security check failed' },
