@@ -88,7 +88,24 @@ export default function NewNotePage() {
                     const response = await fetch(`/api/patients/${patientId}`);
                     if (response.ok) {
                         const data = await response.json();
-                        setCurrentPatient(data);
+                        // Transform raw API data to formatted patient object
+                        const formattedPatient = {
+                            id: data.id,
+                            name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || 'Unknown Patient',
+                            initials: `${(data.first_name || '')[0] || ''}${(data.last_name || '')[0] || ''}`.toUpperCase() || '??',
+                            dob: data.date_of_birth ? new Date(data.date_of_birth).toLocaleDateString() : 'N/A',
+                            gender: data.gender || 'Not specified',
+                            mrn: data.mrn || 'N/A',
+                            phone: data.phone || 'N/A',
+                            email: data.email || 'N/A',
+                            status: data.status === 'active' ? 'Active' : (data.status || 'Unknown'),
+                            avatarColor: data.avatar_color || 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                            lastVisit: '--',
+                            allergies: data.allergies || [],
+                            medications: data.medications || [],
+                            problems: data.problems || [],
+                        };
+                        setCurrentPatient(formattedPatient);
                     }
                 } catch (error) {
                     console.error('Error fetching patient:', error);
@@ -108,7 +125,24 @@ export default function NewNotePage() {
                             const patientResponse = await fetch(`/api/patients/${data.patient_id}`);
                             if (patientResponse.ok) {
                                 const patientData = await patientResponse.json();
-                                setCurrentPatient(patientData);
+                                // Transform raw API data to formatted patient object
+                                const formattedPatient = {
+                                    id: patientData.id,
+                                    name: `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() || 'Unknown Patient',
+                                    initials: `${(patientData.first_name || '')[0] || ''}${(patientData.last_name || '')[0] || ''}`.toUpperCase() || '??',
+                                    dob: patientData.date_of_birth ? new Date(patientData.date_of_birth).toLocaleDateString() : 'N/A',
+                                    gender: patientData.gender || 'Not specified',
+                                    mrn: patientData.mrn || 'N/A',
+                                    phone: patientData.phone || 'N/A',
+                                    email: patientData.email || 'N/A',
+                                    status: patientData.status === 'active' ? 'Active' : (patientData.status || 'Unknown'),
+                                    avatarColor: patientData.avatar_color || 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                                    lastVisit: '--',
+                                    allergies: patientData.allergies || [],
+                                    medications: patientData.medications || [],
+                                    problems: patientData.problems || [],
+                                };
+                                setCurrentPatient(formattedPatient);
                             }
                         }
                     }
