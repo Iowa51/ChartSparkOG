@@ -256,10 +256,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             }
         }
 
-        // Soft delete - mark as deleted status
+        // Hard delete the note (the database constraint doesn't allow 'deleted' status)
         const { error } = await supabase
             .from('clinical_notes')
-            .update({ status: 'deleted' })
+            .delete()
             .eq('id', id)
             .eq('organization_id', profile?.organization_id);
 
