@@ -40,6 +40,15 @@ export async function GET(request: NextRequest) {
         const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
         const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
+        console.log('[PATIENT SEARCH] Query params:', {
+            userId: user.id,
+            organizationId: profile.organization_id,
+            searchTerm,
+            status,
+            page,
+            pageSize,
+        });
+
         let result;
 
         // Use search if search term provided, otherwise paginated list
@@ -54,6 +63,12 @@ export async function GET(request: NextRequest) {
                 pageSize,
             });
         }
+
+        console.log('[PATIENT SEARCH] Results:', {
+            organizationId: profile.organization_id,
+            resultCount: result.data.length,
+            totalCount: result.count,
+        });
 
         // Fire-and-forget audit logging
         logAuditEventAsync({
@@ -107,6 +122,7 @@ export async function POST(request: NextRequest) {
 
         // Try profiles table first, fallback to users table for RLS compatibility
         let profile = null;
+        let profileSource = '';
         const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
@@ -115,6 +131,7 @@ export async function POST(request: NextRequest) {
 
         if (profileData) {
             profile = profileData;
+            profileSource = 'profiles';
         } else {
             // Fallback: Try users table (RLS policies use this table)
             const { data: userData, error: userError } = await supabase
@@ -125,6 +142,7 @@ export async function POST(request: NextRequest) {
 
             if (userData) {
                 profile = userData;
+                profileSource = 'users';
             } else {
                 console.error('Profile lookup failed:', { profileError, userError });
                 return NextResponse.json({
@@ -133,6 +151,13 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        console.log('[PATIENT CREATE] Profile lookup:', {
+            userId: user.id,
+            profileSource,
+            organizationId: profile.organization_id,
+            role: profile.role,
+        });
+
         if (!profile.organization_id) {
             return NextResponse.json({
                 error: 'No organization assigned to your account. Please contact your administrator.'
@@ -140,6 +165,12 @@ export async function POST(request: NextRequest) {
         }
 
         const data = await request.json();
+
+        console.log('[PATIENT CREATE] Creating patient:', {
+            firstName: data.first_name,
+            lastName: data.last_name,
+            organizationId: profile.organization_id,
+        });
 
         // Create patient using data layer
         const patient = await createPatient(
@@ -160,6 +191,14 @@ export async function POST(request: NextRequest) {
                 insurance: data.insurance,
             }
         );
+
+        console.log('[PATIENT CREATE] Patient created successfully:', {
+            patientId: patient.id,
+            patientOrgId: patient.organization_id,
+            firstName: patient.first_name,
+            lastName: patient.last_name,
+            status: patient.status,
+        });
 
         return NextResponse.json(patient, { status: 201 });
     } catch (error) {
