@@ -40,7 +40,9 @@ export default function LoginPage() {
         setIsLoading(true);
         setError(null);
 
-        // Check for lockout before attempting login
+        // TEMPORARILY DISABLED: Lockout check causing login issues
+        // Will re-enable after fixing root cause
+        /*
         try {
             const lockoutCheck = await fetch('/api/auth/check-lockout', {
                 method: 'POST',
@@ -56,6 +58,7 @@ export default function LoginPage() {
         } catch {
             // Continue if lockout check fails
         }
+        */
 
         try {
             // Demo mode without Supabase: allow login for known demo emails
