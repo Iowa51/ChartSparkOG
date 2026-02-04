@@ -63,6 +63,7 @@ export default function LoginPage() {
         try {
             // Demo mode: allow login for known demo emails (bypass Supabase)
             const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+            console.log('[LOGIN DEBUG] NEXT_PUBLIC_DEMO_MODE =', process.env.NEXT_PUBLIC_DEMO_MODE, '| isDemoMode =', isDemoMode);
             const demoRoleMap: Record<string, string> = {
                 'super@chartspark.com': 'SUPER_ADMIN',
                 'admin@chartspark.com': 'ADMIN',
