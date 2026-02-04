@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         }
 
         const searchParams = request.nextUrl.searchParams;
-        const patientId = searchParams.get('patientId');
+        const patientId = searchParams.get('patient_id') || searchParams.get('patientId');
 
         // SEC-REMEDIATION: Add pagination to prevent unbounded queries
         const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
                 provider:profiles(id, first_name, last_name)
             `)
             .eq('organization_id', profile.organization_id)
-            .order('note_date', { ascending: false })
+            .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
         if (patientId) query = query.eq('patient_id', patientId);
