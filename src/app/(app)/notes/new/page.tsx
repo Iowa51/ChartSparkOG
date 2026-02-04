@@ -718,22 +718,33 @@ Prognosis: Favorable with continued treatment adherence.`;
         setIsSaving(true);
 
         try {
-            // Prepare note data
+            // Build full content from all sections
+            const fullContent = template.sections
+                .map(section => {
+                    const sectionContent = noteSections[section.id] || '';
+                    return sectionContent ? `${section.label.toUpperCase()}:\n${sectionContent}` : '';
+                })
+                .filter(Boolean)
+                .join('\n\n');
+
+            // Map template format to valid note type enum
+            const noteTypeMap: Record<string, string> = {
+                'soap': 'soap',
+                'progress': 'progress',
+                'intake': 'intake',
+                'discharge': 'discharge',
+            };
+            const noteType = noteTypeMap[template.format] || 'progress';
+
+            // Prepare note data matching NoteCreateSchema
             const noteData = {
                 patient_id: currentPatient.id,
-                encounter_id: encounterId || currentEncounter?.id || null,
-                type: template.name || 'Progress Note',
-                note_date: new Date().toISOString().split('T')[0],
-                // Map sections to SOAP fields
-                subjective: noteSections['subjective'] || noteSections['sec-subjective'] || '',
-                objective: noteSections['objective'] || noteSections['sec-objective'] || '',
-                assessment: noteSections['assessment'] || noteSections['sec-assessment'] || '',
-                plan: noteSections['plan'] || noteSections['sec-plan'] || '',
-                // Full content for non-SOAP templates
-                content: Object.values(noteSections).filter(Boolean).join('\n\n'),
-                chief_complaint: clinicianInput || null,
+                encounter_id: encounterId || currentEncounter?.id || undefined,
+                type: noteType,
+                content: fullContent || clinicianInput || 'No content provided',
+                template_id: undefined, // Optional
                 is_signed: markComplete,
-                signed_at: markComplete ? new Date().toISOString() : null,
+                is_locked: markComplete,
             };
 
             const url = editId ? `/api/notes/${editId}` : '/api/notes';
