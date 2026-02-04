@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // SEC-011: Security headers for HIPAA compliance
 const securityHeaders = [
@@ -35,7 +36,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' blob: data: https:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://*.daily.co wss://*.daily.co https://*.wss.daily.co", // Added Daily.co WebSockets
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://*.daily.co wss://*.daily.co https://*.wss.daily.co https://*.sentry.io https://*.ingest.sentry.io", // Added Sentry
       "frame-src 'self' https://*.daily.co", // SEC-011: Allow Daily.co frames for telehealth
       "media-src 'self' blob: https://*.daily.co", // Allow video/audio streams
       "worker-src 'self' blob:", // Allow web workers for Daily.co
@@ -118,4 +119,29 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Wrap with Sentry configuration
+export default withSentryConfig(nextConfig, {
+  // Sentry organization and project (set in environment variables)
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
+
+  // Source maps configuration
+  sourcemaps: {
+    // Don't delete source maps after upload (needed for debugging)
+    deleteSourcemapsAfterUpload: true,
+  },
+
+  // Automatically annotate React components for better debugging
+  reactComponentAnnotation: {
+    enabled: true,
+  },
+
+  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers
+  tunnelRoute: "/monitoring",
+
+  // Automatically tree-shake Sentry logger statements to reduce bundle size
+  disableLogger: true,
+});
