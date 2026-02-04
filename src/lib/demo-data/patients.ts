@@ -134,4 +134,16 @@ export const patients: Patient[] = [
     }
 ];
 
-export const getPatientById = (id: string) => patients.find(p => p.id === id);
+export const getPatientById = (id: string) => {
+    // First check existing demo patients
+    const existingPatient = patients.find(p => p.id === id);
+    if (existingPatient) return existingPatient;
+
+    // Then check newly created patients
+    try {
+        const { getNewPatientById } = require('./newPatientStore');
+        return getNewPatientById(id);
+    } catch {
+        return undefined;
+    }
+};

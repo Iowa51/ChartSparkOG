@@ -109,6 +109,39 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             .eq('id', user.id)
             .single();
 
+        // Get current note to check if it's signed
+        const { data: currentNote } = await supabase
+            .from('clinical_notes')
+            .select('is_signed, organization_id')
+            .eq('id', id)
+            .single();
+
+        // Verify organization access
+        if (currentNote?.organization_id !== profile?.organization_id) {
+            await logAuditEvent({
+                eventType: 'UNAUTHORIZED_ACCESS',
+                userId: user.id,
+                userEmail: user.email,
+                organizationId: profile?.organization_id,
+                ipAddress,
+                userAgent,
+                resourceType: 'clinical_note',
+                resourceId: id,
+                details: { reason: 'Cross-organization edit attempt' },
+                phiAccessed: false,
+                riskLevel: 'CRITICAL',
+            });
+            return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+        }
+
+        // Prevent editing signed notes
+        if (currentNote?.is_signed) {
+            return NextResponse.json(
+                { error: 'Cannot edit signed notes' },
+                { status: 403 }
+            );
+        }
+
         const rawData = await request.json();
 
         // SEC-REMEDIATION: Validate input with Zod schema instead of spreading arbitrary data

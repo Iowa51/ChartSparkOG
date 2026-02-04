@@ -12,32 +12,12 @@ import {
     Plus,
     Calendar,
     ArrowRight,
+    Users,
+    Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PatientQuickSelectModal from "@/components/notes/PatientQuickSelectModal";
-
-// Demo data
-const stats = [
-    {
-        label: "Notes Completed",
-        value: "12",
-        change: "+2 from yesterday",
-        changeType: "positive" as const,
-        icon: CheckCircle,
-        iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
-        iconColor: "text-emerald-600 dark:text-emerald-400",
-    },
-    {
-        label: "Pending Billing",
-        value: "5",
-        change: "Needs attention",
-        changeType: "warning" as const,
-        icon: Receipt,
-        iconBg: "bg-amber-100 dark:bg-amber-900/30",
-        iconColor: "text-amber-600 dark:text-amber-400",
-    },
-];
 
 const quickTools = [
     {
@@ -66,30 +46,6 @@ const quickTools = [
     },
 ];
 
-const recentNotes = [
-    {
-        id: "1",
-        patient: { name: "John Doe", initials: "JD", dob: "04/12/1985" },
-        diagnosis: { name: "Acute Pharyngitis", code: "J02.9" },
-        lastEdited: "Today, 9:41 AM",
-        status: "Draft" as const,
-    },
-    {
-        id: "2",
-        patient: { name: "Maria Rodriguez", initials: "MR", dob: "11/22/1972" },
-        diagnosis: { name: "Hypertension F/U", code: "I10" },
-        lastEdited: "Yesterday, 3:15 PM",
-        status: "Signed" as const,
-    },
-    {
-        id: "3",
-        patient: { name: "Arthur Smith", initials: "AS", dob: "02/08/1954" },
-        diagnosis: { name: "T2DM Management", code: "E11.9" },
-        lastEdited: "Oct 24, 10:30 AM",
-        status: "Pending Review" as const,
-    },
-];
-
 const statusStyles = {
     Draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
     Signed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
@@ -97,7 +53,67 @@ const statusStyles = {
 };
 
 export default function DashboardPage() {
-    // TODO: Get actual user name from auth
+    const [showPatientModal, setShowPatientModal] = useState(false);
+    const [stats, setStats] = useState<any>(null);
+    const [recentNotes, setRecentNotes] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                setLoading(true);
+                // Fetch statistics
+                const statsResponse = await fetch('/api/dashboard/stats');
+                if (statsResponse.ok) {
+                    const statsData = await statsResponse.json();
+                    setStats(statsData.stats);
+                }
+
+                // Fetch recent notes
+                const notesResponse = await fetch('/api/notes?limit=3');
+                if (notesResponse.ok) {
+                    const notesData = await notesResponse.json();
+                    setRecentNotes(notesData.notes || []);
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
+    const statCards = stats ? [
+        {
+            label: "Active Patients",
+            value: stats.activePatients.toString(),
+            change: "In your organization",
+            changeType: "neutral" as const,
+            icon: Users,
+            iconBg: "bg-blue-100 dark:bg-blue-900/30",
+            iconColor: "text-blue-600 dark:text-blue-400",
+        },
+        {
+            label: "Today's Notes",
+            value: stats.todayNotes.toString(),
+            change: "Completed today",
+            changeType: "positive" as const,
+            icon: CheckCircle,
+            iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
+            iconColor: "text-emerald-600 dark:text-emerald-400",
+        },
+        {
+            label: "Pending Encounters",
+            value: stats.pendingEncounters.toString(),
+            change: "Needs attention",
+            changeType: stats.pendingEncounters > 0 ? "warning" as const : "neutral" as const,
+            icon: Receipt,
+            iconBg: "bg-amber-100 dark:bg-amber-900/30",
+            iconColor: "text-amber-600 dark:text-amber-400",
+        },
+    ] : [];
     const userName = "Sarah";
     const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
 
@@ -139,7 +155,7 @@ export default function DashboardPage() {
 
                     {/* Stats Cards */}
                     <div className="grid grid-rows-2 gap-4">
-                        {stats.map((stat) => {
+                        {statCards.map((stat: any) => {
                             const Icon = stat.icon;
                             const href = stat.label === "Notes Completed" ? "/notes?status=completed" : "/billing?status=pending";
                             return (
@@ -282,10 +298,12 @@ export default function DashboardPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span
-                                                className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[note.status]
+                                                className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${note.is_signed ? statusStyles["Signed"] :
+                                                        note.is_locked ? statusStyles["Pending Review"] :
+                                                            statusStyles["Draft"]
                                                     }`}
                                             >
-                                                {note.status}
+                                                {note.is_signed ? "Signed" : note.is_locked ? "Pending Review" : "Draft"}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

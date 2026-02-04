@@ -9,130 +9,160 @@ import {
     Trash2,
     ArrowLeft,
     CheckCircle2,
-    Clock
+    Clock,
+    Lock,
+    Loader2,
+    FileSignature,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+interface Note {
+    id: string;
+    patient_id: string;
+    note_date: string;
+    type: string;
+    chief_complaint?: string;
+    subjective?: string;
+    objective?: string;
+    assessment?: string;
+    plan?: string;
+    content?: string;
+    is_signed: boolean;
+    is_locked: boolean;
+    signed_at?: string;
+    signed_by?: string;
+    created_at: string;
+    updated_at: string;
+    patient?: {
+        first_name: string;
+        last_name: string;
+        date_of_birth: string;
+    };
+}
 
 export default function NotePage() {
     const params = useParams();
+    const router = useRouter();
     const id = params.id as string;
 
-    // Notes data matching the list in /notes/page.tsx
-    const allNotes: Record<string, {
-        id: string;
-        patientName: string;
-        patientInitials: string;
-        dob: string;
-        diagnosis: string;
-        diagnosisCode: string;
-        date: string;
-        type: string;
-        format: "soap" | "paragraph";
-        content: string | { subjective: string; objective: string; assessment: string; plan: string };
-        status: string;
-    }> = {
-        "1": {
-            id: "1",
-            patientName: "John Doe",
-            patientInitials: "JD",
-            dob: "04/12/1985",
-            diagnosis: "Acute Pharyngitis",
-            diagnosisCode: "J02.9",
-            date: "Oct 29, 2023",
-            type: "Progress Note",
-            format: "soap",
-            content: {
-                subjective: "Patient presents with sore throat for 3 days, difficulty swallowing, and low-grade fever. Reports no cough or nasal congestion.",
-                objective: "Throat appears erythematous with mild tonsillar enlargement. No exudates. Temp 99.8°F. Lymph nodes slightly tender.",
-                assessment: "Acute viral pharyngitis. Low probability of streptococcal infection based on presentation.",
-                plan: "Symptomatic treatment with OTC analgesics. Warm salt water gargles. Return if symptoms worsen or persist >7 days."
-            },
-            status: "Draft"
-        },
-        "2": {
-            id: "2",
-            patientName: "Maria Rodriguez",
-            patientInitials: "MR",
-            dob: "11/22/1972",
-            diagnosis: "Hypertension F/U",
-            diagnosisCode: "I10",
-            date: "Oct 28, 2023",
-            type: "Progress Note",
-            format: "soap",
-            content: {
-                subjective: "Patient returns for routine hypertension follow-up. Reports good medication compliance. No headaches or dizziness.",
-                objective: "BP: 128/82 mmHg. HR: 72 bpm. Weight stable at 156 lbs. No peripheral edema.",
-                assessment: "Essential hypertension, well-controlled on current regimen.",
-                plan: "Continue Lisinopril 10mg daily. Recheck in 3 months. Continue low-sodium diet and regular exercise."
-            },
-            status: "Signed"
-        },
-        "3": {
-            id: "3",
-            patientName: "Arthur Smith",
-            patientInitials: "AS",
-            dob: "02/08/1954",
-            diagnosis: "T2DM Management",
-            diagnosisCode: "E11.9",
-            date: "Oct 24, 2023",
-            type: "Progress Note",
-            format: "paragraph",
-            content: "Patient has successfully completed the 12-week intensive outpatient program for T2DM management. He has demonstrated significant improvement in blood glucose monitoring and dietary adherence.\n\nFinal A1c at discharge is 6.8%, down from 8.2% at admission. Patient has been provided with a long-term maintenance plan and primary care follow-up is scheduled for next month.\n\nDischarge Status: Stable, improved. All goals met.",
-            status: "Pending Review"
-        },
-        "4": {
-            id: "4",
-            patientName: "Sarah Williams",
-            patientInitials: "SW",
-            dob: "06/15/1992",
-            diagnosis: "Anxiety Screening",
-            diagnosisCode: "F41.1",
-            date: "Oct 22, 2023",
-            type: "Progress Note",
-            format: "soap",
-            content: {
-                subjective: "Patient reports improved mood over the past week. Still experiencing some anxiety in social situations.",
-                objective: "Patient appears well-groomed and engaged. Eye contact appropriate. No psychomotor agitation noted.",
-                assessment: "Generalized anxiety disorder, improving. PHQ-9 score improved from 12 to 7.",
-                plan: "Continue current medication regimen. Schedule follow-up in 2 weeks. Encourage continued therapy attendance."
-            },
-            status: "Signed"
-        },
-        "5": {
-            id: "5",
-            patientName: "David Miller",
-            patientInitials: "DM",
-            dob: "09/30/1968",
-            diagnosis: "Lower Back Pain",
-            diagnosisCode: "M54.5",
-            date: "Oct 20, 2023",
-            type: "Bio-Psychosocial Assessment",
-            format: "paragraph",
-            content: "Patient is a 55-year-old male presenting for an initial assessment. He reports a history of chronic lower back pain following a work-related injury 10 years ago. He describes his current mood as 'stable but frustrated' due to limited mobility.\n\nClinically, the patient is cooperative and articulate. He has maintained consistent employment in a modified capacity and has strong family support. He denies acute suicidal ideation but expresses concern about long-term physical health trends.\n\nThe primary goals for treatment are pain management, improved sleep hygiene, and cognitive restructuring regarding physical limitations. Referral to physical therapy and a vocational counselor is recommended.",
-            status: "Signed"
+    const [note, setNote] = useState<Note | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [signing, setSigning] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchNote = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/notes/${id}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch note');
+                }
+                const data = await response.json();
+                setNote(data.note);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load note');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchNote();
+    }, [id]);
+
+    const handleSignNote = async () => {
+        if (!note || note.is_signed) return;
+
+        const confirmed = window.confirm(
+            'Are you sure you want to sign this note? Once signed, it cannot be edited.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setSigning(true);
+            const response = await fetch(`/api/notes/${id}/sign`, {
+                method: 'POST',
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to sign note');
+            }
+
+            const data = await response.json();
+            setNote(data.note);
+            alert('Note signed successfully!');
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Failed to sign note');
+        } finally {
+            setSigning(false);
         }
     };
 
-    const mockNote = allNotes[id] || {
-        id: id,
-        patientName: "Unknown Patient",
-        patientInitials: "??",
-        dob: "N/A",
-        diagnosis: "N/A",
-        diagnosisCode: "N/A",
-        date: new Date().toLocaleDateString(),
-        type: "Progress Note",
-        format: "paragraph" as const,
-        content: "Note not found.",
-        status: "Draft"
-    };
+    if (loading) {
+        return (
+            <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
+                <Header
+                    title="Loading Note..."
+                    description="Please wait"
+                    breadcrumbs={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Notes", href: "/notes" },
+                        { label: `View Note` },
+                    ]}
+                />
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Loading note...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !note) {
+        return (
+            <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
+                <Header
+                    title="Note Not Found"
+                    description="Unable to load note"
+                    breadcrumbs={[
+                        { label: "Dashboard", href: "/dashboard" },
+                        { label: "Notes", href: "/notes" },
+                        { label: `View Note` },
+                    ]}
+                />
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                        <p className="text-lg text-destructive mb-4">{error || 'Note not found'}</p>
+                        <Link
+                            href="/notes"
+                            className="text-primary hover:underline"
+                        >
+                            Back to Notes
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const patientName = note.patient
+        ? `${note.patient.first_name} ${note.patient.last_name}`
+        : 'Unknown Patient';
+
+    const hasSOAPContent = !!(note.subjective || note.objective || note.assessment || note.plan);
 
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
             <Header
-                title={`Note: ${mockNote.type}`}
-                description={`Viewing record for ${mockNote.patientName}`}
+                title={`Note: ${note.type || 'Clinical Note'}`}
+                description={`Viewing record for ${patientName}`}
                 breadcrumbs={[
                     { label: "Dashboard", href: "/dashboard" },
                     { label: "Notes", href: "/notes" },
@@ -151,17 +181,39 @@ export default function NotePage() {
                         Back to Notes
                     </Link>
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors shadow-sm">
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                            Delete
-                        </button>
-                        <Link
-                            href={`/notes/new?edit=${id}`}
-                            className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
-                        >
-                            <Edit3 className="h-4 w-4" />
-                            Edit Note
-                        </Link>
+                        {note.is_signed ? (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                                <Lock className="h-4 w-4" />
+                                Signed & Locked
+                            </div>
+                        ) : (
+                            <>
+                                <Link
+                                    href={`/notes/new?edit=${id}`}
+                                    className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-bold text-foreground hover:bg-muted transition-colors shadow-sm"
+                                >
+                                    <Edit3 className="h-4 w-4" />
+                                    Edit Note
+                                </Link>
+                                <button
+                                    onClick={handleSignNote}
+                                    disabled={signing}
+                                    className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {signing ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Signing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FileSignature className="h-4 w-4" />
+                                            Sign Note
+                                        </>
+                                    )}
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -173,7 +225,7 @@ export default function NotePage() {
                         </div>
                         <div>
                             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Patient</p>
-                            <p className="text-base font-bold text-foreground">{mockNote.patientName}</p>
+                            <p className="text-base font-bold text-foreground">{patientName}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -182,95 +234,114 @@ export default function NotePage() {
                         </div>
                         <div>
                             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Date</p>
-                            <p className="text-base font-bold text-foreground">{mockNote.date}</p>
+                            <p className="text-base font-bold text-foreground">
+                                {new Date(note.note_date).toLocaleDateString()}
+                            </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                            <CheckCircle2 className="h-6 w-6" />
+                        <div className={`h-12 w-12 rounded-full flex items-center justify-center ${note.is_signed
+                                ? 'bg-emerald-500/10 text-emerald-500'
+                                : 'bg-amber-500/10 text-amber-500'
+                            }`}>
+                            {note.is_signed ? <Lock className="h-6 w-6" /> : <Clock className="h-6 w-6" />}
                         </div>
                         <div>
                             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Status</p>
-                            <p className="text-base font-bold text-foreground capitalize">{mockNote.status}</p>
+                            <p className="text-base font-bold text-foreground capitalize">
+                                {note.is_signed ? 'Signed' : 'Draft'}
+                            </p>
                         </div>
                     </div>
                 </div>
 
                 {/* Content Area */}
                 <div className="space-y-6">
-                    {mockNote.format === "soap" ? (
+                    {hasSOAPContent ? (
                         <div className="grid grid-cols-1 gap-6">
                             {/* Subjective */}
-                            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-                                <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
-                                    <span className="h-6 w-6 rounded bg-primary text-white flex items-center justify-center text-xs font-black">S</span>
-                                    <h3 className="font-bold uppercase tracking-widest text-xs">Subjective</h3>
+                            {note.subjective && (
+                                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                                    <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
+                                        <span className="h-6 w-6 rounded bg-primary text-white flex items-center justify-center text-xs font-black">S</span>
+                                        <h3 className="font-bold uppercase tracking-widest text-xs">Subjective</h3>
+                                    </div>
+                                    <div className="p-6">
+                                        <p className="text-foreground leading-relaxed italic text-sm">
+                                            "{note.subjective}"
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="p-6">
-                                    <p className="text-foreground leading-relaxed italic text-sm">
-                                        "{(mockNote.content as any).subjective}"
-                                    </p>
-                                </div>
-                            </div>
+                            )}
 
                             {/* Objective */}
-                            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-                                <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
-                                    <span className="h-6 w-6 rounded bg-blue-500 text-white flex items-center justify-center text-xs font-black">O</span>
-                                    <h3 className="font-bold uppercase tracking-widest text-xs">Objective</h3>
+                            {note.objective && (
+                                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                                    <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
+                                        <span className="h-6 w-6 rounded bg-blue-500 text-white flex items-center justify-center text-xs font-black">O</span>
+                                        <h3 className="font-bold uppercase tracking-widest text-xs">Objective</h3>
+                                    </div>
+                                    <div className="p-6">
+                                        <p className="text-foreground leading-relaxed text-sm">
+                                            {note.objective}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="p-6">
-                                    <p className="text-foreground leading-relaxed text-sm">
-                                        {(mockNote.content as any).objective}
-                                    </p>
-                                </div>
-                            </div>
+                            )}
 
                             {/* Assessment */}
-                            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-                                <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
-                                    <span className="h-6 w-6 rounded bg-purple-500 text-white flex items-center justify-center text-xs font-black">A</span>
-                                    <h3 className="font-bold uppercase tracking-widest text-xs">Assessment</h3>
+                            {note.assessment && (
+                                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                                    <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
+                                        <span className="h-6 w-6 rounded bg-purple-500 text-white flex items-center justify-center text-xs font-black">A</span>
+                                        <h3 className="font-bold uppercase tracking-widest text-xs">Assessment</h3>
+                                    </div>
+                                    <div className="p-6">
+                                        <p className="text-foreground leading-relaxed text-sm">
+                                            {note.assessment}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="p-6">
-                                    <p className="text-foreground leading-relaxed text-sm">
-                                        {(mockNote.content as any).assessment}
-                                    </p>
-                                </div>
-                            </div>
+                            )}
 
                             {/* Plan */}
-                            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-                                <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
-                                    <span className="h-6 w-6 rounded bg-emerald-500 text-white flex items-center justify-center text-xs font-black">P</span>
-                                    <h3 className="font-bold uppercase tracking-widest text-xs">Plan</h3>
+                            {note.plan && (
+                                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                                    <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
+                                        <span className="h-6 w-6 rounded bg-emerald-500 text-white flex items-center justify-center text-xs font-black">P</span>
+                                        <h3 className="font-bold uppercase tracking-widest text-xs">Plan</h3>
+                                    </div>
+                                    <div className="p-6">
+                                        <p className="text-foreground leading-relaxed text-sm">
+                                            {note.plan}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="p-6">
-                                    <p className="text-foreground leading-relaxed text-sm">
-                                        {(mockNote.content as any).plan}
-                                    </p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     ) : (
-                        /* Paragraph Format */
+                        /* Narrative/Content Format */
                         <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
                             <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-2">
                                 <FileText className="h-5 w-5 text-primary" />
-                                <h3 className="font-bold uppercase tracking-widest text-xs">Narrative Summary</h3>
+                                <h3 className="font-bold uppercase tracking-widest text-xs">Note Content</h3>
                             </div>
                             <div className="p-8">
                                 <p className="text-foreground leading-[1.8] text-base whitespace-pre-line">
-                                    {mockNote.content as string}
+                                    {note.content || note.chief_complaint || 'No content available'}
                                 </p>
                             </div>
                         </div>
                     )}
                 </div>
 
+                {/* Footer */}
                 <div className="flex items-center justify-center gap-2 p-4 bg-muted/20 rounded-xl border border-dashed border-border text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
-                    Last edited by Dr. Sarah K. on {mockNote.date}
+                    {note.is_signed && note.signed_at
+                        ? `Signed on ${new Date(note.signed_at).toLocaleString()}`
+                        : `Last updated ${new Date(note.updated_at).toLocaleString()}`
+                    }
                 </div>
             </div>
         </div>

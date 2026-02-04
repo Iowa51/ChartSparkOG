@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/templates";
 import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
-import { patients, getPatientById, Patient } from "@/lib/demo-data/patients";
+
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
     Subjective: [
@@ -71,32 +71,55 @@ export default function NewNotePage() {
     const templateId = searchParams.get("template") || "tpl-progress-note";
     const editId = searchParams.get("edit"); // Get the note ID being edited
     const patientId = searchParams.get("patientId"); // Get patient ID from URL
+    const encounterId = searchParams.get("encounterId"); // Get encounter ID from URL
     const template = getTemplateById(templateId) || getDefaultTemplate();
 
     // Fetch patient data based on patientId from URL
-    const [currentPatient, setCurrentPatient] = useState<Patient | null>(null);
+    const [currentPatient, setCurrentPatient] = useState<any | null>(null);
+    const [currentEncounter, setCurrentEncounter] = useState<any | null>(null);
+    const [loadingPatient, setLoadingPatient] = useState(false);
     const [showPatientInfo, setShowPatientInfo] = useState(true);
 
     useEffect(() => {
-        if (patientId) {
-            const patient = getPatientById(patientId);
-            setCurrentPatient(patient || null);
-        } else if (editId) {
-            // Fallback for edit mode - try to find patient from demo notes
-            const demoNotes: Record<string, string> = {
-                "1": "p1", // John Doe -> Sarah Connor
-                "2": "p1", // Maria Rodriguez -> Sarah Connor
-                "3": "p2", // Arthur Smith -> Michael Reese
-                "4": "p3", // Sarah Williams -> Elena Fisher
-                "5": "p4", // David Miller -> Nathan Drake
-            };
-            const linkedPatientId = demoNotes[editId];
-            if (linkedPatientId) {
-                const patient = getPatientById(linkedPatientId);
-                setCurrentPatient(patient || null);
+        const fetchPatientAndEncounter = async () => {
+            if (patientId) {
+                try {
+                    setLoadingPatient(true);
+                    const response = await fetch(`/api/patients/${patientId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setCurrentPatient(data);
+                    }
+                } catch (error) {
+                    console.error('Error fetching patient:', error);
+                } finally {
+                    setLoadingPatient(false);
+                }
             }
-        }
-    }, [patientId, editId]);
+
+            if (encounterId) {
+                try {
+                    const response = await fetch(`/api/encounters/${encounterId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setCurrentEncounter(data);
+                        // If encounterId is provided but no patientId, fetch patient from encounter
+                        if (!patientId && data.patient_id) {
+                            const patientResponse = await fetch(`/api/patients/${data.patient_id}`);
+                            if (patientResponse.ok) {
+                                const patientData = await patientResponse.json();
+                                setCurrentPatient(patientData);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching encounter:', error);
+                }
+            }
+        };
+
+        fetchPatientAndEncounter();
+    }, [patientId, encounterId, editId]);
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
@@ -747,11 +770,11 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Allergies</span>
                                                 </div>
                                                 <div className="flex flex-wrap gap-1.5">
-                                                    {currentPatient.allergies.map((allergy, idx) => (
+                                                    {currentPatient.allergies?.map((allergy: any, idx: number) => (
                                                         <span key={idx} className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs rounded-md border border-amber-200 dark:border-amber-800">
-                                                            {allergy}
+                                                            {allergy.allergen || allergy}
                                                         </span>
-                                                    ))}
+                                                    )) || <span className="text-xs text-muted-foreground italic">None</span>}
                                                 </div>
                                             </div>
 
@@ -762,9 +785,9 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Medications</span>
                                                 </div>
                                                 <div className="space-y-0.5">
-                                                    {currentPatient.medications.length > 0 ? (
-                                                        currentPatient.medications.map((med, idx) => (
-                                                            <div key={idx} className="text-xs text-foreground">• {med}</div>
+                                                    {currentPatient.medications?.length > 0 ? (
+                                                        currentPatient.medications.map((med: any, idx: number) => (
+                                                            <div key={idx} className="text-xs text-foreground">• {med.medication_name || med}</div>
                                                         ))
                                                     ) : (
                                                         <div className="text-xs text-muted-foreground italic">None</div>
@@ -779,9 +802,9 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Problems</span>
                                                 </div>
                                                 <div className="space-y-0.5">
-                                                    {currentPatient.problems.map((problem, idx) => (
-                                                        <div key={idx} className="text-xs text-foreground">• {problem}</div>
-                                                    ))}
+                                                    {currentPatient.problems?.map((problem: any, idx: number) => (
+                                                        <div key={idx} className="text-xs text-foreground">• {problem.diagnosis_code || problem}</div>
+                                                    )) || <div className="text-xs text-muted-foreground italic">None</div>}
                                                 </div>
                                             </div>
                                         </div>

@@ -1,10 +1,13 @@
 // src/app/api/patients/[id]/route.ts
-// SEC-009: HIPAA-compliant patient detail API with full audit logging
+// HIPAA-compliant patient detail API with full audit logging
+// Updated to use production data layer
 
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { getPatientById, updatePatient } from '@/lib/data';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
@@ -32,21 +35,20 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             .eq('id', user.id)
             .single();
 
-        const { data: patient, error } = await supabase
-            .from('patients')
-            .select('*')
-            .eq('id', id)
-            .single();
+        if (!profile) {
+            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        }
 
-        if (error) throw error;
+        // Get patient with all related details
+        const patient = await getPatientById(id, { includeDetails: true });
 
         // Verify user has access to this patient's organization
-        if (patient.organization_id !== profile?.organization_id) {
+        if (patient.organization_id !== profile.organization_id) {
             await logAuditEvent({
                 eventType: 'UNAUTHORIZED_ACCESS',
                 userId: user.id,
                 userEmail: user.email,
-                organizationId: profile?.organization_id,
+                organizationId: profile.organization_id,
                 ipAddress,
                 userAgent,
                 resourceType: 'patient',
@@ -58,22 +60,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
             return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
         }
 
-        // Log PHI access - viewing individual patient record
-        await logPHIAccess(
-            user.id,
-            user.email || '',
-            profile?.role || 'USER',
-            profile?.organization_id || '',
-            'PATIENT',
-            id,
-            'VIEW',
-            ipAddress,
-            userAgent
-        );
-
-        return NextResponse.json({ patient });
+        // PHI access is already logged in getPatientById
+        return NextResponse.json(patient);
     } catch (error) {
-        return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
+        logError({
+            action: 'FETCH_PATIENT_ERROR',
+            error: sanitizeError(error),
+        });
+
+        const errorMessage = error instanceof Error ? error.message : 'Patient not found';
+        return NextResponse.json({ error: errorMessage }, { status: 404 });
     }
 }
 
@@ -103,34 +99,24 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             .eq('id', user.id)
             .single();
 
+        if (!profile) {
+            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        }
+
         const updates = await request.json();
 
-        const { data: patient, error } = await supabase
-            .from('patients')
-            .update(updates)
-            .eq('id', id)
-            .eq('organization_id', profile?.organization_id) // Ensure org isolation
-            .select()
-            .single();
+        // Use data layer to update patient
+        const patient = await updatePatient(id, profile.organization_id, updates);
 
-        if (error) throw error;
-
-        // Log PHI update
-        await logPHIAccess(
-            user.id,
-            user.email || '',
-            profile?.role || 'USER',
-            profile?.organization_id || '',
-            'PATIENT',
-            id,
-            'UPDATE',
-            ipAddress,
-            userAgent
-        );
-
-        return NextResponse.json({ patient });
+        return NextResponse.json(patient);
     } catch (error) {
-        return NextResponse.json({ error: 'Failed to update patient' }, { status: 500 });
+        logError({
+            action: 'UPDATE_PATIENT_ERROR',
+            error: sanitizeError(error),
+        });
+
+        const errorMessage = error instanceof Error ? error.message : 'Failed to update patient';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
 
@@ -160,21 +146,19 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
             .eq('id', user.id)
             .single();
 
-        // Soft delete - set status to inactive
-        const { error } = await supabase
-            .from('patients')
-            .update({ status: 'inactive' })
-            .eq('id', id)
-            .eq('organization_id', profile?.organization_id); // Ensure org isolation
+        if (!profile) {
+            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+        }
 
-        if (error) throw error;
+        // Soft delete - set status to archived
+        await updatePatient(id, profile.organization_id, { status: 'archived' });
 
         // Log PHI deletion (high risk event)
         await logPHIAccess(
             user.id,
             user.email || '',
-            profile?.role || 'USER',
-            profile?.organization_id || '',
+            profile.role || 'USER',
+            profile.organization_id || '',
             'PATIENT',
             id,
             'DELETE',
@@ -184,6 +168,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        return NextResponse.json({ error: 'Failed to delete patient' }, { status: 500 });
+        logError({
+            action: 'DELETE_PATIENT_ERROR',
+            error: sanitizeError(error),
+        });
+
+        const errorMessage = error instanceof Error ? error.message : 'Failed to delete patient';
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
