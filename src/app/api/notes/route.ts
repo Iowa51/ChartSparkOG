@@ -185,11 +185,11 @@ export async function POST(request: NextRequest) {
             .insert([{
                 patient_id: validatedData.patient_id,
                 encounter_id: validatedData.encounter_id,
-                type: validatedData.type,
                 content: validatedData.content,
                 template_id: validatedData.template_id,
-                is_signed: validatedData.is_signed,
-                note_date: rawData.note_date || new Date().toISOString().split('T')[0],
+                // Use 'status' column with valid values: 'draft', 'completed', 'signed', 'amended'
+                status: validatedData.is_signed ? 'signed' : 'draft',
+                signed_at: validatedData.is_signed ? new Date().toISOString() : null,
                 organization_id: profile.organization_id,
                 provider_id: user.id
             }])
