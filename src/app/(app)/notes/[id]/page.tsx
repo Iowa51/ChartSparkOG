@@ -18,6 +18,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 
 interface Note {
     id: string;
@@ -51,6 +52,9 @@ export default function NotePage() {
     const [signing, setSigning] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showSignModal, setShowSignModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchNote = async () => {
@@ -75,12 +79,6 @@ export default function NotePage() {
     const handleSignNote = async () => {
         if (!note || note.status === 'signed') return;
 
-        const confirmed = window.confirm(
-            'Are you sure you want to sign this note? Once signed, it cannot be edited.'
-        );
-
-        if (!confirmed) return;
-
         try {
             setSigning(true);
             const response = await fetch(`/api/notes/${id}`, {
@@ -96,9 +94,11 @@ export default function NotePage() {
 
             const data = await response.json();
             setNote(data.note);
-            alert('Note signed successfully!');
+            setSuccessMessage('Note signed successfully!');
+            setTimeout(() => setSuccessMessage(null), 3000);
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to sign note');
+            setError(err instanceof Error ? err.message : 'Failed to sign note');
+            setTimeout(() => setError(null), 3000);
         } finally {
             setSigning(false);
         }
@@ -106,12 +106,6 @@ export default function NotePage() {
 
     const handleDeleteNote = async () => {
         if (!note) return;
-
-        const confirmed = window.confirm(
-            'Are you sure you want to delete this note? This action cannot be undone.'
-        );
-
-        if (!confirmed) return;
 
         try {
             setDeleting(true);
@@ -124,10 +118,10 @@ export default function NotePage() {
                 throw new Error(data.error || 'Failed to delete note');
             }
 
-            alert('Note deleted successfully!');
-            router.push(`/patients/${note.patient_id}`);
+            router.push('/notes');
         } catch (err) {
-            alert(err instanceof Error ? err.message : 'Failed to delete note');
+            setError(err instanceof Error ? err.message : 'Failed to delete note');
+            setTimeout(() => setError(null), 3000);
         } finally {
             setDeleting(false);
         }
@@ -226,7 +220,7 @@ export default function NotePage() {
                                     Edit Note
                                 </Link>
                                 <button
-                                    onClick={handleSignNote}
+                                    onClick={() => setShowSignModal(true)}
                                     disabled={signing}
                                     className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -245,7 +239,7 @@ export default function NotePage() {
                             </>
                         )}
                         <button
-                            onClick={handleDeleteNote}
+                            onClick={() => setShowDeleteModal(true)}
                             disabled={deleting}
                             className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50"
                         >
@@ -386,6 +380,46 @@ export default function NotePage() {
                     }
                 </div>
             </div>
+
+            {/* Toast Messages */}
+            {successMessage && (
+                <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center gap-3 px-5 py-3 bg-emerald-600 text-white rounded-xl shadow-lg">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span className="font-medium">{successMessage}</span>
+                    </div>
+                </div>
+            )}
+            {error && (
+                <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center gap-3 px-5 py-3 bg-red-600 text-white rounded-xl shadow-lg">
+                        <Trash2 className="h-5 w-5" />
+                        <span className="font-medium">{error}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirmation Modals */}
+            <ConfirmModal
+                isOpen={showSignModal}
+                onClose={() => setShowSignModal(false)}
+                onConfirm={handleSignNote}
+                title="Sign Note"
+                message="Are you sure you want to sign this note? Once signed, it cannot be edited."
+                confirmText="Sign Note"
+                variant="primary"
+                icon="sign"
+            />
+            <ConfirmModal
+                isOpen={showDeleteModal}
+                onClose={() => setShowDeleteModal(false)}
+                onConfirm={handleDeleteNote}
+                title="Delete Note"
+                message="Are you sure you want to delete this note? This action cannot be undone."
+                confirmText="Delete"
+                variant="danger"
+                icon="delete"
+            />
         </div>
     );
 }
