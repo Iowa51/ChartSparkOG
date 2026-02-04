@@ -263,7 +263,13 @@ export default function DashboardPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {recentNotes.map((note) => (
+                                {recentNotes.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                                            No notes yet. Click "Start New Note" to create one.
+                                        </td>
+                                    </tr>
+                                ) : recentNotes.map((note) => (
                                     <tr
                                         key={note.id}
                                         className="hover:bg-muted/30 transition-colors"
@@ -271,50 +277,49 @@ export default function DashboardPage() {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                                                    {note.patient.initials}
+                                                    {note.patient?.first_name?.[0]}{note.patient?.last_name?.[0] || '?'}
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-foreground">
-                                                        {note.patient.name}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        DOB: {note.patient.dob}
+                                                        {note.patient ? `${note.patient.first_name} ${note.patient.last_name}` : 'Unknown Patient'}
                                                     </div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-foreground">
-                                                {note.diagnosis.name}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {note.diagnosis.code}
+                                                Clinical Note
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-muted-foreground">
-                                                {note.lastEdited}
+                                                {new Date(note.updated_at || note.created_at).toLocaleDateString('en-US', {
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    hour: 'numeric',
+                                                    minute: '2-digit'
+                                                })}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span
-                                                className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${note.is_signed ? statusStyles["Signed"] :
-                                                        note.is_locked ? statusStyles["Pending Review"] :
-                                                            statusStyles["Draft"]
+                                                className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${note.status === 'signed' ? statusStyles["Signed"] :
+                                                    note.status === 'completed' ? statusStyles["Pending Review"] :
+                                                        statusStyles["Draft"]
                                                     }`}
                                             >
-                                                {note.is_signed ? "Signed" : note.is_locked ? "Pending Review" : "Draft"}
+                                                {note.status === 'signed' ? "Signed" : note.status === 'completed' ? "Complete" : "Draft"}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <Link
                                                 href={`/notes/${note.id}`}
-                                                className={`px-3 py-1 rounded transition-colors ${note.status === "Signed"
+                                                className={`px-3 py-1 rounded transition-colors ${note.status === "signed"
                                                     ? "text-muted-foreground hover:text-foreground"
                                                     : "text-primary bg-primary/10 hover:bg-primary/20"
                                                     }`}
                                             >
-                                                {note.status === "Signed" ? "View" : "Edit"}
+                                                {note.status === "signed" ? "View" : "Edit"}
                                             </Link>
                                         </td>
                                     </tr>
