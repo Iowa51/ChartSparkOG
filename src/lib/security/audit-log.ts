@@ -28,6 +28,8 @@ export type AuditEventType =
     | 'NOTE_UPDATE'
     | 'NOTE_DELETE'
     | 'NOTE_SIGN'
+    | 'NOTE_APPROVED'
+    | 'NOTE_REVISION_REQUESTED'
     | 'ENCOUNTER_VIEW'
     | 'ENCOUNTER_CREATE'
     | 'ENCOUNTER_UPDATE'

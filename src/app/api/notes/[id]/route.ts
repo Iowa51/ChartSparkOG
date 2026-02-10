@@ -162,15 +162,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             return NextResponse.json({ error: 'Note not found' }, { status: 404 });
         }
 
-        // Prevent editing signed notes
-        if (currentNote?.status === 'signed') {
+        const rawData = await request.json();
+
+        // Prevent editing locked/in-review notes (allow draft and needs_revision)
+        // Exception: allow status-only updates (e.g. clinician submitting for review)
+        const lockedStatuses = ['signed', 'pending_review', 'approved'];
+        if (lockedStatuses.includes(currentNote?.status) && !rawData?.status) {
             return NextResponse.json(
-                { error: 'Cannot edit signed notes' },
+                { error: `Cannot edit notes with status: ${currentNote?.status}` },
                 { status: 403 }
             );
         }
-
-        const rawData = await request.json();
 
         // SEC-REMEDIATION: Validate input with Zod schema instead of spreading arbitrary data
         const validation = validateRequest(NoteUpdateSchema, rawData);
@@ -207,7 +209,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         );
 
         return NextResponse.json({ note });
-    } catch (error) {
+    } catch (error: any) {
         logError({
             action: 'note_update_error',
             error: sanitizeError(error),

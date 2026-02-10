@@ -75,11 +75,33 @@ export const NoteCreateSchema = z.object({
     type: z.enum(['progress', 'intake', 'soap', 'discharge', 'other']).optional().default('progress'),
     content: z.string().min(1, 'Note content required').max(50000),
     template_id: UUIDSchema.optional().nullable(),
-    is_signed: z.boolean().optional().default(false),
-    is_locked: z.boolean().optional().default(false),
+    is_signed: z.boolean().optional(),
+    is_locked: z.boolean().optional(),
+    status: z.enum(['draft', 'completed', 'signed', 'amended', 'pending_review', 'approved', 'needs_revision']).optional(),
+    cpt_codes: z.array(z.string().max(20)).max(20).optional(),
+    icd10_codes: z.array(z.string().max(20)).max(20).optional(),
+    subjective: z.string().max(10000).optional().nullable(),
+    objective: z.string().max(10000).optional().nullable(),
+    assessment: z.string().max(10000).optional().nullable(),
+    plan: z.string().max(10000).optional().nullable(),
+    chief_complaint: z.string().max(1000).optional().nullable(),
 });
 
-export const NoteUpdateSchema = NoteCreateSchema.partial().omit({ patient_id: true });
+// Update schema: only include fields that are actual DB columns on clinical_notes.
+// Fields like type, is_signed, is_locked, chief_complaint do NOT exist as DB columns
+// and MUST NOT be sent in PATCH updates (Supabase will reject them).
+export const NoteUpdateSchema = z.object({
+    content: z.string().min(1).max(50000).optional(),
+    status: z.enum(['draft', 'completed', 'signed', 'amended', 'pending_review', 'approved', 'needs_revision']).optional(),
+    cpt_codes: z.array(z.string().max(20)).max(20).optional(),
+    icd10_codes: z.array(z.string().max(20)).max(20).optional(),
+    subjective: z.string().max(10000).optional().nullable(),
+    objective: z.string().max(10000).optional().nullable(),
+    assessment: z.string().max(10000).optional().nullable(),
+    plan: z.string().max(10000).optional().nullable(),
+    template_id: UUIDSchema.optional().nullable(),
+    encounter_id: UUIDSchema.optional(),
+});
 
 // Encounter schemas
 export const EncounterCreateSchema = z.object({
