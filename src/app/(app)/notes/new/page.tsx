@@ -10,6 +10,7 @@ import {
     RefreshCw,
     Copy,
     Download,
+    Send,
     Mic,
     MicOff,
     FileText,
@@ -762,18 +763,13 @@ Prognosis: Favorable with continued treatment adherence.`;
             }
 
             const savedNote = await response.json();
+            const noteId = savedNote?.note?.id || savedNote?.id;
 
-            // Show success message
-            if (markComplete) {
-                alert('Note saved and marked as complete!');
+            // Always redirect to the note detail page after saving
+            if (noteId) {
+                router.push(`/notes/${noteId}`);
             } else {
-                setAutoSaved(new Date().toLocaleTimeString());
-                alert('Note saved successfully!');
-            }
-
-            // Redirect to patient chart or notes list
-            if (markComplete) {
-                router.push(currentPatient?.id ? `/patients/${currentPatient.id}` : '/notes');
+                router.push('/notes');
             }
         } catch (error) {
             console.error('Error saving note:', error);
@@ -819,12 +815,12 @@ Prognosis: Favorable with continued treatment adherence.`;
                         {isSaving ? 'Saving...' : 'Save Draft'}
                     </button>
                     <button
-                        onClick={() => handleSaveNote(true)}
+                        onClick={() => handleSaveNote(false)}
                         disabled={isSaving}
                         className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
-                        <CheckCircle className="h-4 w-4" />
-                        {isSaving ? 'Saving...' : 'Mark Complete'}
+                        <Send className="h-4 w-4" />
+                        {isSaving ? 'Saving...' : 'Save & Review'}
                     </button>
                 </div>
             </header>
