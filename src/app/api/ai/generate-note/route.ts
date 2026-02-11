@@ -8,6 +8,7 @@ import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { analyzeNoteForCodes } from '@/lib/billing/code-analyzer';
 
 interface GenerateNoteRequest {
     clinicianInput: string;
@@ -100,10 +101,26 @@ async function handler(context: AuthContext) {
             }
         }
 
-        // Add suggested codes based on assessment - format matches frontend expectation
+        // Dynamically analyze generated note content for relevant billing codes
+        const noteForAnalysis = {
+            subjective: sections.subjective || '',
+            objective: sections.objective || '',
+            assessment: sections.assessment || '',
+            plan: sections.plan || '',
+            fullContent: Object.values(sections).join(' ')
+        };
+        const codeAnalysis = analyzeNoteForCodes(noteForAnalysis, {
+            templateType: templateFormat,
+            maxCPT: 4,
+            maxICD10: 5
+        });
+
         const suggestedCodes = {
-            cpt: ['90834', '90837', '99214'],
-            icd10: ['F32.1', 'F41.1']
+            cpt: codeAnalysis.cpt,
+            icd10: codeAnalysis.icd10,
+            // Include full details so frontend can display descriptions
+            cptDetails: codeAnalysis.cptDetails,
+            icd10Details: codeAnalysis.icd10Details
         };
 
         return NextResponse.json({

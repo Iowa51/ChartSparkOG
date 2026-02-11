@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/templates";
 import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
+import { getCodeInfo } from "@/lib/billing/code-library";
+import { quickSuggestCodes } from "@/lib/billing/code-analyzer";
 
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
@@ -388,7 +390,11 @@ export default function NewNotePage() {
 
     // Handle clicking on a code - show explanation modal
     const handleCodeClick = (code: string, type: 'cpt' | 'icd10') => {
-        const explanation = codeExplanations[code];
+        // Check local explanations first, then fall back to comprehensive library
+        const explanation = codeExplanations[code] || (() => {
+            const libInfo = getCodeInfo(code);
+            return libInfo ? { title: libInfo.title, description: libInfo.description, details: libInfo.details } : null;
+        })();
         if (explanation) {
             setSelectedCodeInfo({
                 code,
@@ -609,7 +615,7 @@ Prognosis: Favorable with continued treatment adherence.`;
             objective,
             assessment,
             plan,
-            suggestedCodes: { cpt: ['90834', '90837', '99214'], icd10: ['F32.1', 'F41.1'] }
+            suggestedCodes: quickSuggestCodes(`${subjective} ${objective} ${assessment} ${plan}`)
         };
     };
 
@@ -1641,12 +1647,7 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                                         </span>
                                                         <div className="w-px h-6 bg-border mx-1" />
                                                         <span className={`text-xs font-bold ${selectedCodes.has(code) ? 'text-white/80' : 'text-muted-foreground'}`}>
-                                                            {code === "99214" && "Evaluation & Management - Level 4"}
-                                                            {code === "99213" && "Evaluation & Management - Level 3"}
-                                                            {code === "90834" && "Psychotherapy, 45 min"}
-                                                            {code === "90837" && "Psychotherapy, 60 min"}
-                                                            {code === "90833" && "Psychotherapy Adjunct"}
-                                                            {code === "90792" && "Psych Diagnostic Eval"}
+                                                            {getCodeInfo(code)?.title || code}
                                                         </span>
                                                         {!selectedCodes.has(code) && (
                                                             <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1690,12 +1691,7 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                                         </span>
                                                         <span className={`text-xs font-bold ${selectedCodes.has(code) ? 'text-white' : 'text-foreground/80'}`}>
                                                             {selectedCodes.has(code) && 'Copied! - '}
-                                                            {code === "G44.209" && "Tension-type headache, not intractable"}
-                                                            {code === "I10" && "Essential (primary) hypertension"}
-                                                            {code === "E11.9" && "Type 2 diabetes mellitus without complications"}
-                                                            {code === "F32.1" && "Major depressive disorder, moderate"}
-                                                            {code === "F41.1" && "Generalized anxiety disorder"}
-                                                            {code === "F33.1" && "Major depressive disorder, recurrent, moderate"}
+                                                            {getCodeInfo(code)?.title || code}
                                                         </span>
                                                         {!selectedCodes.has(code) && (
                                                             <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
