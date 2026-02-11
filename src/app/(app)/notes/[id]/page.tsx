@@ -21,7 +21,7 @@ import {
     Tag,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ui/ConfirmModal";
@@ -70,7 +70,9 @@ const COMMON_CPT_CODES = [
 export default function NotePage() {
     const params = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const id = params.id as string;
+    const actionParam = searchParams.get('action');
 
     const [note, setNote] = useState<Note | null>(null);
     const [loading, setLoading] = useState(true);
@@ -114,6 +116,13 @@ export default function NotePage() {
 
         if (id) fetchNote();
     }, [id]);
+
+    // Auto-open submit modal when navigated with ?action=submit
+    useEffect(() => {
+        if (actionParam === 'submit' && note && (note.status === 'draft' || note.status === 'needs_revision')) {
+            setShowSubmitModal(true);
+        }
+    }, [actionParam, note]);
 
     const handleSubmitForReview = async () => {
         if (!note) return;

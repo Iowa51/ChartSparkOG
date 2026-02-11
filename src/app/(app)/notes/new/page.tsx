@@ -162,6 +162,8 @@ export default function NewNotePage() {
     const [isRecordingVisible, setIsRecordingVisible] = useState(true);
     const [showTranscript, setShowTranscript] = useState(true);
     const [autoSaved, setAutoSaved] = useState<string | null>(null);
+    const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
+    const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
 
     // Scribe state
     const [scribeTranscription, setScribeTranscription] = useState("");
@@ -765,8 +767,12 @@ Prognosis: Favorable with continued treatment adherence.`;
             const savedNote = await response.json();
             const noteId = savedNote?.note?.id || savedNote?.id;
 
-            // Always redirect to the note detail page after saving
-            if (noteId) {
+            if (markComplete && noteId) {
+                // "Save & Finish" — show the insurance submission modal
+                setSavedNoteId(noteId);
+                setShowSaveSuccessModal(true);
+            } else if (noteId) {
+                // "Save Draft" — just redirect to the note
                 router.push(`/notes/${noteId}`);
             } else {
                 router.push('/notes');
@@ -815,12 +821,12 @@ Prognosis: Favorable with continued treatment adherence.`;
                         {isSaving ? 'Saving...' : 'Save Draft'}
                     </button>
                     <button
-                        onClick={() => handleSaveNote(false)}
+                        onClick={() => handleSaveNote(true)}
                         disabled={isSaving}
                         className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                     >
-                        <Send className="h-4 w-4" />
-                        {isSaving ? 'Saving...' : 'Save & Review'}
+                        <CheckCircle className="h-4 w-4" />
+                        {isSaving ? 'Saving...' : 'Save & Finish'}
                     </button>
                 </div>
             </header>
@@ -1849,6 +1855,63 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                     </div>
                 )
             }
+
+            {/* Post-Save Success Modal — Submit to Insurance */}
+            {showSaveSuccessModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card rounded-3xl shadow-2xl border border-border w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95 duration-300">
+                        {/* Success Header */}
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-6 text-center">
+                            <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <CheckCircle className="h-9 w-9 text-white" />
+                            </div>
+                            <h3 className="text-xl font-black text-white tracking-tight">Note Saved Successfully!</h3>
+                            <p className="text-sm text-white/80 mt-1">Your clinical note has been saved.</p>
+                        </div>
+
+                        {/* Action Options */}
+                        <div className="p-8 space-y-4">
+                            <p className="text-sm text-muted-foreground text-center font-medium">
+                                Would you like to submit this note for insurance review?
+                            </p>
+
+                            {/* Submit to Insurance — Primary CTA */}
+                            <button
+                                onClick={() => {
+                                    setShowSaveSuccessModal(false);
+                                    if (savedNoteId) {
+                                        router.push(`/notes/${savedNoteId}?action=submit`);
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-2xl text-base font-black uppercase tracking-widest shadow-xl shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all"
+                            >
+                                <Send className="h-5 w-5" />
+                                Submit to Insurance
+                            </button>
+
+                            {/* Keep as Draft — Secondary */}
+                            <button
+                                onClick={() => {
+                                    setShowSaveSuccessModal(false);
+                                    if (savedNoteId) {
+                                        router.push(`/notes/${savedNoteId}`);
+                                    } else {
+                                        router.push('/notes');
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-card border-2 border-border hover:border-primary/30 text-foreground rounded-2xl text-sm font-bold transition-all hover:bg-muted/50"
+                            >
+                                <Save className="h-4 w-4" />
+                                Keep as Draft — Review Later
+                            </button>
+
+                            <p className="text-xs text-muted-foreground text-center">
+                                You can always submit later from the note detail page.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
