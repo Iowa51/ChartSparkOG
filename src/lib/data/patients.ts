@@ -213,18 +213,17 @@ export async function searchPatients(
         }
 
         if (terms.length > 1) {
-            // Multi-word search: match ALL terms against first_name or last_name
-            // e.g. "John Smith" → first_name or last_name must match each term
-            // Build OR filter: each word should appear in first_name or last_name
+            // Multi-word search: match ANY term against first_name or last_name
+            // e.g. "John Smith" → first_name or last_name contains "John" OR "Smith"
             const orFilters = terms.map(term => {
                 const wild = `%${term}%`;
-                return `first_name.ilike.${wild},last_name.ilike.${wild},preferred_name.ilike.${wild}`;
+                return `first_name.ilike.${wild},last_name.ilike.${wild}`;
             }).join(',');
             supabaseQuery = supabaseQuery.or(orFilters);
         } else {
-            // Single term: search across all fields
+            // Single term: search across core fields
             supabaseQuery = supabaseQuery.or(
-                `first_name.ilike.${searchWild},last_name.ilike.${searchWild},preferred_name.ilike.${searchWild},mrn.ilike.${searchWild},email.ilike.${searchWild},phone.ilike.${searchWild}`
+                `first_name.ilike.${searchWild},last_name.ilike.${searchWild},email.ilike.${searchWild},phone.ilike.${searchWild}`
             );
         }
 
