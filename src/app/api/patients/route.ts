@@ -71,11 +71,13 @@ export async function GET(request: NextRequest) {
             result = await searchPatients(profile.organization_id, searchTerm, {
                 page,
                 pageSize,
+                status: status || 'active',
             });
         } else {
             result = await getPatients(profile.organization_id, {
                 page,
                 pageSize,
+                status: status || 'active',
             });
         }
 

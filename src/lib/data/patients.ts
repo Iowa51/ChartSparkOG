@@ -48,28 +48,39 @@ export async function getPatients(
             page = 1,
             pageSize = 50,
             sortBy = 'created_at',
-            sortOrder = 'desc'
+            sortOrder = 'desc',
+            status = 'active'
         } = options;
 
         const { from, to } = getPaginationRange(page, pageSize);
 
         // Get total count
-        const { count, error: countError } = await supabase
+        const countQuery = supabase
             .from('patients')
             .select('*', { count: 'exact', head: true })
-            .eq('organization_id', organizationId)
-            .eq('status', 'active');
+            .eq('organization_id', organizationId);
+
+        if (status && status !== 'all') {
+            countQuery.eq('status', status);
+        }
+
+        const { count, error: countError } = await countQuery;
 
         if (countError) {
             handleDatabaseError(countError, 'getPatients:count');
         }
 
         // Get paginated data
-        const { data, error } = await supabase
+        const dataQuery = supabase
             .from('patients')
             .select('*')
-            .eq('organization_id', organizationId)
-            .eq('status', 'active')
+            .eq('organization_id', organizationId);
+
+        if (status && status !== 'all') {
+            dataQuery.eq('status', status);
+        }
+
+        const { data, error } = await dataQuery
             .order(sortBy, { ascending: sortOrder === 'asc' })
             .range(from, to);
 
@@ -181,18 +192,43 @@ export async function searchPatients(
         const {
             page = 1,
             pageSize = 50,
+            status = 'active'
         } = options;
 
         const { from, to } = getPaginationRange(page, pageSize);
-        const searchQuery = `%${query}%`;
+        const trimmedQuery = query.trim();
+        const searchWild = `%${trimmedQuery}%`;
 
-        // Search across multiple fields
-        const { data, count, error } = await supabase
+        // Split query into individual words for multi-term matching
+        const terms = trimmedQuery.split(/\s+/).filter(t => t.length > 0);
+
+        let supabaseQuery = supabase
             .from('patients')
             .select('*', { count: 'exact' })
-            .eq('organization_id', organizationId)
-            .eq('status', 'active')
-            .or(`first_name.ilike.${searchQuery},last_name.ilike.${searchQuery},mrn.ilike.${searchQuery},email.ilike.${searchQuery},phone.ilike.${searchQuery}`)
+            .eq('organization_id', organizationId);
+
+        // Apply status filter
+        if (status && status !== 'all') {
+            supabaseQuery = supabaseQuery.eq('status', status);
+        }
+
+        if (terms.length > 1) {
+            // Multi-word search: match ALL terms against first_name or last_name
+            // e.g. "John Smith" → first_name or last_name must match each term
+            // Build OR filter: each word should appear in first_name or last_name
+            const orFilters = terms.map(term => {
+                const wild = `%${term}%`;
+                return `first_name.ilike.${wild},last_name.ilike.${wild},preferred_name.ilike.${wild}`;
+            }).join(',');
+            supabaseQuery = supabaseQuery.or(orFilters);
+        } else {
+            // Single term: search across all fields
+            supabaseQuery = supabaseQuery.or(
+                `first_name.ilike.${searchWild},last_name.ilike.${searchWild},preferred_name.ilike.${searchWild},mrn.ilike.${searchWild},email.ilike.${searchWild},phone.ilike.${searchWild}`
+            );
+        }
+
+        const { data, count, error } = await supabaseQuery
             .order('created_at', { ascending: false })
             .range(from, to);
 
@@ -204,7 +240,7 @@ export async function searchPatients(
             event_type: 'PATIENTS_SEARCH',
             organization_id: organizationId,
             resource_type: 'patient',
-            details: { query: query.slice(0, 50) }, // Limit query length in logs
+            details: { query: trimmedQuery.slice(0, 50) },
             phi_accessed: true,
             risk_level: 'LOW',
         });

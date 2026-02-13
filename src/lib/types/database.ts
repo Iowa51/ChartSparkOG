@@ -265,6 +265,7 @@ export interface QueryOptions {
     pageSize?: number;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    status?: string;
 }
 
 // =============================================
