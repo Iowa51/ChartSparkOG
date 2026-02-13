@@ -195,45 +195,51 @@ export async function searchPatients(
             status = 'active'
         } = options;
 
-        const { from, to } = getPaginationRange(page, pageSize);
-        const trimmedQuery = query.trim();
-        const searchWild = `%${trimmedQuery}%`;
+        const trimmedQuery = query.trim().toLowerCase();
 
-        // Split query into individual words for multi-term matching
-        const terms = trimmedQuery.split(/\s+/).filter(t => t.length > 0);
-
-        let supabaseQuery = supabase
+        // Fetch all patients for the org (filtered by status), then search client-side
+        // This is more reliable than complex .or() filters which can fail on missing columns
+        let dbQuery = supabase
             .from('patients')
-            .select('*', { count: 'exact' })
+            .select('*')
             .eq('organization_id', organizationId);
 
-        // Apply status filter
         if (status && status !== 'all') {
-            supabaseQuery = supabaseQuery.eq('status', status);
+            dbQuery = dbQuery.eq('status', status);
         }
 
-        if (terms.length > 1) {
-            // Multi-word search: match ANY term against first_name or last_name
-            // e.g. "John Smith" → first_name or last_name contains "John" OR "Smith"
-            const orFilters = terms.map(term => {
-                const wild = `%${term}%`;
-                return `first_name.ilike.${wild},last_name.ilike.${wild}`;
-            }).join(',');
-            supabaseQuery = supabaseQuery.or(orFilters);
-        } else {
-            // Single term: search across core fields
-            supabaseQuery = supabaseQuery.or(
-                `first_name.ilike.${searchWild},last_name.ilike.${searchWild},email.ilike.${searchWild},phone.ilike.${searchWild}`
-            );
-        }
-
-        const { data, count, error } = await supabaseQuery
-            .order('created_at', { ascending: false })
-            .range(from, to);
+        const { data: allPatients, error } = await dbQuery
+            .order('created_at', { ascending: false });
 
         if (error) {
             handleDatabaseError(error, 'searchPatients');
         }
+
+        // Client-side search across name, email, phone fields
+        const terms = trimmedQuery.split(/\s+/).filter(t => t.length > 0);
+
+        const filtered = (allPatients || []).filter((patient: any) => {
+            const firstName = (patient.first_name || '').toLowerCase();
+            const lastName = (patient.last_name || '').toLowerCase();
+            const email = (patient.email || '').toLowerCase();
+            const phone = (patient.phone || '').toLowerCase();
+            const fullName = `${firstName} ${lastName}`;
+
+            // Every search term must match at least one field
+            return terms.every(term =>
+                firstName.includes(term) ||
+                lastName.includes(term) ||
+                fullName.includes(term) ||
+                email.includes(term) ||
+                phone.includes(term)
+            );
+        });
+
+        // Apply pagination
+        const total = filtered.length;
+        const totalPages = Math.ceil(total / pageSize);
+        const startIdx = (page - 1) * pageSize;
+        const paginatedData = filtered.slice(startIdx, startIdx + pageSize);
 
         await createAuditLog({
             event_type: 'PATIENTS_SEARCH',
@@ -245,11 +251,11 @@ export async function searchPatients(
         });
 
         return {
-            data: data || [],
-            count: count || 0,
+            data: paginatedData,
+            count: total,
             page,
             pageSize,
-            totalPages: getTotalPages(count || 0, pageSize),
+            totalPages,
         };
     } catch (error) {
         if (error instanceof Error && error.name !== 'DatabaseError') {
