@@ -6,7 +6,7 @@ import {
     getQuickPhraseCategories,
     searchQuickPhrases,
     QuickPhrase
-} from "@/lib/demo-data/quick-phrases";
+} from "@/lib/clinical/quick-phrases";
 import {
     Zap,
     Search,
@@ -107,8 +107,8 @@ export function QuickPhrasePanel({ specialty, onInsert, isOpen, onClose }: Quick
                     <button
                         onClick={() => setSelectedCategory(null)}
                         className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${selectedCategory === null
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'
                             }`}
                     >
                         All
@@ -118,8 +118,8 @@ export function QuickPhrasePanel({ specialty, onInsert, isOpen, onClose }: Quick
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
                             className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap ${selectedCategory === cat
-                                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200'
                                 }`}
                         >
                             {cat}
@@ -161,8 +161,8 @@ export function QuickPhrasePanel({ specialty, onInsert, isOpen, onClose }: Quick
                                 <button
                                     onClick={() => handleInsert(phrase)}
                                     className={`w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${copiedId === phrase.id
-                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 hover:bg-amber-200'
+                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 hover:bg-amber-200'
                                         }`}
                                 >
                                     {copiedId === phrase.id ? (
