@@ -1,0 +1,181 @@
+// src/app/api/screenings/route.ts
+// Screening scores CRUD API — save and retrieve behavioral health screenings
+// Follows withAuth + audit logging pattern
+
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { createClient } from '@/lib/supabase/server';
+import { logAuditEvent } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+
+const VALID_INSTRUMENTS = ['PHQ9', 'GAD7', 'CSSRS', 'AUDITC', 'DAST10', 'MDQ', 'PCL5'] as const;
+
+// GET /api/screenings?patient_id=...&instrument=...&limit=6
+async function handleGet(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
+
+    try {
+        const { searchParams } = new URL(context.request.url);
+        const patient_id = searchParams.get('patient_id');
+        const encounter_id = searchParams.get('encounter_id');
+        const instrument = searchParams.get('instrument');
+        const limit = parseInt(searchParams.get('limit') || '10');
+
+        if (!patient_id && !encounter_id) {
+            return NextResponse.json(
+                { error: 'patient_id or encounter_id is required' },
+                { status: 400 }
+            );
+        }
+
+        const supabase = await createClient();
+        if (!supabase) {
+            return NextResponse.json({ screenings: [], isDemo: true });
+        }
+
+        let query = supabase
+            .from('screening_scores')
+            .select('*')
+            .order('administered_at', { ascending: false })
+            .limit(limit);
+
+        if (patient_id) query = query.eq('patient_id', patient_id);
+        if (encounter_id) query = query.eq('encounter_id', encounter_id);
+        if (instrument) query = query.eq('instrument', instrument);
+
+        const { data: screenings, error } = await query;
+
+        if (error) {
+            console.error('Error fetching screenings:', error);
+            return NextResponse.json({ screenings: [], error: error.message });
+        }
+
+        await logAuditEvent({
+            eventType: 'NOTE_VIEW',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'screening_scores',
+            details: { action: 'SCREENING_VIEW', patient_id, instrument },
+            phiAccessed: true,
+            riskLevel: 'LOW',
+        });
+
+        return NextResponse.json({ screenings: screenings || [] });
+    } catch (error) {
+        console.error('Error in screenings GET:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch screenings' },
+            { status: 500 }
+        );
+    }
+}
+
+// POST /api/screenings
+async function handlePost(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
+
+    try {
+        const body = await context.request.json();
+        const {
+            patient_id, encounter_id, instrument,
+            total_score, severity, item_responses,
+            clinical_notes, risk_flags
+        } = body;
+
+        if (!patient_id || !instrument || total_score === undefined || !item_responses) {
+            return NextResponse.json(
+                { error: 'patient_id, instrument, total_score, and item_responses are required' },
+                { status: 400 }
+            );
+        }
+
+        if (!VALID_INSTRUMENTS.includes(instrument)) {
+            return NextResponse.json(
+                { error: `Invalid instrument. Must be one of: ${VALID_INSTRUMENTS.join(', ')}` },
+                { status: 400 }
+            );
+        }
+
+        const supabase = await createClient();
+        if (!supabase) {
+            return NextResponse.json({
+                success: true,
+                isDemo: true,
+                screening: {
+                    id: 'demo-screening',
+                    patient_id,
+                    instrument,
+                    total_score,
+                    severity,
+                },
+            });
+        }
+
+        const { data: screening, error } = await supabase
+            .from('screening_scores')
+            .insert({
+                organization_id: context.user.organizationId,
+                patient_id,
+                encounter_id: encounter_id || null,
+                administered_by: context.user.id,
+                instrument,
+                total_score,
+                severity: severity || null,
+                item_responses,
+                clinical_notes: clinical_notes || null,
+                risk_flags: risk_flags || [],
+            })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error saving screening:', error);
+            return NextResponse.json(
+                { error: 'Failed to save screening' },
+                { status: 500 }
+            );
+        }
+
+        await logAuditEvent({
+            eventType: 'NOTE_CREATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'screening_scores',
+            resourceId: screening.id,
+            details: {
+                action: 'SCREENING_SAVE',
+                patient_id,
+                instrument,
+                total_score,
+                severity,
+                has_risk_flags: (risk_flags?.length || 0) > 0,
+            },
+            phiAccessed: true,
+            riskLevel: (risk_flags?.length || 0) > 0 ? 'HIGH' : 'MEDIUM',
+        });
+
+        return NextResponse.json({ success: true, screening });
+    } catch (error) {
+        console.error('Error in screenings POST:', error);
+        return NextResponse.json(
+            { error: 'Failed to save screening' },
+            { status: 500 }
+        );
+    }
+}
+
+export const GET = withAuth(handleGet, {
+    requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+});
+
+export const POST = withAuth(handlePost, {
+    requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+});

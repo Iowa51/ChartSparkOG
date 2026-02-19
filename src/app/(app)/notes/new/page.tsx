@@ -26,6 +26,7 @@ import {
     MapPin,
     AlertTriangle,
     Pill,
+    ShieldCheck,
 } from "lucide-react";
 import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/templates";
 import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
@@ -165,6 +166,11 @@ export default function NewNotePage() {
     const [showTranscript, setShowTranscript] = useState(true);
     const [autoSaved, setAutoSaved] = useState<string | null>(null);
     const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
+
+    // Smart Triage medication summary state
+    const [includeTriageSummary, setIncludeTriageSummary] = useState(true);
+    const [triageSummary, setTriageSummary] = useState<string | null>(null);
+    const [loadingTriage, setLoadingTriage] = useState(false);
     const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
 
     // Scribe state
@@ -446,6 +452,111 @@ export default function NewNotePage() {
     }, [template]);
 
 
+    // Format Smart Triage results as a clinical addendum string
+    const formatTriageSummary = (result: any): string => {
+        const lines: string[] = ['', '── Smart Triage: Medication Safety ──'];
+
+        // Safety score
+        const score = result.overall_safety_score ?? result.safety_score ?? 'N/A';
+        const level = result.safety_level || (score >= 80 ? 'Green' : score >= 60 ? 'Yellow' : 'Red');
+        lines.push(`Safety Score: ${score}/100 (${typeof level === 'string' ? level.charAt(0).toUpperCase() + level.slice(1) : level})`);
+
+        // Drug-drug interactions
+        if (result.drug_drug_interactions?.length) {
+            lines.push('');
+            lines.push('Drug Interactions:');
+            result.drug_drug_interactions.forEach((ddi: any) => {
+                lines.push(`  • ${ddi.med_a} + ${ddi.med_b} (${ddi.severity}) — ${ddi.clinical_significance || ddi.mechanism}`);
+                if (ddi.recommended_action) lines.push(`    Action: ${ddi.recommended_action}`);
+            });
+        }
+
+        // Black box warnings
+        if (result.black_box_warnings?.length) {
+            lines.push('');
+            lines.push('Black Box Warnings:');
+            result.black_box_warnings.forEach((bbw: any) => {
+                lines.push(`  ⚠ ${bbw.medication} — ${bbw.warning_text}`);
+                if (bbw.patient_relevance) lines.push(`    Relevance: ${bbw.patient_relevance}`);
+            });
+        }
+
+        // Lab monitoring
+        if (result.lab_monitoring?.length) {
+            lines.push('');
+            lines.push('Lab Monitoring:');
+            result.lab_monitoring.forEach((lab: any) => {
+                const status = lab.status === 'overdue' ? '⚠ OVERDUE' : lab.status === 'due' ? '📋 Due' : '✓ Current';
+                lines.push(`  ${status}: ${lab.medication} — ${lab.required_lab}${lab.due_date ? ` (due ${lab.due_date})` : ''}`);
+            });
+        }
+
+        // Clinical pearls
+        if (result.clinical_pearls?.length) {
+            lines.push('');
+            lines.push('Clinical Pearls:');
+            result.clinical_pearls.forEach((pearl: string) => {
+                lines.push(`  💡 ${pearl}`);
+            });
+        }
+
+        // Summary
+        if (result.summary) {
+            lines.push('');
+            lines.push(`Summary: ${result.summary}`);
+        }
+
+        lines.push('── End Smart Triage ──');
+        return lines.join('\n');
+    };
+
+    // Fetch medication triage data for the current patient
+    const fetchMedicationTriage = async (): Promise<string | null> => {
+        if (!currentPatient?.id || !includeTriageSummary) return null;
+
+        setLoadingTriage(true);
+        try {
+            const response = await fetch('/api/ai/smart-triage/medication-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id: currentPatient.id }),
+            });
+
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            const triageResult = data.result || data;
+            const summary = formatTriageSummary({ ...triageResult, safety_score: data.safety_score, safety_level: data.safety_level });
+            setTriageSummary(summary);
+            return summary;
+        } catch (error) {
+            console.error('Error fetching medication triage:', error);
+            return null;
+        } finally {
+            setLoadingTriage(false);
+        }
+    };
+
+    // Append triage summary to the assessment section of generated sections
+    const appendTriageToSections = (sections: Record<string, string>, triageText: string): Record<string, string> => {
+        const updated = { ...sections };
+        if (template.format === 'soap') {
+            // Find the assessment section and append
+            template.sections.forEach(s => {
+                if (s.label.toLowerCase().includes('assessment')) {
+                    updated[s.id] = (updated[s.id] || '') + '\n' + triageText;
+                }
+            });
+        } else {
+            // For non-SOAP, append to the first section
+            const firstId = template.sections[0]?.id;
+            if (firstId) {
+                updated[firstId] = (updated[firstId] || '') + '\n' + triageText;
+            }
+        }
+        return updated;
+    };
+
     // Generate note using AI service
     const handleGenerateNote = async () => {
         const hasPhrases = Object.values(selectedPhrases).some(p => p.length > 0);
@@ -458,6 +569,9 @@ export default function NewNotePage() {
 
         // SEC-007: Log metadata only, not PHI content
         console.log("Generating note:", { hasPhrases, inputLength: clinicianInput.length });
+
+        // Fetch triage data in parallel with note generation
+        const triagePromise = fetchMedicationTriage();
 
         try {
             // Call the AI endpoint with user's selections
@@ -472,11 +586,13 @@ export default function NewNotePage() {
                 })
             });
 
+            const triageText = await triagePromise;
+
             if (!response.ok) {
                 // Fallback to demo note if API fails
                 console.warn('AI API failed, using fallback');
                 const phraseNote = generateNoteFromPhrases();
-                applyNoteToSections(phraseNote);
+                applyNoteToSections(phraseNote, triageText);
                 return;
             }
 
@@ -484,7 +600,7 @@ export default function NewNotePage() {
 
             if (data.success && data.sections) {
                 // Apply AI-generated sections to template
-                const updatedSections: Record<string, string> = { ...noteSections };
+                let updatedSections: Record<string, string> = { ...noteSections };
                 if (template.format === "soap") {
                     template.sections.forEach(s => {
                         const label = s.label.toLowerCase();
@@ -497,18 +613,25 @@ export default function NewNotePage() {
                     updatedSections[template.sections[0].id] = data.sections.content ||
                         `${data.sections.subjective}\n\n${data.sections.objective}\n\n${data.sections.assessment}\n\n${data.sections.plan}`;
                 }
+
+                // Append triage summary if available
+                if (triageText) {
+                    updatedSections = appendTriageToSections(updatedSections, triageText);
+                }
+
                 setNoteSections(updatedSections);
                 if (data.suggestedCodes) setSuggestedCodes(data.suggestedCodes);
             } else {
                 // Fallback
                 const phraseNote = generateNoteFromPhrases();
-                applyNoteToSections(phraseNote);
+                applyNoteToSections(phraseNote, triageText);
             }
         } catch (error) {
             console.error('Error calling AI:', error);
+            const triageText = await triagePromise;
             // Fallback to demo on error
             const phraseNote = generateNoteFromPhrases();
-            applyNoteToSections(phraseNote);
+            applyNoteToSections(phraseNote, triageText);
         } finally {
             setIsGenerating(false);
             setAutoSaved(new Date().toLocaleTimeString());
@@ -620,8 +743,8 @@ Prognosis: Favorable with continued treatment adherence.`;
     };
 
     // Helper to apply demo note to sections
-    const applyNoteToSections = (demoNote: { subjective: string; objective: string; assessment: string; plan: string; suggestedCodes: any }) => {
-        const updatedSections: Record<string, string> = { ...noteSections };
+    const applyNoteToSections = (demoNote: { subjective: string; objective: string; assessment: string; plan: string; suggestedCodes: any }, triageText?: string | null) => {
+        let updatedSections: Record<string, string> = { ...noteSections };
         if (template.format === "soap") {
             template.sections.forEach(s => {
                 const label = s.label.toLowerCase();
@@ -634,6 +757,12 @@ Prognosis: Favorable with continued treatment adherence.`;
         } else {
             updatedSections[template.sections[0].id] = `${demoNote.subjective}\n\n${demoNote.objective}\n\n${demoNote.assessment}\n\n${demoNote.plan}`;
         }
+
+        // Append triage summary if available
+        if (triageText) {
+            updatedSections = appendTriageToSections(updatedSections, triageText);
+        }
+
         setNoteSections(updatedSections);
         setSuggestedCodes(demoNote.suggestedCodes);
     };
@@ -1489,6 +1618,45 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                     </div>
                                 )}
                             </div>
+
+                            {/* Smart Triage Toggle */}
+                            {currentPatient && (
+                                <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0">
+                                    <div className="px-5 py-3 flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                                <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-foreground leading-tight">Medication Safety</p>
+                                                <p className="text-[10px] text-muted-foreground">Include Smart Triage summary in note</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setIncludeTriageSummary(!includeTriageSummary)}
+                                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${includeTriageSummary ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                        >
+                                            <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform ${includeTriageSummary ? 'translate-x-4' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
+                                    {loadingTriage && (
+                                        <div className="px-5 pb-3">
+                                            <div className="flex items-center gap-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                                Fetching medication triage...
+                                            </div>
+                                        </div>
+                                    )}
+                                    {triageSummary && !loadingTriage && (
+                                        <div className="px-5 pb-3">
+                                            <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                <CheckCircle className="h-3 w-3" />
+                                                Triage data loaded — will be added to Assessment
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
 
                             {/* Transcript Content */}

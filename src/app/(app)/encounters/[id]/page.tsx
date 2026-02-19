@@ -17,6 +17,8 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { SuperbillWidget } from "@/components/billing/SuperbillWidget";
+import VitalsEntryPanel from "@/components/vitals/VitalsEntryPanel";
+import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
 
 export default function EncounterDetailPage() {
     const params = useParams();
@@ -149,6 +151,9 @@ export default function EncounterDetailPage() {
                                 </p>
                             </div>
                         </div>
+
+                        {/* Smart Triage - Full Width Below Content */}
+                        <SmartTriagePanel patientId="demo-patient" encounterId={id} />
                     </div>
 
                     {/* Vitals Sidebar */}
@@ -156,43 +161,19 @@ export default function EncounterDetailPage() {
                         {/* Superbill Widget */}
                         <SuperbillWidget />
 
-                        <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-                            <div className="flex items-center gap-2 mb-6">
-                                <Activity className="h-5 w-5 text-primary" />
-                                <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Vitals</h3>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="flex items-center justify-between border-b border-border pb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-600 dark:text-red-400">
-                                            <Heart className="h-4 w-4" />
-                                        </div>
-                                        <span className="text-sm font-medium text-muted-foreground">Blood Pressure</span>
-                                    </div>
-                                    <span className="text-base font-bold text-foreground">{mockEncounter.vitals.bp}</span>
-                                </div>
-
-                                <div className="flex items-center justify-between border-b border-border pb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
-                                            <Activity className="h-4 w-4" />
-                                        </div>
-                                        <span className="text-sm font-medium text-muted-foreground">Heart Rate</span>
-                                    </div>
-                                    <span className="text-base font-bold text-foreground">{mockEncounter.vitals.hr} bpm</span>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg text-orange-600 dark:text-orange-400">
-                                            <Thermometer className="h-4 w-4" />
-                                        </div>
-                                        <span className="text-sm font-medium text-muted-foreground">Temperature</span>
-                                    </div>
-                                    <span className="text-base font-bold text-foreground">{mockEncounter.vitals.temp} °F</span>
-                                </div>
-                            </div>
+                        {/* Dynamic Vitals Entry */}
+                        <div className="bg-card rounded-2xl border border-border shadow-sm">
+                            <VitalsEntryPanel
+                                patientId="demo-patient"
+                                encounterId={id}
+                                previousVitals={{
+                                    bp_systolic: 120,
+                                    bp_diastolic: 80,
+                                    heart_rate: 72,
+                                    temperature: 98.6,
+                                    recorded_at: '2024-01-01T00:00:00Z',
+                                }}
+                            />
                         </div>
 
                         {/* Follow up reminder */}

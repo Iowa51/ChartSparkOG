@@ -12,6 +12,7 @@ import {
     X,
     Loader2
 } from "lucide-react";
+import TriageBadge from "@/components/smart-triage/TriageBadge";
 
 const statusStyles = {
     active: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800",
@@ -179,8 +180,8 @@ export default function PatientsPage() {
                                     key={s.value}
                                     onClick={() => setStatusFilter(s.value)}
                                     className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s.value
-                                            ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-border/10"
-                                            : "text-muted-foreground hover:text-foreground"
+                                        ? "bg-white dark:bg-slate-800 text-primary shadow-sm ring-1 ring-border/10"
+                                        : "text-muted-foreground hover:text-foreground"
                                         }`}
                                 >
                                     {s.label}
@@ -220,6 +221,9 @@ export default function PatientsPage() {
                                 <tr className="bg-muted/50 border-b border-border">
                                     <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
                                         Patient Name
+                                    </th>
+                                    <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                        Triage
                                     </th>
                                     <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">
                                         MRN
@@ -285,6 +289,15 @@ export default function PatientsPage() {
                                                         </p>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {(() => {
+                                                    const levels: Array<'green' | 'yellow' | 'red' | 'black'> = ['green', 'green', 'yellow', 'red', 'black'];
+                                                    const idx = patient.first_name.length % levels.length;
+                                                    const level = levels[idx];
+                                                    const counts: Record<string, number> = { green: 0, yellow: 1, red: 2, black: 3 };
+                                                    return <TriageBadge level={level} showLabel alertsCount={counts[level]} />;
+                                                })()}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="text-sm font-mono text-muted-foreground">

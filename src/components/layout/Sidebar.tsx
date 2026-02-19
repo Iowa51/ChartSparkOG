@@ -19,6 +19,7 @@ import {
   LogOut,
   Shield,
   Award,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,10 +45,11 @@ const navSections = [
   {
     title: "Intelligence & Hub",
     items: [
-      { label: "Clinical AI", href: "/ai-assistant", icon: Stethoscope, tier: "complete" },
-      { label: "Treatment Plan", href: "/treatment-planner", icon: ClipboardList, tier: "complete" },
-      { label: "Analytics", href: "/analytics/relapse", icon: LayoutDashboard, tier: "complete" },
-      { label: "Integration", href: "/integrations", icon: Settings, tier: "complete" },
+      { label: "Clinical AI", href: "/ai-assistant", icon: Stethoscope, tier: "complete" as const },
+      { label: "Smart Triage", href: "/smart-triage", icon: ShieldCheck, tier: "complete" as const },
+      { label: "Treatment Plan", href: "/treatment-planner", icon: ClipboardList, tier: "complete" as const },
+      { label: "Analytics", href: "/analytics/relapse", icon: LayoutDashboard, tier: "complete" as const },
+      { label: "Integration", href: "/integrations", icon: Settings, tier: "complete" as const },
     ]
   },
   {

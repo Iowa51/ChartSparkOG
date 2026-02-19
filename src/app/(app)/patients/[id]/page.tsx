@@ -17,9 +17,16 @@ import {
     Shield,
     Loader2,
     ClipboardList,
+    Heart,
+    Brain,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import VitalsEntryPanel from "@/components/vitals/VitalsEntryPanel";
+import ScreeningPanel from "@/components/vitals/ScreeningPanel";
+import WeightTrendChart from "@/components/vitals/WeightTrendChart";
+import ScreeningTrendChart from "@/components/vitals/ScreeningTrendChart";
+import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
 
 // Card components
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -302,8 +309,10 @@ export default function PatientDetailPage() {
                 <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
                     {[
                         { id: "overview", label: "Overview", icon: Activity },
+                        { id: "vitals", label: "Vitals", icon: Heart },
                         { id: "encounters", label: "Encounters", icon: Calendar },
                         { id: "notes", label: "Notes", icon: ClipboardList },
+                        { id: "smart-triage", label: "Smart Triage", icon: Brain },
                         { id: "allergies", label: "Allergies", icon: AlertCircle },
                         { id: "medications", label: "Medications", icon: Pill },
                         { id: "problems", label: "Problems", icon: FileText },
@@ -428,6 +437,89 @@ export default function PatientDetailPage() {
                                 </CardContent>
                             </Card>
                         </>
+                    )}
+
+                    {activeTab === "vitals" && (
+                        <>
+                            <div className="lg:col-span-2">
+                                <VitalsEntryPanel
+                                    patientId={patientId}
+                                    onSave={async (data) => {
+                                        try {
+                                            await fetch('/api/vitals', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ ...data, patient_id: patientId }),
+                                            });
+                                        } catch (err) {
+                                            console.error('Failed to save vitals:', err);
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>
+                                            <Activity className="h-4 w-4" />
+                                            Weight Trend
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <WeightTrendChart
+                                            data={[
+                                                { date: '10/15', weight: 185 },
+                                                { date: '11/12', weight: 183 },
+                                                { date: '12/10', weight: 181 },
+                                                { date: '01/14', weight: 180 },
+                                                { date: '02/11', weight: 178 },
+                                            ]}
+                                        />
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>
+                                            <Brain className="h-4 w-4" />
+                                            Screening Trends
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ScreeningTrendChart
+                                            instrument="PHQ9"
+                                            data={[
+                                                { date: '10/15', score: 18 },
+                                                { date: '11/12', score: 14 },
+                                                { date: '12/10', score: 11 },
+                                                { date: '01/14', score: 9 },
+                                                { date: '02/11', score: 7 },
+                                            ]}
+                                            maxScore={27}
+                                        />
+                                        <ScreeningTrendChart
+                                            instrument="GAD7"
+                                            data={[
+                                                { date: '10/15', score: 15 },
+                                                { date: '11/12', score: 12 },
+                                                { date: '12/10', score: 10 },
+                                                { date: '01/14', score: 8 },
+                                                { date: '02/11', score: 6 },
+                                            ]}
+                                            maxScore={21}
+                                        />
+                                    </CardContent>
+                                </Card>
+                                <ScreeningPanel
+                                    patientId={patientId}
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {activeTab === "smart-triage" && (
+                        <div className="lg:col-span-3">
+                            <SmartTriagePanel patientId={patientId} />
+                        </div>
                     )}
 
                     {activeTab === "encounters" && (
