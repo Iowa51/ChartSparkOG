@@ -7,6 +7,7 @@ import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { NoteCreateSchema, validateRequest } from '@/lib/validation/schemas';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { checkCSRF } from '@/lib/security/csrf';
 
 export async function GET(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
@@ -125,6 +126,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
+
+    // SEC-MED-02: CSRF protection
+    const csrfError = checkCSRF(request);
+    if (csrfError) return csrfError;
 
     try {
         const supabase = await createClient();

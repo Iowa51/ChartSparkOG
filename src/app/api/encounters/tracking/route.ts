@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { checkCSRF } from '@/lib/security/csrf';
 
 /**
  * API Route to track clinical encounter states and maintain a secure audit trail.
@@ -7,6 +8,10 @@ import { createClient } from '@/lib/supabase/server';
  */
 
 export async function POST(request: NextRequest) {
+    // SEC-MED-02: CSRF protection
+    const csrfError = checkCSRF(request);
+    if (csrfError) return csrfError;
+
     try {
         const supabase = await createClient();
         const { encounterId, action, metadata, patientId } = await request.json();

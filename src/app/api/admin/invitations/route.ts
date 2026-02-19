@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { checkCSRF } from '@/lib/security/csrf';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getClientIP } from '@/lib/utils/get-client-ip';
 import { sendInvitationEmail, isEmailConfigured } from '@/lib/email/resend';
@@ -84,6 +85,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    // SEC-MED-02: CSRF protection
+    const csrfError = checkCSRF(request);
+    if (csrfError) return csrfError;
+
     const supabase = await createClient();
     if (!supabase) {
         return NextResponse.json({ error: 'Database unavailable' }, { status: 503 });

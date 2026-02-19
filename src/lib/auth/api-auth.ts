@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { validateOrigin } from '@/lib/security/csrf';
 
 export interface AuthenticatedUser {
     id: string;
@@ -91,6 +92,14 @@ export function withAuth<T extends AuthContext>(
 
         if (!user) {
             return errorResponse('Unauthorized - Please log in', 401);
+        }
+
+        // SEC-MED-02: CSRF protection for state-changing methods
+        const method = request.method;
+        if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+            if (!validateOrigin(request)) {
+                return errorResponse('Invalid request origin', 403);
+            }
         }
 
         // Check role requirement
