@@ -4,28 +4,24 @@ import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { AIChatSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const body = await context.request.json();
-        const { message, conversationHistory = [] } = body;
 
-        // Basic validation
-        if (!message || typeof message !== 'string') {
+        // Validate input with Zod schema
+        const validation = validateRequest(AIChatSchema, body);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Message is required and must be a string' },
+                { error: 'Validation failed', details: validation.errors },
                 { status: 400 }
             );
         }
 
-        if (message.length > 8000) {
-            return NextResponse.json(
-                { error: 'Message too long (max 8000 characters)' },
-                { status: 400 }
-            );
-        }
+        const { message, conversationHistory } = validation.data;
 
         if (!Array.isArray(conversationHistory) || conversationHistory.length > 50) {
             return NextResponse.json(

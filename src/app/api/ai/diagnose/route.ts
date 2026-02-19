@@ -4,28 +4,24 @@ import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { AIDiagnoseSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const body = await context.request.json();
-        const { sessionNotes, specialty = 'mental_health' } = body;
 
-        // Validation
-        if (!sessionNotes || typeof sessionNotes !== 'string') {
+        // Validate input with Zod schema
+        const validation = validateRequest(AIDiagnoseSchema, body);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Session notes are required' },
+                { error: 'Validation failed', details: validation.errors },
                 { status: 400 }
             );
         }
 
-        if (sessionNotes.length > 10000) {
-            return NextResponse.json(
-                { error: 'Session notes too long (max 10000 characters)' },
-                { status: 400 }
-            );
-        }
+        const { sessionNotes, specialty } = validation.data;
 
         // Log AI PHI processing - patient clinical data sent to AI
         await logAuditEvent({

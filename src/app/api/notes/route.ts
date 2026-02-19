@@ -1,70 +1,36 @@
-// src/app/api/notes/route.ts
-// SEC-009: HIPAA-compliant clinical notes API with full audit logging
+// HIPAA-compliant clinical notes API with full audit logging
 
 import { createClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { NoteCreateSchema, validateRequest } from '@/lib/validation/schemas';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
-import { checkCSRF } from '@/lib/security/csrf';
 
-export async function GET(request: NextRequest) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+async function handleGet(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
+        const { user } = context;
+
+        if (!user.organizationId) {
+            return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+        }
+
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
 
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: '/api/notes', method: 'GET' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Try profiles table first, fallback to users table
-        let profile = null;
-        const { data: profileData } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-
-        if (profileData) {
-            profile = profileData;
-        } else {
-            const { data: userData } = await supabase
-                .from('users')
-                .select('organization_id, email, role')
-                .eq('id', user.id)
-                .single();
-
-            if (userData) {
-                profile = userData;
-            } else {
-                return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-            }
-        }
-
-        const searchParams = request.nextUrl.searchParams;
+        const searchParams = context.request.nextUrl.searchParams;
         const patientId = searchParams.get('patient_id') || searchParams.get('patientId');
-
-        // SEC-REMEDIATION: Add pagination to prevent unbounded queries
         const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
         const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
         const offset = (page - 1) * limit;
 
-        // First get total count for pagination metadata
+        // Get total count for pagination
         let countQuery = supabase
             .from('clinical_notes')
             .select('id', { count: 'exact', head: true })
-            .eq('organization_id', profile.organization_id);
+            .eq('organization_id', user.organizationId);
 
         if (patientId) countQuery = countQuery.eq('patient_id', patientId);
 
@@ -76,7 +42,7 @@ export async function GET(request: NextRequest) {
                 *,
                 patient:patients(id, first_name, last_name)
             `)
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', user.organizationId)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
@@ -86,13 +52,12 @@ export async function GET(request: NextRequest) {
 
         if (error) throw error;
 
-        // Log PHI access - viewing clinical notes (highly sensitive)
         await logAuditEvent({
             eventType: patientId ? 'NOTE_VIEW' : 'PATIENT_SEARCH',
             userId: user.id,
             userEmail: user.email,
-            userRole: profile.role,
-            organizationId: profile.organization_id,
+            userRole: user.role,
+            organizationId: user.organizationId,
             ipAddress,
             userAgent,
             resourceType: 'clinical_note',
@@ -114,7 +79,7 @@ export async function GET(request: NextRequest) {
                 totalPages: Math.ceil((totalCount || 0) / limit),
             },
         });
-    } catch (error) {
+    } catch (error: unknown) {
         logError({
             action: 'notes_fetch_error',
             error: sanitizeError(error),
@@ -124,56 +89,19 @@ export async function GET(request: NextRequest) {
     }
 }
 
-export async function POST(request: NextRequest) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
-
-    // SEC-MED-02: CSRF protection
-    const csrfError = checkCSRF(request);
-    if (csrfError) return csrfError;
+async function handlePost(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
+        const { user } = context;
+
+        if (!user.organizationId) {
+            return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+        }
+
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const rawData = await context.request.json();
 
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: '/api/notes', method: 'POST' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Try profiles table first, fallback to users table
-        let profile = null;
-        const { data: profileData } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-
-        if (profileData) {
-            profile = profileData;
-        } else {
-            const { data: userData } = await supabase
-                .from('users')
-                .select('organization_id, email, role')
-                .eq('id', user.id)
-                .single();
-
-            if (userData) {
-                profile = userData;
-            } else {
-                return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-            }
-        }
-
-        const rawData = await request.json();
-
-        // SEC-REMEDIATION: Validate input with Zod schema instead of spreading arbitrary data
         const validation = validateRequest(NoteCreateSchema, rawData);
         if (!validation.success) {
             return NextResponse.json(
@@ -191,10 +119,9 @@ export async function POST(request: NextRequest) {
                 encounter_id: validatedData.encounter_id,
                 content: validatedData.content,
                 template_id: validatedData.template_id,
-                // Use 'status' column with valid values: 'draft', 'completed', 'signed', 'amended'
                 status: validatedData.is_signed ? 'signed' : 'draft',
                 signed_at: validatedData.is_signed ? new Date().toISOString() : null,
-                organization_id: profile.organization_id,
+                organization_id: user.organizationId,
                 provider_id: user.id
             }])
             .select()
@@ -210,12 +137,11 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', validatedData.patient_id);
 
-        // Log PHI creation - clinical note is highly sensitive
         await logPHIAccess(
             user.id,
-            user.email || '',
-            profile.role || 'USER',
-            profile.organization_id,
+            user.email,
+            user.role,
+            user.organizationId,
             'NOTE',
             note.id,
             'CREATE',
@@ -233,3 +159,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to create note' }, { status: 500 });
     }
 }
+
+export const GET = withAuth(handleGet, {
+    requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+});
+
+export const POST = withAuth(handlePost, {
+    requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+});

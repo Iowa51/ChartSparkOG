@@ -1,49 +1,24 @@
-/**
- * User Invitations API
- * Task 1.3: User Invitation Flow
- * 
- * POST - Create new invitation
- * GET - List pending invitations for organization
- */
+// User Invitations API — Create and list organization invitations
 
 import { createClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
-import { checkCSRF } from '@/lib/security/csrf';
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
-import { getClientIP } from '@/lib/utils/get-client-ip';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { sendInvitationEmail, isEmailConfigured } from '@/lib/email/resend';
 
-export async function GET(request: NextRequest) {
-    const supabase = await createClient();
-    if (!supabase) {
-        return NextResponse.json({ error: 'Database unavailable' }, { status: 503 });
-    }
-
-    const ip = getClientIP(request);
-    const userAgent = request.headers.get('user-agent') || undefined;
+async function handleGet(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const { user } = context;
+        const supabase = await createClient();
 
-        // Get user's org and role
-        const { data: profile } = await supabase
-            .from('users')
-            .select('organization_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id) {
+        if (!user.organizationId) {
             return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
         }
 
-        if (!['ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-            return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-        }
-
-        // Get invitations for this org
         const { data: invitations, error } = await supabase
             .from('invitations')
             .select(`
@@ -57,53 +32,44 @@ export async function GET(request: NextRequest) {
                 invited_by,
                 users!invitations_invited_by_fkey(first_name, last_name, email)
             `)
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', user.organizationId)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // Log the view
         await logAuditEvent({
             eventType: 'INVITATION_LIST_VIEW',
             userId: user.id,
             userEmail: user.email,
-            organizationId: profile.organization_id,
+            organizationId: user.organizationId,
             resourceType: 'invitations',
             details: { count: invitations?.length || 0 },
             phiAccessed: false,
             riskLevel: 'LOW',
-            ipAddress: ip,
+            ipAddress,
             userAgent,
         });
 
         return NextResponse.json({ invitations });
 
     } catch (error: unknown) {
-        console.error('Error fetching invitations:', error);
+        logError({ action: 'FETCH_INVITATIONS_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to fetch invitations' }, { status: 500 });
     }
 }
 
-export async function POST(request: NextRequest) {
-    // SEC-MED-02: CSRF protection
-    const csrfError = checkCSRF(request);
-    if (csrfError) return csrfError;
-
-    const supabase = await createClient();
-    if (!supabase) {
-        return NextResponse.json({ error: 'Database unavailable' }, { status: 503 });
-    }
-
-    const ip = getClientIP(request);
-    const userAgent = request.headers.get('user-agent') || undefined;
+async function handlePost(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const { user } = context;
+        const supabase = await createClient();
+
+        if (!user.organizationId) {
+            return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
         }
 
-        const body = await request.json();
+        const body = await context.request.json();
         const { email, role = 'USER', specialty } = body;
 
         if (!email) {
@@ -121,37 +87,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
         }
 
-        // Get user's org and role
-        const { data: profile } = await supabase
-            .from('users')
-            .select('organization_id, role, email')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id) {
-            return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
-        }
-
-        if (!['ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_INVITATION_ATTEMPT',
-                userId: user.id,
-                userEmail: user.email,
-                organizationId: profile.organization_id,
-                details: { attemptedEmail: email, attemptedRole: role },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-                ipAddress: ip,
-                userAgent,
-            });
-            return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-        }
-
-        // Check if email already has a pending invitation
+        // Check for existing pending invitation
         const { data: existing } = await supabase
             .from('invitations')
             .select('id')
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', user.organizationId)
             .eq('email', email.toLowerCase())
             .eq('status', 'pending')
             .single();
@@ -164,7 +104,7 @@ export async function POST(request: NextRequest) {
         const { data: existingUser } = await supabase
             .from('users')
             .select('id')
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', user.organizationId)
             .eq('email', email.toLowerCase())
             .single();
 
@@ -172,13 +112,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'A user with this email already exists in your organization' }, { status: 409 });
         }
 
-        // Generate secure token using database function
+        // Generate secure token
         let token: string;
         const { data: tokenData, error: tokenError } = await supabase
             .rpc('generate_invitation_token');
 
         if (tokenError || !tokenData) {
-            // Fallback to server-side generation
             const crypto = await import('crypto');
             token = crypto.randomBytes(32).toString('base64url');
         } else {
@@ -189,35 +128,30 @@ export async function POST(request: NextRequest) {
         const { data: invitation, error: createError } = await supabase
             .from('invitations')
             .insert({
-                organization_id: profile.organization_id,
+                organization_id: user.organizationId,
                 email: email.toLowerCase(),
                 role,
                 specialty,
                 invited_by: user.id,
                 token,
-                expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+                expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             })
             .select()
             .single();
 
         if (createError) throw createError;
 
-        // Log the invitation
         await logAuditEvent({
             eventType: 'USER_INVITATION_CREATED',
             userId: user.id,
             userEmail: user.email,
-            organizationId: profile.organization_id,
+            organizationId: user.organizationId,
             resourceType: 'invitation',
             resourceId: invitation.id,
-            details: {
-                invitedEmail: email,
-                role,
-                specialty,
-            },
+            details: { invitedEmail: email, role, specialty },
             phiAccessed: false,
             riskLevel: 'MEDIUM',
-            ipAddress: ip,
+            ipAddress,
             userAgent,
         });
 
@@ -225,7 +159,7 @@ export async function POST(request: NextRequest) {
         const { data: org } = await supabase
             .from('organizations')
             .select('name')
-            .eq('id', profile.organization_id)
+            .eq('id', user.organizationId)
             .single();
 
         // Get inviter name
@@ -241,7 +175,7 @@ export async function POST(request: NextRequest) {
 
         const organizationName = org?.name || 'Your organization';
 
-        // Send invitation email via Resend
+        // Send invitation email
         let emailSent = false;
         let emailError: string | undefined;
 
@@ -259,10 +193,8 @@ export async function POST(request: NextRequest) {
             emailError = emailResult.error;
 
             if (!emailSent) {
-                console.warn('Failed to send invitation email:', emailError);
+                logError({ action: 'SEND_INVITATION_EMAIL_FAILED', error: emailError });
             }
-        } else {
-            console.warn('Email service not configured - invitation created but email not sent');
         }
 
         const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://chart-spark-og.vercel.app'}/auth/accept-invite?token=${token}`;
@@ -284,7 +216,15 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: unknown) {
-        console.error('Error creating invitation:', error);
+        logError({ action: 'CREATE_INVITATION_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
     }
 }
+
+export const GET = withAuth(handleGet, {
+    requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+});
+
+export const POST = withAuth(handlePost, {
+    requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+});
