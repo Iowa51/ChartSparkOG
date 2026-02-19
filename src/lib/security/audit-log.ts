@@ -1,10 +1,7 @@
-// src/lib/security/audit-log.ts
-// SEC-009: Comprehensive audit logging for HIPAA compliance
-// IMPORTANT: This module should ONLY be used in server components and API routes
+// HIPAA-compliant audit logging — server components and API routes only
 
 import { createClient } from '@/lib/supabase/server';
 
-// Audit event types
 export type AuditEventType =
     | 'LOGIN_SUCCESS'
     | 'LOGIN_FAILURE'
@@ -30,6 +27,10 @@ export type AuditEventType =
     | 'NOTE_SIGN'
     | 'NOTE_APPROVED'
     | 'NOTE_REVISION_REQUESTED'
+    | 'VITALS_VIEW'
+    | 'VITALS_CREATE'
+    | 'SCREENING_VIEW'
+    | 'SCREENING_CREATE'
     | 'ENCOUNTER_VIEW'
     | 'ENCOUNTER_CREATE'
     | 'ENCOUNTER_UPDATE'

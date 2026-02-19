@@ -1,11 +1,8 @@
-// src/app/api/screenings/route.ts
-// Screening scores CRUD API — save and retrieve behavioral health screenings
-// Follows withAuth + audit logging pattern
-
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 const VALID_INSTRUMENTS = ['PHQ9', 'GAD7', 'CSSRS', 'AUDITC', 'DAST10', 'MDQ', 'PCL5'] as const;
@@ -46,12 +43,12 @@ async function handleGet(context: AuthContext) {
         const { data: screenings, error } = await query;
 
         if (error) {
-            console.error('Error fetching screenings:', error);
-            return NextResponse.json({ screenings: [], error: error.message });
+            logError({ action: 'SCREENING_FETCH_ERROR', error: sanitizeError(error) });
+            return NextResponse.json({ screenings: [], error: 'Failed to query screenings' });
         }
 
         await logAuditEvent({
-            eventType: 'NOTE_VIEW',
+            eventType: 'SCREENING_VIEW',
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -65,8 +62,8 @@ async function handleGet(context: AuthContext) {
         });
 
         return NextResponse.json({ screenings: screenings || [] });
-    } catch (error) {
-        console.error('Error in screenings GET:', error);
+    } catch (error: unknown) {
+        logError({ action: 'SCREENING_FETCH_ERROR', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Failed to fetch screenings' },
             { status: 500 }
@@ -133,7 +130,7 @@ async function handlePost(context: AuthContext) {
             .single();
 
         if (error) {
-            console.error('Error saving screening:', error);
+            logError({ action: 'SCREENING_SAVE_ERROR', error: sanitizeError(error) });
             return NextResponse.json(
                 { error: 'Failed to save screening' },
                 { status: 500 }
@@ -141,7 +138,7 @@ async function handlePost(context: AuthContext) {
         }
 
         await logAuditEvent({
-            eventType: 'NOTE_CREATE',
+            eventType: 'SCREENING_CREATE',
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -163,8 +160,8 @@ async function handlePost(context: AuthContext) {
         });
 
         return NextResponse.json({ success: true, screening });
-    } catch (error) {
-        console.error('Error in screenings POST:', error);
+    } catch (error: unknown) {
+        logError({ action: 'SCREENING_SAVE_ERROR', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Failed to save screening' },
             { status: 500 }

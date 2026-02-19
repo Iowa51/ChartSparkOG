@@ -1,5 +1,4 @@
-// src/app/api/telehealth/end-session/route.ts
-// SEC-005: Secured telehealth end session with authentication
+// End telehealth session — updates appointment status and cleans up Daily.co room
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
@@ -93,17 +92,13 @@ async function handler(context: AuthContext) {
 
     } catch (error: unknown) {
         console.error('Error ending session:', error);
-        const message = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Failed to end session', details: message },
+            { error: 'Failed to end session' },
             { status: 500 }
         );
     }
 }
 
-// SEC-005: Export with authentication
-// NOTE: Feature requirement temporarily disabled for demo - re-enable in production
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
-    // requiredFeature: 'TELEHEALTH', // Disabled for demo mode
 });

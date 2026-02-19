@@ -1,11 +1,8 @@
-// src/app/api/ai/recommendations/route.ts
-// SEC-004: Secured AI recommendations endpoint with authentication
-// SEC-009: HIPAA-compliant audit logging for AI PHI processing
-
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handler(context: AuthContext) {
@@ -65,7 +62,7 @@ async function handler(context: AuthContext) {
         });
 
     } catch (error: unknown) {
-        console.error('Error in recommendations API:', error);
+        logError({ action: 'AI_RECOMMENDATIONS_ERROR', error: sanitizeError(error) });
 
         await logAuditEvent({
             eventType: 'API_ERROR',
@@ -75,20 +72,18 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'ai_recommendations',
-            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            details: { errorType: error instanceof Error ? error.constructor.name : 'Unknown' },
             phiAccessed: false,
             riskLevel: 'LOW',
         });
 
-        const message = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Failed to generate recommendations: ' + message },
+            { error: 'Failed to generate recommendations' },
             { status: 500 }
         );
     }
 }
 
-// SEC-004: Export with authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
 });

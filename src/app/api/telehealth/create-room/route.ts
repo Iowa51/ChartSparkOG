@@ -1,5 +1,4 @@
-// src/app/api/telehealth/create-room/route.ts
-// SEC-005: Secured telehealth room creation with authentication
+// Telehealth room creation via Daily.co API
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
@@ -176,17 +175,13 @@ async function handler(context: AuthContext) {
 
     } catch (error: unknown) {
         console.error('Error creating room:', error);
-        const message = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Failed to create room', details: message },
+            { error: 'Failed to create telehealth room' },
             { status: 500 }
         );
     }
 }
 
-// SEC-005: Export with authentication
-// NOTE: Feature requirement temporarily disabled for demo - re-enable in production
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
-    // requiredFeature: 'TELEHEALTH', // Disabled for demo mode
 });

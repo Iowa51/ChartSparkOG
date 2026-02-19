@@ -49,9 +49,10 @@ export class OfficeAllySFTPAdapter {
             // await sftp.end();
 
             throw new Error('SFTP Client dependency not yet installed. Use isMock=true for now.');
-        } catch (error: any) {
-            console.error(`[SFTP] Upload Error: ${error.message}`);
-            return { success: false, message: error.message };
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : 'SFTP upload failed';
+            console.error(`[SFTP] Upload Error: ${msg}`);
+            return { success: false, message: msg };
         }
     }
 

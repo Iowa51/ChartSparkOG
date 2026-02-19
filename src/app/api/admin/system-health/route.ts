@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
                 });
                 activities.push({
                     time: new Date().toISOString(),
-                    event: `Database check failed: ${error.message}`,
+                    event: 'Database check failed',
                     status: 'error',
                 });
             } else {

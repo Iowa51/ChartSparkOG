@@ -1,6 +1,4 @@
-// src/app/api/patients/route.ts
-// SEC-009: HIPAA-compliant patient API with full audit logging
-// Updated to use production data layer
+// HIPAA-compliant patient API with audit logging
 
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
@@ -57,7 +55,7 @@ export async function GET(request: NextRequest) {
         const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
         const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
-        // SEC-CRIT-01: PHI removed from logs — see audit_logs table for access records
+        // PHI removed from logs — see audit_logs table for access records
 
         let result;
 
@@ -76,7 +74,7 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        // SEC-CRIT-01: PHI removed from logs — audit_logs captures access
+        // PHI removed from logs — audit_logs captures access
 
         // Fire-and-forget audit logging
         logAuditEventAsync({
@@ -120,7 +118,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
 
-    // SEC-MED-02: CSRF protection
+    // CSRF protection
     const csrfError = checkCSRF(request);
     if (csrfError) return csrfError;
 
@@ -132,9 +130,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Try profiles table first, fallback to users table for RLS compatibility
         let profile = null;
-        let profileSource = '';
         const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('organization_id, email, role')
@@ -143,7 +139,6 @@ export async function POST(request: NextRequest) {
 
         if (profileData) {
             profile = profileData;
-            profileSource = 'profiles';
         } else {
             // Fallback: Try users table (RLS policies use this table)
             const { data: userData, error: userError } = await supabase
@@ -154,7 +149,6 @@ export async function POST(request: NextRequest) {
 
             if (userData) {
                 profile = userData;
-                profileSource = 'users';
             } else {
                 console.error('Profile lookup failed:', { profileError, userError });
                 return NextResponse.json({
@@ -163,7 +157,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // SEC-CRIT-01: PHI removed from logs
+        // PHI removed from logs
 
         if (!profile.organization_id) {
             return NextResponse.json({
@@ -173,7 +167,7 @@ export async function POST(request: NextRequest) {
 
         const rawData = await request.json();
 
-        // QUAL-MED-01: Validate input with Zod schema
+        // Validate input with Zod schema
         const validation = validateRequest(PatientCreateSchema, rawData);
         if (!validation.success) {
             return NextResponse.json(
@@ -198,13 +192,14 @@ export async function POST(request: NextRequest) {
                 phone: data.phone ?? undefined,
                 address: data.address ?? undefined,
                 allergies: data.allergies ?? undefined,
+                // TODO: Zod schema validates as string[] but PatientCreateInput expects structured objects — align schemas
                 medications: data.medications as any ?? undefined,
                 problems: data.problems as any ?? undefined,
                 insurance: data.insurance as any ?? undefined,
             }
         );
 
-        // SEC-CRIT-01: Patient details removed from logs — audit_logs captures creation
+        // Patient details removed from logs — audit_logs captures creation
 
         return NextResponse.json(patient, { status: 201 });
     } catch (error) {

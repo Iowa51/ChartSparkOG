@@ -1,11 +1,8 @@
-// src/app/api/ai/diagnose/route.ts
-// SEC-004: Secured AI diagnose endpoint with authentication
-// SEC-009: HIPAA-compliant audit logging for AI PHI processing
-
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handler(context: AuthContext) {
@@ -55,9 +52,9 @@ async function handler(context: AuthContext) {
         return NextResponse.json(result);
 
     } catch (error: unknown) {
-        console.error('Error in diagnose API:', error);
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        logError({ action: 'AI_DIAGNOSE_ERROR', error: sanitizeError(error) });
 
-        // Log the error
         await logAuditEvent({
             eventType: 'API_ERROR',
             userId: context.user.id,
@@ -66,29 +63,27 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'ai_diagnose',
-            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            details: { errorType: error instanceof Error ? error.constructor.name : 'Unknown' },
             phiAccessed: false,
             riskLevel: 'LOW',
         });
 
-        // Provide more specific error messages
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-        if (errorMessage.includes('not configured')) {
+        // Map known error patterns to user-friendly messages without exposing internals
+        if (errorMsg.includes('not configured')) {
             return NextResponse.json(
                 { error: 'Azure OpenAI is not configured. Please set up your API credentials.' },
                 { status: 503 }
             );
         }
 
-        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
             return NextResponse.json(
                 { error: 'Azure OpenAI authentication failed. Please check your API key.' },
                 { status: 401 }
             );
         }
 
-        if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+        if (errorMsg.includes('429') || errorMsg.includes('rate limit')) {
             return NextResponse.json(
                 { error: 'Rate limit exceeded. Please wait a moment and try again.' },
                 { status: 429 }
@@ -96,13 +91,12 @@ async function handler(context: AuthContext) {
         }
 
         return NextResponse.json(
-            { error: `AI analysis failed: ${errorMessage}` },
+            { error: 'AI analysis failed. Please try again.' },
             { status: 500 }
         );
     }
 }
 
-// SEC-004: Export with authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
 });

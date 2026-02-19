@@ -1,11 +1,8 @@
-// src/app/api/vitals/route.ts
-// Vitals CRUD API — save and retrieve patient vitals
-// Follows withAuth + audit logging pattern
-
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { calculateBMI, detectAbnormalVitals } from '@/lib/types/smart-triage';
 
@@ -43,12 +40,12 @@ async function handleGet(context: AuthContext) {
         const { data: vitals, error } = await query;
 
         if (error) {
-            console.error('Error fetching vitals:', error);
-            return NextResponse.json({ vitals: [], error: error.message });
+            logError({ action: 'VITALS_FETCH_ERROR', error: sanitizeError(error) });
+            return NextResponse.json({ vitals: [], error: 'Failed to query vitals' });
         }
 
         await logAuditEvent({
-            eventType: 'NOTE_VIEW',
+            eventType: 'VITALS_VIEW',
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -62,8 +59,8 @@ async function handleGet(context: AuthContext) {
         });
 
         return NextResponse.json({ vitals: vitals || [] });
-    } catch (error) {
-        console.error('Error in vitals GET:', error);
+    } catch (error: unknown) {
+        logError({ action: 'VITALS_FETCH_ERROR', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Failed to fetch vitals' },
             { status: 500 }
@@ -147,7 +144,7 @@ async function handlePost(context: AuthContext) {
             .single();
 
         if (error) {
-            console.error('Error saving vitals:', error);
+            logError({ action: 'VITALS_SAVE_ERROR', error: sanitizeError(error) });
             return NextResponse.json(
                 { error: 'Failed to save vitals' },
                 { status: 500 }
@@ -155,7 +152,7 @@ async function handlePost(context: AuthContext) {
         }
 
         await logAuditEvent({
-            eventType: 'NOTE_CREATE',
+            eventType: 'VITALS_CREATE',
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -176,8 +173,8 @@ async function handlePost(context: AuthContext) {
         });
 
         return NextResponse.json({ success: true, vital });
-    } catch (error) {
-        console.error('Error in vitals POST:', error);
+    } catch (error: unknown) {
+        logError({ action: 'VITALS_SAVE_ERROR', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Failed to save vitals' },
             { status: 500 }
@@ -185,7 +182,6 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-// Export handlers with auth
 export const GET = withAuth(handleGet, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
 });
