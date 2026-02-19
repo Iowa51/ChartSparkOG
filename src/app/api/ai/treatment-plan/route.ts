@@ -1,11 +1,8 @@
-// src/app/api/ai/treatment-plan/route.ts
-// SEC-004: Secured AI treatment plan endpoint with authentication
-// SEC-009: HIPAA-compliant audit logging for AI PHI processing
-
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handler(context: AuthContext) {
@@ -52,8 +49,7 @@ async function handler(context: AuthContext) {
             riskLevel: 'MEDIUM',
         });
 
-        // SEC-REMEDIATION: Removed PHI from logs - patient name was being logged
-        // Audit logs capture the access for HIPAA compliance without console logging PHI
+        // PHI removed from console logs — audit_logs captures access for HIPAA compliance
         console.log('[Treatment Plan] Generating plan (see audit_logs for details)');
 
         // Use safe Azure OpenAI wrapper (falls back to demo if not configured)
@@ -62,7 +58,7 @@ async function handler(context: AuthContext) {
         return NextResponse.json(result);
 
     } catch (error: unknown) {
-        console.error('Error in treatment plan API:', error);
+        logError({ action: 'AI_TREATMENT_PLAN_ERROR', error: sanitizeError(error) });
 
         await logAuditEvent({
             eventType: 'API_ERROR',
@@ -84,7 +80,6 @@ async function handler(context: AuthContext) {
     }
 }
 
-// SEC-004: Export with authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
 });

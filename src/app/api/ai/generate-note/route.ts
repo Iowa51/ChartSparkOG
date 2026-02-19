@@ -1,6 +1,4 @@
-// src/app/api/ai/generate-note/route.ts
-// SEC-004: AI-powered clinical note generation from clinician input
-// SEC-009: HIPAA-compliant audit logging for AI PHI processing
+// AI-powered clinical note generation from clinician input
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
@@ -162,7 +160,6 @@ async function handler(context: AuthContext) {
     }
 }
 
-// Requires authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
 });
