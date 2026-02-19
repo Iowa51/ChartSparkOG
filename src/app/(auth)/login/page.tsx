@@ -63,7 +63,7 @@ export default function LoginPage() {
         try {
             // Demo mode: allow login for known demo emails (bypass Supabase)
             const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-            console.log('[LOGIN DEBUG] NEXT_PUBLIC_DEMO_MODE =', process.env.NEXT_PUBLIC_DEMO_MODE, '| isDemoMode =', isDemoMode);
+            // SEC-HIGH-04: Debug logging removed for production security
             const demoRoleMap: Record<string, string> = {
                 'super@chartspark.com': 'SUPER_ADMIN',
                 'admin@chartspark.com': 'ADMIN',
@@ -130,7 +130,7 @@ export default function LoginPage() {
                 console.error("Error fetching user profile:", userError);
 
                 // Demo mode: fallback to email-based role detection
-                const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
+                const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
                 if (isDemoMode) {
                     const demoRoleMap: Record<string, string> = {
                         'super@chartspark.com': 'SUPER_ADMIN',
@@ -316,7 +316,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Demo Credentials Section - Only shown when DEMO_MODE is enabled */}
-                {process.env.NEXT_PUBLIC_DEMO_MODE !== 'false' && (
+                {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
                     <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-4 border-t border-slate-100 dark:border-slate-800">
                         <div className="flex items-center gap-2 mb-3">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

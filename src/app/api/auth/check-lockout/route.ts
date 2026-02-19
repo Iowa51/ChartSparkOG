@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
         // TEMPORARY: Disable lockout in development/demo mode for easier testing
         // Remove this block in production
-        const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
+        const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
         if (isDemoMode || process.env.NODE_ENV !== 'production') {
             console.log('[LOCKOUT] Skipping lockout check - demo/dev mode');
             return NextResponse.json({ locked: false, remainingAttempts: 99 });

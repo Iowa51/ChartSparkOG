@@ -55,14 +55,7 @@ export async function GET(request: NextRequest) {
         const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
         const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50', 10)));
 
-        console.log('[PATIENT SEARCH] Query params:', {
-            userId: user.id,
-            organizationId: profile.organization_id,
-            searchTerm,
-            status,
-            page,
-            pageSize,
-        });
+        // SEC-CRIT-01: PHI removed from logs — see audit_logs table for access records
 
         let result;
 
@@ -81,11 +74,7 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        console.log('[PATIENT SEARCH] Results:', {
-            organizationId: profile.organization_id,
-            resultCount: result.data.length,
-            totalCount: result.count,
-        });
+        // SEC-CRIT-01: PHI removed from logs — audit_logs captures access
 
         // Fire-and-forget audit logging
         logAuditEventAsync({
@@ -168,12 +157,7 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        console.log('[PATIENT CREATE] Profile lookup:', {
-            userId: user.id,
-            profileSource,
-            organizationId: profile.organization_id,
-            role: profile.role,
-        });
+        // SEC-CRIT-01: PHI removed from logs
 
         if (!profile.organization_id) {
             return NextResponse.json({
@@ -183,11 +167,7 @@ export async function POST(request: NextRequest) {
 
         const data = await request.json();
 
-        console.log('[PATIENT CREATE] Creating patient:', {
-            firstName: data.first_name,
-            lastName: data.last_name,
-            organizationId: profile.organization_id,
-        });
+        // SEC-CRIT-01: Patient names removed from logs
 
         // Create patient using data layer
         const patient = await createPatient(
@@ -209,13 +189,7 @@ export async function POST(request: NextRequest) {
             }
         );
 
-        console.log('[PATIENT CREATE] Patient created successfully:', {
-            patientId: patient.id,
-            patientOrgId: patient.organization_id,
-            firstName: patient.first_name,
-            lastName: patient.last_name,
-            status: patient.status,
-        });
+        // SEC-CRIT-01: Patient details removed from logs — audit_logs captures creation
 
         return NextResponse.json(patient, { status: 201 });
     } catch (error) {

@@ -77,9 +77,9 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ invitations });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error fetching invitations:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to fetch invitations' }, { status: 500 });
     }
 }
 
@@ -278,8 +278,8 @@ export async function POST(request: NextRequest) {
                 : 'Invitation created. Email could not be sent - please share the invite URL manually.',
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error creating invitation:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
     }
 }

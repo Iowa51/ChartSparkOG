@@ -24,7 +24,7 @@ export async function GET() {
 
         if (error) {
             console.error('[EHR Config] Error fetching configurations:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to fetch configurations' }, { status: 500 });
         }
 
         // If no configurations exist, return default list
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
         if (error) {
             console.error('[EHR Config] Error saving configuration:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to save configuration' }, { status: 500 });
         }
 
         // Log to audit trail

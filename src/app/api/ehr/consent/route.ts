@@ -32,7 +32,7 @@ export async function GET() {
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
             console.error('[EHR Consent] Error fetching settings:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to fetch consent settings' }, { status: 500 });
         }
 
         // Return defaults if no settings exist
@@ -126,7 +126,7 @@ export async function PUT(request: NextRequest) {
 
         if (error) {
             console.error('[EHR Consent] Error saving settings:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to save consent settings' }, { status: 500 });
         }
 
         // Log to audit trail

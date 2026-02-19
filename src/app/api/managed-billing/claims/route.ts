@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         const { data: claims, count, error } = await query;
 
         if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to fetch claims' }, { status: 500 });
         }
 
         return NextResponse.json({
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to create claim' }, { status: 500 });
         }
 
         return NextResponse.json({ claim }, { status: 201 });

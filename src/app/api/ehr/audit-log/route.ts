@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
         if (error) {
             console.error('[EHR Audit] Error fetching logs:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: 'Failed to fetch audit logs' }, { status: 500 });
         }
 
         // Transform to match UI expectations

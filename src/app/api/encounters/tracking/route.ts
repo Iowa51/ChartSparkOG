@@ -77,11 +77,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ success: true, action, timestamp: new Date().toISOString() });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error in encounter tracking API:', error);
         return NextResponse.json({
             error: 'Failed to track encounter session',
-            details: error.message
         }, { status: 500 });
     }
 }
