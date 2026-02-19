@@ -7,16 +7,7 @@ export async function GET() {
         const supabase = await createClient();
 
         if (!supabase) {
-            return NextResponse.json({
-                consents: {
-                    share_diagnoses: true,
-                    share_medications: true,
-                    share_notes: false,
-                    share_labs: true,
-                    share_appointments: true,
-                    share_assessments: false
-                }
-            });
+            return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
         }
 
         const { data: { user } } = await supabase.auth.getUser();

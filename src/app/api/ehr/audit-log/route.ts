@@ -7,15 +7,7 @@ export async function GET(request: NextRequest) {
         const supabase = await createClient();
 
         if (!supabase) {
-            // Demo mode fallback
-            return NextResponse.json({
-                auditLog: [
-                    { id: '1', timestamp: new Date().toISOString(), system: 'ChartPath', action: 'Data Sync', user: 'System', records: 127, status: 'success' },
-                    { id: '2', timestamp: new Date(Date.now() - 3600000).toISOString(), system: 'ChartPath', action: 'Patient Record Access', user: 'Dr. Sarah Johnson', records: 1, status: 'success' },
-                    { id: '3', timestamp: new Date(Date.now() - 86400000).toISOString(), system: 'ChartPath', action: 'Data Export', user: 'Admin', records: 50, status: 'success' },
-                    { id: '4', timestamp: new Date(Date.now() - 172800000).toISOString(), system: 'Epic', action: 'Connection Test', user: 'Admin', records: 0, status: 'failed' }
-                ]
-            });
+            return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
         }
 
         const { data: { user } } = await supabase.auth.getUser();

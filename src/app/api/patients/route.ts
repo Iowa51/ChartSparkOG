@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEventAsync } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { PatientCreateSchema, validateRequest } from '@/lib/validation/schemas';
 import {
     getPatients,
     searchPatients,
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
             error: sanitizeError(error),
         });
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Failed to fetch patients' },
+            { error: 'Failed to fetch patients' },
             { status: 500 }
         );
     }
@@ -165,9 +166,18 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        const data = await request.json();
+        const rawData = await request.json();
 
-        // SEC-CRIT-01: Patient names removed from logs
+        // QUAL-MED-01: Validate input with Zod schema
+        const validation = validateRequest(PatientCreateSchema, rawData);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
+        }
+
+        const data = validation.data;
 
         // Create patient using data layer
         const patient = await createPatient(
@@ -176,16 +186,16 @@ export async function POST(request: NextRequest) {
             {
                 first_name: data.first_name,
                 last_name: data.last_name,
-                preferred_name: data.preferred_name,
+                preferred_name: data.preferred_name ?? undefined,
                 date_of_birth: data.date_of_birth,
-                gender: data.gender,
-                email: data.email,
-                phone: data.phone,
-                address: data.address,
-                allergies: data.allergies,
-                medications: data.medications,
-                problems: data.problems,
-                insurance: data.insurance,
+                gender: data.gender ?? undefined,
+                email: data.email ?? undefined,
+                phone: data.phone ?? undefined,
+                address: data.address ?? undefined,
+                allergies: data.allergies ?? undefined,
+                medications: data.medications as any ?? undefined,
+                problems: data.problems as any ?? undefined,
+                insurance: data.insurance as any ?? undefined,
             }
         );
 
@@ -198,10 +208,8 @@ export async function POST(request: NextRequest) {
             error: sanitizeError(error),
         });
 
-        // Return more specific error message
-        const errorMessage = error instanceof Error ? error.message : 'Failed to create patient';
         return NextResponse.json(
-            { error: errorMessage },
+            { error: 'Failed to create patient' },
             { status: 500 }
         );
     }

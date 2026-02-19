@@ -219,23 +219,12 @@ export async function POST(request: NextRequest) {
         );
 
         return NextResponse.json({ note }, { status: 201 });
-    } catch (error: any) {
-        // Extract error message from various error types
-        let errorMessage = 'Unknown error';
-        if (error instanceof Error) {
-            errorMessage = error.message;
-        } else if (error && typeof error === 'object') {
-            // Supabase errors have message, details, hint properties
-            errorMessage = error.message || error.details || error.hint || JSON.stringify(error);
-        } else if (typeof error === 'string') {
-            errorMessage = error;
-        }
-
+    } catch (error: unknown) {
         logError({
             action: 'note_create_error',
             error: sanitizeError(error),
             resourceType: 'clinical_note',
         });
-        return NextResponse.json({ error: 'Failed to create note', details: errorMessage }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to create note' }, { status: 500 });
     }
 }

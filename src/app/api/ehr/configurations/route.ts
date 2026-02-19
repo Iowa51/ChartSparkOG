@@ -7,7 +7,7 @@ export async function GET() {
         const supabase = await createClient();
 
         if (!supabase) {
-            return NextResponse.json({ configurations: [] });
+            return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
         }
 
         // Get current user's organization
