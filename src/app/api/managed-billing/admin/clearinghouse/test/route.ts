@@ -1,37 +1,21 @@
 /**
  * Test Clearinghouse Connection API
- * POST /api/managed-billing/admin/clearinghouse/test
- * Super Admin only
+ * SEC-HIGH-01: Migrated to withAuth wrapper
+ * POST /api/managed-billing/admin/clearinghouse/test - Super Admin only
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 
-export async function POST(request: NextRequest) {
+async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
-
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 500 });
         }
 
-        // Auth check - Super Admin only
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (profile?.role !== 'SUPER_ADMIN') {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        const { clearinghouse } = await request.json();
+        const { clearinghouse } = await context.request.json();
 
         if (!clearinghouse) {
             return NextResponse.json({ error: 'Clearinghouse required' }, { status: 400 });
@@ -57,7 +41,6 @@ export async function POST(request: NextRequest) {
         try {
             switch (clearinghouse) {
                 case 'claim_md':
-                    // Test Claim.MD API
                     if (config.api_key_encrypted) {
                         const response = await fetch('https://api.claim.md/api/v2/status', {
                             method: 'GET',
@@ -72,7 +55,6 @@ export async function POST(request: NextRequest) {
                     break;
 
                 case 'availity':
-                    // Test Availity OAuth
                     if (config.api_key_encrypted && config.api_secret_encrypted) {
                         const response = await fetch('https://api.availity.com/v1/token', {
                             method: 'POST',
@@ -91,13 +73,8 @@ export async function POST(request: NextRequest) {
 
                 case 'office_ally':
                 default:
-                    // SFTP test would require ssh2-sftp-client
-                    // For now, just check if SFTP host is configured
                     if (config.sftp_host) {
-                        testResult = {
-                            success: true,
-                            error: undefined
-                        };
+                        testResult = { success: true, error: undefined };
                         console.log('[Test] Would test SFTP connection to:', config.sftp_host);
                     } else {
                         testResult = { success: false, error: 'SFTP host not configured' };
@@ -118,9 +95,10 @@ export async function POST(request: NextRequest) {
             .eq('clearinghouse', clearinghouse);
 
         return NextResponse.json(testResult);
-
     } catch (error) {
         console.error('[Clearinghouse Test] Error:', error);
         return NextResponse.json({ success: false, error: 'Test failed' }, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePost, { requiredRole: ['SUPER_ADMIN'] });

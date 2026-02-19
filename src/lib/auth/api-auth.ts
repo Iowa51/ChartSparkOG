@@ -15,6 +15,7 @@ export interface AuthenticatedUser {
 export interface AuthContext {
     user: AuthenticatedUser;
     request: NextRequest;
+    params?: Record<string, string>;
 }
 
 export interface AuthOptions {
@@ -86,7 +87,10 @@ export function withAuth<T extends AuthContext>(
     handler: (context: T) => Promise<NextResponse>,
     options?: AuthOptions
 ) {
-    return async (request: NextRequest): Promise<NextResponse> => {
+    return async (
+        request: NextRequest,
+        routeContext?: { params: Promise<Record<string, string>> }
+    ): Promise<NextResponse> => {
         // Get authenticated user
         const user = await getAuthenticatedUser(request);
 
@@ -152,10 +156,16 @@ export function withAuth<T extends AuthContext>(
             }
         }
 
+        // Resolve dynamic route params if present
+        const resolvedParams = routeContext?.params
+            ? await routeContext.params
+            : undefined;
+
         // Call the handler with auth context
         const context = {
             user,
             request,
+            params: resolvedParams,
         } as T;
 
         return handler(context);

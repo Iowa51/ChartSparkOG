@@ -1,41 +1,26 @@
 /**
  * Claims List API Route
+ * SEC-HIGH-01: Migrated to withAuth wrapper
  * GET /api/managed-billing/claims - List claims for organization
  * POST /api/managed-billing/claims - Create new claim
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 
-export async function GET(request: NextRequest) {
+async function handleGet(context: AuthContext) {
     try {
         const supabase = await createClient();
-
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 503 });
         }
 
-        const { searchParams } = new URL(request.url);
+        const { searchParams } = new URL(context.request.url);
         const status = searchParams.get('status');
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '20');
         const offset = (page - 1) * limit;
-
-        // Get user's organization
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('users')
-            .select('organization_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id) {
-            return NextResponse.json({ error: 'No organization' }, { status: 403 });
-        }
 
         let query = supabase
             .from('billing_claims')
@@ -44,7 +29,7 @@ export async function GET(request: NextRequest) {
                 patients (id, first_name, last_name),
                 users!billing_claims_provider_id_fkey (id, first_name, last_name)
             `, { count: 'exact' })
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', context.user.organizationId!)
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
@@ -61,8 +46,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             claims,
             pagination: {
-                page,
-                limit,
+                page, limit,
                 total: count || 0,
                 totalPages: Math.ceil((count || 0) / limit),
             },
@@ -73,38 +57,20 @@ export async function GET(request: NextRequest) {
     }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
-
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 503 });
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('users')
-            .select('organization_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id || !['ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        const body = await request.json();
-
-        // Generate claim number
+        const body = await context.request.json();
         const claimNumber = `CLM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
         const { data: claim, error } = await supabase
             .from('billing_claims')
             .insert({
-                organization_id: profile.organization_id,
+                organization_id: context.user.organizationId,
                 patient_id: body.patientId,
                 provider_id: body.providerId,
                 encounter_id: body.encounterId,
@@ -129,3 +95,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }
+
+export const GET = withAuth(handleGet, { requireOrganization: true });
+export const POST = withAuth(handlePost, {
+    requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
+});

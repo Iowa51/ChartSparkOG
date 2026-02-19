@@ -1,39 +1,22 @@
 /**
  * Submit Claim to Clearinghouse API
+ * SEC-HIGH-01: Migrated to withAuth wrapper with params support
  * POST /api/managed-billing/claims/[id]/submit
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { submitClaimToClearinghouse } from '@/lib/managed-billing/clearinghouse-service';
+import { withAuth, AuthContext, isSuperAdmin } from '@/lib/auth/api-auth';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+async function handlePost(context: AuthContext) {
     try {
-        const { id } = await params;
-        const supabase = await createClient();
+        const id = context.params?.id;
+        if (!id) return NextResponse.json({ error: 'Missing claim id' }, { status: 400 });
 
+        const supabase = await createClient();
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-        }
-
-        // Auth check
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Get user's organization
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id) {
-            return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
         }
 
         // Verify claim belongs to organization
@@ -47,7 +30,7 @@ export async function POST(
             return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
         }
 
-        if (claim.organization_id !== profile.organization_id && profile.role !== 'SUPER_ADMIN') {
+        if (claim.organization_id !== context.user.organizationId && !isSuperAdmin(context.user)) {
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });
         }
 
@@ -59,7 +42,6 @@ export async function POST(
             );
         }
 
-        // Submit to clearinghouse
         const result = await submitClaimToClearinghouse(id);
 
         if (!result.success) {
@@ -71,9 +53,10 @@ export async function POST(
             submissionId: result.submissionId,
             clearinghouseClaimId: result.clearinghouseClaimId,
         });
-
     } catch (error) {
         console.error('[Submit Claim] Error:', error);
         return NextResponse.json({ error: 'Failed to submit claim' }, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePost);

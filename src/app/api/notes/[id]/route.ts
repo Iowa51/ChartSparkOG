@@ -1,53 +1,24 @@
 // src/app/api/notes/[id]/route.ts
+// SEC-HIGH-01: Migrated to withAuth wrapper for centralized auth + CSRF protection
 // SEC-009: HIPAA-compliant clinical note detail API with full audit logging
 
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { NoteUpdateSchema, validateRequest } from '@/lib/validation/schemas';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+async function handleGet(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
-        const { id } = await params;
+        const id = context.params?.id;
+        if (!id) return NextResponse.json({ error: 'Missing note id' }, { status: 400 });
+
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: `/api/notes/${id}`, method: 'GET' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Try profiles first, fallback to users
-        let profile = null;
-        const { data: profileData } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-        if (profileData) {
-            profile = profileData;
-        } else {
-            const { data: userData } = await supabase
-                .from('users')
-                .select('organization_id, email, role')
-                .eq('id', user.id)
-                .single();
-            if (userData) {
-                profile = userData;
-            }
-        }
 
         const { data: note, error } = await supabase
             .from('clinical_notes')
@@ -61,12 +32,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         if (error) throw error;
 
         // Verify organization access
-        if (note.organization_id !== profile?.organization_id) {
+        if (note.organization_id !== context.user.organizationId) {
             await logAuditEvent({
                 eventType: 'UNAUTHORIZED_ACCESS',
-                userId: user.id,
-                userEmail: user.email,
-                organizationId: profile?.organization_id,
+                userId: context.user.id,
+                userEmail: context.user.email,
+                organizationId: context.user.organizationId ?? undefined,
                 ipAddress,
                 userAgent,
                 resourceType: 'clinical_note',
@@ -80,10 +51,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
         // Log PHI access - viewing clinical note
         await logPHIAccess(
-            user.id,
-            user.email || '',
-            profile?.role || 'USER',
-            profile?.organization_id || '',
+            context.user.id,
+            context.user.email,
+            context.user.role,
+            context.user.organizationId || '',
             'NOTE',
             id,
             'VIEW',
@@ -97,45 +68,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+async function handlePatch(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
-        const { id } = await params;
+        const id = context.params?.id;
+        if (!id) return NextResponse.json({ error: 'Missing note id' }, { status: 400 });
+
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: `/api/notes/${id}`, method: 'PATCH' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Try profiles first, fallback to users
-        let profile = null;
-        const { data: profileData } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-        if (profileData) {
-            profile = profileData;
-        } else {
-            const { data: userData } = await supabase
-                .from('users')
-                .select('organization_id, email, role')
-                .eq('id', user.id)
-                .single();
-            if (userData) {
-                profile = userData;
-            }
-        }
 
         // Get current note to check if it's signed
         const { data: currentNote } = await supabase
@@ -145,12 +85,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             .single();
 
         // Verify organization access
-        if (currentNote?.organization_id !== profile?.organization_id) {
+        if (currentNote?.organization_id !== context.user.organizationId) {
             await logAuditEvent({
                 eventType: 'UNAUTHORIZED_ACCESS',
-                userId: user.id,
-                userEmail: user.email,
-                organizationId: profile?.organization_id,
+                userId: context.user.id,
+                userEmail: context.user.email,
+                organizationId: context.user.organizationId ?? undefined,
                 ipAddress,
                 userAgent,
                 resourceType: 'clinical_note',
@@ -162,10 +102,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             return NextResponse.json({ error: 'Note not found' }, { status: 404 });
         }
 
-        const rawData = await request.json();
+        const rawData = await context.request.json();
 
         // Prevent editing locked/in-review notes (allow draft and needs_revision)
-        // Exception: allow status-only updates (e.g. clinician submitting for review)
         const lockedStatuses = ['signed', 'pending_review', 'approved'];
         if (lockedStatuses.includes(currentNote?.status) && !rawData?.status) {
             return NextResponse.json(
@@ -174,7 +113,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             );
         }
 
-        // SEC-REMEDIATION: Validate input with Zod schema instead of spreading arbitrary data
+        // SEC-REMEDIATION: Validate input with Zod schema
         const validation = validateRequest(NoteUpdateSchema, rawData);
         if (!validation.success) {
             return NextResponse.json(
@@ -189,18 +128,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
             .from('clinical_notes')
             .update(validatedUpdates)
             .eq('id', id)
-            .eq('organization_id', profile?.organization_id) // Ensure org isolation
+            .eq('organization_id', context.user.organizationId) // Ensure org isolation
             .select()
             .single();
 
         if (error) throw error;
 
-        // Log PHI update - clinical note modification
+        // Log PHI update
         await logPHIAccess(
-            user.id,
-            user.email || '',
-            profile?.role || 'USER',
-            profile?.organization_id || '',
+            context.user.id,
+            context.user.email,
+            context.user.role,
+            context.user.organizationId || '',
             'NOTE',
             id,
             'UPDATE',
@@ -209,7 +148,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         );
 
         return NextResponse.json({ note });
-    } catch (error: any) {
+    } catch (error: unknown) {
         logError({
             action: 'note_update_error',
             error: sanitizeError(error),
@@ -219,45 +158,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+async function handleDelete(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
-        const { id } = await params;
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: `/api/notes/${id}`, method: 'DELETE' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Try profiles first, fallback to users
-        let profile = null;
-        const { data: profileData } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-        if (profileData) {
-            profile = profileData;
-        } else {
-            const { data: userData } = await supabase
-                .from('users')
-                .select('organization_id, email, role')
-                .eq('id', user.id)
-                .single();
-            if (userData) {
-                profile = userData;
-            }
-        }
+        const id = context.params?.id;
+        if (!id) return NextResponse.json({ error: 'Missing note id' }, { status: 400 });
 
         // Use service role client for delete (bypasses RLS after auth check above)
         const adminClient = createServiceRoleClient();
@@ -279,10 +185,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
         // Log PHI deletion - HIGH risk event
         await logPHIAccess(
-            user.id,
-            user.email || '',
-            profile?.role || 'USER',
-            profile?.organization_id || '',
+            context.user.id,
+            context.user.email,
+            context.user.role,
+            context.user.organizationId || '',
             'NOTE',
             id,
             'DELETE',
@@ -300,3 +206,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         return NextResponse.json({ error: 'Failed to delete note' }, { status: 500 });
     }
 }
+
+export const GET = withAuth(handleGet);
+export const PATCH = withAuth(handlePatch);
+export const DELETE = withAuth(handleDelete);

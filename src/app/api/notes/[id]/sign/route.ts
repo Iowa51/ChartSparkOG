@@ -1,37 +1,22 @@
 // src/app/api/notes/[id]/sign/route.ts
-// HIPAA-compliant note signing API
-// High-risk operation with comprehensive audit logging
+// SEC-HIGH-01: Migrated to withAuth wrapper for centralized auth + CSRF protection
+// HIPAA-compliant note signing API - High-risk operation
 
 import { createClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEventAsync, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const { id: noteId } = await params;
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+async function handlePost(context: AuthContext) {
+    const noteId = context.params?.id;
+    if (!noteId) return NextResponse.json({ error: 'Missing note id' }, { status: 400 });
+
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role, full_name')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-        }
 
         // Get current note to check status and ownership
         const { data: currentNote, error: fetchError } = await supabase
@@ -43,13 +28,13 @@ export async function POST(
         if (fetchError) throw fetchError;
 
         // Verify organization access
-        if (currentNote.organization_id !== profile.organization_id) {
+        if (currentNote.organization_id !== context.user.organizationId) {
             await logAuditEventAsync({
                 eventType: 'UNAUTHORIZED_ACCESS',
-                userId: user.id,
-                userEmail: user.email,
-                userRole: profile.role,
-                organizationId: profile.organization_id,
+                userId: context.user.id,
+                userEmail: context.user.email,
+                userRole: context.user.role,
+                organizationId: context.user.organizationId ?? undefined,
                 ipAddress,
                 userAgent,
                 resourceType: 'clinical_note',
@@ -83,27 +68,26 @@ export async function POST(
             .update({
                 is_signed: true,
                 signed_at: signedAt,
-                signed_by: user.id,
-                is_locked: true, // Lock the note when signed
+                signed_by: context.user.id,
+                is_locked: true,
                 updated_at: signedAt,
             })
             .eq('id', noteId)
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', context.user.organizationId)
             .eq('is_signed', false) // Prevent race condition
             .select()
             .single();
 
         if (updateError) {
-            // Could be due to race condition or other error
             throw updateError;
         }
 
         // High-risk audit log for signing
         await logPHIAccess(
-            user.id,
-            user.email || '',
-            profile.role || 'USER',
-            profile.organization_id,
+            context.user.id,
+            context.user.email,
+            context.user.role,
+            context.user.organizationId || '',
             'NOTE',
             noteId,
             'UPDATE',
@@ -114,16 +98,16 @@ export async function POST(
         // Additional audit event for note signing
         await logAuditEventAsync({
             eventType: 'NOTE_SIGN',
-            userId: user.id,
-            userEmail: user.email,
-            userRole: profile.role,
-            organizationId: profile.organization_id,
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
             ipAddress,
             userAgent,
             resourceType: 'clinical_note',
             resourceId: noteId,
             details: {
-                signer_name: profile.full_name || user.email,
+                signer_name: context.user.email,
                 signed_at: signedAt,
             },
             phiAccessed: true,
@@ -142,8 +126,10 @@ export async function POST(
             resourceId: noteId,
         });
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Failed to sign note' },
+            { error: 'Failed to sign note' },
             { status: 500 }
         );
     }
 }
+
+export const POST = withAuth(handlePost);

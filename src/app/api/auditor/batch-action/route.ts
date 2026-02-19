@@ -1,27 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+// src/app/api/auditor/batch-action/route.ts
+// SEC-HIGH-01: Migrated to withAuth wrapper for centralized auth + CSRF + role enforcement
 
-export async function POST(request: NextRequest) {
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+
+async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
 
-        if (!user) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        // Check if user is auditor, admin, or super_admin
-        const { data: userData } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (!userData || !['auditor', 'admin', 'super_admin'].includes(userData.role)) {
-            return NextResponse.json({ message: "Forbidden - Auditor access required" }, { status: 403 });
-        }
-
-        const body = await request.json();
+        const body = await context.request.json();
         const { action, submissionIds, reason } = body;
 
         if (!action || !submissionIds || !Array.isArray(submissionIds) || submissionIds.length === 0) {
@@ -69,9 +57,9 @@ export async function POST(request: NextRequest) {
             }
 
             // Create audit flag records for each submission
-            const flagRecords = submissionIds.map(submissionId => ({
+            const flagRecords = submissionIds.map((submissionId: string) => ({
                 submission_id: submissionId,
-                auditor_id: user.id,
+                auditor_id: context.user.id,
                 reason: reason,
                 status: 'open',
                 created_at: new Date().toISOString(),
@@ -94,8 +82,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: "Invalid action" }, { status: 400 });
         }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Batch action error:', error);
-        return NextResponse.json({ message: error.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ message: "Server error" }, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePost, {
+    requiredRole: ['AUDITOR', 'ADMIN', 'SUPER_ADMIN'],
+});

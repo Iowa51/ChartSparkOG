@@ -1,38 +1,17 @@
 /**
  * Invoices API Route
+ * SEC-HIGH-01: Migrated to withAuth wrapper
  * GET /api/managed-billing/invoices - List invoices
  * POST /api/managed-billing/invoices - Generate invoice
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { getInvoices, generateMonthlyInvoice } from '@/lib/managed-billing/invoice-service';
 
-export async function GET(request: NextRequest) {
+async function handleGet(context: AuthContext) {
     try {
-        const supabase = await createClient();
-
-        if (!supabase) {
-            return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-        }
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('users')
-            .select('organization_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id) {
-            return NextResponse.json({ error: 'No organization' }, { status: 403 });
-        }
-
-        const invoices = await getInvoices(profile.organization_id);
-
+        const invoices = await getInvoices(context.user.organizationId!);
         return NextResponse.json({ invoices });
     } catch (error) {
         console.error('[API] Invoices list error:', error);
@@ -40,37 +19,16 @@ export async function GET(request: NextRequest) {
     }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(context: AuthContext) {
     try {
-        const supabase = await createClient();
-
-        if (!supabase) {
-            return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-        }
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('users')
-            .select('organization_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id || !['ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        const body = await request.json();
+        const body = await context.request.json();
         const { periodId } = body;
 
         if (!periodId) {
             return NextResponse.json({ error: 'Period ID required' }, { status: 400 });
         }
 
-        const result = await generateMonthlyInvoice(profile.organization_id, periodId);
+        const result = await generateMonthlyInvoice(context.user.organizationId!, periodId);
 
         if (!result.success) {
             return NextResponse.json({ error: result.error }, { status: 400 });
@@ -82,3 +40,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }
+
+export const GET = withAuth(handleGet, { requireOrganization: true });
+export const POST = withAuth(handlePost, {
+    requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
+});

@@ -1,39 +1,16 @@
 /**
  * Upload ERA/835 File API
- * POST /api/managed-billing/era/upload
- * Super Admin only
+ * SEC-HIGH-01: Migrated to withAuth wrapper
+ * POST /api/managed-billing/era/upload - Super Admin only
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
 import { processERAFile } from '@/lib/managed-billing/era-service';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 
-export async function POST(request: NextRequest) {
+async function handlePost(context: AuthContext) {
     try {
-        const supabase = await createClient();
-
-        if (!supabase) {
-            return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-        }
-
-        // Auth check - Super Admin only
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (profile?.role !== 'SUPER_ADMIN') {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        // Get form data
-        const formData = await request.formData();
+        const formData = await context.request.formData();
         const file = formData.get('file') as File;
         const organizationId = formData.get('organizationId') as string;
 
@@ -56,9 +33,12 @@ export async function POST(request: NextRequest) {
             matched: result.matched,
             unmatched: result.unmatched,
         });
-
     } catch (error) {
         console.error('[ERA Upload] Error:', error);
         return NextResponse.json({ error: 'Failed to process ERA file' }, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePost, {
+    requiredRole: ['SUPER_ADMIN'],
+});

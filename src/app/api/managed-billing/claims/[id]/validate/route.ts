@@ -1,39 +1,26 @@
 /**
  * Claim Validation API Route
- * POST /api/managed-billing/claims/[id]/validate - Validate claim before submission
+ * SEC-HIGH-01: Migrated to withAuth wrapper with params support
+ * POST /api/managed-billing/claims/[id]/validate
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { validateClaimForSubmission, getValidationSummary } from '@/lib/managed-billing/claim-validator';
-import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
+async function handlePost(context: AuthContext) {
     try {
-        const { id: claimId } = await params;
-        const supabase = await createClient();
+        const claimId = context.params?.id;
+        if (!claimId) return NextResponse.json({ error: 'Missing claim id' }, { status: 400 });
 
-        if (!supabase) {
-            return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-        }
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Validate claim
         const result = await validateClaimForSubmission(claimId);
         const summary = getValidationSummary(result);
 
-        return NextResponse.json({
-            ...result,
-            summary,
-        });
+        return NextResponse.json({ ...result, summary });
     } catch (error) {
         console.error('[API] Validate claim error:', error);
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePost);
