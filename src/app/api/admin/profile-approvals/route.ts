@@ -1,27 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+// src/app/api/admin/profile-approvals/route.ts
+// SEC-HIGH-01: Migrated to withAuth wrapper for centralized auth + CSRF + role enforcement
 
-export async function POST(request: NextRequest) {
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+
+async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
 
-        if (!user) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-        }
-
-        // Check if user is admin or super_admin
-        const { data: adminUser } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (!adminUser || !['admin', 'super_admin'].includes(adminUser.role)) {
-            return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 });
-        }
-
-        const body = await request.json();
+        const body = await context.request.json();
         const { changeId, userId, fieldName, newValue, action } = body;
 
         if (!changeId || !action) {
@@ -48,7 +36,7 @@ export async function POST(request: NextRequest) {
                 .from('pending_profile_changes')
                 .update({
                     status: 'approved',
-                    reviewed_by: user.id,
+                    reviewed_by: context.user.id,
                     reviewed_at: new Date().toISOString(),
                 })
                 .eq('id', changeId);
@@ -66,7 +54,7 @@ export async function POST(request: NextRequest) {
                 .from('pending_profile_changes')
                 .update({
                     status: 'rejected',
-                    reviewed_by: user.id,
+                    reviewed_by: context.user.id,
                     reviewed_at: new Date().toISOString(),
                 })
                 .eq('id', changeId);
@@ -82,8 +70,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: "Invalid action" }, { status: 400 });
         }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Profile approval error:', error);
-        return NextResponse.json({ message: error.message || "Server error" }, { status: 500 });
+        return NextResponse.json({ message: "Server error" }, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePost, {
+    requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+});

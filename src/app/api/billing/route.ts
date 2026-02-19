@@ -1,18 +1,18 @@
-import { createClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+// src/app/api/billing/route.ts
+// SEC-HIGH-01: Migrated to withAuth wrapper for centralized auth + CSRF protection
 
-export async function GET(request: NextRequest) {
+import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+
+async function handleGet(context: AuthContext) {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
         const { data: billing, error } = await supabase.from('billing').select(`
       *,
       patient:patients(id, first_name, last_name),
       provider:profiles(id, first_name, last_name)
-    `).eq('organization_id', profile.organization_id).order('service_date', { ascending: false });
+    `).eq('organization_id', context.user.organizationId).order('service_date', { ascending: false });
 
         if (error) throw error;
         return NextResponse.json({ billing });
@@ -21,20 +21,16 @@ export async function GET(request: NextRequest) {
     }
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-        const { data: profile } = await supabase.from('profiles').select('organization_id').eq('id', user.id).single();
-        const billingData = await request.json();
+        const billingData = await context.request.json();
         const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
         const { data: billing, error } = await supabase.from('billing').insert([{
             ...billingData,
-            organization_id: profile.organization_id,
-            provider_id: user.id,
+            organization_id: context.user.organizationId,
+            provider_id: context.user.id,
             invoice_number: invoiceNumber,
             outstanding_balance: billingData.amount
         }]).select().single();
@@ -45,3 +41,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to create billing' }, { status: 500 });
     }
 }
+
+export const GET = withAuth(handleGet, { requireOrganization: true });
+export const POST = withAuth(handlePost, { requireOrganization: true });

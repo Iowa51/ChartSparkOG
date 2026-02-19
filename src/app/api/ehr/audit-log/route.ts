@@ -1,8 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+// src/app/api/ehr/audit-log/route.ts
+// SEC-HIGH-01: Migrated to withAuth wrapper for centralized auth + CSRF protection
+
+import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 
 // GET: Fetch EHR-related audit log entries
-export async function GET(request: NextRequest) {
+async function handleGet(context: AuthContext) {
     try {
         const supabase = await createClient();
 
@@ -10,18 +14,12 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
         }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         // Parse query params
-        const { searchParams } = new URL(request.url);
+        const { searchParams } = new URL(context.request.url);
         const limit = parseInt(searchParams.get('limit') || '20');
         const offset = parseInt(searchParams.get('offset') || '0');
 
         // Fetch EHR-related audit logs (RLS will filter by organization for non-super-admins)
-        // Join with users table to get real names
         const { data, error } = await supabase
             .from('audit_logs')
             .select(`
@@ -84,3 +82,5 @@ function formatEventType(eventType: string): string {
     };
     return mappings[eventType] || eventType.replace('EHR_', '').replace(/_/g, ' ');
 }
+
+export const GET = withAuth(handleGet);

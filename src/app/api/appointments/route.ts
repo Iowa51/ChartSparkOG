@@ -1,41 +1,20 @@
 // src/app/api/appointments/route.ts
+// SEC-HIGH-01: Migrated to withAuth wrapper for centralized auth + CSRF protection
 // SEC-009: HIPAA-compliant appointments API with full audit logging
 
 import { createClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
-export async function GET(request: NextRequest) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+async function handleGet(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
 
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: '/api/appointments', method: 'GET' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-        }
-
-        const searchParams = request.nextUrl.searchParams;
+        const searchParams = context.request.nextUrl.searchParams;
         const status = searchParams.get('status');
         const date = searchParams.get('date');
 
@@ -46,7 +25,7 @@ export async function GET(request: NextRequest) {
                 patient:patients(id, first_name, last_name),
                 provider:profiles(id, first_name, last_name)
             `)
-            .eq('organization_id', profile.organization_id)
+            .eq('organization_id', context.user.organizationId)
             .order('appointment_datetime', { ascending: true });
 
         if (status) query = query.eq('status', status);
@@ -63,10 +42,10 @@ export async function GET(request: NextRequest) {
         // Log appointment viewing - contains patient schedule info
         await logAuditEvent({
             eventType: 'PATIENT_VIEW',
-            userId: user.id,
-            userEmail: user.email,
-            userRole: profile.role,
-            organizationId: profile.organization_id,
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
             ipAddress,
             userAgent,
             resourceType: 'appointment',
@@ -86,43 +65,20 @@ export async function GET(request: NextRequest) {
     }
 }
 
-export async function POST(request: NextRequest) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+async function handlePost(context: AuthContext) {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
 
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: '/api/appointments', method: 'POST' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-        }
-
-        const appointmentData = await request.json();
+        const appointmentData = await context.request.json();
 
         const { data: appointment, error } = await supabase
             .from('appointments')
             .insert([{
                 ...appointmentData,
-                organization_id: profile.organization_id,
-                provider_id: appointmentData.provider_id || user.id
+                organization_id: context.user.organizationId,
+                provider_id: appointmentData.provider_id || context.user.id
             }])
             .select()
             .single();
@@ -140,10 +96,10 @@ export async function POST(request: NextRequest) {
         // Log appointment creation
         await logAuditEvent({
             eventType: 'PATIENT_CREATE',
-            userId: user.id,
-            userEmail: user.email,
-            userRole: profile.role,
-            organizationId: profile.organization_id,
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
             ipAddress,
             userAgent,
             resourceType: 'appointment',
@@ -162,3 +118,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to create appointment' }, { status: 500 });
     }
 }
+
+export const GET = withAuth(handleGet, { requireOrganization: true });
+export const POST = withAuth(handlePost, { requireOrganization: true });
