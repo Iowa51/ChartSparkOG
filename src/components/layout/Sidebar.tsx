@@ -101,15 +101,15 @@ export function Sidebar() {
   if (!hasMounted) return null;
 
   return (
-    <aside className="hidden lg:flex flex-col w-60 bg-surface border-r border-border h-screen sticky top-0">
+    <aside className="hidden lg:flex flex-col w-60 bg-surface border-r border-border h-screen sticky top-0" role="complementary" aria-label="Main sidebar navigation">
       {/* Navigation */}
       <div className="px-6 pb-4 pt-6">
 
         {/* Navigation Sections */}
-        <nav className="flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar max-h-[calc(100vh-320px)]">
+        <nav className="flex flex-col gap-6 overflow-y-auto pr-2 custom-scrollbar max-h-[calc(100vh-320px)]" aria-label="Main navigation">
           {navSections.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
-              <h3 className="px-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2 pl-4">
+              <h3 className="px-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2 pl-4" id={`nav-section-${section.title.replace(/\s+/g, '-').toLowerCase()}`}>
                 {section.title}
               </h3>
               {section.items.map((item) => {
@@ -185,7 +185,7 @@ export function Sidebar() {
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border border-primary/10">
                 SK
               </div>
-              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-lg shadow-sm" />
+              <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-lg shadow-sm" aria-label="Online" role="status" />
             </div>
             <div className="flex flex-col min-w-0">
               <p className="text-slate-900 dark:text-white text-xs font-black truncate">Dr. Sarah K.</p>
@@ -195,6 +195,7 @@ export function Sidebar() {
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all text-xs font-black uppercase tracking-widest border border-slate-100 dark:border-slate-800 hover:border-red-100 dark:hover:border-red-900/30"
+            aria-label="Log out of your account"
           >
             <LogOut className="h-3.5 w-3.5" />
             Logout

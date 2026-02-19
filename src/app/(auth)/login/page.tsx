@@ -241,10 +241,13 @@ export default function LoginPage() {
                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <input
                                     type="email"
+                                    id="email"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="name@organization.com"
+                                    aria-label="Email address"
+                                    autoComplete="email"
                                     className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                                 />
                             </div>
@@ -266,16 +269,20 @@ export default function LoginPage() {
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                                 <input
                                     type={showPassword ? "text" : "password"}
+                                    id="password"
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
+                                    aria-label="Password"
+                                    autoComplete="current-password"
                                     className="w-full pl-12 pr-12 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
                                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors z-10"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
                                     {showPassword ? (
                                         <EyeOff className="h-5 w-5" />
@@ -329,6 +336,7 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => { setEmail("super@chartspark.com"); setPassword("Demo123!!"); }}
                                 className="px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                                aria-label="Use Super Admin demo credentials"
                             >
                                 Super Admin
                             </button>
@@ -336,6 +344,7 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => { setEmail("admin@chartspark.com"); setPassword("Demo123!!"); }}
                                 className="px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                                aria-label="Use Admin demo credentials"
                             >
                                 Admin
                             </button>
@@ -343,6 +352,7 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => { setEmail("auditor@chartspark.com"); setPassword("Demo123!!"); }}
                                 className="px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                                aria-label="Use Auditor demo credentials"
                             >
                                 Auditor
                             </button>
@@ -350,6 +360,7 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => { setEmail("clinician@chartspark.com"); setPassword("Demo123!!"); }}
                                 className="px-3 py-2 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg font-medium hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors"
+                                aria-label="Use Clinician demo credentials"
                             >
                                 Clinician
                             </button>
