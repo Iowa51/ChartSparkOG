@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handler(context: AuthContext) {
     try {
@@ -30,7 +31,7 @@ async function handler(context: AuthContext) {
 
             if (appointmentError || !appointment) {
                 // Log but don't fail - allow demo appointments
-                console.log(`[Telehealth] Appointment ${appointmentId} not found in DB - proceeding in demo mode`);
+                logError({ action: 'TELEHEALTH_APPOINTMENT_NOT_FOUND', error: sanitizeError(appointmentError), resourceId: appointmentId });
             } else {
                 appointmentVerified = true;
                 // Verify organization access (unless demo mode)
@@ -48,7 +49,7 @@ async function handler(context: AuthContext) {
         // SEC-005: Use non-guessable room name (UUID instead of predictable pattern)
         const roomName = `room-${randomUUID()}`;
 
-        console.log('Creating Daily.co room:', roomName);
+        // Room creation logged via audit log below — no console output of room names
 
         // Check if Daily API is configured
         const dailyApiKey = process.env.DAILY_API_KEY;
@@ -83,19 +84,16 @@ async function handler(context: AuthContext) {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('Daily.co API Error:', response.status, errorData);
+            logError({ action: 'DAILY_API_ERROR', error: sanitizeError(errorData), status: String(response.status) });
             return NextResponse.json(
-                {
-                    error: 'Failed to create telehealth room',
-                    details: errorData.error || errorData.info || JSON.stringify(errorData)
-                },
+                { error: 'Failed to create telehealth room' },
                 { status: 500 }
             );
         }
 
         const room = await response.json();
 
-        console.log('✅ Room created:', room.url);
+        // Room URL logged via audit log below
 
         // Update appointment in database (optional - may not exist for demo)
         if (supabase) {
@@ -174,7 +172,7 @@ async function handler(context: AuthContext) {
         });
 
     } catch (error: unknown) {
-        console.error('Error creating room:', error);
+        logError({ action: 'ERROR_CREATING_ROOM', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Failed to create telehealth room' },
             { status: 500 }

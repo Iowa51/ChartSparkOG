@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkFeatureAccess } from '@/lib/subscriptions/subscription-service';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handleGet(context: AuthContext) {
     try {
@@ -27,7 +28,7 @@ async function handleGet(context: AuthContext) {
         const hasAccess = await checkFeatureAccess(context.user.id, featureCode);
         return NextResponse.json({ hasAccess });
     } catch (error) {
-        console.error('[Feature Check] Error:', error);
+        logError({ action: 'FEATURE_CHECK_ERROR', error: sanitizeError(error) });
         // Fail open - allow access on error
         return NextResponse.json({ hasAccess: true });
     }

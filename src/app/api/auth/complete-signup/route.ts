@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 interface SignupData {
     // SEC-REMEDIATION: userId and email are now IGNORED from request body
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (orgError) {
-            console.error('Organization creation error:', orgError);
+            logError({ action: 'ORGANIZATION_CREATION_ERROR', error: sanitizeError(orgError) });
             return NextResponse.json(
                 { error: 'Failed to create organization' },
                 { status: 500 }
@@ -122,7 +123,7 @@ export async function POST(request: NextRequest) {
             });
 
         if (userError) {
-            console.error('User creation error:', userError);
+            logError({ action: 'USER_CREATION_ERROR', error: sanitizeError(userError) });
             // Rollback organization creation
             await serviceSupabase.from('organizations').delete().eq('id', org.id);
             return NextResponse.json(
@@ -176,7 +177,7 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error) {
-        console.error('Complete signup error:', error);
+        logError({ action: 'COMPLETE_SIGNUP_ERROR', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }

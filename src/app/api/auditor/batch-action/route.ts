@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -28,7 +29,7 @@ async function handlePost(context: AuthContext) {
                 .eq('status', 'pending_audit'); // Only approve pending ones
 
             if (updateError) {
-                console.error('Error approving submissions:', updateError);
+                logError({ action: 'ERROR_APPROVING_SUBMISSIONS', error: sanitizeError(updateError) });
                 return NextResponse.json({ message: "Failed to approve submissions" }, { status: 500 });
             }
 
@@ -52,7 +53,7 @@ async function handlePost(context: AuthContext) {
                 .eq('status', 'pending_audit');
 
             if (updateError) {
-                console.error('Error flagging submissions:', updateError);
+                logError({ action: 'ERROR_FLAGGING_SUBMISSIONS', error: sanitizeError(updateError) });
                 return NextResponse.json({ message: "Failed to flag submissions" }, { status: 500 });
             }
 
@@ -70,7 +71,7 @@ async function handlePost(context: AuthContext) {
                 .insert(flagRecords);
 
             if (flagError) {
-                console.error('Error creating flag records:', flagError);
+                logError({ action: 'ERROR_CREATING_FLAG_RECORDS', error: sanitizeError(flagError) });
                 // Don't fail the whole operation, flag records are secondary
             }
 
@@ -83,7 +84,7 @@ async function handlePost(context: AuthContext) {
         }
 
     } catch (error: unknown) {
-        console.error('Batch action error:', error);
+        logError({ action: 'BATCH_ACTION_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ message: "Server error" }, { status: 500 });
     }
 }

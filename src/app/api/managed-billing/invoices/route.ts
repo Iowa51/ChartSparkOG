@@ -8,13 +8,14 @@
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { getInvoices, generateMonthlyInvoice } from '@/lib/managed-billing/invoice-service';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handleGet(context: AuthContext) {
     try {
         const invoices = await getInvoices(context.user.organizationId!);
         return NextResponse.json({ invoices });
     } catch (error) {
-        console.error('[API] Invoices list error:', error);
+        logError({ action: 'INVOICES_LIST_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }
@@ -36,7 +37,7 @@ async function handlePost(context: AuthContext) {
 
         return NextResponse.json({ invoiceId: result.invoiceId }, { status: 201 });
     } catch (error) {
-        console.error('[API] Generate invoice error:', error);
+        logError({ action: 'GENERATE_INVOICE_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }

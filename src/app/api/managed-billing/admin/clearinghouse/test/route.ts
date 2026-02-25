@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -96,7 +97,7 @@ async function handlePost(context: AuthContext) {
 
         return NextResponse.json(testResult);
     } catch (error) {
-        console.error('[Clearinghouse Test] Error:', error);
+        logError({ action: 'CLEARINGHOUSE_TEST_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ success: false, error: 'Test failed' }, { status: 500 });
     }
 }

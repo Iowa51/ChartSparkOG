@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 /**
  * API Route to track clinical encounter states and maintain a secure audit trail.
@@ -66,7 +67,7 @@ async function handlePost(context: AuthContext) {
         return NextResponse.json({ success: true, action, timestamp: new Date().toISOString() });
 
     } catch (error: unknown) {
-        console.error('Error in encounter tracking API:', error);
+        logError({ action: 'ERROR_IN_ENCOUNTER_TRACKING_API', error: sanitizeError(error) });
         return NextResponse.json({
             error: 'Failed to track encounter session',
         }, { status: 500 });

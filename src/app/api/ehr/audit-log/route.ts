@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // GET: Fetch EHR-related audit log entries
 async function handleGet(context: AuthContext) {
@@ -39,7 +40,7 @@ async function handleGet(context: AuthContext) {
             .range(offset, offset + limit - 1);
 
         if (error) {
-            console.error('[EHR Audit] Error fetching logs:', error);
+            logError({ action: 'EHR_AUDIT_LOG_FETCH_ERROR', error: sanitizeError(error) });
             return NextResponse.json({ error: 'Failed to fetch audit logs' }, { status: 500 });
         }
 
@@ -63,7 +64,7 @@ async function handleGet(context: AuthContext) {
 
         return NextResponse.json({ auditLog });
     } catch (error) {
-        console.error('[EHR Audit] Unexpected error:', error);
+        logError({ action: 'EHR_AUDIT_LOG_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

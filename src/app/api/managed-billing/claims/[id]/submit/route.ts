@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { submitClaimToClearinghouse } from '@/lib/managed-billing/clearinghouse-service';
 import { withAuth, AuthContext, isSuperAdmin } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -54,7 +55,7 @@ async function handlePost(context: AuthContext) {
             clearinghouseClaimId: result.clearinghouseClaimId,
         });
     } catch (error) {
-        console.error('[Submit Claim] Error:', error);
+        logError({ action: 'SUBMIT_CLAIM_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to submit claim' }, { status: 500 });
     }
 }

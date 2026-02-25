@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext, canAccessPatient, isSuperAdmin } from '@/lib/auth/api-auth';
 import { logPHIAccess } from '@/lib/security/audit-log';
 import { z } from 'zod';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // Prevent static generation
 export const dynamic = 'force-dynamic';
@@ -73,10 +74,11 @@ async function handleGet(context: RiskAssessmentContext): Promise<NextResponse> 
         .from('risk_assessments')
         .select('*')
         .eq('patient_id', patientId)
-        .order('assessment_date', { ascending: false });
+        .order('assessment_date', { ascending: false })
+        .limit(50);
 
     if (error) {
-        console.error('[Risk Assessments] Database error');
+        logError({ action: 'RISK_ASSESSMENTS_DATABASE_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to fetch assessments' }, { status: 500 });
     }
 
@@ -139,7 +141,7 @@ async function handlePost(context: RiskAssessmentContext): Promise<NextResponse>
         .single();
 
     if (error) {
-        console.error('[Risk Assessments] Insert error');
+        logError({ action: 'RISK_ASSESSMENTS_INSERT_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to create assessment' }, { status: 500 });
     }
 

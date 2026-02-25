@@ -6,6 +6,7 @@ import { createCipheriv, createDecipheriv, randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
 
 const scryptAsync = promisify(scrypt);
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // Legacy static salt (for backward compatibility only)
 const LEGACY_SALT = 'chartspark-salt';
@@ -108,7 +109,7 @@ export async function encryptPHI(plaintext: string): Promise<string> {
         return `v2:${salt.toString('hex')}:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
     } catch (error) {
         // SEC-REMEDIATION: Don't log the actual error which might contain PHI
-        console.error('Encryption error occurred');
+        logError({ action: 'PHI_ENCRYPTION_ERROR', error: sanitizeError(error) });
         throw new Error('Failed to encrypt data');
     }
 }
@@ -133,7 +134,7 @@ export async function decryptPHI(encryptedData: string): Promise<string> {
         throw new Error('Invalid encrypted data format');
     } catch (error) {
         // SEC-REMEDIATION: Don't log the actual error which might contain PHI
-        console.error('Decryption error occurred');
+        logError({ action: 'PHI_DECRYPTION_ERROR', error: sanitizeError(error) });
         throw new Error('Failed to decrypt data');
     }
 }

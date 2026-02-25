@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { validateClaimForSubmission, getValidationSummary } from '@/lib/managed-billing/claim-validator';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -18,7 +19,7 @@ async function handlePost(context: AuthContext) {
 
         return NextResponse.json({ ...result, summary });
     } catch (error) {
-        console.error('[API] Validate claim error:', error);
+        logError({ action: 'VALIDATE_CLAIM_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }

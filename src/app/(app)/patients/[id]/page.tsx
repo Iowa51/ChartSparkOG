@@ -27,6 +27,7 @@ import ScreeningPanel from "@/components/vitals/ScreeningPanel";
 import WeightTrendChart from "@/components/vitals/WeightTrendChart";
 import ScreeningTrendChart from "@/components/vitals/ScreeningTrendChart";
 import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
+import PatientDocuments from "@/components/patients/PatientDocuments";
 
 // Card components
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -784,42 +785,61 @@ export default function PatientDetailPage() {
                     )}
 
                     {activeTab === "insurance" && (
-                        <Card className="lg:col-span-3">
-                            <CardHeader>
-                                <CardTitle>
-                                    <Shield className="h-4 w-4" />
-                                    Insurance Information
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {patient.insurance ? (
-                                    <div className="space-y-3 text-sm">
-                                        <div>
-                                            <p className="text-muted-foreground">Provider</p>
-                                            <p className="font-medium text-foreground">{patient.insurance.provider}</p>
+                        <div className="lg:col-span-3 space-y-6">
+                            {/* Insurance Text Info */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>
+                                        <Shield className="h-4 w-4" />
+                                        Insurance Information
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {patient.insurance ? (
+                                        <div className="space-y-3 text-sm">
+                                            <div>
+                                                <p className="text-muted-foreground">Provider</p>
+                                                <p className="font-medium text-foreground">{patient.insurance.provider}</p>
+                                            </div>
+                                            {patient.insurance.policy_number && (
+                                                <div>
+                                                    <p className="text-muted-foreground">Policy Number</p>
+                                                    <p className="font-medium text-foreground font-mono">
+                                                        {patient.insurance.policy_number}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {patient.insurance.group_number && (
+                                                <div>
+                                                    <p className="text-muted-foreground">Group Number</p>
+                                                    <p className="font-medium text-foreground font-mono">
+                                                        {patient.insurance.group_number}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
-                                        {patient.insurance.policy_number && (
-                                            <div>
-                                                <p className="text-muted-foreground">Policy Number</p>
-                                                <p className="font-medium text-foreground font-mono">
-                                                    {patient.insurance.policy_number}
-                                                </p>
-                                            </div>
-                                        )}
-                                        {patient.insurance.group_number && (
-                                            <div>
-                                                <p className="text-muted-foreground">Group Number</p>
-                                                <p className="font-medium text-foreground font-mono">
-                                                    {patient.insurance.group_number}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">No insurance information on file</p>
-                                )}
-                            </CardContent>
-                        </Card>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">No insurance information on file</p>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Patient Documents — ID & Insurance Card Uploads */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>
+                                        <FileText className="h-4 w-4" />
+                                        Patient ID & Insurance Cards
+                                    </CardTitle>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Upload copies of the patient&apos;s photo ID and insurance cards for reference
+                                    </p>
+                                </CardHeader>
+                                <CardContent>
+                                    <PatientDocuments patientId={patientId} />
+                                </CardContent>
+                            </Card>
+                        </div>
                     )}
                 </div>
             </div>

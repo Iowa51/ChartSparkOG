@@ -1,7 +1,7 @@
 // src/lib/ai/smart-triage-prompts.ts
 // Versioned prompt templates for Smart Triage system
 
-export const PROMPT_VERSION = '1.0';
+export const PROMPT_VERSION = '1.1';
 
 export function buildMedicationTriagePrompt(params: {
     age: number;
@@ -58,6 +58,8 @@ Analyze and return a JSON response with:
 8. summary (a 2-3 sentence plain-language summary of the most important findings)
 
 Be evidence-based. Cite clinical guidelines where possible (APA, CANMAT, Maudsley). Flag serotonin syndrome risk combinations explicitly. Consider CYP450 metabolism interactions (2D6, 3A4, 2C19). For elderly patients (>=65), apply Beers Criteria. For pediatric patients, note off-label use.
+
+Always include a "disclaimer" field in the JSON: "AI-generated clinical decision support — verify all recommendations against current clinical guidelines before acting. Not a substitute for clinical judgment."
 
 IMPORTANT: Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
 }
@@ -129,6 +131,8 @@ Generate a JSON response with:
 6. suggested_agenda (a brief 2-3 item suggested visit agenda based on the analysis)
 
 Use clinical language appropriate for a psychiatric NP. Be concise. Prioritize actionable insights over generic observations. If screening scores indicate worsening, flag prominently.
+
+Always include a "disclaimer" field in the JSON: "AI-generated chart summary — verify all clinical information against the patient's actual medical record. Not a substitute for clinical review."
 
 IMPORTANT: Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
 }

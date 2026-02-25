@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // GET: Fetch EHR configurations for current user's organization
 async function handleGet(context: AuthContext) {
@@ -21,7 +22,7 @@ async function handleGet(context: AuthContext) {
             .order('display_name');
 
         if (error) {
-            console.error('[EHR Config] Error fetching configurations:', error);
+            logError({ action: 'EHR_CONFIG_FETCH_ERROR', error: sanitizeError(error) });
             return NextResponse.json({ error: 'Failed to fetch configurations' }, { status: 500 });
         }
 
@@ -38,7 +39,7 @@ async function handleGet(context: AuthContext) {
 
         return NextResponse.json({ configurations: data });
     } catch (error) {
-        console.error('[EHR Config] Unexpected error:', error);
+        logError({ action: 'EHR_CONFIG_GET_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -78,7 +79,7 @@ async function handlePost(context: AuthContext) {
             .single();
 
         if (error) {
-            console.error('[EHR Config] Error saving configuration:', error);
+            logError({ action: 'EHR_CONFIG_SAVE_ERROR', error: sanitizeError(error) });
             return NextResponse.json({ error: 'Failed to save configuration' }, { status: 500 });
         }
 
@@ -94,7 +95,7 @@ async function handlePost(context: AuthContext) {
 
         return NextResponse.json({ configuration: data, message: 'EHR connection initiated' });
     } catch (error) {
-        console.error('[EHR Config] Unexpected error:', error);
+        logError({ action: 'EHR_CONFIG_POST_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

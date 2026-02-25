@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth, AuthContext, isSuperAdmin } from '@/lib/auth/api-auth';
 import azureOpenAIService from '@/services/azureOpenAIService';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // Prevent static generation - this route requires runtime environment
 export const dynamic = 'force-dynamic';
@@ -45,7 +46,7 @@ async function handleTestAzure(context: TestAzureContext): Promise<NextResponse>
         });
     } catch (error) {
         // Don't log error details that could contain sensitive info
-        console.error('[test-azure] Health check failed');
+        logError({ action: 'TEST_AZURE_HEALTH_CHECK_FAILED', error: '[test-azure] Health check failed' });
 
         return NextResponse.json({
             success: false,

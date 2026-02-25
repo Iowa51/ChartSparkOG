@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 const LOCKOUT_CONFIG = {
     maxAttempts: 5,
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
                     return NextResponse.json({ locked: false, remainingAttempts: 5 });
                 }
                 // SEC-REMEDIATION: FAIL CLOSED on other database errors
-                console.error('Lockout check database error:', error);
+                logError({ action: 'LOCKOUT_CHECK_DATABASE_ERROR', error: sanitizeError(error) });
                 return NextResponse.json(
                     { locked: true, error: 'Security check failed' },
                     { status: 500 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ locked: false, remainingAttempts: 5 });
             }
             // SEC-REMEDIATION: FAIL CLOSED - don't allow login on other errors
-            console.error('login_attempts table error:', dbError);
+            logError({ action: 'LOGIN_ATTEMPTS_TABLE_ERROR', error: sanitizeError(dbError) });
             return NextResponse.json(
                 { locked: true, error: 'Security check failed' },
                 { status: 500 }
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
         }
 
     } catch (error) {
-        console.error('Check lockout error:', error);
+        logError({ action: 'CHECK_LOCKOUT_ERROR', error: sanitizeError(error) });
         // SEC-REMEDIATION: FAIL CLOSED
         return NextResponse.json(
             { locked: true, error: 'Security check failed' },

@@ -213,7 +213,7 @@ export function useUserFeatures(userId: string | null) {
                 .eq('user_id', userId);
 
             if (queryError) {
-                setError(queryError as any);
+                setError(new Error(queryError.message));
                 setLoading(false);
                 return;
             }

@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { processERAFile } from '@/lib/managed-billing/era-service';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -34,7 +35,7 @@ async function handlePost(context: AuthContext) {
             unmatched: result.unmatched,
         });
     } catch (error) {
-        console.error('[ERA Upload] Error:', error);
+        logError({ action: 'ERA_UPLOAD_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to process ERA file' }, { status: 500 });
     }
 }

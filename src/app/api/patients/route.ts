@@ -119,10 +119,9 @@ async function handlePost(context: AuthContext) {
                 phone: data.phone ?? undefined,
                 address: data.address ?? undefined,
                 allergies: data.allergies ?? undefined,
-                // TODO: Zod schema validates as string[] but PatientCreateInput expects structured objects — align schemas
-                medications: data.medications as any ?? undefined,
-                problems: data.problems as any ?? undefined,
-                insurance: data.insurance as any ?? undefined,
+                medications: data.medications?.map((m: string) => ({ medication: m })) ?? undefined,
+                problems: data.problems?.map((p: string) => ({ problem: p })) ?? undefined,
+                insurance: data.insurance?.provider ? { provider: data.insurance.provider, policy_number: data.insurance.policy_number, group_number: data.insurance.group_number } : undefined,
             }
         );
 

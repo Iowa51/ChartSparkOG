@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handler(context: AuthContext) {
     try {
@@ -91,7 +92,7 @@ async function handler(context: AuthContext) {
         });
 
     } catch (error: unknown) {
-        console.error('Error ending session:', error);
+        logError({ action: 'ERROR_ENDING_SESSION', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Failed to end session' },
             { status: 500 }

@@ -12,8 +12,10 @@ describe('sanitizeError', () => {
     });
 
     it('handles string errors', () => {
+        // sanitizeError deliberately returns 'Unknown error' for non-Error inputs
+        // to prevent PHI leakage through arbitrary strings in logs
         const result = sanitizeError('string error');
-        expect(result).toBe('string error');
+        expect(result).toBe('Unknown error');
     });
 
     it('handles null/undefined', () => {

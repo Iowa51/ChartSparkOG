@@ -9,20 +9,25 @@ import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { buildMedicationTriagePrompt, PROMPT_VERSION } from '@/lib/ai/smart-triage-prompts';
 import { getSafetyLevel, type PrescribingCheckResult } from '@/lib/types/smart-triage';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { PrescribingCheckSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const body = await context.request.json();
-        const { patient_id, new_medication, dose, frequency } = body;
 
-        if (!patient_id || !new_medication) {
+        // Validate input with Zod schema
+        const validation = validateRequest(PrescribingCheckSchema, body);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'patient_id and new_medication are required' },
+                { error: 'Validation failed', details: validation.errors },
                 { status: 400 }
             );
         }
+
+        const { patient_id, new_medication, dose, frequency } = validation.data;
 
         const supabase = await createClient();
 
@@ -142,7 +147,7 @@ async function handler(context: AuthContext) {
 
         return NextResponse.json({ result, isDemo });
     } catch (error) {
-        console.error('Error in prescribing check:', error);
+        logError({ action: 'ERROR_IN_PRESCRIBING_CHECK', error: sanitizeError(error) });
         return NextResponse.json({
             result: getDemoPrescribingCheckResponse('Unknown', ''),
             isDemo: true,

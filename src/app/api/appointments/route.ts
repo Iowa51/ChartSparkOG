@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handleGet(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
@@ -60,7 +61,7 @@ async function handleGet(context: AuthContext) {
 
         return NextResponse.json({ appointments });
     } catch (error) {
-        console.error('Error fetching appointments:', error);
+        logError({ action: 'ERROR_FETCHING_APPOINTMENTS', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to fetch appointments' }, { status: 500 });
     }
 }
@@ -114,7 +115,7 @@ async function handlePost(context: AuthContext) {
 
         return NextResponse.json({ appointment }, { status: 201 });
     } catch (error) {
-        console.error('Error creating appointment:', error);
+        logError({ action: 'ERROR_CREATING_APPOINTMENT', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to create appointment' }, { status: 500 });
     }
 }

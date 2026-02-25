@@ -12,17 +12,25 @@ import {
     getDemoChartSummaryResponse,
     PROMPT_VERSION,
 } from '@/lib/ai/smart-triage-prompts';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { ChartSummarySchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const body = await context.request.json();
-        const { patient_id } = body;
 
-        if (!patient_id) {
-            return NextResponse.json({ error: 'patient_id is required' }, { status: 400 });
+        // Validate input with Zod schema
+        const validation = validateRequest(ChartSummarySchema, body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
         }
+
+        const { patient_id } = validation.data;
 
         const supabase = await createClient();
 
@@ -207,7 +215,7 @@ async function handler(context: AuthContext) {
 
         return NextResponse.json({ result, isDemo, cached: false });
     } catch (error) {
-        console.error('Error in chart summary:', error);
+        logError({ action: 'CHART_SUMMARY_ERROR', error: sanitizeError(error) });
         return NextResponse.json({
             result: getDemoChartSummaryResponse(),
             isDemo: true,

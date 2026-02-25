@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getSubscriptionStatus } from '@/lib/subscriptions/subscription-service';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handleGet(context: AuthContext) {
     try {
@@ -43,7 +44,7 @@ async function handleGet(context: AuthContext) {
         const status = await getSubscriptionStatus(orgId);
         return NextResponse.json(status);
     } catch (error) {
-        console.error('[Subscription Status] Error (fail-closed):', error);
+        logError({ action: 'SUBSCRIPTION_STATUS_ERROR_FAIL_CLOSED', error: sanitizeError(error) });
         return NextResponse.json(
             {
                 error: 'Subscription service temporarily unavailable',

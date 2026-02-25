@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
-import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
+import { logAuditEvent, logAuditEventAsync, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { NoteCreateSchema, validateRequest } from '@/lib/validation/schemas';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
@@ -52,7 +52,7 @@ async function handleGet(context: AuthContext) {
 
         if (error) throw error;
 
-        await logAuditEvent({
+        logAuditEventAsync({
             eventType: patientId ? 'NOTE_VIEW' : 'PATIENT_SEARCH',
             userId: user.id,
             userEmail: user.email,

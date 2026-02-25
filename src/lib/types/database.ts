@@ -93,6 +93,23 @@ export interface PatientInsurance {
     updated_at: string;
 }
 
+export type PatientDocumentType = 'photo_id' | 'insurance_card_front' | 'insurance_card_back' | 'other';
+
+export interface PatientDocument {
+    id: string;
+    patient_id: string;
+    organization_id: string;
+    uploaded_by: string;
+    document_type: PatientDocumentType;
+    file_name: string;
+    file_path: string;
+    file_size: number;
+    mime_type: string;
+    label?: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface Encounter {
     id: string;
     patient_id: string;

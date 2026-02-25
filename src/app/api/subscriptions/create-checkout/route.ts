@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createCheckoutSession } from '@/lib/subscriptions/stripe-client';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -62,7 +63,7 @@ async function handlePost(context: AuthContext) {
 
         return NextResponse.json({ url: checkoutUrl });
     } catch (error) {
-        console.error('[Create Checkout] Error:', error);
+        logError({ action: 'CREATE_CHECKOUT_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 });
     }
 }

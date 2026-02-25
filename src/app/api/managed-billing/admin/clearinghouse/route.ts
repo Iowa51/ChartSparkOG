@@ -10,13 +10,14 @@ import {
     getAllClearinghouseConfigs,
     updateClearinghouseConfig
 } from '@/lib/managed-billing/clearinghouse-service';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handleGet(context: AuthContext) {
     try {
         const configs = await getAllClearinghouseConfigs();
         return NextResponse.json({ configs });
     } catch (error) {
-        console.error('[Clearinghouse Config] GET Error:', error);
+        logError({ action: 'CLEARINGHOUSE_CONFIG_GET_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to get configs' }, { status: 500 });
     }
 }
@@ -32,7 +33,7 @@ async function handlePut(context: AuthContext) {
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error('[Clearinghouse Config] PUT Error:', error);
+        logError({ action: 'CLEARINGHOUSE_CONFIG_PUT_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to update config' }, { status: 500 });
     }
 }

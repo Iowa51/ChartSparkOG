@@ -6,6 +6,7 @@
  */
 
 import { AzureOpenAI } from "openai";
+import { logError, sanitizeError } from "@/lib/logging/safe-logger";
 
 class AzureOpenAIService {
     constructor() {
@@ -74,7 +75,7 @@ Generate a comprehensive SOAP (Subjective, Objective, Assessment, Plan) note tha
 
             return response.choices[0].message.content;
         } catch (error) {
-            console.error("Error generating clinical note:", error);
+            logError({ action: 'AI_GENERATE_NOTE_ERROR', error: sanitizeError(error) });
             throw new Error("Failed to generate clinical note. Please try again.");
         }
     }
@@ -116,7 +117,7 @@ Provide 3-5 evidence-based treatment recommendations with brief rationale for ea
 
             return response.choices[0].message.content;
         } catch (error) {
-            console.error("Error generating treatment recommendations:", error);
+            logError({ action: 'AI_TREATMENT_REC_ERROR', error: sanitizeError(error) });
             throw new Error("Failed to generate treatment recommendations. Please try again.");
         }
     }
@@ -158,7 +159,7 @@ Session Notes: ${sessionNotes}`;
                 analysis: response.choices[0].message.content
             };
         } catch (error) {
-            console.error("Error analyzing sentiment:", error);
+            logError({ action: 'AI_SENTIMENT_ERROR', error: sanitizeError(error) });
             throw new Error("Failed to analyze sentiment. Please try again.");
         }
     }
@@ -199,7 +200,7 @@ Provide practical, achievable homework assignments that support the treatment go
 
             return response.choices[0].message.content;
         } catch (error) {
-            console.error("Error generating homework:", error);
+            logError({ action: 'AI_HOMEWORK_ERROR', error: sanitizeError(error) });
             throw new Error("Failed to generate homework assignments. Please try again.");
         }
     }
@@ -234,7 +235,7 @@ Provide practical, achievable homework assignments that support the treatment go
 
             return response.choices[0].message.content;
         } catch (error) {
-            console.error("Error in chat:", error);
+            logError({ action: 'AI_CHAT_ERROR', error: sanitizeError(error) });
             throw new Error("Failed to get AI response. Please try again.");
         }
     }

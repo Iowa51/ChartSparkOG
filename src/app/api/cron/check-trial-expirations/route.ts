@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 /**
  * Validate cron secret - fails CLOSED in production
@@ -18,7 +19,7 @@ function validateCronSecret(request: NextRequest): { valid: boolean; error?: str
 
     // SEC-REMEDIATION: In production, CRON_SECRET is REQUIRED
     if (isProduction && !cronSecret) {
-        console.error('SECURITY: CRON_SECRET not set in production');
+        logError({ action: 'SECURITY_CRON_SECRET_NOT_SET_IN_PRODUCTION', error: 'SECURITY: CRON_SECRET not set in production' });
         return { valid: false, error: 'Server configuration error' };
     }
 
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
             .lt('trial_ends_at', now);
 
         if (queryError) {
-            console.error('[Cron] Query error:', queryError);
+            logError({ action: 'CRON_QUERY_ERROR', error: sanitizeError(queryError) });
             return NextResponse.json({ error: 'Database error' }, { status: 500 });
         }
 
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
             expired: updatedCount,
         });
     } catch (error) {
-        console.error('[Cron] Check trials error:', error);
+        logError({ action: 'CRON_CHECK_TRIALS_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }

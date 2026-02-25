@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handleGet(context: AuthContext) {
     try {
@@ -52,7 +53,7 @@ async function handleGet(context: AuthContext) {
             },
         });
     } catch (error) {
-        console.error('[API] Claims list error:', error);
+        logError({ action: 'CLAIMS_LIST_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }
@@ -91,7 +92,7 @@ async function handlePost(context: AuthContext) {
 
         return NextResponse.json({ claim }, { status: 201 });
     } catch (error) {
-        console.error('[API] Create claim error:', error);
+        logError({ action: 'CREATE_CLAIM_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }

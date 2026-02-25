@@ -7,23 +7,29 @@ import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { analyzeNoteForCodes } from '@/lib/billing/code-analyzer';
+import { AIGenerateNoteSchema, validateRequest } from '@/lib/validation/schemas';
 
-interface GenerateNoteRequest {
-    clinicianInput: string;
-    selectedPhrases: Record<string, string[]>;
-    templateId: string;
-    templateFormat: 'soap' | 'paragraph';
-}
+
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
-        const body: GenerateNoteRequest = await context.request.json();
-        const { clinicianInput, selectedPhrases, templateId, templateFormat } = body;
+        const body = await context.request.json();
 
-        // Validate input
-        if (!clinicianInput && Object.keys(selectedPhrases || {}).length === 0) {
+        // Validate input with Zod schema (enforces 50K char limit)
+        const validation = validateRequest(AIGenerateNoteSchema, body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
+        }
+
+        const { clinicianInput, selectedPhrases, templateId, templateFormat } = validation.data;
+
+        // Require at least some input
+        if (!clinicianInput && Object.keys(selectedPhrases).length === 0) {
             return NextResponse.json(
                 { error: 'Please provide input text or select preset phrases' },
                 { status: 400 }

@@ -13,17 +13,25 @@ import {
     PROMPT_VERSION,
 } from '@/lib/ai/smart-triage-prompts';
 import { getSafetyLevel } from '@/lib/types/smart-triage';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { MedicationReviewSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const body = await context.request.json();
-        const { patient_id } = body;
 
-        if (!patient_id) {
-            return NextResponse.json({ error: 'patient_id is required' }, { status: 400 });
+        // Validate input with Zod schema
+        const validation = validateRequest(MedicationReviewSchema, body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
         }
+
+        const { patient_id } = validation.data;
 
         const supabase = await createClient();
 
@@ -144,7 +152,7 @@ async function handler(context: AuthContext) {
                 const response = await safeAzureOpenAI.chat(prompt, []);
                 result = JSON.parse(response);
             } catch (parseError) {
-                console.error('Error parsing AI response:', parseError);
+                logError({ action: 'ERROR_PARSING_AI_RESPONSE', error: sanitizeError(parseError) });
                 result = getDemoMedicationTriageResponse();
                 isDemo = true;
             }
@@ -203,7 +211,7 @@ async function handler(context: AuthContext) {
             cached: false,
         });
     } catch (error) {
-        console.error('Error in medication review:', error);
+        logError({ action: 'ERROR_IN_MEDICATION_REVIEW', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Failed to run medication triage', isDemo: true, result: getDemoMedicationTriageResponse() },
             { status: 200 } // Return 200 with demo data for graceful degradation

@@ -174,6 +174,36 @@ export const ValidateCodesSchema = z.object({
     })).min(1).max(100),
 });
 
+// AI Generate Note schema
+export const AIGenerateNoteSchema = z.object({
+    clinicianInput: z.string().max(50000).optional().default(''),
+    selectedPhrases: z.record(z.string(), z.array(z.string().max(500))).optional().default({}),
+    templateId: z.string().max(100).optional().default(''),
+    templateFormat: z.enum(['soap', 'paragraph']).optional().default('soap'),
+});
+
+// Smart Triage schemas
+export const PrescribingCheckSchema = z.object({
+    patient_id: UUIDSchema,
+    new_medication: z.string().min(1, 'Medication name required').max(200),
+    dose: z.string().max(100).optional().default(''),
+    frequency: z.string().max(100).optional().default(''),
+});
+
+export const MedicationReviewSchema = z.object({
+    patient_id: UUIDSchema,
+});
+
+export const ChartSummarySchema = z.object({
+    patient_id: UUIDSchema,
+});
+
+// Patient document upload schema
+export const PatientDocumentUploadSchema = z.object({
+    document_type: z.enum(['photo_id', 'insurance_card_front', 'insurance_card_back', 'other']),
+    label: z.string().max(200).optional().default(''),
+});
+
 // Telehealth schemas
 export const TelehealthCreateRoomSchema = z.object({
     appointmentId: UUIDSchema,

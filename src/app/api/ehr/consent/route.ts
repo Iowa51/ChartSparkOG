@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // GET: Fetch consent settings for current user's organization
 async function handleGet(context: AuthContext) {
@@ -21,7 +22,7 @@ async function handleGet(context: AuthContext) {
             .single();
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-            console.error('[EHR Consent] Error fetching settings:', error);
+            logError({ action: 'EHR_CONSENT_FETCH_ERROR', error: sanitizeError(error) });
             return NextResponse.json({ error: 'Failed to fetch consent settings' }, { status: 500 });
         }
 
@@ -50,7 +51,7 @@ async function handleGet(context: AuthContext) {
             }
         });
     } catch (error) {
-        console.error('[EHR Consent] Unexpected error:', error);
+        logError({ action: 'EHR_CONSENT_GET_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
@@ -94,7 +95,7 @@ async function handlePut(context: AuthContext) {
             .single();
 
         if (error) {
-            console.error('[EHR Consent] Error saving settings:', error);
+            logError({ action: 'EHR_CONSENT_SAVE_ERROR', error: sanitizeError(error) });
             return NextResponse.json({ error: 'Failed to save consent settings' }, { status: 500 });
         }
 
@@ -127,7 +128,7 @@ async function handlePut(context: AuthContext) {
             }
         });
     } catch (error) {
-        console.error('[EHR Consent] Unexpected error:', error);
+        logError({ action: 'EHR_CONSENT_PUT_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

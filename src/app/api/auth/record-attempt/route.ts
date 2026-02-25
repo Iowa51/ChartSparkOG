@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export async function POST(request: NextRequest) {
     try {
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ recorded: true, demo: true });
             }
             // In production without service client, log error but don't block
-            console.error('SECURITY: Cannot record login attempt - service role not configured');
+            logError({ action: 'RECORD_ATTEMPT_NO_SERVICE_ROLE', error: 'Service role not configured' });
             return NextResponse.json({ recorded: false, error: 'Service unavailable' });
         }
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
             }
         } catch (dbError) {
             // Log but don't fail - recording is important but not blocking
-            console.error('Failed to record login attempt:', dbError);
+            logError({ action: 'RECORD_ATTEMPT_DB_ERROR', error: sanitizeError(dbError) });
         }
 
         // Also log to audit_logs for HIPAA compliance
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ recorded: true });
 
     } catch (error) {
-        console.error('Record attempt error:', error);
+        logError({ action: 'RECORD_ATTEMPT_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to record' }, { status: 500 });
     }
 }

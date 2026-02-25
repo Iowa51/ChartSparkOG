@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/subscriptions/stripe-client';
 import { activateSubscription } from '@/lib/subscriptions/subscription-service';
 import { createClient } from '@/lib/supabase/server';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logError, sanitizeError, devLog, logWarn } from '@/lib/logging/safe-logger';
 import type Stripe from 'stripe';
 
 // In-memory idempotency store (use Redis in production for multi-instance deployments)
@@ -28,7 +28,7 @@ function cleanupProcessedEvents() {
 
 export async function POST(request: NextRequest) {
     if (!stripe) {
-        console.warn('[Webhook] Stripe not configured');
+        logWarn({ action: 'WEBHOOK_STRIPE_NOT_CONFIGURED' });
         return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
     }
 
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // SEC-REMEDIATION: Idempotency check - prevent duplicate event processing
     if (processedEvents.has(event.id)) {
-        console.log(`[Webhook] Duplicate event ignored: ${event.id}`);
+        devLog('Webhook', `Duplicate event ignored: ${event.id}`);
         return NextResponse.json({ received: true, duplicate: true });
     }
 
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
                 const { organizationId, tierCode } = session.metadata || {};
 
                 if (organizationId && tierCode) {
-                    console.log(`[Webhook] Activating subscription for org ${organizationId} with tier ${tierCode}`);
+                    devLog('Webhook', `Activating subscription for org ${organizationId}`);
                     await activateSubscription(
                         organizationId,
                         tierCode as 'STARTER' | 'ELITE',
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
             case 'customer.subscription.updated': {
                 const subscription = event.data.object as Stripe.Subscription;
-                console.log(`[Webhook] Subscription updated: ${subscription.id}`);
+                devLog('Webhook', `Subscription updated: ${subscription.id}`);
 
                 // Handle subscription updates (e.g., plan changes, renewals)
                 const supabase = await createClient();
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
                         .single();
 
                     if (!existingSub) {
-                        console.warn(`[Webhook] Unknown subscription ID: ${subscription.id}`);
+                        logWarn({ action: 'WEBHOOK_UNKNOWN_SUBSCRIPTION', resourceId: subscription.id });
                         break;
                     }
 
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
             case 'customer.subscription.deleted': {
                 const subscription = event.data.object as Stripe.Subscription;
-                console.log(`[Webhook] Subscription deleted: ${subscription.id}`);
+                devLog('Webhook', `Subscription deleted: ${subscription.id}`);
 
                 const supabase = await createClient();
                 if (supabase) {
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
             case 'invoice.payment_failed': {
                 const invoice = event.data.object as Stripe.Invoice;
-                console.log(`[Webhook] Payment failed for invoice: ${invoice.id}`);
+                devLog('Webhook', `Payment failed for invoice: ${invoice.id}`);
 
                 // Update subscription status to past_due
                 const supabase = await createClient();
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 
             case 'invoice.paid': {
                 const invoice = event.data.object as Stripe.Invoice;
-                console.log(`[Webhook] Invoice paid: ${invoice.id}`);
+                devLog('Webhook', `Invoice paid: ${invoice.id}`);
 
                 // Ensure subscription is active after successful payment
                 const supabase = await createClient();

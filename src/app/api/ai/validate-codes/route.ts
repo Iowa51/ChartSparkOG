@@ -3,6 +3,7 @@
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // Mock database of common valid codes for demo purposes
 const VALID_ICD10_CODES = [
@@ -91,7 +92,7 @@ async function handler(context: AuthContext) {
         return NextResponse.json({ results });
 
     } catch (error: unknown) {
-        console.error('Error in validate-codes API:', error);
+        logError({ action: 'ERROR_IN_VALIDATE_CODES_API', error: sanitizeError(error) });
         return NextResponse.json(
             { error: 'Failed to validate codes' },
             { status: 500 }
