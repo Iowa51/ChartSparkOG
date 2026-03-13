@@ -40,25 +40,25 @@ export default function LoginPage() {
         setIsLoading(true);
         setError(null);
 
-        // TEMPORARILY DISABLED: Lockout check causing login issues
-        // Will re-enable after fixing root cause
-        /*
+        // SEC-REMEDIATION: Brute-force lockout check (graceful degradation)
         try {
             const lockoutCheck = await fetch('/api/auth/check-lockout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),
             });
-            const lockoutData = await lockoutCheck.json();
-            if (lockoutData.locked) {
-                setError(lockoutData.message || 'Account temporarily locked. Please try again later.');
-                setIsLoading(false);
-                return;
+            if (lockoutCheck.ok) {
+                const lockoutData = await lockoutCheck.json();
+                if (lockoutData.locked) {
+                    setError(lockoutData.message || 'Account temporarily locked. Please try again later.');
+                    setIsLoading(false);
+                    return;
+                }
             }
+            // If response is not ok (500, etc.), proceed with login (graceful degradation)
         } catch {
-            // Continue if lockout check fails
+            // Continue if lockout check fails — don't block login on network errors
         }
-        */
 
         try {
             // Demo mode: allow login for known demo emails (bypass Supabase)
@@ -125,9 +125,24 @@ export default function LoginPage() {
                 .eq('id', userId)
                 .single();
 
-            // 3. Handle profile fetch failure
+            // 2b. Fallback to profiles table if users table lookup fails
+            // (Identity Context Desynchronization resilience)
+            let finalUserData = userData;
             if (userError || !userData) {
-                console.error("Error fetching user profile:", userError);
+                console.warn('[LOGIN] Users table lookup failed, trying profiles table fallback');
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('role, organization_id, first_name, last_name, is_active')
+                    .eq('id', userId)
+                    .single();
+                if (profileData) {
+                    finalUserData = profileData;
+                }
+            }
+
+            // 3. Handle profile fetch failure (both tables failed)
+            if (!finalUserData) {
+                console.error("Error fetching user profile from both tables:", userError);
 
                 // Demo mode: fallback to email-based role detection
                 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
@@ -161,7 +176,7 @@ export default function LoginPage() {
             }
 
             // 4. Check if account is active
-            if (userData.is_active === false) {
+            if (finalUserData.is_active === false) {
                 await supabase.auth.signOut();
                 setError("Your account has been deactivated. Please contact support.");
                 setIsLoading(false);
@@ -182,7 +197,7 @@ export default function LoginPage() {
                 .eq('id', userId);
 
             // 7. Role-based redirect
-            const userRole = userData?.role || 'USER';
+            const userRole = finalUserData?.role || 'USER';
             const redirectPath = roleRoutes[userRole] || defaultRedirect;
 
             // Check for explicit redirect param (for returning to a specific page)

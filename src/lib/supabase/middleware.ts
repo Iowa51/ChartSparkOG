@@ -130,16 +130,32 @@ export async function updateSession(request: NextRequest) {
         }
 
         // Get user role from database
-        const { data: userData, error: userError } = await supabase
+        let userData: { role: string; is_active: boolean | null } | null = null;
+        const { data: usersData, error: userError } = await supabase
             .from('users')
             .select('role, is_active')
             .eq('id', user.id)
             .single();
 
+        userData = usersData;
+
+        // Fallback to profiles table if users table lookup fails
+        // (Identity Context Desynchronization resilience)
+        if (userError || !userData || !userData.role) {
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('role, is_active')
+                .eq('id', user.id)
+                .single();
+            if (profileData?.role) {
+                userData = profileData;
+            }
+        }
+
         // SEC-002: Handle role lookup failure
         let userRole: string;
 
-        if (userError || !userData || !userData.role) {
+        if (!userData || !userData.role) {
             // Demo mode: fallback to email-based role detection for known demo emails only
             if (isDemoMode) {
                 const detectedRole = demoEmailRoles[user.email?.toLowerCase() || ''];
@@ -180,10 +196,12 @@ export async function updateSession(request: NextRequest) {
         }
 
         // SEC-MFA: Check MFA requirement for high-privilege roles
-        // Phase 2: MFA enforcement re-enabled for HIPAA compliance
+        // Toggle: set DISABLE_MFA_ENFORCEMENT=true in non-production to skip
         const isMFAExemptPath = mfaExemptPaths.some(exempt => path.startsWith(exempt));
+        const mfaDisabledByEnv = process.env.DISABLE_MFA_ENFORCEMENT === 'true'
+            && process.env.NEXT_PUBLIC_APP_ENV !== 'production';
 
-        if (mfaRequiredRoles.includes(userRole) && !isMFAExemptPath) {
+        if (!mfaDisabledByEnv && mfaRequiredRoles.includes(userRole) && !isMFAExemptPath) {
             const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
             if (mfaError) {
                 console.error('Middleware: MFA check failed', mfaError);

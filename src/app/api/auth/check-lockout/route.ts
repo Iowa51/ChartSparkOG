@@ -20,11 +20,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Email required' }, { status: 400 });
         }
 
-        // TEMPORARY: Disable lockout in development/demo mode for easier testing
-        // Remove this block in production
+        // Skip lockout check only in explicit demo mode
         const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-        if (isDemoMode || process.env.NODE_ENV !== 'production') {
-            console.log('[LOCKOUT] Skipping lockout check - demo/dev mode');
+        if (isDemoMode) {
+            console.log('[LOCKOUT] Skipping lockout check - demo mode');
             return NextResponse.json({ locked: false, remainingAttempts: 99 });
         }
 
@@ -33,14 +32,14 @@ export async function POST(request: NextRequest) {
         let supabase;
         try {
             supabase = createServiceRoleClient();
-        } catch (err: any) {
+        } catch (err: unknown) {
             // Service role key not configured - allow login but log warning
-            console.warn('Lockout check: Service role client not configured. Run migrations and set SUPABASE_SERVICE_ROLE_KEY for full security.');
+            console.warn('Lockout check: Service role client not configured.', err);
             return NextResponse.json({ locked: false, remainingAttempts: 5 });
         }
 
         if (!supabase) {
-            // Demo mode or missing credentials - allow login attempts
+            // Missing credentials - allow login attempts
             console.warn('Lockout check: Supabase not configured, allowing login');
             return NextResponse.json({ locked: false, remainingAttempts: 5 });
         }
@@ -95,9 +94,10 @@ export async function POST(request: NextRequest) {
                 locked: false,
                 remainingAttempts: Math.max(0, LOCKOUT_CONFIG.maxAttempts - failedCount),
             });
-        } catch (dbError: any) {
+        } catch (dbError: unknown) {
             // Handle missing table gracefully
-            if (dbError?.code === '42P01' || dbError?.message?.includes('does not exist')) {
+            const errObj = dbError as { code?: string; message?: string };
+            if (errObj?.code === '42P01' || errObj?.message?.includes('does not exist')) {
                 console.warn('login_attempts table not found - allowing login');
                 return NextResponse.json({ locked: false, remainingAttempts: 5 });
             }
