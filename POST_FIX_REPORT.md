@@ -390,3 +390,132 @@ $ npx tsc --noEmit 2>&1 | grep -E "api-auth|billing/route|schemas"
 **Total integrity findings remediated: 3** (2 MEDIUM, 1 LOW)
 **Files modified: 3**
 **TypeScript errors introduced: 0**
+
+---
+
+## Codex Integrity Review — Round 2 Fixes
+
+**Date:** 2026-03-16
+**Source:** Codex integrity review — 6 additional findings
+**TypeScript Check:** All modified files pass `tsc --noEmit` with zero new errors
+
+---
+
+### CODEX-IR-1 (HIGH): System-health endpoint missing MFA enforcement
+
+**File:** `src/app/api/admin/system-health/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `requireMFA: true` to `withAuth` options alongside existing `requiredRole: ['SUPER_ADMIN']` | 233 |
+
+**Before:** The system-health endpoint required SUPER_ADMIN role but did not enforce MFA, inconsistent with other admin routes that require `requireMFA: true`.
+
+**After:** MFA is now required for system-health access, consistent with all other privileged admin routes.
+
+---
+
+### CODEX-IR-2 (MEDIUM): MFA check method inconsistency — session.aal vs mfa.getAuthenticatorAssuranceLevel()
+
+**File:** `src/lib/auth/api-auth.ts`
+
+| What changed | Lines |
+|---|---|
+| Replaced `session?.aal` check with `supabase.auth.mfa.getAuthenticatorAssuranceLevel()` | 128–131 |
+| Check `mfaData.currentLevel !== 'aal2'` instead of `session?.aal !== 'aal2'` | 131 |
+| Added null/error check on `mfaData` response (fail closed with 503) | 129–131 |
+
+**Before:** The MFA check used `session?.aal` from `getSession()`, which is a cached session property that may not reflect the current MFA state. Middleware and `lib/auth/mfa.ts` used the dedicated `mfa.getAuthenticatorAssuranceLevel()` API.
+
+**After:** Uses `supabase.auth.mfa.getAuthenticatorAssuranceLevel()` for authoritative MFA state, consistent with middleware and `lib/auth/mfa.ts`. Still fails closed (503) if client is null or API returns an error.
+
+---
+
+### CODEX-IR-3 (HIGH): Billing DB unique constraint (23505) not handled at application level
+
+**File:** `src/app/api/billing/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `error.code === '23505'` check after insert failure | 103–120 |
+| On unique violation: attempts to fetch existing record by idempotency_key first, then by encounter_id+service_date | 106–117 |
+| Returns existing record with `{ duplicate: true }` (HTTP 200) if found | 118 |
+| Falls through to `throw error` if no existing record can be recovered | 120 |
+
+**Before:** If a DB-level unique constraint fired (race condition between the application-level check and the actual INSERT), the error propagated as a generic 500 "Failed to create billing". The client received no indication of the duplicate or the existing record.
+
+**After:** The `23505` (unique_violation) error is caught and handled by fetching the existing record via idempotency key or encounter+service_date, returning it to the client with `duplicate: true`. This gracefully handles race conditions at the DB constraint level.
+
+---
+
+### CODEX-IR-4 (MEDIUM): Note signing comment contradicts actual behavior
+
+**File:** `src/app/api/notes/[id]/sign/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Changed comment from `"Verify the signer is the note's provider (or SUPER_ADMIN)"` to `"Verify the signer is the note's provider (org check below blocks cross-org access for all roles)"` | 30 |
+
+**Before:** The comment `"(or SUPER_ADMIN)"` implied SUPER_ADMIN users could sign notes across organizations. In reality, the organization check at line 53 blocks cross-org access for ALL roles including SUPER_ADMIN. The comment was misleading.
+
+**After:** Comment accurately describes behavior: the provider ownership check passes SUPER_ADMIN through, but the subsequent org check prevents cross-org signing for all roles.
+
+---
+
+### CODEX-IR-5 (MEDIUM): Telehealth status allowlist missing 'in_progress'
+
+**File:** `src/app/api/telehealth/create-room/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `'in_progress'` to `ALLOWED_STATUSES` array | 49 |
+| Added `telehealth_room_url` to appointment SELECT query | 26 |
+| Added early return: if status is `in_progress` and `telehealth_room_url` exists, returns existing room URL | 56–61 |
+| Updated error message to include `in_progress` in allowed statuses | 52 |
+
+**Before:** If a provider navigated away and returned during an active telehealth session, the `in_progress` appointment status was rejected by the allowlist. The only workaround was to reset the appointment status, losing session state.
+
+**After:** `in_progress` appointments are accepted. If the appointment already has a `telehealth_room_url`, the existing room is returned (avoiding creation of a duplicate Daily.co room). New rooms are only created for `in_progress` appointments that don't yet have one.
+
+---
+
+### CODEX-IR-6 (HIGH): Chart summary prompt inputs not org-scoped
+
+**File:** `src/app/api/ai/smart-triage/chart-summary/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `.eq('organization_id', context.user.organizationId)` to patient demographics query | 73 |
+| Added `.eq('organization_id', context.user.organizationId)` to vitals query | 106 |
+| Added `.eq('organization_id', context.user.organizationId)` to screening scores query | 135 |
+| Added `requireOrganization: true` to route export `withAuth` options | 229 |
+
+**Before:** The patient demographics, vitals, and screening scores queries filtered only by `patient_id` without org scoping. If a patient ID from another organization was submitted, data from that organization would be fetched and fed into the AI prompt. The notes query was already org-scoped (fixed in CODEX-2), but these three queries were not.
+
+**After:** All four data-gathering queries (demographics, notes, vitals, screening scores) are scoped to `context.user.organizationId`. Additionally, `requireOrganization: true` ensures the route rejects requests from users without an organization assignment before any queries execute.
+
+---
+
+### Verification
+
+```
+$ npx tsc --noEmit 2>&1 | grep -E "system-health|api-auth|billing/route|sign/route|create-room|chart-summary"
+(no output — zero errors in modified files)
+```
+
+Pre-existing errors (5 total) in `src/__tests__/csrf.test.ts` and `src/__tests__/setup.ts` are unrelated (read-only `NODE_ENV` assignment).
+
+### Summary
+
+| ID | Severity | Status | File(s) |
+|----|----------|--------|---------|
+| CODEX-IR-1 | HIGH | FIXED | `src/app/api/admin/system-health/route.ts` |
+| CODEX-IR-2 | MEDIUM | FIXED | `src/lib/auth/api-auth.ts` |
+| CODEX-IR-3 | HIGH | FIXED | `src/app/api/billing/route.ts` |
+| CODEX-IR-4 | MEDIUM | FIXED | `src/app/api/notes/[id]/sign/route.ts` |
+| CODEX-IR-5 | MEDIUM | FIXED | `src/app/api/telehealth/create-room/route.ts` |
+| CODEX-IR-6 | HIGH | FIXED | `src/app/api/ai/smart-triage/chart-summary/route.ts` |
+
+**Total findings remediated: 6** (3 HIGH, 3 MEDIUM)
+**Files modified: 6**
+**TypeScript errors introduced: 0**

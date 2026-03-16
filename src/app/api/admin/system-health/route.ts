@@ -231,4 +231,5 @@ async function handleGet(context: AuthContext) {
 
 export const GET = withAuth(handleGet, {
     requiredRole: ['SUPER_ADMIN'],
+    requireMFA: true,
 });

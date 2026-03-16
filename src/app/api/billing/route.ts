@@ -100,7 +100,35 @@ async function handlePost(context: AuthContext) {
 
         const { data: billing, error } = await supabase.from('billing').insert([insertData]).select().single();
 
-        if (error) throw error;
+        if (error) {
+            // SEC-INTEGRITY-3: Handle DB-level unique constraint violations gracefully
+            if (error.code === '23505') {
+                // Unique violation — fetch and return the existing record
+                let existingRecord = null;
+                if (idempotencyKey) {
+                    const { data } = await supabase
+                        .from('billing')
+                        .select('*')
+                        .eq('idempotency_key', idempotencyKey)
+                        .maybeSingle();
+                    existingRecord = data;
+                }
+                if (!existingRecord && billingData.encounter_id && billingData.service_date) {
+                    const { data } = await supabase
+                        .from('billing')
+                        .select('*')
+                        .eq('encounter_id', billingData.encounter_id)
+                        .eq('service_date', billingData.service_date)
+                        .eq('organization_id', context.user.organizationId)
+                        .maybeSingle();
+                    existingRecord = data;
+                }
+                if (existingRecord) {
+                    return NextResponse.json({ billing: existingRecord, duplicate: true }, { status: 200 });
+                }
+            }
+            throw error;
+        }
         return NextResponse.json({ billing }, { status: 201 });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to create billing' }, { status: 500 });

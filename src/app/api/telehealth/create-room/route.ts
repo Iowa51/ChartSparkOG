@@ -23,7 +23,7 @@ async function handler(context: AuthContext) {
         // SEC-CODEX-4: Hard-fail if appointment lookup fails or returns null
         const { data: appointment, error: appointmentError } = await supabase
             .from('appointments')
-            .select('id, patient_id, provider_id, organization_id, status')
+            .select('id, patient_id, provider_id, organization_id, status, telehealth_room_url')
             .eq('id', appointmentId)
             .single();
 
@@ -46,12 +46,21 @@ async function handler(context: AuthContext) {
         }
 
         // Verify appointment status is eligible for telehealth
-        const ALLOWED_STATUSES = ['scheduled', 'confirmed'];
+        const ALLOWED_STATUSES = ['scheduled', 'confirmed', 'in_progress'];
         if (!ALLOWED_STATUSES.includes(appointment.status)) {
             return NextResponse.json(
-                { error: `Appointment status '${appointment.status}' is not eligible for telehealth. Must be scheduled or confirmed.` },
+                { error: `Appointment status '${appointment.status}' is not eligible for telehealth. Must be scheduled, confirmed, or in_progress.` },
                 { status: 400 }
             );
+        }
+
+        // If appointment is already in_progress and has an existing room, return it
+        if (appointment.status === 'in_progress' && appointment.telehealth_room_url) {
+            return NextResponse.json({
+                roomUrl: appointment.telehealth_room_url,
+                roomName: appointment.telehealth_room_url.split('/').pop() || '',
+                existingRoom: true,
+            });
         }
 
         // SEC-005: Use non-guessable room name (UUID instead of predictable pattern)

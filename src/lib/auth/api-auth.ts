@@ -125,13 +125,15 @@ export function withAuth<T extends AuthContext>(
                     // FAIL CLOSED - deny access if Supabase client unavailable
                     return errorResponse('MFA validation unavailable', 503);
                 }
-                const { data: { session } } = await supabaseMfa.auth.getSession();
-                const aal = session?.aal;
-                if (aal !== 'aal2') {
+                const { data: mfaData, error: mfaError } = await supabaseMfa.auth.mfa.getAuthenticatorAssuranceLevel();
+                if (mfaError || !mfaData) {
+                    return errorResponse('MFA validation unavailable', 503);
+                }
+                if (mfaData.currentLevel !== 'aal2') {
                     return errorResponse('MFA required - please complete second factor authentication', 403);
                 }
-            } catch (mfaError) {
-                console.error('MFA check error:', mfaError);
+            } catch (mfaErr) {
+                console.error('MFA check error:', mfaErr);
                 // FAIL CLOSED - deny access if MFA check fails
                 return errorResponse('MFA validation unavailable', 503);
             }

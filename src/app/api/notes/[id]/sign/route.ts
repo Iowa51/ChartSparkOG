@@ -27,7 +27,7 @@ async function handlePost(context: AuthContext) {
 
         if (fetchError) throw fetchError;
 
-        // SEC-CODEX-3: Verify the signer is the note's provider (or SUPER_ADMIN)
+        // SEC-CODEX-3: Verify the signer is the note's provider (org check below blocks cross-org access for all roles)
         if (
             currentNote.provider_id !== context.user.id &&
             context.user.role !== 'SUPER_ADMIN'

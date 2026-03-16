@@ -71,6 +71,7 @@ async function handler(context: AuthContext) {
                 .from('patients')
                 .select('*')
                 .eq('id', patient_id)
+                .eq('organization_id', context.user.organizationId)
                 .single();
 
             if (patient) {
@@ -104,6 +105,7 @@ async function handler(context: AuthContext) {
                     .from('vitals')
                     .select('weight, weight_unit, bp_systolic, bp_diastolic, recorded_at')
                     .eq('patient_id', patient_id)
+                    .eq('organization_id', context.user.organizationId)
                     .order('recorded_at', { ascending: true })
                     .limit(6);
 
@@ -133,6 +135,7 @@ async function handler(context: AuthContext) {
                     .from('screening_scores')
                     .select('instrument, total_score, administered_at')
                     .eq('patient_id', patient_id)
+                    .eq('organization_id', context.user.organizationId)
                     .order('administered_at', { ascending: true })
                     .limit(30);
 
@@ -227,4 +230,5 @@ async function handler(context: AuthContext) {
 
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
 });
