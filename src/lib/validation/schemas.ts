@@ -132,9 +132,10 @@ export const EncounterUpdateSchema = EncounterCreateSchema.partial().omit({ pati
 // Billing schemas
 export const BillingCreateSchema = z.object({
     patient_id: UUIDSchema,
-    encounter_id: UUIDSchema.optional(),
+    encounter_id: UUIDSchema.optional().nullable(),
+    service_date: z.string().max(50).optional().nullable(),
     amount: z.number().positive('Amount must be positive'),
-    cpt_code: z.string().max(20),
+    cpt_code: z.string().max(20).optional().nullable(),
     icd_codes: z.array(z.string().max(20)).max(10).optional(),
     status: z.enum(['pending', 'submitted', 'approved', 'denied', 'paid']).optional().default('pending'),
     insurance_claim_id: z.string().max(100).optional().nullable(),

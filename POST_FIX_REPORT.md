@@ -310,3 +310,83 @@ $ npx tsc --noEmit 2>&1 | grep -E "api-auth|profile-approvals|invitations|batch-
 **Total additional findings remediated: 5** (1 CRITICAL, 3 HIGH, 1 MEDIUM)
 **Files modified: 7**
 **TypeScript errors introduced: 0**
+
+---
+
+## Integrity Check — Additional Fixes
+
+**Date:** 2026-03-16
+**Source:** Post-remediation code integrity check
+**TypeScript Check:** All modified files pass `tsc --noEmit` with zero new errors
+
+---
+
+### INTEGRITY-1 (MEDIUM): MFA fail-closed bypass when `createClient()` returns null
+
+**File:** `src/lib/auth/api-auth.ts`
+
+| What changed | Lines |
+|---|---|
+| Replaced `if (supabaseMfa) { ... }` with `if (!supabaseMfa) { return 503; }` | 124–126 |
+
+**Before:** If `createClient()` returned `null` inside the MFA check block, the entire MFA verification was silently skipped — the code fell through to the handler without blocking. This violated the fail-closed principle stated in the catch block comment.
+
+**After:** A null Supabase client now immediately returns `503 MFA validation unavailable`, consistent with the catch block's fail-closed behavior. The MFA check can no longer be bypassed by a client initialization failure.
+
+---
+
+### INTEGRITY-2 (MEDIUM): Mass assignment + missing Zod validation on `/api/billing` POST
+
+**File:** `src/app/api/billing/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added import: `BillingCreateSchema`, `validateRequest` from `@/lib/validation/schemas` | 7 |
+| Added `validateRequest(BillingCreateSchema, rawBody)` before processing | 27–31 |
+| Replaced `...billingData` spread with explicit field assignment | 69–80 |
+
+**File:** `src/lib/validation/schemas.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `service_date` field (string, max 50, optional nullable) to `BillingCreateSchema` | 136 |
+| Made `cpt_code` optional nullable (was required) to match existing usage | 138 |
+
+**Before:** The billing POST handler called `await context.request.json()` with no validation and spread the raw client payload directly into the database insert via `...billingData`. An attacker could inject arbitrary columns (e.g., `organization_id`, `provider_id`, `invoice_number`, `outstanding_balance`) to override server-set values, or insert junk data into any billing table column.
+
+**After:** Input is validated against `BillingCreateSchema` (patient_id, encounter_id, service_date, amount, cpt_code, icd_codes, status, insurance_claim_id, notes). Only validated fields are explicitly assigned to the insert payload. Server-controlled fields (`organization_id`, `provider_id`, `invoice_number`, `outstanding_balance`) cannot be overridden by client input.
+
+---
+
+### INTEGRITY-3 (LOW): Missing error check on idempotency re-fetch query
+
+**File:** `src/app/api/billing/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `error` destructuring and null check on second Supabase query in idempotency path | 39–43 |
+
+**Before:** After finding an existing record by idempotency key, the second query to fetch the full record (`select('*').eq('id', existing.id).single()`) did not check for errors. If the record was deleted between the two queries (race condition), `existingBilling` would be null and a `{ billing: null, duplicate: true }` response would be returned.
+
+**After:** The query now checks both `fetchError` and `!existingBilling`. If either is truthy, returns `500 Failed to retrieve existing billing record` instead of silently returning null data.
+
+---
+
+### Verification
+
+```
+$ npx tsc --noEmit 2>&1 | grep -E "api-auth|billing/route|schemas"
+(no output — zero errors in modified files)
+```
+
+### Summary
+
+| ID | Severity | Status | File(s) |
+|----|----------|--------|---------|
+| INTEGRITY-1 | MEDIUM | FIXED | `src/lib/auth/api-auth.ts` |
+| INTEGRITY-2 | MEDIUM | FIXED | `src/app/api/billing/route.ts`, `src/lib/validation/schemas.ts` |
+| INTEGRITY-3 | LOW | FIXED | `src/app/api/billing/route.ts` |
+
+**Total integrity findings remediated: 3** (2 MEDIUM, 1 LOW)
+**Files modified: 3**
+**TypeScript errors introduced: 0**

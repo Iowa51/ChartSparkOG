@@ -4,6 +4,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { BillingCreateSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handleGet(context: AuthContext) {
     try {
@@ -24,7 +25,14 @@ async function handleGet(context: AuthContext) {
 async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
-        const billingData = await context.request.json();
+        const rawBody = await context.request.json();
+
+        // SEC-INTEGRITY-2: Validate input with Zod — no arbitrary fields accepted
+        const validation = validateRequest(BillingCreateSchema, rawBody);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+        }
+        const billingData = validation.data;
 
         // SEC-CODEX-5a: Idempotency-Key header to prevent duplicate submissions
         const idempotencyKey = context.request.headers.get('Idempotency-Key');
@@ -37,11 +45,14 @@ async function handlePost(context: AuthContext) {
 
             if (existing) {
                 // Return the existing record instead of creating a duplicate
-                const { data: existingBilling } = await supabase
+                const { data: existingBilling, error: fetchError } = await supabase
                     .from('billing')
                     .select('*')
                     .eq('id', existing.id)
                     .single();
+                if (fetchError || !existingBilling) {
+                    return NextResponse.json({ error: 'Failed to retrieve existing billing record' }, { status: 500 });
+                }
                 return NextResponse.json({ billing: existingBilling, duplicate: true }, { status: 200 });
             }
         }
@@ -66,8 +77,17 @@ async function handlePost(context: AuthContext) {
 
         const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
+        // SEC-INTEGRITY-2: Explicit fields only — no spread of raw client data
         const insertData: Record<string, unknown> = {
-            ...billingData,
+            patient_id: billingData.patient_id,
+            encounter_id: billingData.encounter_id ?? null,
+            service_date: billingData.service_date ?? null,
+            amount: billingData.amount,
+            cpt_code: billingData.cpt_code ?? null,
+            icd_codes: billingData.icd_codes ?? null,
+            status: billingData.status,
+            insurance_claim_id: billingData.insurance_claim_id ?? null,
+            notes: billingData.notes ?? null,
             organization_id: context.user.organizationId,
             provider_id: context.user.id,
             invoice_number: invoiceNumber,

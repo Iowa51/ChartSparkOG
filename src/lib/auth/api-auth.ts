@@ -121,12 +121,14 @@ export function withAuth<T extends AuthContext>(
         if (options?.requireMFA) {
             try {
                 const supabaseMfa = await createClient();
-                if (supabaseMfa) {
-                    const { data: { session } } = await supabaseMfa.auth.getSession();
-                    const aal = session?.aal;
-                    if (aal !== 'aal2') {
-                        return errorResponse('MFA required - please complete second factor authentication', 403);
-                    }
+                if (!supabaseMfa) {
+                    // FAIL CLOSED - deny access if Supabase client unavailable
+                    return errorResponse('MFA validation unavailable', 503);
+                }
+                const { data: { session } } = await supabaseMfa.auth.getSession();
+                const aal = session?.aal;
+                if (aal !== 'aal2') {
+                    return errorResponse('MFA required - please complete second factor authentication', 403);
                 }
             } catch (mfaError) {
                 console.error('MFA check error:', mfaError);
