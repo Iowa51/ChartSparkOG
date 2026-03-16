@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 
 interface SystemStatus {
     name: string;
@@ -20,7 +21,8 @@ interface RecentActivity {
     status: 'success' | 'warning' | 'error';
 }
 
-export async function GET(req: NextRequest) {
+async function handleGet(context: AuthContext) {
+    const req = context.request;
     const startTime = Date.now();
     const systems: SystemStatus[] = [];
     const activities: RecentActivity[] = [];
@@ -226,3 +228,7 @@ export async function GET(req: NextRequest) {
         timestamp: new Date().toISOString(),
     });
 }
+
+export const GET = withAuth(handleGet, {
+    requiredRole: ['SUPER_ADMIN'],
+});

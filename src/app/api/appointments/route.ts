@@ -8,6 +8,21 @@ import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { z } from 'zod';
+import { UUIDSchema, validateRequest } from '@/lib/validation/schemas';
+
+// Schema matching the actual DB columns used by this route
+const AppointmentPostSchema = z.object({
+    patient_id: UUIDSchema,
+    provider_id: UUIDSchema.optional(),
+    appointment_datetime: z.string().min(1, 'Appointment datetime is required').max(50),
+    appointment_type: z.string().max(100).optional(),
+    status: z.enum(['scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']).optional().default('scheduled'),
+    notes: z.string().max(2000).optional().nullable(),
+    duration_minutes: z.number().int().min(1).max(480).optional(),
+    is_telehealth: z.boolean().optional().default(false),
+    reason: z.string().max(500).optional().nullable(),
+});
 
 async function handleGet(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
@@ -72,7 +87,12 @@ async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
 
-        const appointmentData = await context.request.json();
+        const rawBody = await context.request.json();
+        const validation = validateRequest(AppointmentPostSchema, rawBody);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+        }
+        const appointmentData = validation.data;
 
         const { data: appointment, error } = await supabase
             .from('appointments')

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(xargs ls:*)",
+      "Bash(find \"C:/Users/joman/OneDrive/Desktop/ChartSparkOG\" -path \"*/migrations\" -o -path \"*/supabase/migrations\" 2>/dev/null | head -10)",
+      "Bash(ls -la \"C:/Users/joman/OneDrive/Desktop/ChartSparkOG/src/app/\\(app\\)\" 2>/dev/null || ls -la \"C:/Users/joman/OneDrive/Desktop/ChartSparkOG/src/app/\\(dashboard\\)\")",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(cd:*)"
+    ]
+  }
+}

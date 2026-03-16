@@ -54,7 +54,7 @@ export async function getAuthenticatedUser(
 
         // Check if account is active
         if (user.is_active === false) {
-            console.warn('API Auth: Deactivated account attempted API access', user.email);
+            console.warn('API Auth: Deactivated account attempted API access', user.id);
             return null;
         }
 
@@ -110,7 +110,7 @@ export function withAuth<T extends AuthContext>(
         if (options?.requiredRole && options.requiredRole.length > 0) {
             if (!options.requiredRole.includes(user.role)) {
                 // Log unauthorized access attempt
-                console.warn(`Unauthorized access attempt: User ${user.email} (${user.role}) tried to access ${request.nextUrl.pathname}`);
+                console.warn(`Unauthorized access attempt: User ${user.id} (${user.role}) tried to access ${request.nextUrl.pathname}`);
 
                 return errorResponse('Forbidden - Insufficient permissions', 403);
             }

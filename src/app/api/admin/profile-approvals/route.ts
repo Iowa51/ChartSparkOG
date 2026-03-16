@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
+const ALLOWED_PROFILE_FIELDS = ['first_name', 'last_name', 'specialty', 'phone', 'license_number'];
+
 async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
@@ -18,6 +20,11 @@ async function handlePost(context: AuthContext) {
         }
 
         if (action === 'approve') {
+            // SEC-CRITICAL-04: Validate fieldName against whitelist to prevent arbitrary column updates
+            if (!fieldName || !ALLOWED_PROFILE_FIELDS.includes(fieldName)) {
+                return NextResponse.json({ message: "Invalid or disallowed field name" }, { status: 400 });
+            }
+
             // Update the user's profile with the new value
             const updateData: Record<string, string> = {};
             updateData[fieldName] = newValue;

@@ -191,12 +191,12 @@ export default function DailyVideoCall({
                 });
 
                 call.on("participant-joined", (event) => {
-                    console.log("[Telehealth] Participant joined:", event?.participant?.user_name);
+                    if (process.env.NODE_ENV === 'development') console.log("[Telehealth] Participant joined");
                     if (isMounted && call) updateParticipants(call);
                 });
 
                 call.on("participant-left", (event) => {
-                    console.log("[Telehealth] Participant left:", event?.participant?.user_name);
+                    if (process.env.NODE_ENV === 'development') console.log("[Telehealth] Participant left");
                     if (isMounted && call) updateParticipants(call);
                 });
 
