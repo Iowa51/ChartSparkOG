@@ -223,8 +223,10 @@ async function handlePost(context: AuthContext) {
 
 export const GET = withAuth(handleGet, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

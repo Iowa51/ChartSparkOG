@@ -18,14 +18,36 @@ async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
 
-        // Get current note to check status and ownership
+        // Get current note to check status, ownership, and provider
         const { data: currentNote, error: fetchError } = await supabase
             .from('clinical_notes')
-            .select('id, organization_id, is_signed, signed_at, signed_by')
+            .select('id, organization_id, provider_id, is_signed, signed_at, signed_by')
             .eq('id', noteId)
             .single();
 
         if (fetchError) throw fetchError;
+
+        // SEC-CODEX-3: Verify the signer is the note's provider (or SUPER_ADMIN)
+        if (
+            currentNote.provider_id !== context.user.id &&
+            context.user.role !== 'SUPER_ADMIN'
+        ) {
+            await logAuditEventAsync({
+                eventType: 'UNAUTHORIZED_ACCESS',
+                userId: context.user.id,
+                userEmail: context.user.email,
+                userRole: context.user.role,
+                organizationId: context.user.organizationId ?? undefined,
+                ipAddress,
+                userAgent,
+                resourceType: 'clinical_note',
+                resourceId: noteId,
+                details: { reason: 'Non-owner sign attempt', note_provider_id: currentNote.provider_id },
+                phiAccessed: false,
+                riskLevel: 'HIGH',
+            });
+            return NextResponse.json({ error: 'Only the note provider or a super admin can sign this note' }, { status: 403 });
+        }
 
         // Verify organization access
         if (currentNote.organization_id !== context.user.organizationId) {

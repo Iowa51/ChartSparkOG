@@ -193,3 +193,120 @@ All 6 modified files pass TypeScript type-checking with no errors introduced.
 **Total findings remediated: 8** (4 CRITICAL, 4 HIGH)
 **Files modified: 7**
 **TypeScript errors introduced: 0**
+
+---
+
+## Codex Independent Review — Additional Fixes
+
+**Date:** 2026-03-16
+**Reviewer:** Independent Codex audit (not part of original 2026-03-15 audit)
+**TypeScript Check:** All modified files pass `tsc --noEmit` with zero new errors
+
+---
+
+### CODEX-1 (CRITICAL): MFA API Gap — `requireMFA` enforcement for privileged roles
+
+**Files modified:**
+
+| File | What changed | Lines |
+|---|---|---|
+| `src/lib/auth/api-auth.ts` | Added `requireMFA?: boolean` to `AuthOptions` interface | 25 |
+| `src/lib/auth/api-auth.ts` | Added MFA enforcement block: checks `session.aal === 'aal2'`; fails closed on error | 119–132 |
+| `src/app/api/admin/profile-approvals/route.ts` | Added `requireMFA: true` to `withAuth` options | 89 |
+| `src/app/api/admin/invitations/route.ts` | Added `requireMFA: true` to both GET and POST `withAuth` options | 226, 231 |
+| `src/app/api/auditor/batch-action/route.ts` | Added `requireMFA: true` to `withAuth` options | 94 |
+
+**Before:** ADMIN, SUPER_ADMIN, and AUDITOR routes only checked role — a compromised session without MFA could access privileged operations (profile approvals, invitations, batch audit actions).
+
+**After:** All three privileged routes require AAL2 (Authenticator Assurance Level 2) on the Supabase session. If MFA has not been completed, the request is rejected with `403 MFA required`. The check fails closed on error (returns 503).
+
+---
+
+### CODEX-2 (HIGH): Cross-patient PHI leak to OpenAI — Notes query missing patient filter
+
+**File:** `src/app/api/ai/smart-triage/chart-summary/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `.eq('patient_id', patient_id)` to notes query before org filter | 90 |
+
+**Before:** The notes query at line 87–92 filtered only by `organization_id`, meaning ALL notes from the entire organization were fetched and embedded in the AI prompt. A chart summary for Patient A could include clinical SOAP notes from Patients B, C, D, etc.
+
+**After:** Notes are scoped to the specific `patient_id` first, then `organization_id`. Only the target patient's clinical notes are sent to the AI model.
+
+**Medication-review route:** Verified — `src/app/api/ai/smart-triage/medication-review/route.ts` does not have a notes query. All data fetches (medications, problems, allergies) are already correctly scoped by `patient_id`. No fix needed.
+
+---
+
+### CODEX-3 (HIGH): Note signing without provider ownership check
+
+**File:** `src/app/api/notes/[id]/sign/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `provider_id` to the `clinical_notes` SELECT query | 24 |
+| Added ownership check: `currentNote.provider_id !== context.user.id` with SUPER_ADMIN bypass | 30–46 |
+| Added `UNAUTHORIZED_ACCESS` audit event (risk: HIGH) on non-owner sign attempt | 32–44 |
+
+**Before:** Any authenticated user within the same organization could sign any clinical note, regardless of whether they were the note's authoring provider. This violated clinical documentation integrity rules.
+
+**After:** Only the note's `provider_id` (the authoring clinician) can sign the note. `SUPER_ADMIN` users are exempt for administrative override scenarios. Non-owner attempts are rejected with 403 and logged as HIGH-risk audit events.
+
+---
+
+### CODEX-4 (HIGH): Telehealth room creation without appointment validation
+
+**File:** `src/app/api/telehealth/create-room/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Changed appointment lookup from soft-fail to hard-fail (returns 400 on null/error) | 21–27 |
+| Added organization ownership check on the appointment record | 29–36 |
+| Added appointment status validation — only `scheduled` or `confirmed` allowed | 38–45 |
+| Added `status` to the appointment SELECT query | 23 |
+| Removed `appointmentVerified` soft-flag variable and demo-mode fallthrough | 21–47 |
+
+**Before:** If the appointment lookup failed or returned null, the route logged a warning but continued to create a Daily.co room anyway. No status check — cancelled, completed, or no-show appointments could spawn telehealth rooms. Org check was conditional on `context.user.organizationId` being truthy.
+
+**After:** Appointment lookup failure is a hard 400 error. Organization ownership is enforced (SUPER_ADMIN exempt). Only appointments with status `scheduled` or `confirmed` can create telehealth rooms. Invalid statuses return 400 with a descriptive message.
+
+---
+
+### CODEX-5 (MEDIUM): Billing idempotency — duplicate record prevention
+
+**File:** `src/app/api/billing/route.ts`
+
+| What changed | Lines |
+|---|---|
+| Added `Idempotency-Key` header check — if present, looks up existing record by key and returns it (200) instead of creating duplicate | 28–41 |
+| Added uniqueness check on `encounter_id` + `service_date` + `organization_id` before insert — returns 409 if duplicate found | 43–55 |
+| Attaches `idempotency_key` to insert payload when header is provided | 62–64 |
+
+**Before:** Repeated POST requests (from network retries, double-clicks, or client bugs) would create duplicate billing records for the same encounter and service date. No idempotency mechanism existed.
+
+**After:** Two layers of protection:
+1. **Idempotency-Key header:** If the client sends an `Idempotency-Key` header, the server checks for an existing billing record with that key. If found, returns the existing record with `{ duplicate: true }` (HTTP 200) instead of inserting.
+2. **Encounter + date uniqueness:** Even without the header, if `encounter_id` and `service_date` are provided and a matching record already exists for the organization, the insert is blocked with HTTP 409 and the existing invoice number is returned.
+
+---
+
+### Verification
+
+```
+$ npx tsc --noEmit 2>&1 | grep -E "api-auth|profile-approvals|invitations|batch-action|chart-summary|medication-review|sign/route|create-room|billing/route"
+(no output — zero errors in modified files)
+```
+
+### Summary
+
+| ID | Severity | Status | File(s) |
+|----|----------|--------|---------|
+| CODEX-1 | CRITICAL | FIXED | `src/lib/auth/api-auth.ts`, `src/app/api/admin/profile-approvals/route.ts`, `src/app/api/admin/invitations/route.ts`, `src/app/api/auditor/batch-action/route.ts` |
+| CODEX-2 | HIGH | FIXED | `src/app/api/ai/smart-triage/chart-summary/route.ts` |
+| CODEX-3 | HIGH | FIXED | `src/app/api/notes/[id]/sign/route.ts` |
+| CODEX-4 | HIGH | FIXED | `src/app/api/telehealth/create-room/route.ts` |
+| CODEX-5 | MEDIUM | FIXED | `src/app/api/billing/route.ts` |
+
+**Total additional findings remediated: 5** (1 CRITICAL, 3 HIGH, 1 MEDIUM)
+**Files modified: 7**
+**TypeScript errors introduced: 0**

@@ -83,10 +83,11 @@ async function handler(context: AuthContext) {
                 demographics = `${age} ${patient.gender || ''} ${patient.first_name} ${patient.last_name}`.trim();
             }
 
-            // Recent notes
+            // Recent notes — SEC-CODEX-2: scope to patient to prevent cross-patient PHI leak
             const { data: notes } = await supabase
                 .from('notes')
                 .select('subjective, objective, assessment, plan, created_at')
+                .eq('patient_id', patient_id)
                 .eq('organization_id', context.user.organizationId!)
                 .order('created_at', { ascending: false })
                 .limit(5);

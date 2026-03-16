@@ -22,6 +22,7 @@ export interface AuthOptions {
     requiredRole?: string[];
     requiredFeature?: string;
     requireOrganization?: boolean;
+    requireMFA?: boolean;
 }
 
 /**
@@ -113,6 +114,24 @@ export function withAuth<T extends AuthContext>(
                 console.warn(`Unauthorized access attempt: User ${user.id} (${user.role}) tried to access ${request.nextUrl.pathname}`);
 
                 return errorResponse('Forbidden - Insufficient permissions', 403);
+            }
+        }
+
+        // SEC-CODEX-1: MFA enforcement for privileged roles
+        if (options?.requireMFA) {
+            try {
+                const supabaseMfa = await createClient();
+                if (supabaseMfa) {
+                    const { data: { session } } = await supabaseMfa.auth.getSession();
+                    const aal = session?.aal;
+                    if (aal !== 'aal2') {
+                        return errorResponse('MFA required - please complete second factor authentication', 403);
+                    }
+                }
+            } catch (mfaError) {
+                console.error('MFA check error:', mfaError);
+                // FAIL CLOSED - deny access if MFA check fails
+                return errorResponse('MFA validation unavailable', 503);
             }
         }
 

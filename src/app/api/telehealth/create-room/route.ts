@@ -19,31 +19,39 @@ async function handler(context: AuthContext) {
         }
 
         const supabase = await createClient();
-        let appointmentVerified = false;
 
-        // Try to verify appointment exists (optional for demo mode)
-        if (supabase) {
-            const { data: appointment, error: appointmentError } = await supabase
-                .from('appointments')
-                .select('id, patient_id, provider_id, organization_id')
-                .eq('id', appointmentId)
-                .single();
+        // SEC-CODEX-4: Hard-fail if appointment lookup fails or returns null
+        const { data: appointment, error: appointmentError } = await supabase
+            .from('appointments')
+            .select('id, patient_id, provider_id, organization_id, status')
+            .eq('id', appointmentId)
+            .single();
 
-            if (appointmentError || !appointment) {
-                // Log but don't fail - allow demo appointments
-                logError({ action: 'TELEHEALTH_APPOINTMENT_NOT_FOUND', error: sanitizeError(appointmentError), resourceId: appointmentId });
-            } else {
-                appointmentVerified = true;
-                // Verify organization access (unless demo mode)
-                if (context.user.organizationId &&
-                    appointment.organization_id !== context.user.organizationId &&
-                    context.user.role !== 'SUPER_ADMIN') {
-                    return NextResponse.json(
-                        { error: 'Access denied - appointment belongs to different organization' },
-                        { status: 403 }
-                    );
-                }
-            }
+        if (appointmentError || !appointment) {
+            return NextResponse.json(
+                { error: 'Appointment not found or invalid' },
+                { status: 400 }
+            );
+        }
+
+        // Verify organization ownership
+        if (
+            appointment.organization_id !== context.user.organizationId &&
+            context.user.role !== 'SUPER_ADMIN'
+        ) {
+            return NextResponse.json(
+                { error: 'Access denied - appointment belongs to different organization' },
+                { status: 403 }
+            );
+        }
+
+        // Verify appointment status is eligible for telehealth
+        const ALLOWED_STATUSES = ['scheduled', 'confirmed'];
+        if (!ALLOWED_STATUSES.includes(appointment.status)) {
+            return NextResponse.json(
+                { error: `Appointment status '${appointment.status}' is not eligible for telehealth. Must be scheduled or confirmed.` },
+                { status: 400 }
+            );
         }
 
         // SEC-005: Use non-guessable room name (UUID instead of predictable pattern)

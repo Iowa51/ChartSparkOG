@@ -86,4 +86,5 @@ async function handlePost(context: AuthContext) {
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });
