@@ -25,7 +25,7 @@ async function handler(context: AuthContext) {
 
         // Log AI PHI processing - patient clinical data sent to AI
         await logAuditEvent({
-            eventType: 'NOTE_VIEW', // AI is processing clinical notes
+            eventType: 'AI_DIAGNOSE_REQUEST', // F-024: Use correct AI-specific audit type
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,

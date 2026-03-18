@@ -4,35 +4,34 @@ import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { AITreatmentPlanSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const body = await context.request.json();
+
+        // F-025: Validate input with Zod schema
         // Support both patientData (from frontend) and patientProfile (legacy)
-        const patientProfile = body.patientData || body.patientProfile;
-        const { diagnoses } = body;
+        const normalizedBody = {
+            patientProfile: body.patientData || body.patientProfile,
+            diagnoses: body.diagnoses,
+        };
 
-        // Validation
-        if (!patientProfile || !diagnoses) {
-            console.log('[Treatment Plan] Missing data:', { hasPatientProfile: !!patientProfile, hasDiagnoses: !!diagnoses, bodyKeys: Object.keys(body) });
+        const validation = validateRequest(AITreatmentPlanSchema, normalizedBody);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Patient profile and diagnoses are required' },
+                { error: 'Validation failed', details: validation.errors },
                 { status: 400 }
             );
         }
 
-        if (typeof patientProfile === 'string' && patientProfile.length > 5000) {
-            return NextResponse.json(
-                { error: 'Patient profile too long' },
-                { status: 400 }
-            );
-        }
+        const { patientProfile, diagnoses } = validation.data;
 
-        // Log AI PHI processing - patient clinical data sent to AI
+        // F-025: Audit event without PHI (patientName removed from details)
         await logAuditEvent({
-            eventType: 'NOTE_CREATE', // Creating treatment plan
+            eventType: 'AI_TREATMENT_PLAN_REQUEST',
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -42,17 +41,12 @@ async function handler(context: AuthContext) {
             resourceType: 'ai_treatment_plan',
             details: {
                 action: 'AI_TREATMENT_PLAN_GENERATION',
-                patientName: patientProfile.name || 'Unknown',
                 diagnosisCount: Array.isArray(diagnoses) ? diagnoses.length : 1,
             },
-            phiAccessed: true, // Patient profile contains PHI
+            phiAccessed: true,
             riskLevel: 'MEDIUM',
         });
 
-        // PHI removed from console logs — audit_logs captures access for HIPAA compliance
-        console.log('[Treatment Plan] Generating plan (see audit_logs for details)');
-
-        // Use safe Azure OpenAI wrapper (falls back to demo if not configured)
         const result = await safeAzureOpenAI.generateTreatmentPlan(patientProfile, diagnoses);
 
         return NextResponse.json(result);

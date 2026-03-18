@@ -195,51 +195,49 @@ export async function searchPatients(
             status = 'active'
         } = options;
 
-        const trimmedQuery = query.trim().toLowerCase();
+        const trimmedQuery = query.trim();
+        const { from, to } = getPaginationRange(page, pageSize);
 
-        // Fetch all patients for the org (filtered by status), then search client-side
-        // This is more reliable than complex .or() filters which can fail on missing columns
-        let dbQuery = supabase
+        // Server-side search using ilike for each search term across name, email, phone
+        const pattern = `%${trimmedQuery}%`;
+
+        // Build count query with server-side filtering
+        let countQuery = supabase
             .from('patients')
-            .select('*')
-            .eq('organization_id', organizationId);
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', organizationId)
+            .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`);
 
         if (status && status !== 'all') {
-            dbQuery = dbQuery.eq('status', status);
+            countQuery = countQuery.eq('status', status);
         }
 
-        const { data: allPatients, error } = await dbQuery
-            .order('created_at', { ascending: false });
+        const { count, error: countError } = await countQuery;
+
+        if (countError) {
+            handleDatabaseError(countError, 'searchPatients:count');
+        }
+
+        // Build data query with server-side filtering and pagination
+        let dataQuery = supabase
+            .from('patients')
+            .select('*')
+            .eq('organization_id', organizationId)
+            .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`);
+
+        if (status && status !== 'all') {
+            dataQuery = dataQuery.eq('status', status);
+        }
+
+        const { data, error } = await dataQuery
+            .order('created_at', { ascending: false })
+            .range(from, to);
 
         if (error) {
             handleDatabaseError(error, 'searchPatients');
         }
 
-        // Client-side search across name, email, phone fields
-        const terms = trimmedQuery.split(/\s+/).filter(t => t.length > 0);
-
-        const filtered = (allPatients || []).filter((patient: any) => {
-            const firstName = (patient.first_name || '').toLowerCase();
-            const lastName = (patient.last_name || '').toLowerCase();
-            const email = (patient.email || '').toLowerCase();
-            const phone = (patient.phone || '').toLowerCase();
-            const fullName = `${firstName} ${lastName}`;
-
-            // Every search term must match at least one field
-            return terms.every(term =>
-                firstName.includes(term) ||
-                lastName.includes(term) ||
-                fullName.includes(term) ||
-                email.includes(term) ||
-                phone.includes(term)
-            );
-        });
-
-        // Apply pagination
-        const total = filtered.length;
-        const totalPages = Math.ceil(total / pageSize);
-        const startIdx = (page - 1) * pageSize;
-        const paginatedData = filtered.slice(startIdx, startIdx + pageSize);
+        const total = count || 0;
 
         await createAuditLog({
             event_type: 'PATIENTS_SEARCH',
@@ -251,11 +249,11 @@ export async function searchPatients(
         });
 
         return {
-            data: paginatedData,
+            data: data || [],
             count: total,
             page,
             pageSize,
-            totalPages,
+            totalPages: getTotalPages(total, pageSize),
         };
     } catch (error) {
         if (error instanceof Error && error.name !== 'DatabaseError') {

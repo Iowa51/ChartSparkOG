@@ -402,26 +402,27 @@ export async function completeNote(
  * CPT code billing rates (simplified for demo)
  * In production, this would be fetched from a fee schedule table
  */
+// F-052: All rates in CENTS (integers) — consistent with claim-generator.ts
 const CPT_RATES: Record<string, number> = {
     // Evaluation & Management
-    '99211': 25.00,
-    '99212': 50.00,
-    '99213': 75.00,
-    '99214': 110.00,
-    '99215': 150.00,
+    '99211': 2500,
+    '99212': 5000,
+    '99213': 7500,
+    '99214': 11000,
+    '99215': 15000,
     // New Patient Visits
-    '99201': 45.00,
-    '99202': 75.00,
-    '99203': 110.00,
-    '99204': 165.00,
-    '99205': 210.00,
+    '99201': 4500,
+    '99202': 7500,
+    '99203': 11000,
+    '99204': 16500,
+    '99205': 21000,
     // Psychiatric
-    '90791': 150.00, // Psychiatric diagnostic evaluation
-    '90832': 60.00,  // Psychotherapy 30 min
-    '90834': 90.00,  // Psychotherapy 45 min
-    '90837': 120.00, // Psychotherapy 60 min
+    '90791': 15000, // Psychiatric diagnostic evaluation
+    '90832': 6000,  // Psychotherapy 30 min
+    '90834': 9000,  // Psychotherapy 45 min
+    '90837': 12000, // Psychotherapy 60 min
     // Default
-    'DEFAULT': 75.00,
+    'DEFAULT': 7500,
 };
 
 /**
@@ -439,21 +440,20 @@ export function calculateBillingAmount(cptCodes: string[]): number {
 }
 
 /**
- * Calculate platform fee (default 1%)
- * In production, this would be fetched from organization settings
+ * Calculate platform fee (default 1%) — returns cents as integer
  */
 export function calculatePlatformFee(
-    billingAmount: number,
+    billingAmountCents: number,
     feePercentage: number = 1.0
 ): number {
-    return Number((billingAmount * (feePercentage / 100)).toFixed(2));
+    return Math.round(billingAmountCents * (feePercentage / 100));
 }
 
 /**
- * Calculate net amount after platform fee
+ * Calculate net amount after platform fee — returns cents as integer
  */
-export function calculateNetAmount(billingAmount: number, platformFee: number): number {
-    return Number((billingAmount - platformFee).toFixed(2));
+export function calculateNetAmount(billingAmountCents: number, platformFeeCents: number): number {
+    return billingAmountCents - platformFeeCents;
 }
 
 // =============================================

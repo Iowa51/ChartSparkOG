@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { decryptPHI } from '@/lib/security/encryption';
 
 /**
  * Office Ally SFTP Adapter
@@ -117,19 +118,9 @@ export async function getOfficeAllyAdapter(organizationId: string, supabase: any
         host: config.sftp_host || 'ftp10officeally.com',
         port: 22,
         username: config.sftp_username,
-        password: decrypt(config.sftp_password), // Decrypt stored credential
+        password: await decryptPHI(config.sftp_password), // F-035: Real AES-256-GCM decryption
         path: config.sftp_path || '/inbound'
     }, false);
 }
 
-/**
- * Decryption Placeholder
- * In a real production environment, this would use a HSM or 
- * environment-stored KMS key to decrypt clearinghouse passwords.
- */
-function decrypt(encryptedValue: string): string {
-    if (!encryptedValue) return '';
-    // Mock decryption logic for POC
-    console.log('[Security] Decrypting clearinghouse credential...');
-    return Buffer.from(encryptedValue, 'base64').toString('ascii');
-}
+// F-035: Removed fake base64 decrypt() — now uses decryptPHI with real AES-256-GCM

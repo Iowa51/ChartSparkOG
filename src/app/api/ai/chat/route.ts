@@ -32,7 +32,7 @@ async function handler(context: AuthContext) {
 
         // Log AI chat - may contain PHI in questions
         await logAuditEvent({
-            eventType: 'NOTE_VIEW', // User querying AI about clinical data
+            eventType: 'AI_CHAT_REQUEST', // F-024: Use correct AI-specific audit type
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,

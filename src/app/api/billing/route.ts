@@ -4,7 +4,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
-import { BillingCreateSchema, validateRequest } from '@/lib/validation/schemas';
+import { BillingCreateSchema, PaginationSchema, validateRequest } from '@/lib/validation/schemas';
 import { logAuditEventAsync } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
@@ -12,11 +12,33 @@ async function handleGet(context: AuthContext) {
     try {
         const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const supabase = await createClient();
+
+        // F-039: Parse pagination parameters
+        const url = new URL(context.request.url);
+        const pageParam = url.searchParams.get('page') ?? '1';
+        const limitParam = url.searchParams.get('limit') ?? '20';
+        const pagination = PaginationSchema.safeParse({ page: pageParam, limit: limitParam });
+        const page = pagination.success ? pagination.data.page : 1;
+        const limit = pagination.success ? pagination.data.limit : 20;
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        // Get total count
+        const { count, error: countError } = await supabase
+            .from('billing')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', context.user.organizationId);
+
+        if (countError) throw countError;
+
+        // Get paginated data
         const { data: billing, error } = await supabase.from('billing').select(`
       *,
       patient:patients(id, first_name, last_name),
       provider:profiles(id, first_name, last_name)
-    `).eq('organization_id', context.user.organizationId).order('service_date', { ascending: false });
+    `).eq('organization_id', context.user.organizationId)
+            .order('service_date', { ascending: false })
+            .range(from, to);
 
         if (error) throw error;
 
@@ -35,7 +57,15 @@ async function handleGet(context: AuthContext) {
             riskLevel: 'LOW',
         });
 
-        return NextResponse.json({ billing });
+        return NextResponse.json({
+            billing,
+            pagination: {
+                page,
+                limit,
+                total: count || 0,
+                totalPages: Math.ceil((count || 0) / limit),
+            },
+        });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch billing' }, { status: 500 });
     }
@@ -77,23 +107,8 @@ async function handlePost(context: AuthContext) {
             }
         }
 
-        // SEC-CODEX-5b: Uniqueness check on encounter_id + service_date to prevent duplicate billing
-        if (billingData.encounter_id && billingData.service_date) {
-            const { data: duplicateBilling } = await supabase
-                .from('billing')
-                .select('id, invoice_number')
-                .eq('encounter_id', billingData.encounter_id)
-                .eq('service_date', billingData.service_date)
-                .eq('organization_id', context.user.organizationId)
-                .maybeSingle();
-
-            if (duplicateBilling) {
-                return NextResponse.json(
-                    { error: 'A billing record already exists for this encounter and service date', existing_invoice: duplicateBilling.invoice_number },
-                    { status: 409 }
-                );
-            }
-        }
+        // F-012: Removed TOCTOU SELECT-then-INSERT duplicate check.
+        // Duplicate prevention relies solely on DB UNIQUE constraint + 23505 error handler below.
 
         const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 

@@ -1,7 +1,108 @@
 // src/lib/validation/schemas.ts
 // SEC-007: Centralized Zod validation schemas for API routes
+// F-030: Single canonical validation module (consolidated from security/validation.ts and utils/validation.ts)
 
 import { z } from 'zod';
+
+// =============================================
+// SANITIZATION (from security/validation.ts)
+// =============================================
+
+/** Sanitize string input - remove dangerous characters */
+export function sanitizeInput(input: string): string {
+    if (typeof input !== 'string') return '';
+    let sanitized = input.trim();
+    sanitized = sanitized.replace(/\0/g, '');
+    sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    sanitized = sanitized.replace(/javascript:/gi, '');
+    sanitized = sanitized.replace(/on\w+\s*=/gi, '');
+    sanitized = sanitized.replace(/(['";]--)/g, '');
+    return sanitized;
+}
+
+/** Sanitize object recursively */
+export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+        if (typeof value === 'string') {
+            result[key] = sanitizeInput(value);
+        } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+            result[key] = sanitizeObject(value);
+        } else if (Array.isArray(value)) {
+            result[key] = value.map(item =>
+                typeof item === 'string' ? sanitizeInput(item) :
+                    typeof item === 'object' ? sanitizeObject(item) : item
+            );
+        } else {
+            result[key] = value;
+        }
+    }
+    return result as T;
+}
+
+// =============================================
+// FORM VALIDATION HELPERS (from utils/validation.ts)
+// =============================================
+
+export function isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+export function isValidUrl(url: string): boolean {
+    try { new URL(url); return true; } catch { return false; }
+}
+
+export function isValidPhone(phone: string): boolean {
+    return /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/.test(phone);
+}
+
+export function isValidDate(dateString: string): boolean {
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date.getTime());
+}
+
+export function isFutureDate(dateString: string): boolean {
+    if (!isValidDate(dateString)) return false;
+    return new Date(dateString) > new Date();
+}
+
+export interface FieldState {
+    value: string;
+    error: string | null;
+    touched: boolean;
+}
+
+export function createFieldState(initialValue = ''): FieldState {
+    return { value: initialValue, error: null, touched: false };
+}
+
+export function validateForm(
+    values: Record<string, string>,
+    rules: Record<string, ((value: string) => string | null)[]>
+): { isValid: boolean; errors: Record<string, string> } {
+    const errors: Record<string, string> = {};
+    for (const [field, fieldValidators] of Object.entries(rules)) {
+        const value = values[field] || '';
+        for (const validate of fieldValidators) {
+            const error = validate(value);
+            if (error) { errors[field] = error; break; }
+        }
+    }
+    return { isValid: Object.keys(errors).length === 0, errors };
+}
+
+export const validators = {
+    required: (message = 'This field is required') => (value: string) =>
+        (value !== null && value !== undefined && value.trim() !== '') ? null : message,
+    email: (message = 'Please enter a valid email') => (value: string) =>
+        !value || isValidEmail(value) ? null : message,
+    url: (message = 'Please enter a valid URL') => (value: string) =>
+        !value || isValidUrl(value) ? null : message,
+    minLength: (min: number, message?: string) => (value: string) =>
+        !value || value.length >= min ? null : (message || `Must be at least ${min} characters`),
+    maxLength: (max: number, message?: string) => (value: string) =>
+        value.length <= max ? null : (message || `Must be no more than ${max} characters`),
+};
 
 // Common reusable schemas
 export const UUIDSchema = z.string().uuid('Invalid ID format');
