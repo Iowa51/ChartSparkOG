@@ -208,6 +208,6 @@ async function handleDelete(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet);
-export const PATCH = withAuth(handlePatch);
-export const DELETE = withAuth(handleDelete, { requiredRole: ['ADMIN', 'SUPER_ADMIN'], requireOrganization: true });
+export const GET = withAuth(handleGet, { requireMFA: true });
+export const PATCH = withAuth(handlePatch, { requireMFA: true });
+export const DELETE = withAuth(handleDelete, { requiredRole: ['ADMIN', 'SUPER_ADMIN'], requireOrganization: true, requireMFA: true });

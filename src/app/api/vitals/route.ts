@@ -54,6 +54,8 @@ async function handleGet(context: AuthContext) {
         let query = supabase
             .from('vitals')
             .select('*')
+            // F-033: Scope to user's organization to prevent cross-org PHI access
+            .eq('organization_id', context.user.organizationId)
             .order('recorded_at', { ascending: false })
             .limit(limit);
 
@@ -207,8 +209,10 @@ async function handlePost(context: AuthContext) {
 
 export const GET = withAuth(handleGet, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

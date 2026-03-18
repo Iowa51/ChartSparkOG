@@ -5,9 +5,12 @@ import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { BillingCreateSchema, validateRequest } from '@/lib/validation/schemas';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handleGet(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const supabase = await createClient();
         const { data: billing, error } = await supabase.from('billing').select(`
       *,
@@ -16,6 +19,22 @@ async function handleGet(context: AuthContext) {
     `).eq('organization_id', context.user.organizationId).order('service_date', { ascending: false });
 
         if (error) throw error;
+
+        // F-034: Audit log billing record access (PHI under HIPAA)
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_VIEW',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'billing',
+            details: { action: 'BILLING_LIST_VIEW', recordCount: billing?.length || 0 },
+            phiAccessed: true,
+            riskLevel: 'LOW',
+        });
+
         return NextResponse.json({ billing });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to fetch billing' }, { status: 500 });
@@ -24,6 +43,7 @@ async function handleGet(context: AuthContext) {
 
 async function handlePost(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const supabase = await createClient();
         const rawBody = await context.request.json();
 
@@ -129,6 +149,23 @@ async function handlePost(context: AuthContext) {
             }
             throw error;
         }
+
+        // F-034: Audit log billing record creation (PHI under HIPAA)
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_CREATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'billing',
+            resourceId: billing.id,
+            details: { action: 'BILLING_CREATE', patient_id: billingData.patient_id, invoice_number: invoiceNumber },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
+
         return NextResponse.json({ billing }, { status: 201 });
     } catch (error) {
         return NextResponse.json({ error: 'Failed to create billing' }, { status: 500 });

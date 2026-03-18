@@ -1,6 +1,7 @@
-// HIPAA-compliant audit logging — server components and API routes only
+// F-028: Consolidated HIPAA-compliant audit logging service
+// Uses service role client to bypass RLS (audit logs should always be written)
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 
 export type AuditEventType =
     | 'LOGIN_SUCCESS'
@@ -66,7 +67,14 @@ export type AuditEventType =
     | 'AI_RECOMMENDATION_REQUEST'
     | 'AI_TREATMENT_PLAN_REQUEST'
     | 'AI_CHAT_REQUEST'
-    | 'AI_GENERATE_NOTE_REQUEST';
+    | 'AI_GENERATE_NOTE_REQUEST'
+    // Billing events (F-028: consolidated from managed-billing/audit-logger)
+    | 'BILLING_RECORD_VIEW'
+    | 'BILLING_RECORD_CREATE'
+    | 'BILLING_CLAIM_GENERATED'
+    | 'BILLING_CLAIM_SUBMITTED'
+    | 'BILLING_CLAIM_STATUS_CHANGED'
+    | 'BILLING_PAYMENT_RECEIVED';
 
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -167,10 +175,17 @@ export function logAuditEventAsync(entry: AuditLogEntry): void {
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
     try {
-        const supabase = await createClient();
+        // F-028: Use service role client to bypass RLS (audit logs must always be written)
+        let supabase;
+        try {
+            supabase = createServiceRoleClient();
+        } catch {
+            // In demo mode or missing config, just log to console
+            console.log('[AUDIT]', entry.eventType, sanitizeDetails(entry.details || {}));
+            return;
+        }
 
         if (!supabase) {
-            // In demo mode, just log to console
             console.log('[AUDIT]', entry.eventType, sanitizeDetails(entry.details || {}));
             return;
         }
@@ -326,7 +341,12 @@ export async function queryAuditLogs(options: {
     limit?: number;
     offset?: number;
 }): Promise<AuditLogEntry[]> {
-    const supabase = await createClient();
+    let supabase;
+    try {
+        supabase = createServiceRoleClient();
+    } catch {
+        return [];
+    }
 
     if (!supabase) {
         return [];

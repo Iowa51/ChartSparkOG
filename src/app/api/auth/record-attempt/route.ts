@@ -4,15 +4,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { LoginAttemptSchema, validateRequest } from '@/lib/validation/schemas';
+
+// F-020: In-memory IP-based rate limiting for record-attempt endpoint
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 20; // max 20 requests per IP per minute
+
+function isRateLimited(ip: string): boolean {
+    const now = Date.now();
+    const entry = rateLimitMap.get(ip);
+    if (!entry || now > entry.resetAt) {
+        rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+        return false;
+    }
+    entry.count++;
+    return entry.count > RATE_LIMIT_MAX;
+}
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { email, success } = body;
+        const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+            request.headers.get('x-real-ip') ||
+            'unknown';
 
-        if (!email || typeof success !== 'boolean') {
-            return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
+        // F-020: Rate limit by IP to prevent lockout flooding
+        if (isRateLimited(ipAddress)) {
+            return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
         }
+
+        const body = await request.json();
+
+        // F-020: Validate email format with Zod
+        const validation = validateRequest(LoginAttemptSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Invalid data', details: validation.errors }, { status: 400 });
+        }
+        const { email, success } = validation.data;
 
         // SEC-REMEDIATION: Use service role client for recording attempts
         // This bypasses RLS since we need to record before user is authenticated
@@ -30,9 +58,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ recorded: false, error: 'Service unavailable' });
         }
 
-        const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-            request.headers.get('x-real-ip') ||
-            'unknown';
         const userAgent = request.headers.get('user-agent') || 'unknown';
 
         // Record the attempt in login_attempts table

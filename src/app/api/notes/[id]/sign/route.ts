@@ -154,4 +154,4 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const POST = withAuth(handlePost);
+export const POST = withAuth(handlePost, { requireMFA: true });

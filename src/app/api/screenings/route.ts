@@ -4,8 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
-
-const VALID_INSTRUMENTS = ['PHQ9', 'GAD7', 'CSSRS', 'AUDITC', 'DAST10', 'MDQ', 'PCL5'] as const;
+import { ScreeningCreateSchema, validateRequest } from '@/lib/validation/schemas';
 
 // GET /api/screenings?patient_id=...&instrument=...&limit=6
 async function handleGet(context: AuthContext) {
@@ -77,25 +76,20 @@ async function handlePost(context: AuthContext) {
 
     try {
         const body = await context.request.json();
+
+        // F-011: Validate with Zod schema (UUID, bounded score, typed item_responses, size limits)
+        const validation = validateRequest(ScreeningCreateSchema, body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
+        }
         const {
             patient_id, encounter_id, instrument,
             total_score, severity, item_responses,
             clinical_notes, risk_flags
-        } = body;
-
-        if (!patient_id || !instrument || total_score === undefined || !item_responses) {
-            return NextResponse.json(
-                { error: 'patient_id, instrument, total_score, and item_responses are required' },
-                { status: 400 }
-            );
-        }
-
-        if (!VALID_INSTRUMENTS.includes(instrument)) {
-            return NextResponse.json(
-                { error: `Invalid instrument. Must be one of: ${VALID_INSTRUMENTS.join(', ')}` },
-                { status: 400 }
-            );
-        }
+        } = validation.data;
 
         const supabase = await createClient();
         if (!supabase) {
@@ -171,8 +165,10 @@ async function handlePost(context: AuthContext) {
 
 export const GET = withAuth(handleGet, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

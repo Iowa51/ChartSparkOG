@@ -180,4 +180,5 @@ function getDemoPrescribingCheckResponse(medication: string, dose: string): Pres
 
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

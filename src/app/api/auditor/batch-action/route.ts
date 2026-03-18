@@ -19,6 +19,7 @@ async function handlePost(context: AuthContext) {
 
         if (action === 'approve') {
             // Batch approve submissions
+            // F-027: Scope to user's organization to prevent cross-org manipulation
             const { error: updateError } = await supabase
                 .from('submissions')
                 .update({
@@ -26,7 +27,8 @@ async function handlePost(context: AuthContext) {
                     updated_at: new Date().toISOString(),
                 })
                 .in('id', submissionIds)
-                .eq('status', 'pending_audit'); // Only approve pending ones
+                .eq('status', 'pending_audit')
+                .eq('organization_id', context.user.organizationId);
 
             if (updateError) {
                 logError({ action: 'ERROR_APPROVING_SUBMISSIONS', error: sanitizeError(updateError) });
@@ -43,6 +45,7 @@ async function handlePost(context: AuthContext) {
             }
 
             // Update submissions to flagged status
+            // F-027: Scope to user's organization to prevent cross-org manipulation
             const { error: updateError } = await supabase
                 .from('submissions')
                 .update({
@@ -50,7 +53,8 @@ async function handlePost(context: AuthContext) {
                     updated_at: new Date().toISOString(),
                 })
                 .in('id', submissionIds)
-                .eq('status', 'pending_audit');
+                .eq('status', 'pending_audit')
+                .eq('organization_id', context.user.organizationId);
 
             if (updateError) {
                 logError({ action: 'ERROR_FLAGGING_SUBMISSIONS', error: sanitizeError(updateError) });

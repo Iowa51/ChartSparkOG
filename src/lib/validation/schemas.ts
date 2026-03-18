@@ -142,6 +142,19 @@ export const BillingCreateSchema = z.object({
     notes: z.string().max(2000).optional().nullable(),
 });
 
+// Screening schemas (F-011)
+export const ScreeningCreateSchema = z.object({
+    patient_id: UUIDSchema,
+    encounter_id: UUIDSchema.optional().nullable(),
+    instrument: z.enum(['PHQ9', 'GAD7', 'CSSRS', 'AUDITC', 'DAST10', 'MDQ', 'PCL5']),
+    total_score: z.number().int().min(0).max(100, 'Score must be between 0 and 100'),
+    severity: z.enum(['none', 'minimal', 'mild', 'moderate', 'moderately_severe', 'severe']).optional().nullable(),
+    item_responses: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()]))
+        .refine(obj => JSON.stringify(obj).length <= 10000, 'item_responses payload too large'),
+    clinical_notes: z.string().max(5000).optional().nullable(),
+    risk_flags: z.array(z.string().max(200)).max(20).optional().default([]),
+});
+
 // AI Chat schemas
 export const AIChatSchema = z.object({
     message: z.string().min(1, 'Message required').max(8000, 'Message too long'),

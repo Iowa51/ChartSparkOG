@@ -154,5 +154,5 @@ async function handleDelete(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet, { requireOrganization: true });
-export const DELETE = withAuth(handleDelete, { requireOrganization: true });
+export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
+export const DELETE = withAuth(handleDelete, { requireOrganization: true, requireMFA: true });

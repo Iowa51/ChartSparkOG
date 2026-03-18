@@ -33,15 +33,21 @@ export async function POST(request: NextRequest) {
         try {
             supabase = createServiceRoleClient();
         } catch (err: unknown) {
-            // Service role key not configured - allow login but log warning
-            console.warn('Lockout check: Service role client not configured.', err);
-            return NextResponse.json({ locked: false, remainingAttempts: 5 });
+            // F-019: FAIL CLOSED - infrastructure unavailable
+            logError({ action: 'LOCKOUT_SERVICE_ROLE_UNAVAILABLE', error: sanitizeError(err) });
+            return NextResponse.json(
+                { locked: true, error: 'Security infrastructure unavailable' },
+                { status: 503 }
+            );
         }
 
         if (!supabase) {
-            // Missing credentials - allow login attempts
-            console.warn('Lockout check: Supabase not configured, allowing login');
-            return NextResponse.json({ locked: false, remainingAttempts: 5 });
+            // F-019: FAIL CLOSED - infrastructure unavailable
+            logError({ action: 'LOCKOUT_SUPABASE_UNAVAILABLE', error: 'Service role client returned null' });
+            return NextResponse.json(
+                { locked: true, error: 'Security infrastructure unavailable' },
+                { status: 503 }
+            );
         }
 
         // Get recent failed attempts

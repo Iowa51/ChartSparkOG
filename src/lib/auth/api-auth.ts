@@ -5,6 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateOrigin } from '@/lib/security/csrf';
 
+// F-022: HIPAA-compliant server-side session timeout (15 minutes)
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
+
 export interface AuthenticatedUser {
     id: string;
     email: string;
@@ -45,7 +48,7 @@ export async function getAuthenticatedUser(
 
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, email, role, organization_id, is_active')
+            .select('id, email, role, organization_id, is_active, last_activity_at')
             .eq('id', authUser.id)
             .single();
 
@@ -58,6 +61,23 @@ export async function getAuthenticatedUser(
             console.warn('API Auth: Deactivated account attempted API access', user.id);
             return null;
         }
+
+        // F-022: Server-side session timeout enforcement (HIPAA 15-min inactivity)
+        if (user.last_activity_at) {
+            const lastActivity = new Date(user.last_activity_at).getTime();
+            if (Date.now() - lastActivity > SESSION_TIMEOUT_MS) {
+                console.warn('API Auth: Session timed out for user', user.id);
+                return null;
+            }
+        }
+
+        // F-022: Update last_activity_at (fire-and-forget, don't block the request)
+        supabase
+            .from('users')
+            .update({ last_activity_at: new Date().toISOString() })
+            .eq('id', user.id)
+            .then(() => {})
+            .catch(() => {});
 
         return {
             id: user.id,
