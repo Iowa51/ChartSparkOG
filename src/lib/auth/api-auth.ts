@@ -37,16 +37,16 @@ export async function getAuthenticatedUser(
             return null;
         }
 
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-        if (sessionError || !session) {
+        if (authError || !authUser) {
             return null;
         }
 
         const { data: user, error: userError } = await supabase
             .from('users')
             .select('id, email, role, organization_id, is_active')
-            .eq('id', session.user.id)
+            .eq('id', authUser.id)
             .single();
 
         if (userError || !user) {

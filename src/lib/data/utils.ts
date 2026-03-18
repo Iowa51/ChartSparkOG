@@ -4,6 +4,7 @@
  */
 
 import { DatabaseError, NotFoundError, UnauthorizedError, ValidationError } from '../types/database';
+import { logAuditEvent, getRiskLevel } from '../security/audit-log';
 
 // =============================================
 // PHI SANITIZATION
@@ -263,17 +264,19 @@ export interface AuditLogEntry {
 
 /**
  * Create audit log entry (to be called by data layer functions)
- * This is a stub - actual implementation would insert into audit_logs table
+ * Delegates to the real logAuditEvent from security/audit-log.ts
  */
 export async function createAuditLog(entry: AuditLogEntry): Promise<void> {
-    // In production, this would insert into the audit_logs table
-    // For now, just log to console in development
-    if (process.env.NODE_ENV === 'development') {
-        safeLogger.info(`[AUDIT] ${entry.event_type}`);
-    }
-
-    // TODO: Implement actual audit log insertion
-    // await supabase.from('audit_logs').insert(entry);
+    await logAuditEvent({
+        eventType: entry.event_type as any,
+        userId: entry.user_id,
+        organizationId: entry.organization_id,
+        resourceType: entry.resource_type,
+        resourceId: entry.resource_id,
+        details: entry.details,
+        phiAccessed: entry.phi_accessed,
+        riskLevel: entry.risk_level || getRiskLevel(entry.event_type as any),
+    });
 }
 
 // =============================================

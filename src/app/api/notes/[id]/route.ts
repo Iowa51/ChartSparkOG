@@ -175,6 +175,7 @@ async function handleDelete(context: AuthContext) {
             .from('clinical_notes')
             .delete()
             .eq('id', id)
+            .eq('organization_id', context.user.organizationId)
             .select();
 
         if (error) throw error;
@@ -209,4 +210,4 @@ async function handleDelete(context: AuthContext) {
 
 export const GET = withAuth(handleGet);
 export const PATCH = withAuth(handlePatch);
-export const DELETE = withAuth(handleDelete);
+export const DELETE = withAuth(handleDelete, { requiredRole: ['ADMIN', 'SUPER_ADMIN'], requireOrganization: true });

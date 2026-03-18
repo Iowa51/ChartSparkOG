@@ -54,27 +54,26 @@ export async function updateSession(request: NextRequest) {
     const isProduction = process.env.NODE_ENV === 'production';
     const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-    // SEC-REMEDIATION: Allow demo mode in production ONLY if Supabase is configured
-    // This enables demo features while still having real authentication
-    if (isProduction && process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (!supabaseUrl || !supabaseAnonKey)) {
-        console.error('SECURITY: Demo mode requires Supabase configuration in production');
+    // SEC-F018: Block demo mode entirely in production
+    if (isProduction && isDemoMode) {
+        console.error('CRITICAL: Demo mode is forbidden in production. Set NEXT_PUBLIC_DEMO_MODE=false or remove it.');
         return NextResponse.json(
-            { error: 'Security configuration error' },
+            { error: 'Server configuration error - demo mode not allowed in production' },
             { status: 500 }
         );
     }
 
     // SEC-003: Fail closed in production if Supabase not configured
     if (!supabaseUrl || !supabaseAnonKey) {
-        if (isProduction && !isDemoMode) {
+        if (isProduction) {
             console.error('CRITICAL: Supabase environment variables missing in production');
             return NextResponse.json(
                 { error: 'Server configuration error' },
                 { status: 500 }
             );
         }
-        // Allow in development/demo mode
-        console.warn('WARNING: Supabase not configured, allowing traffic in development/demo');
+        // Allow in development only
+        console.warn('WARNING: Supabase not configured, allowing traffic in development');
         return supabaseResponse;
     }
 
