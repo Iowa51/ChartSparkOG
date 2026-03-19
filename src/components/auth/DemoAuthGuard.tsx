@@ -11,16 +11,16 @@ export function DemoAuthGuard({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const checkAuth = async () => {
-            // Priority 2: Check Real Supabase Session
+            // C6: Use getUser() for server-side verification (getSession() is client-only and spoofable)
             if (supabase) {
                 try {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (session) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
                         setIsAuthorized(true);
                         return;
                     }
-                } catch (e) {
-                    console.error("Auth check failed", e);
+                } catch {
+                    // Auth check failed — fall through to redirect
                 }
             }
 
