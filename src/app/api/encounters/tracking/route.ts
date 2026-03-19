@@ -74,4 +74,4 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const POST = withAuth(handlePost, { requireOrganization: true });
+export const POST = withAuth(handlePost, { requireOrganization: true, requireMFA: true });

@@ -140,5 +140,5 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet, { requireOrganization: true });
-export const POST = withAuth(handlePost, { requireOrganization: true });
+export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
+export const POST = withAuth(handlePost, { requireOrganization: true, requireMFA: true });

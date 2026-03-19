@@ -84,4 +84,4 @@ function formatEventType(eventType: string): string {
     return mappings[eventType] || eventType.replace('EHR_', '').replace(/_/g, ' ');
 }
 
-export const GET = withAuth(handleGet);
+export const GET = withAuth(handleGet, { requireMFA: true });

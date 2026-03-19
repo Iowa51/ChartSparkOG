@@ -133,8 +133,9 @@ async function handlePut(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet);
+export const GET = withAuth(handleGet, { requireMFA: true });
 export const PUT = withAuth(handlePut, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
-    requireOrganization: true
+    requireOrganization: true,
+    requireMFA: true
 });

@@ -10,6 +10,7 @@ import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEventAsync } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { decryptPHI } from '@/lib/security/encryption';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -38,17 +39,18 @@ async function handlePost(context: AuthContext) {
             });
         }
 
-        // Test connection based on clearinghouse type
+        // H3: Test connection — decrypt credentials before use, never log them
         let testResult: { success: boolean; error?: string } = { success: false, error: 'Unknown clearinghouse' };
 
         try {
             switch (clearinghouse) {
                 case 'claim_md':
                     if (config.api_key_encrypted) {
+                        const apiKey = await decryptPHI(config.api_key_encrypted);
                         const response = await fetch('https://api.claim.md/api/v2/status', {
                             method: 'GET',
                             headers: {
-                                'Authorization': `Basic ${Buffer.from(`${config.api_key_encrypted}:`).toString('base64')}`,
+                                'Authorization': `Basic ${Buffer.from(`${apiKey}:`).toString('base64')}`,
                             },
                         });
                         testResult = { success: response.ok, error: response.ok ? undefined : 'API test failed' };
@@ -59,13 +61,15 @@ async function handlePost(context: AuthContext) {
 
                 case 'availity':
                     if (config.api_key_encrypted && config.api_secret_encrypted) {
+                        const clientId = await decryptPHI(config.api_key_encrypted);
+                        const clientSecret = await decryptPHI(config.api_secret_encrypted);
                         const response = await fetch('https://api.availity.com/v1/token', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                             body: new URLSearchParams({
                                 grant_type: 'client_credentials',
-                                client_id: config.api_key_encrypted,
-                                client_secret: config.api_secret_encrypted,
+                                client_id: clientId,
+                                client_secret: clientSecret,
                             }),
                         });
                         testResult = { success: response.ok, error: response.ok ? undefined : 'OAuth test failed' };
@@ -77,8 +81,8 @@ async function handlePost(context: AuthContext) {
                 case 'office_ally':
                 default:
                     if (config.sftp_host) {
+                        // H3: Do not log SFTP host or credentials
                         testResult = { success: true, error: undefined };
-                        console.log('[Test] Would test SFTP connection to:', config.sftp_host);
                     } else {
                         testResult = { success: false, error: 'SFTP host not configured' };
                     }

@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { decryptPHI } from '@/lib/security/encryption';
 
 export type ClearinghouseType =
     | 'office_ally'
@@ -225,10 +226,13 @@ async function submitToClaimMD(
             return { success: false, error: 'Claim.MD credentials not configured' };
         }
 
+        // H3: Decrypt credentials before use
+        const apiKey = await decryptPHI(config.api_key_encrypted!);
+        const apiSecret = await decryptPHI(config.api_secret_encrypted!);
         const response = await fetch('https://api.claim.md/api/v2/claims', {
             method: 'POST',
             headers: {
-                'Authorization': `Basic ${Buffer.from(`${config.api_key_encrypted}:${config.api_secret_encrypted}`).toString('base64')}`,
+                'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -267,6 +271,9 @@ async function submitToAvaility(
             return { success: false, error: 'Availity credentials not configured' };
         }
 
+        // H3: Decrypt credentials before use
+        const clientId = await decryptPHI(config.api_key_encrypted!);
+        const clientSecret = await decryptPHI(config.api_secret_encrypted!);
         // Get OAuth token
         const tokenResponse = await fetch('https://api.availity.com/v1/token', {
             method: 'POST',
@@ -275,8 +282,8 @@ async function submitToAvaility(
             },
             body: new URLSearchParams({
                 grant_type: 'client_credentials',
-                client_id: config.api_key_encrypted,
-                client_secret: config.api_secret_encrypted,
+                client_id: clientId,
+                client_secret: clientSecret,
             }),
         });
 
@@ -324,8 +331,7 @@ async function submitViaSFTP(
         // SFTP submission requires ssh2-sftp-client package
         // This is a placeholder that marks for manual upload
 
-        console.log('[SFTP] Would upload claim:', claim.claim_number);
-        console.log('[SFTP] Host:', config.sftp_host);
+        // H3: Do not log SFTP credentials or host details
 
         // In production:
         // import SftpClient from 'ssh2-sftp-client';

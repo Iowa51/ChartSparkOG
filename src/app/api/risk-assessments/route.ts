@@ -194,7 +194,7 @@ export const GET = withAuth(async (context: AuthContext) => {
         return NextResponse.json({ error: 'Database unavailable' }, { status: 503 });
     }
     return handleGet({ ...context, supabase } as RiskAssessmentContext);
-});
+}, { requireMFA: true });
 
 export const POST = withAuth(async (context: AuthContext) => {
     const supabase = await createClient();
@@ -202,4 +202,4 @@ export const POST = withAuth(async (context: AuthContext) => {
         return NextResponse.json({ error: 'Database unavailable' }, { status: 503 });
     }
     return handlePost({ ...context, supabase } as RiskAssessmentContext);
-});
+}, { requireMFA: true });
