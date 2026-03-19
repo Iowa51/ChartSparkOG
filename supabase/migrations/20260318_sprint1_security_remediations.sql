@@ -81,6 +81,7 @@ CREATE POLICY "prompts_select" ON ai_prompts
 -- CLAIM_LINES: enable RLS and scope through parent billing_claims
 ALTER TABLE claim_lines ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "claim_lines_select" ON claim_lines;
 CREATE POLICY "claim_lines_select" ON claim_lines
   FOR SELECT TO authenticated
   USING (
@@ -91,6 +92,7 @@ CREATE POLICY "claim_lines_select" ON claim_lines
     )
   );
 
+DROP POLICY IF EXISTS "claim_lines_insert" ON claim_lines;
 CREATE POLICY "claim_lines_insert" ON claim_lines
   FOR INSERT TO authenticated
   WITH CHECK (
@@ -101,6 +103,7 @@ CREATE POLICY "claim_lines_insert" ON claim_lines
     )
   );
 
+DROP POLICY IF EXISTS "claim_lines_update" ON claim_lines;
 CREATE POLICY "claim_lines_update" ON claim_lines
   FOR UPDATE TO authenticated
   USING (
@@ -134,14 +137,14 @@ BEGIN
       RAISE EXCEPTION 'Users cannot change their own role';
     END IF;
     -- Non-self updates: only ADMIN/SUPER_ADMIN can change roles
-    IF (SELECT role FROM public.users WHERE id = auth.uid()) NOT IN ('ADMIN', 'SUPER_ADMIN') THEN
+    IF (SELECT role FROM public.profiles WHERE id = auth.uid()) NOT IN ('ADMIN', 'SUPER_ADMIN') THEN
       RAISE EXCEPTION 'Only administrators can change user roles';
     END IF;
   END IF;
 
   -- Block changes to organization_id for non-super-admins
   IF NEW.organization_id IS DISTINCT FROM OLD.organization_id THEN
-    IF (SELECT role FROM public.users WHERE id = auth.uid()) != 'SUPER_ADMIN' THEN
+    IF (SELECT role FROM public.profiles WHERE id = auth.uid()) != 'SUPER_ADMIN' THEN
       RAISE EXCEPTION 'Only super administrators can change organization assignments';
     END IF;
   END IF;
@@ -150,9 +153,9 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_prevent_self_role_escalation ON users;
+DROP TRIGGER IF EXISTS trg_prevent_self_role_escalation ON profiles;
 CREATE TRIGGER trg_prevent_self_role_escalation
-  BEFORE UPDATE ON users
+  BEFORE UPDATE ON profiles
   FOR EACH ROW
   EXECUTE FUNCTION public.prevent_self_role_escalation();
 

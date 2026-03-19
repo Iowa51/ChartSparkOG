@@ -4,13 +4,13 @@
 
 DO $$
 BEGIN
-    -- Add unique constraint on encounter_id + service_date + organization_id
+    -- Add unique constraint on service_date + organization_id
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
-        WHERE conname = 'billing_encounter_service_date_org_unique'
+        WHERE conname = 'billing_service_date_org_unique'
     ) THEN
         ALTER TABLE public.billing
-            ADD CONSTRAINT billing_encounter_service_date_org_unique
-            UNIQUE (encounter_id, service_date, organization_id);
+            ADD CONSTRAINT billing_service_date_org_unique
+            UNIQUE (service_date, organization_id);
     END IF;
 END $$;
