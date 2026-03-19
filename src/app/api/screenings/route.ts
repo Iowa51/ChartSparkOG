@@ -29,9 +29,19 @@ async function handleGet(context: AuthContext) {
             return NextResponse.json({ screenings: [], isDemo: true });
         }
 
+        // C3: Enforce org isolation — reject if no orgId
+        const orgId = context.user.organizationId;
+        if (!orgId) {
+            return NextResponse.json(
+                { error: 'Organization context required' },
+                { status: 403 }
+            );
+        }
+
         let query = supabase
             .from('screening_scores')
             .select('*')
+            .eq('organization_id', orgId)
             .order('administered_at', { ascending: false })
             .limit(limit);
 
@@ -91,6 +101,15 @@ async function handlePost(context: AuthContext) {
             clinical_notes, risk_flags
         } = validation.data;
 
+        // C3: Enforce org isolation on POST
+        const orgId = context.user.organizationId;
+        if (!orgId) {
+            return NextResponse.json(
+                { error: 'Organization context required' },
+                { status: 403 }
+            );
+        }
+
         const supabase = await createClient();
         if (!supabase) {
             return NextResponse.json({
@@ -109,7 +128,7 @@ async function handlePost(context: AuthContext) {
         const { data: screening, error } = await supabase
             .from('screening_scores')
             .insert({
-                organization_id: context.user.organizationId,
+                organization_id: orgId,
                 patient_id,
                 encounter_id: encounter_id || null,
                 administered_by: context.user.id,
@@ -165,10 +184,12 @@ async function handlePost(context: AuthContext) {
 
 export const GET = withAuth(handleGet, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
     requireMFA: true,
 });
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
     requireMFA: true,
 });

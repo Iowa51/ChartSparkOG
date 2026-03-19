@@ -2,6 +2,7 @@
 // Uses service role client to bypass RLS (audit logs should always be written)
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { sendEmail } from '@/lib/email/resend';
 
 export type AuditEventType =
     | 'LOGIN_SUCCESS'
@@ -299,31 +300,59 @@ export async function logSecurityEvent(
 }
 
 /**
- * Trigger security alert for critical events
+ * C2: Trigger security alert for critical events
+ * HIPAA Breach Notification Rule — sends email via Resend and logs to console.
+ * PHI is NOT included in the email body; PHI details are logged separately in audit_logs.
  */
 async function triggerSecurityAlert(entry: AuditLogEntry): Promise<void> {
-    console.error('[SECURITY ALERT]', entry.eventType, entry);
+    const timestamp = new Date().toISOString();
 
-    // In production, this would:
-    // 1. Send email to security team
-    // 2. Send SMS for critical alerts
-    // 3. Trigger SIEM integration
-    // 4. Create incident ticket
+    // Always log to console as secondary output
+    console.error('[SECURITY ALERT]', entry.eventType, {
+        userId: entry.userId,
+        ipAddress: entry.ipAddress,
+        timestamp,
+    });
 
-    // For now, just log prominently
+    // Send breach notification email via Resend (server-side only)
     if (typeof window === 'undefined') {
-        // Server-side
-        console.error(`
-================================================================================
-🚨 CRITICAL SECURITY ALERT 🚨
-================================================================================
-Event Type: ${entry.eventType}
-User: ${entry.userEmail || 'Unknown'} (${entry.userId || 'N/A'})
-IP Address: ${entry.ipAddress || 'Unknown'}
-Time: ${new Date().toISOString()}
-Details: ${JSON.stringify(entry.details, null, 2)}
-================================================================================
-    `);
+        try {
+            const sanitizedDetails = entry.details ? sanitizeDetails(entry.details) : {};
+
+            await sendEmail({
+                to: 'support@chartspark.io',
+                subject: `[SECURITY ALERT] ${entry.eventType} — ${timestamp}`,
+                html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; padding: 20px; color: #1e293b;">
+  <div style="background: #dc2626; color: white; padding: 16px 24px; border-radius: 8px 8px 0 0;">
+    <h2 style="margin: 0;">Security Alert — ${entry.eventType}</h2>
+  </div>
+  <div style="border: 1px solid #e2e8f0; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 8px 0; font-weight: bold;">Event Type</td><td>${entry.eventType}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Timestamp</td><td>${timestamp}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">User ID</td><td>${entry.userId || 'Unknown'}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Organization ID</td><td>${entry.organizationId || 'Unknown'}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">IP Address</td><td>${entry.ipAddress || 'Unknown'}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Risk Level</td><td>${entry.riskLevel}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Details (sanitized)</td><td><pre>${JSON.stringify(sanitizedDetails, null, 2)}</pre></td></tr>
+    </table>
+    <hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;">
+    <p style="color: #64748b; font-size: 13px;">
+      This is an automated security alert from ChartSpark. PHI has been redacted from this email.
+      Check the audit_logs table for full details.
+    </p>
+  </div>
+</body>
+</html>`,
+                text: `SECURITY ALERT: ${entry.eventType}\nTimestamp: ${timestamp}\nUser ID: ${entry.userId || 'Unknown'}\nOrg ID: ${entry.organizationId || 'Unknown'}\nIP: ${entry.ipAddress || 'Unknown'}\nRisk: ${entry.riskLevel}\n\nCheck audit_logs for full details. PHI has been redacted from this notification.`,
+            });
+        } catch (emailError) {
+            // Email failure must not suppress the alert — log and continue
+            console.error('[SECURITY ALERT] Failed to send breach notification email:', emailError);
+        }
     }
 }
 
