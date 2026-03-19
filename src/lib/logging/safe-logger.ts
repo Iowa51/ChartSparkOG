@@ -1,5 +1,6 @@
 // src/lib/logging/safe-logger.ts
-// SEC-REMEDIATION: HIPAA-compliant logging utility
+// SEC-REMEDIATION: HIPAA-compliant logging utility — CANONICAL implementation
+// C4: Consolidated from three separate implementations into one.
 // NEVER logs PHI - only logs safe metadata
 
 /**
@@ -28,6 +29,94 @@ function shouldLog(level: 'debug' | 'info' | 'warn' | 'error'): boolean {
     const currentLevel = levels[logLevel] ?? 0;
     return levels[level] >= currentLevel;
 }
+
+// =============================================
+// PHI SANITIZATION (consolidated from data/utils.ts and utils/safe-logger.ts)
+// =============================================
+
+/** PHI field names — if a key matches, the value is redacted */
+const PHI_FIELDS = [
+    'ssn', 'social_security', 'socialsecurity',
+    'dob', 'date_of_birth', 'dateofbirth', 'birthdate',
+    'address', 'street', 'city', 'zipcode', 'zip', 'postal',
+    'phone', 'telephone', 'mobile', 'cell',
+    'email', 'emailaddress',
+    'firstname', 'first_name', 'lastname', 'last_name', 'name', 'fullname',
+    'insurance_id', 'insuranceid', 'policynumber', 'policy_number',
+    'diagnosis', 'diagnoses', 'icd10', 'icd_codes',
+    'notes', 'content', 'notecontent', 'sessionnotes', 'clinicalnotes',
+    'symptoms', 'medications', 'allergies', 'conditions',
+    'treatmentplan', 'treatment_plan', 'recommendations',
+    'emergencycontact', 'emergency_contact',
+    'mrn', 'medicalrecordnumber', 'patientid', 'patient_id',
+];
+
+/** PHI patterns in string values */
+const PHI_PATTERNS: RegExp[] = [
+    /\b\d{3}-\d{2}-\d{4}\b/g, // SSN
+    /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, // Phone
+    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, // Email
+    /MRN-\d{6}/g, // MRN
+];
+
+/**
+ * Sanitize a string by replacing PHI patterns with redaction markers.
+ */
+export function sanitizePHI(message: string): string {
+    let result = message;
+    for (const pattern of PHI_PATTERNS) {
+        result = result.replace(pattern, '[REDACTED]');
+    }
+    // Also redact UUIDs that could be patient IDs
+    result = result.replace(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+        '[ID]'
+    );
+    return result;
+}
+
+/**
+ * Deep clone and redact PHI from an arbitrary object.
+ * Redacts values whose keys match known PHI field names and
+ * replaces inline PHI patterns (SSN, phone, email) in strings.
+ */
+export function redactPHI(data: unknown): unknown {
+    if (data === null || data === undefined) return data;
+
+    if (typeof data === 'string') {
+        let result = data;
+        for (const pattern of PHI_PATTERNS) {
+            result = result.replace(pattern, '[REDACTED]');
+        }
+        if (result.length > 100) {
+            return `[TRUNCATED:${result.length} chars]`;
+        }
+        return result;
+    }
+
+    if (Array.isArray(data)) {
+        return data.map(item => redactPHI(item));
+    }
+
+    if (typeof data === 'object') {
+        const result: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+            const lowerKey = key.toLowerCase();
+            if (PHI_FIELDS.some(f => lowerKey.includes(f))) {
+                result[key] = '[REDACTED]';
+            } else {
+                result[key] = redactPHI(value);
+            }
+        }
+        return result;
+    }
+
+    return data;
+}
+
+// =============================================
+// SAFE LOGGING
+// =============================================
 
 /**
  * Safe logging function - only logs non-PHI metadata

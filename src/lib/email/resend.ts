@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { logWarn, logError, logInfo, sanitizeError } from '@/lib/logging/safe-logger';
 
 // Initialize Resend with API key
 const resend = process.env.RESEND_API_KEY
@@ -30,7 +31,7 @@ export interface InvitationEmailData {
  */
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
     if (!resend) {
-        console.warn('Resend not configured - RESEND_API_KEY missing');
+        logWarn({ action: 'EMAIL_RESEND_NOT_CONFIGURED', error: 'RESEND_API_KEY missing' });
         return { success: false, error: 'Email service not configured' };
     }
 
@@ -44,14 +45,14 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
         });
 
         if (error) {
-            console.error('Resend error:', error);
+            logError({ action: 'EMAIL_RESEND_SEND_ERROR', error: sanitizeError(error) });
             return { success: false, error: error.message };
         }
 
-        console.log('Email sent successfully:', data?.id);
+        logInfo({ action: 'EMAIL_SENT_SUCCESSFULLY', resourceId: data?.id });
         return { success: true };
     } catch (err) {
-        console.error('Failed to send email:', err);
+        logError({ action: 'EMAIL_SEND_FAILED', error: sanitizeError(err) });
         return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
     }
 }

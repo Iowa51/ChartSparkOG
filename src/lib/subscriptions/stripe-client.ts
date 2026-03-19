@@ -9,9 +9,10 @@
  */
 
 import Stripe from 'stripe';
+import { logWarn } from '@/lib/logging/safe-logger';
 
 if (!process.env.STRIPE_SECRET_KEY) {
-    console.warn('[Stripe] STRIPE_SECRET_KEY not set - Stripe functionality disabled');
+    logWarn({ action: 'STRIPE_NOT_CONFIGURED', error: 'STRIPE_SECRET_KEY not set' });
 }
 
 export const stripe = process.env.STRIPE_SECRET_KEY
@@ -27,7 +28,7 @@ export async function createStripeCustomer(
     organizationName: string
 ): Promise<string | null> {
     if (!stripe) {
-        console.warn('[Stripe] Not configured - skipping customer creation');
+        logWarn({ action: 'STRIPE_SKIP_CUSTOMER_CREATION', status: 'not_configured' });
         return null;
     }
 
@@ -54,7 +55,7 @@ export async function createCheckoutSession(
     cancelUrl: string
 ): Promise<string | null> {
     if (!stripe) {
-        console.warn('[Stripe] Not configured - cannot create checkout session');
+        logWarn({ action: 'STRIPE_SKIP_CHECKOUT_SESSION', status: 'not_configured' });
         return null;
     }
 
@@ -86,7 +87,7 @@ export async function createBillingPortalSession(
     returnUrl: string
 ): Promise<string | null> {
     if (!stripe) {
-        console.warn('[Stripe] Not configured - cannot create billing portal session');
+        logWarn({ action: 'STRIPE_SKIP_BILLING_PORTAL', status: 'not_configured' });
         return null;
     }
 
@@ -106,7 +107,7 @@ export async function cancelSubscription(
     cancelAtPeriodEnd: boolean = true
 ): Promise<void> {
     if (!stripe) {
-        console.warn('[Stripe] Not configured - cannot cancel subscription');
+        logWarn({ action: 'STRIPE_SKIP_CANCEL_SUBSCRIPTION', status: 'not_configured' });
         return;
     }
 

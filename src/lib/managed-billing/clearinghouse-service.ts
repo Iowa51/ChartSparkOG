@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { decryptPHI } from '@/lib/security/encryption';
+import { logWarn, logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export type ClearinghouseType =
     | 'office_ally'
@@ -48,7 +49,7 @@ export async function getGlobalClearinghouseConfig(
     const supabase = await createClient();
 
     if (!supabase) {
-        console.warn('[Clearinghouse] No Supabase client - demo mode');
+        logWarn({ action: 'CLEARINGHOUSE_NO_SUPABASE_CLIENT', status: 'demo_mode' });
         return null;
     }
 
@@ -155,7 +156,7 @@ export async function submitClaimToClearinghouse(
         return result;
 
     } catch (error) {
-        console.error('[Clearinghouse] Submission error:', error);
+        logError({ action: 'CLEARINGHOUSE_SUBMISSION_ERROR', error: sanitizeError(error) });
         return { success: false, error: 'Submission failed' };
     }
 }
@@ -253,7 +254,7 @@ async function submitToClaimMD(
         return { success: false, error: errorData.message || 'Claim.MD submission failed' };
 
     } catch (error) {
-        console.error('[Claim.MD] Submission error:', error);
+        logError({ action: 'CLAIM_MD_SUBMISSION_ERROR', error: sanitizeError(error) });
         return { success: false, error: 'Claim.MD submission failed' };
     }
 }
@@ -314,7 +315,7 @@ async function submitToAvaility(
         return { success: false, error: 'Availity submission failed' };
 
     } catch (error) {
-        console.error('[Availity] Submission error:', error);
+        logError({ action: 'AVAILITY_SUBMISSION_ERROR', error: sanitizeError(error) });
         return { success: false, error: 'Availity submission failed' };
     }
 }
@@ -345,7 +346,7 @@ async function submitViaSFTP(
         };
 
     } catch (error) {
-        console.error('[SFTP] Submission error:', error);
+        logError({ action: 'SFTP_SUBMISSION_ERROR', error: sanitizeError(error) });
         return { success: false, error: 'SFTP submission failed' };
     }
 }

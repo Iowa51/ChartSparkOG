@@ -2,6 +2,7 @@
 // SEC-REMEDIATION: Service role client for privileged server-side operations
 
 import { createClient } from '@supabase/supabase-js';
+import { devWarn } from '@/lib/logging/safe-logger';
 
 /**
  * CRITICAL SECURITY: This client bypasses RLS and should ONLY be used
@@ -27,7 +28,7 @@ export function createServiceRoleClient() {
 
     if (!supabaseUrl || !supabaseServiceKey) {
         if (isDemoMode) {
-            console.warn('[Service Role Client] Not configured - running in demo mode');
+            devWarn('Service Role Client', 'Not configured - running in demo mode');
             return null;
         }
 

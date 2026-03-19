@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 
 /**
  * Validate cron secret - fails CLOSED in production
@@ -25,7 +25,7 @@ function validateCronSecret(request: NextRequest): { valid: boolean; error?: str
 
     // In development without secret, allow for testing
     if (!cronSecret) {
-        console.warn('[Cron] CRON_SECRET not set - allowing in development');
+        logWarn({ action: 'CRON_SECRET_NOT_SET', status: 'allowing_in_development' });
         return { valid: true };
     }
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         const { generateAllMonthlyInvoices } = await import('@/lib/managed-billing/invoice-service');
         const result = await generateAllMonthlyInvoices();
 
-        console.log(`[Cron] Generated ${result.generated} invoices`);
+        logInfo({ action: 'CRON_INVOICES_GENERATED', count: result.generated });
         if (result.errors.length > 0) {
             logError({ action: 'CRON_INVOICE_ERRORS', error: sanitizeError(result.errors) });
         }

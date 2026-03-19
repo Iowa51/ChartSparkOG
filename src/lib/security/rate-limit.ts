@@ -3,6 +3,7 @@
 // SEC-REMEDIATION: Fail-closed for auth endpoints, circuit breaker for persistent failures
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 
 // Determine if Upstash is available
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
@@ -80,7 +81,7 @@ function recordFailure(): void {
 
     if (circuitBreaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
         circuitBreaker.isOpen = true;
-        console.error('[RATE-LIMIT] Circuit breaker OPEN - rate limit service experiencing persistent failures');
+        logError({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_OPEN', error: 'Rate limit service experiencing persistent failures' });
     }
 }
 
@@ -237,7 +238,7 @@ export async function checkRateLimit(
         // Check circuit breaker first
         if (checkCircuitBreaker()) {
             // Circuit is open - use in-memory fallback
-            console.warn('[RATE-LIMIT] Circuit breaker open, using in-memory fallback');
+            logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FALLBACK', status: 'using_in_memory' });
             result = checkInMemoryRateLimit(ip, pathname);
         } else if (UPSTASH_URL && UPSTASH_TOKEN) {
             // Use Upstash Redis for distributed rate limiting
@@ -246,17 +247,17 @@ export async function checkRateLimit(
         } else {
             // Fall back to in-memory (single instance only)
             if (process.env.NODE_ENV === 'production') {
-                console.warn('[RATE-LIMIT] Upstash not configured, using in-memory fallback. This is not suitable for multi-instance deployments.');
+                logWarn({ action: 'RATE_LIMIT_UPSTASH_NOT_CONFIGURED', status: 'using_in_memory_fallback' });
             }
             result = checkInMemoryRateLimit(ip, pathname);
         }
     } catch (error) {
         recordFailure();
-        console.error('[RATE-LIMIT] Rate limit check error:', error instanceof Error ? error.message : 'Unknown error');
+        logError({ action: 'RATE_LIMIT_CHECK_ERROR', error: sanitizeError(error) });
 
         // SEC-REMEDIATION: Fail-closed for security-critical endpoints
         if (config.failClosed) {
-            console.warn(`[RATE-LIMIT] Fail-closed: Denying request to ${pathname} due to rate limit service error`);
+            logWarn({ action: 'RATE_LIMIT_FAIL_CLOSED', status: 'denying_request' });
             return {
                 success: false,
                 response: NextResponse.json(

@@ -2,6 +2,7 @@
 // Multi-Factor Authentication utilities using Supabase MFA
 
 import { createClient } from '@/lib/supabase/client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export interface MFAEnrollmentResult {
     qrCode: string;
@@ -32,7 +33,7 @@ export async function enrollMFA(): Promise<MFAEnrollmentResult> {
     });
 
     if (error) {
-        console.error('MFA enrollment error:', error);
+        logError({ action: 'MFA_ENROLLMENT_ERROR', error: sanitizeError(error) });
         throw new Error(error.message);
     }
 
@@ -58,7 +59,7 @@ export async function verifyMFA(factorId: string, code: string): Promise<boolean
     });
 
     if (challengeError) {
-        console.error('MFA challenge error:', challengeError);
+        logError({ action: 'MFA_CHALLENGE_ERROR', error: sanitizeError(challengeError) });
         throw new Error(challengeError.message);
     }
 
@@ -70,7 +71,7 @@ export async function verifyMFA(factorId: string, code: string): Promise<boolean
     });
 
     if (error) {
-        console.error('MFA verification error:', error);
+        logError({ action: 'MFA_VERIFICATION_ERROR', error: sanitizeError(error) });
         throw new Error(error.message);
     }
 
@@ -89,7 +90,7 @@ export async function getMFAFactors(): Promise<MFAFactor[]> {
     const { data, error } = await supabase.auth.mfa.listFactors();
 
     if (error) {
-        console.error('Error listing MFA factors:', error);
+        logError({ action: 'MFA_LIST_FACTORS_ERROR', error: sanitizeError(error) });
         return [];
     }
 
@@ -116,7 +117,7 @@ export async function unenrollMFA(factorId: string): Promise<boolean> {
     });
 
     if (error) {
-        console.error('MFA unenroll error:', error);
+        logError({ action: 'MFA_UNENROLL_ERROR', error: sanitizeError(error) });
         throw new Error(error.message);
     }
 
@@ -151,7 +152,7 @@ export async function getMFAAssuranceLevel(): Promise<'aal1' | 'aal2' | null> {
     const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
     if (error) {
-        console.error('Error getting MFA assurance level:', error);
+        logError({ action: 'MFA_ASSURANCE_LEVEL_ERROR', error: sanitizeError(error) });
         return null;
     }
 

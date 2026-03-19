@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateOrigin } from '@/lib/security/csrf';
+import { logWarn, logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // F-022: HIPAA-compliant server-side session timeout (15 minutes)
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
@@ -58,7 +59,7 @@ export async function getAuthenticatedUser(
 
         // Check if account is active
         if (user.is_active === false) {
-            console.warn('API Auth: Deactivated account attempted API access', user.id);
+            logWarn({ action: 'API_AUTH_DEACTIVATED_ACCOUNT_ACCESS', userId: user.id });
             return null;
         }
 
@@ -66,7 +67,7 @@ export async function getAuthenticatedUser(
         if (user.last_activity_at) {
             const lastActivity = new Date(user.last_activity_at).getTime();
             if (Date.now() - lastActivity > SESSION_TIMEOUT_MS) {
-                console.warn('API Auth: Session timed out for user', user.id);
+                logWarn({ action: 'API_AUTH_SESSION_TIMEOUT', userId: user.id });
                 return null;
             }
         }
@@ -86,7 +87,7 @@ export async function getAuthenticatedUser(
             organizationId: user.organization_id,
         };
     } catch (error) {
-        console.error('Auth error:', error);
+        logError({ action: 'API_AUTH_ERROR', error: sanitizeError(error) });
         return null;
     }
 }
@@ -131,7 +132,7 @@ export function withAuth<T extends AuthContext>(
         if (options?.requiredRole && options.requiredRole.length > 0) {
             if (!options.requiredRole.includes(user.role)) {
                 // Log unauthorized access attempt
-                console.warn(`Unauthorized access attempt: User ${user.id} (${user.role}) tried to access ${request.nextUrl.pathname}`);
+                logWarn({ action: 'API_AUTH_UNAUTHORIZED_ACCESS_ATTEMPT', userId: user.id, status: user.role });
 
                 return errorResponse('Forbidden - Insufficient permissions', 403);
             }
@@ -153,7 +154,7 @@ export function withAuth<T extends AuthContext>(
                     return errorResponse('MFA required - please complete second factor authentication', 403);
                 }
             } catch (mfaErr) {
-                console.error('MFA check error:', mfaErr);
+                logError({ action: 'API_AUTH_MFA_CHECK_ERROR', error: sanitizeError(mfaErr) });
                 // FAIL CLOSED - deny access if MFA check fails
                 return errorResponse('MFA validation unavailable', 503);
             }
@@ -182,7 +183,7 @@ export function withAuth<T extends AuthContext>(
                     .maybeSingle();
 
                 if (featureError) {
-                    console.error('Feature check database error:', featureError);
+                    logError({ action: 'API_AUTH_FEATURE_CHECK_DB_ERROR', error: sanitizeError(featureError) });
                     // FAIL CLOSED on database error
                     return errorResponse('Feature validation unavailable', 503);
                 }
@@ -196,7 +197,7 @@ export function withAuth<T extends AuthContext>(
                     return errorResponse('Feature access has expired', 403);
                 }
             } catch (err) {
-                console.error('Feature check error:', err);
+                logError({ action: 'API_AUTH_FEATURE_CHECK_ERROR', error: sanitizeError(err) });
                 // SEC-006: FAIL CLOSED - Do NOT allow through on error
                 return errorResponse('Feature validation unavailable', 503);
             }

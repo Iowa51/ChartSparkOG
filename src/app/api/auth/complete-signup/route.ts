@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 
 interface SignupData {
     // SEC-REMEDIATION: userId and email are now IGNORED from request body
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
             }
         } catch (featureError) {
             // Non-critical - log but don't fail registration
-            console.warn('Feature assignment warning:', featureError);
+            logWarn({ action: 'SIGNUP_FEATURE_ASSIGNMENT_WARNING', error: sanitizeError(featureError) });
         }
 
         // Audit log - SEC-REMEDIATION: No PHI in details

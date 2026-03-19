@@ -2,6 +2,7 @@
 // QUAL-002: Centralized error handling with PHI sanitization
 
 import { NextResponse } from 'next/server';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // PHI fields that should never appear in error messages or logs
 const PHI_PATTERNS = [
@@ -95,7 +96,7 @@ export function createErrorResponse(
 
     // Log the full error server-side (sanitized)
     if (status >= 500) {
-        console.error(`[${code}] ${sanitizedMessage}`, details ? sanitizePHI(JSON.stringify(details)) : '');
+        logError({ action: code, error: sanitizedMessage });
     }
 
     return NextResponse.json(
@@ -116,7 +117,7 @@ export function createErrorResponse(
 export function handleApiError(error: unknown): NextResponse {
     // Log for debugging (sanitized)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[API Error]', sanitizePHI(errorMessage));
+    logError({ action: 'API_ERROR', error: sanitizeError(error) });
 
     // Handle specific error types
     if (error instanceof Error) {

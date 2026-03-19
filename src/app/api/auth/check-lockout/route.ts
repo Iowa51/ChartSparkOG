@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 
 const LOCKOUT_CONFIG = {
     maxAttempts: 5,
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         // Skip lockout check only in explicit demo mode AND non-production
         const isDemoMode = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
         if (isDemoMode) {
-            console.log('[LOCKOUT] Skipping lockout check - demo mode');
+            logInfo({ action: 'LOCKOUT_SKIP_DEMO_MODE' });
             return NextResponse.json({ locked: false, remainingAttempts: 99 });
         }
 
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
             if (error) {
                 // Handle missing table gracefully (table may not exist yet)
                 if (error.code === '42P01' || error.message?.includes('does not exist')) {
-                    console.warn('login_attempts table not found - allowing login (run migrations to enable lockout)');
+                    logWarn({ action: 'LOCKOUT_TABLE_NOT_FOUND', status: 'allowing_login' });
                     return NextResponse.json({ locked: false, remainingAttempts: 5 });
                 }
                 // SEC-REMEDIATION: FAIL CLOSED on other database errors
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
             // Handle missing table gracefully
             const errObj = dbError as { code?: string; message?: string };
             if (errObj?.code === '42P01' || errObj?.message?.includes('does not exist')) {
-                console.warn('login_attempts table not found - allowing login');
+                logWarn({ action: 'LOCKOUT_TABLE_NOT_FOUND', status: 'allowing_login' });
                 return NextResponse.json({ locked: false, remainingAttempts: 5 });
             }
             // SEC-REMEDIATION: FAIL CLOSED - don't allow login on other errors

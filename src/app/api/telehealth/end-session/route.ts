@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 
 async function handler(context: AuthContext) {
     try {
@@ -80,11 +80,11 @@ async function handler(context: AuthContext) {
                     },
                 });
             } catch (deleteError) {
-                console.warn('Failed to delete Daily.co room:', deleteError);
+                logWarn({ action: 'TELEHEALTH_DAILY_ROOM_DELETE_FAILED', error: sanitizeError(deleteError) });
             }
         }
 
-        console.log(`✅ Session ended for appointment ${appointmentId}`);
+        logInfo({ action: 'TELEHEALTH_SESSION_ENDED', resourceId: appointmentId });
 
         return NextResponse.json({
             success: true,

@@ -3,6 +3,7 @@
 
 // F-036: Use service role client for server-side lockout operations (bypasses RLS, pre-auth)
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export const LOCKOUT_CONFIG = {
     maxAttempts: 5,
@@ -46,7 +47,7 @@ export async function checkAccountLockout(email: string): Promise<LockoutStatus>
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error checking lockout:', error);
+            logError({ action: 'LOCKOUT_CHECK_ERROR', error: sanitizeError(error) });
             // F-036: Fail closed on DB errors
             return { locked: true, remainingAttempts: 0 };
         }
@@ -77,7 +78,7 @@ export async function checkAccountLockout(email: string): Promise<LockoutStatus>
             remainingAttempts: Math.max(0, LOCKOUT_CONFIG.maxAttempts - failedCount),
         };
     } catch (err) {
-        console.error('Lockout check exception:', err);
+        logError({ action: 'LOCKOUT_CHECK_EXCEPTION', error: sanitizeError(err) });
         // F-036: Fail closed on exceptions
         return { locked: true, remainingAttempts: 0 };
     }
@@ -121,7 +122,7 @@ export async function recordLoginAttempt(
                 .eq('success', false);
         }
     } catch (err) {
-        console.error('Error recording login attempt:', err);
+        logError({ action: 'LOCKOUT_RECORD_ATTEMPT_ERROR', error: sanitizeError(err) });
     }
 }
 
@@ -149,13 +150,13 @@ export async function getLoginHistory(email: string, limit = 10): Promise<any[]>
             .limit(limit);
 
         if (error) {
-            console.error('Error fetching login history:', error);
+            logError({ action: 'LOCKOUT_FETCH_HISTORY_ERROR', error: sanitizeError(error) });
             return [];
         }
 
         return data || [];
     } catch (err) {
-        console.error('Login history exception:', err);
+        logError({ action: 'LOCKOUT_HISTORY_EXCEPTION', error: sanitizeError(err) });
         return [];
     }
 }
@@ -184,7 +185,7 @@ export async function clearLockout(email: string): Promise<boolean> {
 
         return !error;
     } catch (err) {
-        console.error('Clear lockout exception:', err);
+        logError({ action: 'LOCKOUT_CLEAR_EXCEPTION', error: sanitizeError(err) });
         return false;
     }
 }

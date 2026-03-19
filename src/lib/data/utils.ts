@@ -5,48 +5,27 @@
 
 import { DatabaseError, NotFoundError, UnauthorizedError, ValidationError } from '../types/database';
 import { logAuditEvent, getRiskLevel } from '../security/audit-log';
+import { sanitizePHI, logError as safeLogError, logWarn as safeLogWarn, logInfo as safeLogInfo, logDebug as safeLogDebug } from '../logging/safe-logger';
+
+// Re-export sanitizePHI for backward compatibility
+export { sanitizePHI };
 
 // =============================================
-// PHI SANITIZATION
+// PHI-SAFE LOGGER (C4: delegates to canonical safe-logger)
 // =============================================
 
-/**
- * Sanitize PHI from error messages and logs
- * Removes patient names, MRNs, emails, phones, addresses
- */
-export function sanitizePHI(message: string): string {
-    return message
-        // Remove email addresses
-        .replace(/[\w.-]+@[\w.-]+\.\w+/g, '[EMAIL]')
-        // Remove phone numbers
-        .replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[PHONE]')
-        // Remove MRNs
-        .replace(/MRN-\d{6}/g, '[MRN]')
-        // Remove UUIDs (could be patient IDs)
-        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '[ID]');
-}
-
-/**
- * Safe logger that sanitizes PHI before logging
- */
 export const safeLogger = {
     error: (message: string, error?: any) => {
-        const sanitized = sanitizePHI(message);
-        console.error(`[DB Error] ${sanitized}`, error ? sanitizePHI(JSON.stringify(error)) : '');
+        safeLogError({ action: `DB_ERROR: ${sanitizePHI(message)}`, error: error ? sanitizePHI(JSON.stringify(error)) : undefined });
     },
     warn: (message: string) => {
-        const sanitized = sanitizePHI(message);
-        console.warn(`[DB Warning] ${sanitized}`);
+        safeLogWarn({ action: `DB_WARNING: ${sanitizePHI(message)}` });
     },
     info: (message: string) => {
-        const sanitized = sanitizePHI(message);
-        console.log(`[DB Info] ${sanitized}`);
+        safeLogInfo({ action: `DB_INFO: ${sanitizePHI(message)}` });
     },
-    debug: (message: string, data?: any) => {
-        if (process.env.NODE_ENV === 'development') {
-            const sanitized = sanitizePHI(message);
-            console.debug(`[DB Debug] ${sanitized}`, data);
-        }
+    debug: (message: string, _data?: any) => {
+        safeLogDebug({ action: `DB_DEBUG: ${sanitizePHI(message)}` });
     }
 };
 

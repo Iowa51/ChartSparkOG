@@ -3,6 +3,7 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { sendEmail } from '@/lib/email/resend';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export type AuditEventType =
     | 'LOGIN_SUCCESS'
@@ -167,7 +168,7 @@ export function getRiskLevel(eventType: AuditEventType): RiskLevel {
 export function logAuditEventAsync(entry: AuditLogEntry): void {
     // Fire and forget - don't await
     logAuditEvent(entry).catch(err => {
-        console.error('Async audit log error:', err);
+        logError({ action: 'AUDIT_LOG_ASYNC_ERROR', error: sanitizeError(err) });
     });
 }
 
@@ -211,7 +212,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
         });
 
         if (error) {
-            console.error('Failed to log audit event:', error);
+            logError({ action: 'AUDIT_LOG_DB_WRITE_FAILED', error: sanitizeError(error) });
         }
 
         // For critical events, trigger alert
@@ -219,7 +220,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
             await triggerSecurityAlert(entry);
         }
     } catch (err) {
-        console.error('Audit logging error:', err);
+        logError({ action: 'AUDIT_LOG_ERROR', error: sanitizeError(err) });
     }
 }
 
@@ -307,12 +308,8 @@ export async function logSecurityEvent(
 async function triggerSecurityAlert(entry: AuditLogEntry): Promise<void> {
     const timestamp = new Date().toISOString();
 
-    // Always log to console as secondary output
-    console.error('[SECURITY ALERT]', entry.eventType, {
-        userId: entry.userId,
-        ipAddress: entry.ipAddress,
-        timestamp,
-    });
+    // Always log as secondary output
+    logError({ action: 'SECURITY_ALERT', resourceType: entry.eventType, userId: entry.userId, timestamp });
 
     // Send breach notification email via Resend (server-side only)
     if (typeof window === 'undefined') {
@@ -351,7 +348,7 @@ async function triggerSecurityAlert(entry: AuditLogEntry): Promise<void> {
             });
         } catch (emailError) {
             // Email failure must not suppress the alert — log and continue
-            console.error('[SECURITY ALERT] Failed to send breach notification email:', emailError);
+            logError({ action: 'SECURITY_ALERT_EMAIL_FAILED', error: sanitizeError(emailError) });
         }
     }
 }
@@ -417,7 +414,7 @@ export async function queryAuditLogs(options: {
     const { data, error } = await query;
 
     if (error) {
-        console.error('Error querying audit logs:', error);
+        logError({ action: 'AUDIT_LOG_QUERY_ERROR', error: sanitizeError(error) });
         return [];
     }
 
