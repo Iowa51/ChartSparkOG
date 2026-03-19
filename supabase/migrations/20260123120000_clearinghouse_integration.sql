@@ -200,6 +200,7 @@ ALTER TABLE era_files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE era_payments ENABLE ROW LEVEL SECURITY;
 
 -- Clearinghouse configs - Admins only
+DROP POLICY IF EXISTS "clearinghouse_configs_admin_access" ON clearinghouse_configs;
 CREATE POLICY "clearinghouse_configs_admin_access" ON clearinghouse_configs
   FOR ALL TO authenticated
   USING (
@@ -208,6 +209,7 @@ CREATE POLICY "clearinghouse_configs_admin_access" ON clearinghouse_configs
   );
 
 -- Claim submissions - same org can view
+DROP POLICY IF EXISTS "claim_submissions_org_select" ON claim_submissions;
 CREATE POLICY "claim_submissions_org_select" ON claim_submissions
   FOR SELECT TO authenticated
   USING (
@@ -218,11 +220,13 @@ CREATE POLICY "claim_submissions_org_select" ON claim_submissions
   );
 
 -- ERA files - same org can view
+DROP POLICY IF EXISTS "era_files_org_select" ON era_files;
 CREATE POLICY "era_files_org_select" ON era_files
   FOR SELECT TO authenticated
   USING (organization_id = public.get_user_organization_id());
 
 -- ERA payments - same org can view
+DROP POLICY IF EXISTS "era_payments_org_select" ON era_payments;
 CREATE POLICY "era_payments_org_select" ON era_payments
   FOR SELECT TO authenticated
   USING (
@@ -233,18 +237,22 @@ CREATE POLICY "era_payments_org_select" ON era_payments
   );
 
 -- Super admin full access policies
+DROP POLICY IF EXISTS "clearinghouse_configs_super_admin" ON clearinghouse_configs;
 CREATE POLICY "clearinghouse_configs_super_admin" ON clearinghouse_configs
   FOR ALL TO authenticated
   USING (public.get_user_role() = 'SUPER_ADMIN');
 
+DROP POLICY IF EXISTS "claim_submissions_super_admin" ON claim_submissions;
 CREATE POLICY "claim_submissions_super_admin" ON claim_submissions
   FOR ALL TO authenticated
   USING (public.get_user_role() = 'SUPER_ADMIN');
 
+DROP POLICY IF EXISTS "era_files_super_admin" ON era_files;
 CREATE POLICY "era_files_super_admin" ON era_files
   FOR ALL TO authenticated
   USING (public.get_user_role() = 'SUPER_ADMIN');
 
+DROP POLICY IF EXISTS "era_payments_super_admin" ON era_payments;
 CREATE POLICY "era_payments_super_admin" ON era_payments
   FOR ALL TO authenticated
   USING (public.get_user_role() = 'SUPER_ADMIN');
@@ -252,6 +260,7 @@ CREATE POLICY "era_payments_super_admin" ON era_payments
 -- Global clearinghouse config - super admin only
 ALTER TABLE global_clearinghouse_config ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "global_clearinghouse_super_admin" ON global_clearinghouse_config;
 CREATE POLICY "global_clearinghouse_super_admin" ON global_clearinghouse_config
   FOR ALL TO authenticated
   USING (public.get_user_role() = 'SUPER_ADMIN');

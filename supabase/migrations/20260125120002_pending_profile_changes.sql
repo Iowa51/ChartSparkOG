@@ -25,18 +25,21 @@ CREATE INDEX IF NOT EXISTS idx_pending_profile_changes_status ON pending_profile
 ALTER TABLE pending_profile_changes ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can view their own pending changes
+DROP POLICY IF EXISTS "Users can view own profile changes" ON pending_profile_changes;
 CREATE POLICY "Users can view own profile changes"
     ON pending_profile_changes
     FOR SELECT
     USING (auth.uid() = user_id);
 
 -- Policy: Users can create their own pending changes
+DROP POLICY IF EXISTS "Users can create own profile changes" ON pending_profile_changes;
 CREATE POLICY "Users can create own profile changes"
     ON pending_profile_changes
     FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
 -- Policy: Admins can view all pending changes
+DROP POLICY IF EXISTS "Admins can view all profile changes" ON pending_profile_changes;
 CREATE POLICY "Admins can view all profile changes"
     ON pending_profile_changes
     FOR SELECT
@@ -49,6 +52,7 @@ CREATE POLICY "Admins can view all profile changes"
     );
 
 -- Policy: Admins can update pending changes (approve/reject)
+DROP POLICY IF EXISTS "Admins can update profile changes" ON pending_profile_changes;
 CREATE POLICY "Admins can update profile changes"
     ON pending_profile_changes
     FOR UPDATE
@@ -69,6 +73,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_pending_profile_changes_updated_at ON pending_profile_changes;
 CREATE TRIGGER trigger_pending_profile_changes_updated_at
     BEFORE UPDATE ON pending_profile_changes
     FOR EACH ROW

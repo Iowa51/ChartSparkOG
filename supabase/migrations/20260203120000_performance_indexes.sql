@@ -89,13 +89,13 @@ ON profiles(organization_id);
 -- AUDIT_LOGS INDEXES
 -- ============================================================================
 
--- organization_id + timestamp: Common audit query pattern
-CREATE INDEX IF NOT EXISTS idx_audit_logs_org_timestamp
-ON audit_logs(organization_id, timestamp DESC);
+-- organization_id + created_at: Common audit query pattern
+CREATE INDEX IF NOT EXISTS idx_audit_logs_org_created_at
+ON audit_logs(organization_id, created_at DESC);
 
--- event_type: Filtering by event type
-CREATE INDEX IF NOT EXISTS idx_audit_logs_event_type
-ON audit_logs(event_type);
+-- action: Filtering by action type
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action
+ON audit_logs(action);
 
 -- user_id: Viewing user's activity
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id

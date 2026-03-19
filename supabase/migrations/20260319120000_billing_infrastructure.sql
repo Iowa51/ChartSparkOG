@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS public.billing_claims CASCADE;
 -- ============================================================
 
 CREATE TABLE public.billing_claims (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id),
   patient_id UUID NOT NULL REFERENCES patients(id),
   provider_id UUID NOT NULL REFERENCES profiles(id),

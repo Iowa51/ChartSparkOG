@@ -59,6 +59,7 @@ CREATE INDEX IF NOT EXISTS idx_providers_billing_npi ON public.providers(billing
 CREATE INDEX IF NOT EXISTS idx_providers_rendering_npi ON public.providers(rendering_npi);
 
 ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tenant_isolation" ON public.providers;
 CREATE POLICY "tenant_isolation" ON public.providers
   FOR ALL TO authenticated
   USING (organization_id = public.get_user_organization_id());
@@ -107,6 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_payers_payer_id ON public.payers(payer_id);
 CREATE INDEX IF NOT EXISTS idx_payers_name ON public.payers(name);
 
 ALTER TABLE public.payers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "read_only_payers" ON public.payers;
 CREATE POLICY "read_only_payers" ON public.payers
   FOR SELECT TO authenticated
   USING (is_active = TRUE);
@@ -161,6 +163,7 @@ CREATE INDEX IF NOT EXISTS idx_coverages_org ON public.coverages(organization_id
 CREATE INDEX IF NOT EXISTS idx_coverages_patient ON public.coverages(patient_id);
 
 ALTER TABLE public.coverages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tenant_isolation" ON public.coverages;
 CREATE POLICY "tenant_isolation" ON public.coverages
   FOR ALL TO authenticated
   USING (organization_id = public.get_user_organization_id());
@@ -255,6 +258,7 @@ CREATE INDEX IF NOT EXISTS idx_edi_transactions_org ON public.edi_transactions(o
 CREATE INDEX IF NOT EXISTS idx_edi_transactions_claim ON public.edi_transactions(claim_id);
 
 ALTER TABLE public.edi_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tenant_isolation" ON public.edi_transactions;
 CREATE POLICY "tenant_isolation" ON public.edi_transactions
   FOR ALL TO authenticated
   USING (organization_id = public.get_user_organization_id());
