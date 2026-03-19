@@ -11,10 +11,28 @@ import {
     updateClearinghouseConfig
 } from '@/lib/managed-billing/clearinghouse-service';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handleGet(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const configs = await getAllClearinghouseConfigs();
+
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_VIEW',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'clearinghouse_config',
+            details: { action: 'CLEARINGHOUSE_CONFIG_VIEW', recordCount: configs?.length || 0 },
+            phiAccessed: false,
+            riskLevel: 'MEDIUM',
+        });
+
         return NextResponse.json({ configs });
     } catch (error) {
         logError({ action: 'CLEARINGHOUSE_CONFIG_GET_ERROR', error: sanitizeError(error) });
@@ -24,12 +42,27 @@ async function handleGet(context: AuthContext) {
 
 async function handlePut(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const config = await context.request.json();
         const result = await updateClearinghouseConfig(config);
 
         if (!result.success) {
             return NextResponse.json({ error: result.error }, { status: 500 });
         }
+
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_CREATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'clearinghouse_config',
+            details: { action: 'CLEARINGHOUSE_CONFIG_UPDATE', clearinghouse: config.clearinghouse },
+            phiAccessed: false,
+            riskLevel: 'HIGH',
+        });
 
         return NextResponse.json({ success: true });
     } catch (error) {
@@ -38,5 +71,5 @@ async function handlePut(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet, { requiredRole: ['SUPER_ADMIN'] });
-export const PUT = withAuth(handlePut, { requiredRole: ['SUPER_ADMIN'] });
+export const GET = withAuth(handleGet, { requiredRole: ['SUPER_ADMIN'], requireMFA: true });
+export const PUT = withAuth(handlePut, { requiredRole: ['SUPER_ADMIN'], requireMFA: true });

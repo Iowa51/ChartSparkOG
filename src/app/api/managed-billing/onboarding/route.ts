@@ -10,9 +10,12 @@ import { createClient } from '@/lib/supabase/server';
 import { logBillingAction } from '@/lib/managed-billing/audit-logger';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handleGet(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const supabase = await createClient();
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 503 });
@@ -31,6 +34,20 @@ async function handleGet(context: AuthContext) {
         if (!subscription) {
             return NextResponse.json({ enrolled: false, status: 'not_enrolled' });
         }
+
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_VIEW',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'managed_billing_subscription',
+            details: { action: 'ONBOARDING_STATUS_VIEW' },
+            phiAccessed: false,
+            riskLevel: 'LOW',
+        });
 
         return NextResponse.json({
             enrolled: true,
@@ -95,8 +112,9 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet, { requireOrganization: true });
+export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
     requireOrganization: true,
+    requireMFA: true,
 });

@@ -9,9 +9,12 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handleGet(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const supabase = await createClient();
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 503 });
@@ -44,6 +47,20 @@ async function handleGet(context: AuthContext) {
             return NextResponse.json({ error: 'Failed to fetch claims' }, { status: 500 });
         }
 
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_VIEW',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'billing_claim',
+            details: { action: 'CLAIMS_LIST_VIEW', recordCount: claims?.length || 0 },
+            phiAccessed: true,
+            riskLevel: 'LOW',
+        });
+
         return NextResponse.json({
             claims,
             pagination: {
@@ -60,6 +77,7 @@ async function handleGet(context: AuthContext) {
 
 async function handlePost(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const supabase = await createClient();
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 503 });
@@ -90,6 +108,21 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Failed to create claim' }, { status: 500 });
         }
 
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_CREATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'billing_claim',
+            resourceId: claim.id,
+            details: { action: 'CLAIM_CREATE', claimNumber: claim.claim_number, patient_id: body.patientId },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
+
         return NextResponse.json({ claim }, { status: 201 });
     } catch (error) {
         logError({ action: 'CREATE_CLAIM_ERROR', error: sanitizeError(error) });
@@ -97,8 +130,9 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet, { requireOrganization: true });
+export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
     requireOrganization: true,
+    requireMFA: true,
 });

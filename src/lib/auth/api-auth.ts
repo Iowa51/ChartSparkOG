@@ -168,29 +168,32 @@ export function withAuth<T extends AuthContext>(
         if (options?.requiredFeature) {
             try {
                 const supabase = await createClient();
-                if (supabase) {
-                    const { data: feature, error: featureError } = await supabase
-                        .from('user_features')
-                        .select('enabled, expires_at, features!inner(code)')
-                        .eq('user_id', user.id)
-                        .eq('features.code', options.requiredFeature)
-                        .eq('enabled', true)
-                        .maybeSingle();
+                if (!supabase) {
+                    // SEC-006: FAIL CLOSED - deny access if Supabase client unavailable
+                    return errorResponse('Feature validation unavailable', 503);
+                }
 
-                    if (featureError) {
-                        console.error('Feature check database error:', featureError);
-                        // FAIL CLOSED on database error
-                        return errorResponse('Feature validation unavailable', 503);
-                    }
+                const { data: feature, error: featureError } = await supabase
+                    .from('user_features')
+                    .select('enabled, expires_at, features!inner(code)')
+                    .eq('user_id', user.id)
+                    .eq('features.code', options.requiredFeature)
+                    .eq('enabled', true)
+                    .maybeSingle();
 
-                    if (!feature) {
-                        return errorResponse('Feature not enabled for your account', 403);
-                    }
+                if (featureError) {
+                    console.error('Feature check database error:', featureError);
+                    // FAIL CLOSED on database error
+                    return errorResponse('Feature validation unavailable', 503);
+                }
 
-                    // Check if feature has expired
-                    if (feature.expires_at && new Date(feature.expires_at) < new Date()) {
-                        return errorResponse('Feature access has expired', 403);
-                    }
+                if (!feature) {
+                    return errorResponse('Feature not enabled for your account', 403);
+                }
+
+                // Check if feature has expired
+                if (feature.expires_at && new Date(feature.expires_at) < new Date()) {
+                    return errorResponse('Feature access has expired', 403);
                 }
             } catch (err) {
                 console.error('Feature check error:', err);

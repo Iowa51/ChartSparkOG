@@ -8,6 +8,8 @@ import { NextResponse } from 'next/server';
 import { processERAFile } from '@/lib/managed-billing/era-service';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -29,6 +31,21 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: result.error }, { status: 500 });
         }
 
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_CREATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: organizationId,
+            ipAddress,
+            userAgent,
+            resourceType: 'era_file',
+            details: { action: 'ERA_UPLOAD', fileName: file.name, matched: result.matched, unmatched: result.unmatched },
+            phiAccessed: true,
+            riskLevel: 'HIGH',
+        });
+
         return NextResponse.json({
             success: true,
             matched: result.matched,
@@ -42,4 +59,5 @@ async function handlePost(context: AuthContext) {
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['SUPER_ADMIN'],
+    requireMFA: true,
 });

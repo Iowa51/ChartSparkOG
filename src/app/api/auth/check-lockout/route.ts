@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Email required' }, { status: 400 });
         }
 
-        // Skip lockout check only in explicit demo mode
-        const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+        // Skip lockout check only in explicit demo mode AND non-production
+        const isDemoMode = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
         if (isDemoMode) {
             console.log('[LOCKOUT] Skipping lockout check - demo mode');
             return NextResponse.json({ locked: false, remainingAttempts: 99 });

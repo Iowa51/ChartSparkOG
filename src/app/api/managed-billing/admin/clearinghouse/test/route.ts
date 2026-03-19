@@ -8,6 +8,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -95,6 +97,21 @@ async function handlePost(context: AuthContext) {
             })
             .eq('clearinghouse', clearinghouse);
 
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_VIEW',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'clearinghouse_config',
+            details: { action: 'CLEARINGHOUSE_CONNECTION_TEST', clearinghouse, success: testResult.success },
+            phiAccessed: false,
+            riskLevel: 'MEDIUM',
+        });
+
         return NextResponse.json(testResult);
     } catch (error) {
         logError({ action: 'CLEARINGHOUSE_TEST_ERROR', error: sanitizeError(error) });
@@ -102,4 +119,4 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const POST = withAuth(handlePost, { requiredRole: ['SUPER_ADMIN'] });
+export const POST = withAuth(handlePost, { requiredRole: ['SUPER_ADMIN'], requireMFA: true });
