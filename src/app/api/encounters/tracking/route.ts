@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 /**
@@ -35,23 +36,25 @@ async function handlePost(context: AuthContext) {
         if (trackingError) throw trackingError;
 
         // 2. Create a high-level security audit log entry
-        const { error: auditError } = await supabase
-            .from('audit_logs')
-            .insert({
-                organization_id: context.user.organizationId,
-                user_id: context.user.id,
-                action: `encounter_${action}`,
-                resource_type: 'encounter',
-                resource_id: encounterId,
-                details: {
-                    msg: `Encounter status changed to ${action}`,
-                    patient_id: patientId,
-                    ...metadata
-                },
-                ip_address: context.request.headers.get('x-forwarded-for') || 'unknown'
-            });
-
-        if (auditError) throw auditError;
+        await logAuditEvent({
+            eventType: 'ENCOUNTER_UPDATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
+            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            resourceType: 'encounter',
+            resourceId: encounterId,
+            details: {
+                action,
+                tracking_record_type: 'encounter_tracking',
+                metadata_present: Boolean(metadata && Object.keys(metadata).length > 0),
+                patient_context_present: Boolean(patientId),
+            },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
 
         // 3. Update the encounter status if necessary
         if (action === 'completed') {

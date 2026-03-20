@@ -33,6 +33,25 @@ async function handler(context: AuthContext) {
             );
         }
 
+        await logAuditEvent({
+            eventType: 'phi_read',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
+            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            resourceType: 'appointment',
+            resourceId: appointment.id,
+            details: {
+                access_context: 'telehealth_room_creation',
+                resource_type: 'appointment',
+                resource_id: appointment.id,
+            },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
+
         // Verify organization ownership
         if (
             appointment.organization_id !== context.user.organizationId &&

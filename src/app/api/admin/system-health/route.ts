@@ -192,15 +192,15 @@ async function handleGet(context: AuthContext) {
         if (supabase) {
             const { data: logs } = await supabase
                 .from('audit_logs')
-                .select('action, entity_type, created_at')
-                .order('created_at', { ascending: false })
+                .select('event_type, resource_type, timestamp')
+                .order('timestamp', { ascending: false })
                 .limit(5);
 
             if (logs && logs.length > 0) {
-                logs.forEach((log: { action: string; entity_type: string; created_at: string }) => {
+                logs.forEach((log: { event_type: string; resource_type: string | null; timestamp: string }) => {
                     activities.push({
-                        time: log.created_at,
-                        event: `${log.action} ${log.entity_type}`,
+                        time: log.timestamp,
+                        event: `${log.event_type} ${log.resource_type || 'system'}`,
                         status: 'success',
                     });
                 });
