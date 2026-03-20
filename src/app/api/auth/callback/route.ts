@@ -1,19 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
-
-/**
- * Validate redirect path to prevent open redirect attacks.
- * Must start with "/" and not contain "//" or "\" to block protocol-relative URLs.
- */
-function sanitizeRedirectPath(path: string | null): string {
-    const fallback = "/dashboard";
-    if (!path) return fallback;
-    // Must start with single slash, block "//" (protocol-relative) and "\" (path traversal)
-    if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\")) {
-        return fallback;
-    }
-    return path;
-}
+import { sanitizeRedirectPath } from "@/lib/security/redirects";
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);

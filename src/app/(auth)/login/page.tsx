@@ -13,6 +13,7 @@ import {
     EyeOff,
 } from "lucide-react";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import { sanitizeRedirectPath } from "@/lib/security/redirects";
 
 // Role-based redirect map
 const roleRoutes: Record<string, string> = {
@@ -201,7 +202,7 @@ export default function LoginPage() {
             const redirectPath = roleRoutes[userRole] || defaultRedirect;
 
             // Check for explicit redirect param (for returning to a specific page)
-            const explicitRedirect = searchParams.get("redirect");
+            const explicitRedirect = sanitizeRedirectPath(searchParams.get("redirect"), redirectPath);
             if (explicitRedirect && userRole === 'USER') {
                 // Only honor redirect param for regular users going to dashboard routes
                 router.push(explicitRedirect);

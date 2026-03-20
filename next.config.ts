@@ -119,15 +119,14 @@ const nextConfig: NextConfig = {
         source: '/telehealth/:path*',
         headers: telehealthHeaders,
       },
-      // Allow microphone on notes pages for AI Scribe
       {
-        source: '/notes/:path*',
+        source: '/api/telehealth/:path*',
         headers: telehealthHeaders,
       },
-      // All other routes EXCEPT /notes and /telehealth - strict permissions
+      // All other routes EXCEPT telehealth - strict permissions
       // Using regex to exclude specific paths
       {
-        source: '/((?!notes|telehealth).*)',
+        source: '/((?!telehealth|api/telehealth).*)',
         headers: defaultHeaders,
       },
       // Also apply to root path
