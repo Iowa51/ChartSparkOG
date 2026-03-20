@@ -89,12 +89,12 @@ export default async function SuperAdminDashboard() {
                 .from('audit_logs')
                 .select(`
                     id,
-                    action,
-                    entity_type,
-                    created_at,
+                    event_type,
+                    resource_type,
+                    timestamp,
                     users(first_name, last_name)
                 `)
-                .order('created_at', { ascending: false })
+                .order('timestamp', { ascending: false })
                 .limit(10);
             recentActivity = logsData || [];
 
@@ -432,10 +432,10 @@ export default async function SuperAdminDashboard() {
                                                     <span className="font-medium">
                                                         {log.users?.first_name || 'System'}
                                                     </span>{' '}
-                                                    {log.action} {log.entity_type}
+                                                    {log.event_type} {log.resource_type || 'system'}
                                                 </p>
                                                 <p className="text-xs text-slate-500">
-                                                    {new Date(log.created_at).toLocaleString()}
+                                                    {new Date(log.timestamp).toLocaleString()}
                                                 </p>
                                             </div>
                                         </div>

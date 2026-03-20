@@ -212,7 +212,7 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'smart_triage',
-            details: { action: 'CHART_SUMMARY', patient_id, isDemo },
+            details: { action: 'CHART_SUMMARY', isDemo },
             phiAccessed: true,
             riskLevel: 'MEDIUM',
         });

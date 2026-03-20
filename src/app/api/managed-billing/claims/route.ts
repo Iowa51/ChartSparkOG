@@ -146,7 +146,7 @@ async function handlePost(context: AuthContext) {
             userAgent,
             resourceType: 'billing_claim',
             resourceId: claim.id,
-            details: { action: 'CLAIM_CREATE', claimNumber: claim.claim_number, patient_id: validatedBody.patientId },
+            details: { action: 'CLAIM_CREATE', claimNumber: claim.claim_number, hasEncounterReference: Boolean(validatedBody.encounterId) },
             phiAccessed: true,
             riskLevel: 'MEDIUM',
         });

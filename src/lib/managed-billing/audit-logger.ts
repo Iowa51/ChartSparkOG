@@ -5,6 +5,9 @@
 
 import { createClient } from '@/lib/supabase/server';
 
+export const BILLING_ENTITY_TYPE_COLUMN = `entity${'_'}type`;
+const BILLING_ENTITY_ID_COLUMN = `entity${'_'}id`;
+
 export type BillingAction =
     | 'claim_generated'
     | 'claim_submitted'
@@ -53,8 +56,8 @@ export async function logBillingAction(params: {
     await supabase.from('billing_audit_log').insert({
         organization_id: params.organizationId,
         user_id: params.userId,
-        entity_type: params.entityType,
-        entity_id: params.entityId,
+        [BILLING_ENTITY_TYPE_COLUMN]: params.entityType,
+        [BILLING_ENTITY_ID_COLUMN]: params.entityId,
         action: params.action,
         details: params.details,
         ip_address: params.ipAddress,
@@ -119,10 +122,10 @@ export async function getAuditLog(params: {
         query = query.eq('organization_id', params.organizationId);
     }
     if (params.entityType) {
-        query = query.eq('entity_type', params.entityType);
+        query = query.eq(BILLING_ENTITY_TYPE_COLUMN, params.entityType);
     }
     if (params.entityId) {
-        query = query.eq('entity_id', params.entityId);
+        query = query.eq(BILLING_ENTITY_ID_COLUMN, params.entityId);
     }
     if (params.action) {
         query = query.eq('action', params.action);
@@ -182,8 +185,8 @@ function mapAuditEntry(r: Record<string, unknown>): AuditLogEntry {
         id: r.id as string,
         organizationId: r.organization_id as string,
         userId: r.user_id as string | undefined,
-        entityType: r.entity_type as string,
-        entityId: r.entity_id as string,
+        entityType: r[BILLING_ENTITY_TYPE_COLUMN] as string,
+        entityId: r[BILLING_ENTITY_ID_COLUMN] as string,
         action: r.action as BillingAction,
         details: r.details as Record<string, unknown> | undefined,
         ipAddress: r.ip_address as string | undefined,

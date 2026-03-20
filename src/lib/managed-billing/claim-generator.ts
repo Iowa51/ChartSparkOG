@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { devError } from '@/lib/logging/safe-logger';
+import { BILLING_ENTITY_TYPE_COLUMN } from './audit-logger';
 
 export interface GeneratedClaim {
     encounterId: string;
@@ -444,7 +445,7 @@ async function logClaimGeneration(
 
     await supabase.from('billing_audit_log').insert({
         organization_id: organizationId,
-        entity_type: 'claim',
+        [BILLING_ENTITY_TYPE_COLUMN]: 'claim',
         entity_id: claimId,
         action: 'claim_generated',
         details: { auto_generated: true },

@@ -176,7 +176,7 @@ async function handlePost(context: AuthContext) {
             userAgent,
             resourceType: 'billing',
             resourceId: billing.id,
-            details: { action: 'BILLING_CREATE', patient_id: billingData.patient_id, invoice_number: invoiceNumber },
+            details: { action: 'BILLING_CREATE', invoice_number: invoiceNumber, hasEncounterReference: Boolean(billingData.encounter_id) },
             phiAccessed: true,
             riskLevel: 'MEDIUM',
         });

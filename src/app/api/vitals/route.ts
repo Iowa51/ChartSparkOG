@@ -78,7 +78,7 @@ async function handleGet(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'vitals',
-            details: { action: 'VITALS_VIEW', patient_id, encounter_id },
+            details: { action: 'VITALS_VIEW', hasPatientFilter: Boolean(patient_id), hasEncounterFilter: Boolean(encounter_id) },
             phiAccessed: true,
             riskLevel: 'LOW',
         });
@@ -192,8 +192,7 @@ async function handlePost(context: AuthContext) {
             resourceId: vital.id,
             details: {
                 action: 'VITALS_SAVE',
-                patient_id,
-                encounter_id,
+                hasEncounterReference: Boolean(encounter_id),
                 has_abnormal: abnormalFlags.length > 0,
                 abnormal_flags: abnormalFlags,
             },

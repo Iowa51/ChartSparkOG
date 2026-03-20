@@ -321,7 +321,7 @@ export async function checkRateLimit(
 export async function checkRateLimitByKey(
     identifier: string,
     rateLimitKey: RateLimitKey,
-    scope = rateLimitKey
+    scope: string = rateLimitKey
 ): Promise<{ success: boolean; response?: NextResponse }> {
     const config = getRateLimitConfigByKey(rateLimitKey);
 

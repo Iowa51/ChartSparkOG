@@ -65,7 +65,7 @@ async function handleGet(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'screening_scores',
-            details: { action: 'SCREENING_VIEW', patient_id, instrument },
+            details: { action: 'SCREENING_VIEW', instrument, hasPatientFilter: Boolean(patient_id) },
             phiAccessed: true,
             riskLevel: 'LOW',
         });
@@ -170,7 +170,6 @@ async function handlePost(context: AuthContext) {
             resourceId: screening.id,
             details: {
                 action: 'SCREENING_SAVE',
-                patient_id,
                 instrument,
                 total_score,
                 severity,
