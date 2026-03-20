@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEvent } from '@/lib/security/audit-log';
 import { CompleteSignupSchema, validateRequest } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
@@ -135,17 +136,17 @@ export async function POST(request: NextRequest) {
             logWarn({ action: 'SIGNUP_FEATURE_ASSIGNMENT_WARNING', error: sanitizeError(featureError) });
         }
 
-        // Audit log - SEC-REMEDIATION: No PHI in details
+        // SEC-SPRINT8: Route audit writes through canonical helper
         try {
-            await serviceSupabase.from('audit_logs').insert({
-                event_type: 'USER_CREATED',
-                user_id: userId,
-                user_email: email,
-                user_role: 'ADMIN',
-                organization_id: org.id,
-                ip_address: request.headers.get('x-forwarded-for') || 'unknown',
-                user_agent: request.headers.get('user-agent') || 'unknown',
-                risk_level: 'LOW',
+            await logAuditEvent({
+                eventType: 'USER_CREATED',
+                userId,
+                userEmail: email,
+                userRole: 'ADMIN',
+                organizationId: org.id,
+                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                userAgent: request.headers.get('user-agent') || 'unknown',
+                riskLevel: 'LOW',
                 details: { isNewOrg: true },
             });
         } catch {

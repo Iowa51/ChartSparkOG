@@ -137,7 +137,7 @@ export default function AdminAuditLogsPage() {
             const transformedLogs: AuditLogEntry[] = (data || []).map((row: any) => ({
                 id: row.id,
                 timestamp: new Date(row.created_at),
-                eventType: row.event_type || row.action || 'UNKNOWN',
+                eventType: row.event_type || 'UNKNOWN',
                 userId: row.user_id,
                 userEmail: row.user_email,
                 userRole: row.user_role,

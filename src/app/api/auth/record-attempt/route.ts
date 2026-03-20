@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEvent } from '@/lib/security/audit-log';
 import { LoginAttemptSchema, validateRequest } from '@/lib/validation/schemas';
 
 // F-020: In-memory IP-based rate limiting for record-attempt endpoint
@@ -84,15 +85,14 @@ export async function POST(request: NextRequest) {
             logError({ action: 'RECORD_ATTEMPT_DB_ERROR', error: sanitizeError(dbError) });
         }
 
-        // Also log to audit_logs for HIPAA compliance
+        // SEC-SPRINT8: Route audit writes through canonical helper
         try {
-            await supabase.from('audit_logs').insert({
-                event_type: success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILURE',
-                user_email: email,
-                ip_address: ipAddress,
-                user_agent: userAgent,
-                risk_level: success ? 'LOW' : 'MEDIUM',
-                created_at: new Date().toISOString(),
+            await logAuditEvent({
+                eventType: success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILURE',
+                userEmail: email,
+                ipAddress,
+                userAgent,
+                riskLevel: success ? 'LOW' : 'MEDIUM',
             });
         } catch {
             // Audit log failure is not blocking
