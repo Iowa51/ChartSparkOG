@@ -92,6 +92,28 @@ async function handlePost(context: AuthContext) {
         const validatedBody = validation.data;
         const claimNumber = `CLM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+        const [{ data: patient }, { data: provider }] = await Promise.all([
+            supabase
+                .from('patients')
+                .select('id')
+                .eq('id', validatedBody.patientId)
+                .eq('organization_id', context.user.organizationId!)
+                .maybeSingle(),
+            supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', validatedBody.providerId)
+                .eq('organization_id', context.user.organizationId!)
+                .maybeSingle(),
+        ]);
+
+        if (!patient || !provider) {
+            return NextResponse.json(
+                { error: 'Forbidden - invalid organization association' },
+                { status: 403 }
+            );
+        }
+
         const { data: claim, error } = await supabase
             .from('billing_claims')
             .insert({
