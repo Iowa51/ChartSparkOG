@@ -73,7 +73,7 @@ export type AuditEventType =
     | 'AI_TREATMENT_PLAN_REQUEST'
     | 'AI_CHAT_REQUEST'
     | 'AI_GENERATE_NOTE_REQUEST'
-    // Billing events (F-028: consolidated from managed-billing/audit-logger)
+    // Billing events (F-028: consolidated from legacy managed billing audit flow)
     | 'BILLING_RECORD_VIEW'
     | 'BILLING_RECORD_CREATE'
     | 'BILLING_CLAIM_GENERATED'
