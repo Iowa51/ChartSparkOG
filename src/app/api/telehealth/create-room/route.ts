@@ -75,6 +75,10 @@ async function handler(context: AuthContext) {
         const dailyApiKey = process.env.DAILY_API_KEY;
 
         if (!dailyApiKey) {
+            // SEC-SPRINT8: Demo/fallback telehealth is forbidden in production
+            if (process.env.NODE_ENV === 'production') {
+                throw new Error('Demo telehealth is disabled in production');
+            }
             roomUrl = roomUrl || `https://demo.daily.co/${roomName}`;
 
             await supabase

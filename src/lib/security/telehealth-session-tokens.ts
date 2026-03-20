@@ -111,21 +111,21 @@ export async function resolveTelehealthJoinSession(sessionTokenRef: string): Pro
     }
 
     const supabase = requireServiceRoleClient();
+
+    // SEC-SPRINT8: Atomic single-use claim — UPDATE ... WHERE used = FALSE
+    // If zero rows returned, the token was already consumed or does not exist.
     const { data, error } = await supabase
         .from('telehealth_session_tokens')
-        .select('appointment_id, participant_role, encrypted_room_url, encrypted_meeting_token, expires_at')
+        .update({ used: true, last_accessed_at: new Date().toISOString() })
         .eq('token_id', decoded.tokenId)
+        .eq('used', false)
         .gt('expires_at', new Date().toISOString())
+        .select('appointment_id, participant_role, encrypted_room_url, encrypted_meeting_token')
         .single();
 
     if (error || !data) {
         return null;
     }
-
-    await supabase
-        .from('telehealth_session_tokens')
-        .update({ last_accessed_at: new Date().toISOString() })
-        .eq('token_id', decoded.tokenId);
 
     return {
         appointmentId: data.appointment_id,

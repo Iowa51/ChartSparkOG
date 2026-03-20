@@ -14,7 +14,8 @@ export async function POST(request: Request) {
 
         const session = await resolveTelehealthJoinSession(validation.data.sessionTokenRef);
         if (!session) {
-            return NextResponse.json({ error: 'Telehealth session is invalid or expired' }, { status: 404 });
+            // SEC-SPRINT8: 403 — token is invalid, expired, or already used (single-use)
+            return NextResponse.json({ error: 'Telehealth session token is invalid, expired, or already used' }, { status: 403 });
         }
 
         return NextResponse.json({
