@@ -8,23 +8,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/subscriptions/stripe-client';
 import { activateSubscription } from '@/lib/subscriptions/subscription-service';
-import { createClient } from '@/lib/supabase/server';
+import { requireServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, sanitizeError, devLog, logWarn } from '@/lib/logging/safe-logger';
 import type Stripe from 'stripe';
-
-// In-memory idempotency store (use Redis in production for multi-instance deployments)
-const processedEvents = new Map<string, number>();
-const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-// Clean up old entries periodically
-function cleanupProcessedEvents() {
-    const now = Date.now();
-    for (const [eventId, timestamp] of processedEvents.entries()) {
-        if (now - timestamp > IDEMPOTENCY_TTL_MS) {
-            processedEvents.delete(eventId);
-        }
-    }
-}
 
 export async function POST(request: NextRequest) {
     if (!stripe) {
@@ -61,15 +47,24 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // SEC-REMEDIATION: Idempotency check - prevent duplicate event processing
-    if (processedEvents.has(event.id)) {
-        devLog('Webhook', `Duplicate event ignored: ${event.id}`);
-        return NextResponse.json({ received: true, duplicate: true });
-    }
+    const supabase = requireServiceRoleClient();
+    const { error: idempotencyError } = await supabase
+        .from('processed_webhook_events')
+        .insert({ stripe_event_id: event.id });
 
-    // Mark event as being processed
-    processedEvents.set(event.id, Date.now());
-    cleanupProcessedEvents();
+    if (idempotencyError) {
+        if (idempotencyError.code === '23505') {
+            devLog('Webhook', `Duplicate event ignored: ${event.id}`);
+            return NextResponse.json({ received: true, duplicate: true });
+        }
+
+        logError({
+            action: 'webhook_idempotency_error',
+            error: sanitizeError(idempotencyError),
+            resourceId: event.id,
+        });
+        return NextResponse.json({ error: 'Webhook idempotency check failed' }, { status: 500 });
+    }
 
     try {
         switch (event.type) {
@@ -93,39 +88,34 @@ export async function POST(request: NextRequest) {
                 devLog('Webhook', `Subscription updated: ${subscription.id}`);
 
                 // Handle subscription updates (e.g., plan changes, renewals)
-                const supabase = await createClient();
-                if (supabase) {
-                    // SEC-REMEDIATION: Verify subscription belongs to an existing org before updating
-                    const { data: existingSub } = await supabase
-                        .from('organization_subscriptions')
-                        .select('organization_id')
-                        .eq('stripe_subscription_id', subscription.id)
-                        .single();
+                const { data: existingSub } = await supabase
+                    .from('organization_subscriptions')
+                    .select('organization_id')
+                    .eq('stripe_subscription_id', subscription.id)
+                    .single();
 
-                    if (!existingSub) {
-                        logWarn({ action: 'WEBHOOK_UNKNOWN_SUBSCRIPTION', resourceId: subscription.id });
-                        break;
-                    }
-
-                    const status = subscription.status === 'active' ? 'active'
-                        : subscription.status === 'past_due' ? 'past_due'
-                            : subscription.status === 'canceled' ? 'canceled'
-                                : 'active';
-
-                    // Access period timestamps - use type assertion for compatibility with different Stripe versions
-                    const subData = subscription as unknown as { current_period_start: number; current_period_end: number };
-
-                    await supabase
-                        .from('organization_subscriptions')
-                        .update({
-                            status,
-                            current_period_start: new Date(subData.current_period_start * 1000).toISOString(),
-                            current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
-                            updated_at: new Date().toISOString(),
-                        })
-                        .eq('stripe_subscription_id', subscription.id)
-                        .eq('organization_id', existingSub.organization_id); // Extra safety: ensure org match
+                if (!existingSub) {
+                    logWarn({ action: 'WEBHOOK_UNKNOWN_SUBSCRIPTION', resourceId: subscription.id });
+                    break;
                 }
+
+                const status = subscription.status === 'active' ? 'active'
+                    : subscription.status === 'past_due' ? 'past_due'
+                        : subscription.status === 'canceled' ? 'canceled'
+                            : 'active';
+
+                const subData = subscription as unknown as { current_period_start: number; current_period_end: number };
+
+                await supabase
+                    .from('organization_subscriptions')
+                    .update({
+                        status,
+                        current_period_start: new Date(subData.current_period_start * 1000).toISOString(),
+                        current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('stripe_subscription_id', subscription.id)
+                    .eq('organization_id', existingSub.organization_id);
                 break;
             }
 
@@ -133,22 +123,19 @@ export async function POST(request: NextRequest) {
                 const subscription = event.data.object as Stripe.Subscription;
                 devLog('Webhook', `Subscription deleted: ${subscription.id}`);
 
-                const supabase = await createClient();
-                if (supabase) {
-                    const now = new Date();
-                    const deletionDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
+                const now = new Date();
+                const deletionDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-                    await supabase
-                        .from('organization_subscriptions')
-                        .update({
-                            status: 'canceled',
-                            canceled_at: now.toISOString(),
-                            read_only_started_at: now.toISOString(),
-                            deletion_scheduled_at: deletionDate.toISOString(),
-                            updated_at: now.toISOString(),
-                        })
-                        .eq('stripe_subscription_id', subscription.id);
-                }
+                await supabase
+                    .from('organization_subscriptions')
+                    .update({
+                        status: 'canceled',
+                        canceled_at: now.toISOString(),
+                        read_only_started_at: now.toISOString(),
+                        deletion_scheduled_at: deletionDate.toISOString(),
+                        updated_at: now.toISOString(),
+                    })
+                    .eq('stripe_subscription_id', subscription.id);
                 break;
             }
 
@@ -157,10 +144,8 @@ export async function POST(request: NextRequest) {
                 devLog('Webhook', `Payment failed for invoice: ${invoice.id}`);
 
                 // Update subscription status to past_due
-                const supabase = await createClient();
-                // Use type assertion for subscription property compatibility
                 const invoiceData = invoice as unknown as { subscription?: string | null };
-                if (supabase && invoiceData.subscription) {
+                if (invoiceData.subscription) {
                     await supabase
                         .from('organization_subscriptions')
                         .update({
@@ -177,10 +162,8 @@ export async function POST(request: NextRequest) {
                 devLog('Webhook', `Invoice paid: ${invoice.id}`);
 
                 // Ensure subscription is active after successful payment
-                const supabase = await createClient();
-                // Use type assertion for subscription property compatibility
                 const invoiceData = invoice as unknown as { subscription?: string | null };
-                if (supabase && invoiceData.subscription) {
+                if (invoiceData.subscription) {
                     await supabase
                         .from('organization_subscriptions')
                         .update({
@@ -201,8 +184,10 @@ export async function POST(request: NextRequest) {
             error: sanitizeError(error),
             resourceType: 'stripe_webhook',
         });
-        // Remove from processed events so it can be retried
-        processedEvents.delete(event.id);
+        await supabase
+            .from('processed_webhook_events')
+            .delete()
+            .eq('stripe_event_id', event.id);
         return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
     }
 }
