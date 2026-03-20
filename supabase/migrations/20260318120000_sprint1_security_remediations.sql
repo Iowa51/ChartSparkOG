@@ -132,7 +132,7 @@ BEGIN
   END IF;
 
   -- Block changes to role column unless performer is ADMIN or SUPER_ADMIN
-  IF NEW.role IS DISTINCT FROM OLD.role THEN
+  IF TG_OP = 'UPDATE' AND NEW.role IS DISTINCT FROM OLD.role THEN
     IF OLD.id = auth.uid() THEN
       RAISE EXCEPTION 'Users cannot change their own role';
     END IF;
@@ -143,9 +143,16 @@ BEGIN
   END IF;
 
   -- Block changes to organization_id for non-super-admins
-  IF NEW.organization_id IS DISTINCT FROM OLD.organization_id THEN
+  IF TG_OP = 'UPDATE' AND NEW.organization_id IS DISTINCT FROM OLD.organization_id THEN
     IF (SELECT role FROM public.profiles WHERE id = auth.uid()) != 'SUPER_ADMIN' THEN
       RAISE EXCEPTION 'Only super administrators can change organization assignments';
+    END IF;
+  END IF;
+
+  -- For INSERT: block non-admin from assigning elevated roles
+  IF TG_OP = 'INSERT' AND NEW.role IN ('ADMIN', 'SUPER_ADMIN') THEN
+    IF (SELECT role FROM public.profiles WHERE id = auth.uid()) NOT IN ('ADMIN', 'SUPER_ADMIN') THEN
+      RAISE EXCEPTION 'Only administrators can create profiles with elevated roles';
     END IF;
   END IF;
 
@@ -155,7 +162,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_prevent_self_role_escalation ON profiles;
 CREATE TRIGGER trg_prevent_self_role_escalation
-  BEFORE UPDATE ON profiles
+  BEFORE INSERT OR UPDATE ON profiles
   FOR EACH ROW
   EXECUTE FUNCTION public.prevent_self_role_escalation();
 

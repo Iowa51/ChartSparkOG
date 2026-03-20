@@ -49,11 +49,22 @@ export async function getAuthenticatedUser(
 
         const { data: user, error: userError } = await supabase
             .from('users')
-            .select('id, email, role, organization_id, is_active, last_activity_at')
+            .select('id, email, role, organization_id, is_active')
             .eq('id', authUser.id)
             .single();
 
         if (userError || !user) {
+            return null;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('last_activity_at')
+            .eq('id', authUser.id)
+            .maybeSingle();
+
+        if (profileError) {
+            logError({ action: 'API_AUTH_PROFILE_LOOKUP_ERROR', error: sanitizeError(profileError), userId: authUser.id });
             return null;
         }
 
@@ -64,21 +75,23 @@ export async function getAuthenticatedUser(
         }
 
         // F-022: Server-side session timeout enforcement (HIPAA 15-min inactivity)
-        if (user.last_activity_at) {
-            const lastActivity = new Date(user.last_activity_at).getTime();
+        if (profile?.last_activity_at) {
+            const lastActivity = new Date(profile.last_activity_at).getTime();
             if (Date.now() - lastActivity > SESSION_TIMEOUT_MS) {
                 logWarn({ action: 'API_AUTH_SESSION_TIMEOUT', userId: user.id });
                 return null;
             }
         }
 
-        // F-022: Update last_activity_at (fire-and-forget, don't block the request)
-        supabase
-            .from('users')
-            .update({ last_activity_at: new Date().toISOString() })
-            .eq('id', user.id)
-            .then(() => {})
-            .catch(() => {});
+        if (profile) {
+            // F-022: Update last_activity_at (fire-and-forget, don't block the request)
+            supabase
+                .from('profiles')
+                .update({ last_activity_at: new Date().toISOString() })
+                .eq('id', user.id)
+                .then(() => {})
+                .catch(() => {});
+        }
 
         return {
             id: user.id,
