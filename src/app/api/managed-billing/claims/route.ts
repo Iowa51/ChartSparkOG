@@ -92,7 +92,7 @@ async function handlePost(context: AuthContext) {
         const validatedBody = validation.data;
         const claimNumber = `CLM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-        const [{ data: patient }, { data: provider }] = await Promise.all([
+        const [{ data: patient }, { data: provider }, encounterResult] = await Promise.all([
             supabase
                 .from('patients')
                 .select('id')
@@ -105,6 +105,13 @@ async function handlePost(context: AuthContext) {
                 .eq('id', validatedBody.providerId)
                 .eq('organization_id', context.user.organizationId!)
                 .maybeSingle(),
+            validatedBody.encounterId
+                ? supabase
+                    .from('encounters')
+                    .select('id, patient_id, organization_id')
+                    .eq('id', validatedBody.encounterId)
+                    .maybeSingle()
+                : Promise.resolve({ data: null, error: null }),
         ]);
 
         if (!patient || !provider) {
@@ -112,6 +119,31 @@ async function handlePost(context: AuthContext) {
                 { error: 'Forbidden - invalid organization association' },
                 { status: 403 }
             );
+        }
+
+        if (validatedBody.encounterId) {
+            const encounter = encounterResult?.data;
+
+            if (!encounter) {
+                return NextResponse.json(
+                    { error: 'Forbidden - encounter not found' },
+                    { status: 403 }
+                );
+            }
+
+            if (encounter.organization_id !== context.user.organizationId) {
+                return NextResponse.json(
+                    { error: 'Forbidden - encounter belongs to a different organization' },
+                    { status: 403 }
+                );
+            }
+
+            if (encounter.patient_id !== validatedBody.patientId) {
+                return NextResponse.json(
+                    { error: 'Forbidden - encounter does not belong to the selected patient' },
+                    { status: 403 }
+                );
+            }
         }
 
         const { data: claim, error } = await supabase
