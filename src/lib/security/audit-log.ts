@@ -110,6 +110,7 @@ function sanitizeDetails(details: Record<string, any>): Record<string, any> {
         'insurance_id', 'medical_record', 'diagnosis', 'medication',
         'treatment', 'symptoms', 'notes', 'content', 'patient', 'name',
     ];
+    const sensitiveDiagnosticFields = ['error', 'message', 'stack'];
 
     const sanitized: Record<string, any> = {};
 
@@ -118,6 +119,8 @@ function sanitizeDetails(details: Record<string, any>): Record<string, any> {
 
         if (phiFields.some(phi => lowerKey.includes(phi))) {
             sanitized[key] = '[REDACTED]';
+        } else if (sensitiveDiagnosticFields.some(field => lowerKey.includes(field)) && typeof value === 'string') {
+            sanitized[key] = '[REDACTED_DIAGNOSTIC]';
         } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
             sanitized[key] = sanitizeDetails(value);
         } else {

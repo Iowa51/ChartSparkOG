@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { getSafeAuditErrorDetails } from '@/lib/security/audit-error-codes';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { AITreatmentPlanSchema, validateRequest } from '@/lib/validation/schemas';
@@ -53,6 +54,7 @@ async function handler(context: AuthContext) {
 
     } catch (error: unknown) {
         logError({ action: 'AI_TREATMENT_PLAN_ERROR', error: sanitizeError(error) });
+        const { errorCode, errorStatus } = getSafeAuditErrorDetails(error);
 
         await logAuditEvent({
             eventType: 'API_ERROR',
@@ -62,7 +64,7 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'ai_treatment_plan',
-            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            details: { errorCode, errorStatus },
             phiAccessed: false,
             riskLevel: 'LOW',
         });
