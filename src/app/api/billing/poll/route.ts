@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { StatusPollingService } from "@/lib/managed-billing/status-polling-service";
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { isValidBearerSecret } from '@/lib/security/timing-safe';
+import { requireServiceRoleClient } from '@/lib/supabase/service-role-client';
 
 /**
  * Trigger Billing Polling
@@ -24,8 +25,19 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        // Fetch all organizations with active billing
-        const activeOrgIds = ['demo-org-123'];
+        const supabase = requireServiceRoleClient();
+        const { data: subscriptions, error } = await supabase
+            .from('managed_billing_subscriptions')
+            .select('organization_id')
+            .eq('status', 'active');
+
+        if (error) {
+            throw error;
+        }
+
+        const activeOrgIds = Array.from(
+            new Set((subscriptions || []).map(subscription => subscription.organization_id).filter(Boolean))
+        );
 
         const results = [];
         for (const orgId of activeOrgIds) {
