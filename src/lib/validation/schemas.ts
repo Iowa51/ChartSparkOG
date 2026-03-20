@@ -289,6 +289,33 @@ export const ValidateCodesSchema = z.object({
     })).min(1).max(100),
 });
 
+export const AuditorBatchActionSchema = z.object({
+    action: z.enum(['approve', 'flag']),
+    submissionIds: z.array(z.string().min(1).max(100)).min(1).max(100),
+    reason: z.string().trim().max(1000).optional(),
+}).superRefine((data, ctx) => {
+    if (data.action === 'flag' && !data.reason) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['reason'],
+            message: 'Flag reason is required',
+        });
+    }
+});
+
+const ERA_UPLOAD_MIME_TYPES = [
+    'application/edi-x12',
+    'application/octet-stream',
+    'text/plain',
+] as const;
+
+export const ERAUploadMetadataSchema = z.object({
+    organizationId: UUIDSchema,
+    fileName: z.string().trim().min(1).max(200).regex(/\.(835|edi|txt)$/i, 'ERA files must use .835, .edi, or .txt extensions'),
+    fileType: z.enum(ERA_UPLOAD_MIME_TYPES),
+    fileSize: z.number().int().positive().max(10 * 1024 * 1024, 'ERA file exceeds 10MB size limit'),
+});
+
 // AI Generate Note schema
 export const AIGenerateNoteSchema = z.object({
     clinicianInput: z.string().max(50000).optional().default(''),
