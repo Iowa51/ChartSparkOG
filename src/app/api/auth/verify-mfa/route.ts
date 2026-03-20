@@ -2,11 +2,26 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { checkRateLimitByKey } from '@/lib/security/rate-limit';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { VerifyMFASchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handlePost(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
+        const rateLimitIdentifier = ipAddress !== 'unknown'
+            ? ipAddress
+            : context.user.id;
+        const rateLimitResult = await checkRateLimitByKey(rateLimitIdentifier, 'mfaVerify', 'verify-mfa');
+
+        if (!rateLimitResult.success) {
+            return rateLimitResult.response ?? NextResponse.json(
+                { error: 'Service temporarily unavailable. Please try again.' },
+                { status: 503 }
+            );
+        }
+
         const supabase = await createClient();
         if (!supabase) {
             return NextResponse.json({ error: 'MFA verification unavailable' }, { status: 503 });
@@ -31,8 +46,8 @@ async function handlePost(context: AuthContext) {
                 userEmail: context.user.email,
                 userRole: context.user.role,
                 organizationId: context.user.organizationId ?? undefined,
-                ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-                userAgent: context.request.headers.get('user-agent') || 'unknown',
+                ipAddress,
+                userAgent,
                 resourceType: 'mfa_factor',
                 resourceId: factorId,
                 details: { stage: 'challenge' },
@@ -55,8 +70,8 @@ async function handlePost(context: AuthContext) {
                 userEmail: context.user.email,
                 userRole: context.user.role,
                 organizationId: context.user.organizationId ?? undefined,
-                ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-                userAgent: context.request.headers.get('user-agent') || 'unknown',
+                ipAddress,
+                userAgent,
                 resourceType: 'mfa_factor',
                 resourceId: factorId,
                 details: { stage: 'verify' },
@@ -72,8 +87,8 @@ async function handlePost(context: AuthContext) {
             userEmail: context.user.email,
             userRole: context.user.role,
             organizationId: context.user.organizationId ?? undefined,
-            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            ipAddress,
+            userAgent,
             resourceType: 'mfa_factor',
             resourceId: factorId,
             details: { stage: 'verify' },
