@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { isValidBearerSecret } from '@/lib/security/timing-safe';
 
 /**
  * Validate cron secret - fails CLOSED in production
@@ -31,9 +32,7 @@ function validateCronSecret(request: NextRequest): { valid: boolean; error?: str
 
     // Verify authorization header
     const authHeader = request.headers.get('authorization');
-    const providedSecret = authHeader?.replace('Bearer ', '');
-
-    if (providedSecret !== cronSecret) {
+    if (!isValidBearerSecret(authHeader, cronSecret)) {
         return { valid: false, error: 'Unauthorized' };
     }
 

@@ -125,6 +125,7 @@ export function validateRequiredEnvVars(): string[] {
     const required = [
         'NEXT_PUBLIC_SUPABASE_URL',
         'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+        'ENCRYPTION_SALT',
     ];
 
     // Additional requirements for production
@@ -156,7 +157,7 @@ export function ensureRequiredEnvVars(): void {
     if (missing.length > 0) {
         const message = `Missing required environment variables: ${missing.join(', ')}`;
 
-        if (isProduction()) {
+        if (isProduction() || missing.includes('ENCRYPTION_SALT')) {
             throw new Error(`[CRITICAL] ${message}`);
         } else {
             logWarn({ action: 'ENV_MISSING_VARS', error: message });

@@ -278,3 +278,36 @@ CREATE TABLE IF NOT EXISTS public.acknowledgements (
 );
 
 CREATE INDEX IF NOT EXISTS idx_acknowledgements_claim ON public.acknowledgements(claim_id);
+
+ALTER TABLE public.acknowledgements ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "acknowledgements_select" ON public.acknowledgements;
+CREATE POLICY "acknowledgements_select" ON public.acknowledgements
+  FOR SELECT TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.billing_claims bc
+      WHERE bc.id = acknowledgements.claim_id
+        AND bc.organization_id = public.get_user_organization_id()
+    )
+  );
+
+DROP POLICY IF EXISTS "acknowledgements_manage" ON public.acknowledgements;
+CREATE POLICY "acknowledgements_manage" ON public.acknowledgements
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.billing_claims bc
+      WHERE bc.id = acknowledgements.claim_id
+        AND bc.organization_id = public.get_user_organization_id()
+        AND public.get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.billing_claims bc
+      WHERE bc.id = acknowledgements.claim_id
+        AND bc.organization_id = public.get_user_organization_id()
+        AND public.get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+    )
+  );

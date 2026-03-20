@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { StatusPollingService } from "@/lib/managed-billing/status-polling-service";
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { isValidBearerSecret } from '@/lib/security/timing-safe';
 
 /**
  * Trigger Billing Polling
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
     }
 
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    if (!isValidBearerSecret(authHeader, cronSecret)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

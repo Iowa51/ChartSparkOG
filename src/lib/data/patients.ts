@@ -200,46 +200,37 @@ export async function searchPatients(
         const trimmedQuery = query.trim();
         const { from, to } = getPaginationRange(page, pageSize);
 
-        // Server-side search using ilike for each search term across name, email, phone
-        const pattern = `%${trimmedQuery}%`;
-
-        // Build count query with server-side filtering
-        let countQuery = supabase
-            .from('patients')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', organizationId)
-            .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`);
-
-        if (status && status !== 'all') {
-            countQuery = countQuery.eq('status', status);
-        }
-
-        const { count, error: countError } = await countQuery;
-
-        if (countError) {
-            handleDatabaseError(countError, 'searchPatients:count');
-        }
-
-        // Build data query with server-side filtering and pagination
         let dataQuery = supabase
             .from('patients')
             .select('*')
-            .eq('organization_id', organizationId)
-            .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`);
+            .eq('organization_id', organizationId);
 
         if (status && status !== 'all') {
             dataQuery = dataQuery.eq('status', status);
         }
 
-        const { data, error } = await dataQuery
-            .order('created_at', { ascending: false })
-            .range(from, to);
+        const { data, error } = await dataQuery.order('created_at', { ascending: false });
 
         if (error) {
             handleDatabaseError(error, 'searchPatients');
         }
 
-        const total = count || 0;
+        const searchNeedle = trimmedQuery.toLowerCase();
+        const filteredPatients = (data || []).filter((patient: Patient) => {
+            const searchableFields = [
+                patient.first_name,
+                patient.last_name,
+                patient.email,
+                patient.phone,
+            ];
+
+            return searchableFields.some((field) =>
+                typeof field === 'string' && field.toLowerCase().includes(searchNeedle)
+            );
+        });
+
+        const paginatedPatients = filteredPatients.slice(from, to + 1);
+        const total = filteredPatients.length;
 
         await createAuditLog({
             event_type: 'PATIENTS_SEARCH',
@@ -251,7 +242,7 @@ export async function searchPatients(
         });
 
         return {
-            data: data || [],
+            data: paginatedPatients,
             count: total,
             page,
             pageSize,
