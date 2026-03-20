@@ -331,6 +331,10 @@ export const TelehealthEndSessionSchema = z.object({
     roomName: z.string().max(100).optional(),
 });
 
+export const TelehealthJoinSessionSchema = z.object({
+    sessionTokenRef: z.string().min(32).max(512),
+});
+
 export const EHRConfigurationSchema = z.object({
     ehr_system: z.string().min(1).max(100),
     display_name: z.string().min(1).max(100),

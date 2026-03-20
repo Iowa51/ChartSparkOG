@@ -1,10 +1,11 @@
 // Telehealth room creation via Daily.co API
 
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
-import { randomUUID } from 'crypto';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { createTelehealthJoinSession } from '@/lib/security/telehealth-session-tokens';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { TelehealthCreateRoomSchema, validateRequest } from '@/lib/validation/schemas';
 
@@ -15,11 +16,10 @@ async function handler(context: AuthContext) {
         if (!validation.success) {
             return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
-        const { appointmentId, patientName, providerId } = validation.data;
 
+        const { appointmentId, patientName, providerId } = validation.data;
         const supabase = await createClient();
 
-        // SEC-CODEX-4: Hard-fail if appointment lookup fails or returns null
         const { data: appointment, error: appointmentError } = await supabase
             .from('appointments')
             .select('id, patient_id, provider_id, organization_id, status, telehealth_room_url')
@@ -52,7 +52,6 @@ async function handler(context: AuthContext) {
             riskLevel: 'MEDIUM',
         });
 
-        // Verify organization ownership
         if (
             appointment.organization_id !== context.user.organizationId &&
             context.user.role !== 'SUPER_ADMIN'
@@ -63,112 +62,88 @@ async function handler(context: AuthContext) {
             );
         }
 
-        // Verify appointment status is eligible for telehealth
-        const ALLOWED_STATUSES = ['scheduled', 'confirmed', 'in_progress'];
-        if (!ALLOWED_STATUSES.includes(appointment.status)) {
+        const allowedStatuses = ['scheduled', 'confirmed', 'in_progress'];
+        if (!allowedStatuses.includes(appointment.status)) {
             return NextResponse.json(
                 { error: `Appointment status '${appointment.status}' is not eligible for telehealth. Must be scheduled, confirmed, or in_progress.` },
                 { status: 400 }
             );
         }
 
-        // If appointment is already in_progress and has an existing room, return it
-        if (appointment.status === 'in_progress' && appointment.telehealth_room_url) {
-            return NextResponse.json({
-                roomUrl: appointment.telehealth_room_url,
-                roomName: appointment.telehealth_room_url.split('/').pop() || '',
-                existingRoom: true,
-            });
-        }
-
-        // SEC-005: Use non-guessable room name (UUID instead of predictable pattern)
-        const roomName = `room-${randomUUID()}`;
-
-        // Room creation logged via audit log below — no console output of room names
-
-        // Check if Daily API is configured
+        let roomUrl = appointment.telehealth_room_url || null;
+        const roomName = roomUrl ? roomUrl.split('/').pop() || '' : `room-${randomUUID()}`;
         const dailyApiKey = process.env.DAILY_API_KEY;
+
         if (!dailyApiKey) {
-            // Demo mode - return mock room
+            roomUrl = roomUrl || `https://demo.daily.co/${roomName}`;
+
+            await supabase
+                .from('appointments')
+                .update({
+                    is_telehealth: true,
+                    telehealth_room_url: roomUrl,
+                    status: 'in_progress'
+                })
+                .eq('id', appointmentId)
+                .eq('organization_id', context.user.organizationId);
+
+            const providerSessionTokenRef = await createTelehealthJoinSession({
+                appointmentId,
+                organizationId: appointment.organization_id,
+                participantRole: 'provider',
+                roomUrl,
+                meetingToken: 'demo-provider-token',
+            });
+
+            const patientSessionTokenRef = await createTelehealthJoinSession({
+                appointmentId,
+                organizationId: appointment.organization_id,
+                participantRole: 'patient',
+                roomUrl,
+                meetingToken: 'demo-patient-token',
+            });
+
             return NextResponse.json({
-                roomUrl: `https://demo.daily.co/${roomName}`,
-                roomName: roomName,
-                providerToken: 'demo-provider-token',
-                patientToken: 'demo-patient-token',
-                isDemo: true
+                appointmentId,
+                providerSessionTokenRef,
+                patientSessionTokenRef,
+                patientJoinPath: `/telehealth/join?session=${encodeURIComponent(patientSessionTokenRef)}`,
+                isDemo: true,
             });
         }
 
-        const response = await fetch('https://api.daily.co/v1/rooms', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${dailyApiKey}`
-            },
-            body: JSON.stringify({
-                name: roomName,
-                privacy: 'private',
-                properties: {
-                    enable_chat: true,
-                    enable_screenshare: true,
-                    max_participants: 2,
-                    exp: Math.floor(Date.now() / 1000) + (2 * 60 * 60) // 2 hour expiry
-                }
-            })
-        });
+        if (!roomUrl) {
+            const roomResponse = await fetch('https://api.daily.co/v1/rooms', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${dailyApiKey}`
+                },
+                body: JSON.stringify({
+                    name: roomName,
+                    privacy: 'private',
+                    properties: {
+                        enable_chat: true,
+                        enable_screenshare: true,
+                        max_participants: 2,
+                        exp: Math.floor(Date.now() / 1000) + (2 * 60 * 60)
+                    }
+                })
+            });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            logError({ action: 'DAILY_API_ERROR', error: sanitizeError(errorData), status: String(response.status) });
-            return NextResponse.json(
-                { error: 'Failed to create telehealth room' },
-                { status: 500 }
-            );
-        }
-
-        const room = await response.json();
-
-        // Room URL logged via audit log below
-
-        // Update appointment in database (optional - may not exist for demo)
-        if (supabase) {
-            try {
-                await supabase
-                    .from('appointments')
-                    .update({
-                        is_telehealth: true,
-                        telehealth_room_url: room.url,
-                        status: 'in_progress'
-                    })
-                    .eq('id', appointmentId);
-            } catch {
-                // Ignore - demo appointments may not exist
+            if (!roomResponse.ok) {
+                const errorData = await roomResponse.json().catch(() => ({ error: 'Unknown error' }));
+                logError({ action: 'DAILY_API_ERROR', error: sanitizeError(errorData), status: String(roomResponse.status) });
+                return NextResponse.json(
+                    { error: 'Failed to create telehealth room' },
+                    { status: 500 }
+                );
             }
 
-            // Audit log (no PHI) - wrapped in try-catch
-            try {
-                await logAuditEvent({
-                    eventType: 'APPOINTMENT_UPDATE',
-                    userId: context.user.id,
-                    userEmail: context.user.email,
-                    userRole: context.user.role,
-                    organizationId: context.user.organizationId ?? undefined,
-                    ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-                    userAgent: context.request.headers.get('user-agent') || 'unknown',
-                    resourceType: 'telehealth_room',
-                    resourceId: appointmentId,
-                    riskLevel: 'LOW',
-                    details: {
-                        telehealth_action: 'room_created',
-                        roomName,
-                    },
-                });
-            } catch {
-                // Don't fail if audit log fails
-            }
+            const room = await roomResponse.json();
+            roomUrl = room.url;
         }
 
-        // Generate meeting tokens
         const providerTokenResponse = await fetch('https://api.daily.co/v1/meeting-tokens', {
             method: 'POST',
             headers: {
@@ -199,16 +174,65 @@ async function handler(context: AuthContext) {
             })
         });
 
+        if (!providerTokenResponse.ok || !patientTokenResponse.ok) {
+            logError({
+                action: 'DAILY_TOKEN_GENERATION_ERROR',
+                status: `${providerTokenResponse.status}:${patientTokenResponse.status}`,
+            });
+            return NextResponse.json({ error: 'Failed to create telehealth session access' }, { status: 500 });
+        }
+
         const providerToken = await providerTokenResponse.json();
         const patientToken = await patientTokenResponse.json();
 
-        return NextResponse.json({
-            roomUrl: room.url,
-            roomName: room.name,
-            providerToken: providerToken.token,
-            patientToken: patientToken.token
+        await supabase
+            .from('appointments')
+            .update({
+                is_telehealth: true,
+                telehealth_room_url: roomUrl,
+                status: 'in_progress'
+            })
+            .eq('id', appointmentId)
+            .eq('organization_id', context.user.organizationId);
+
+        await logAuditEvent({
+            eventType: 'APPOINTMENT_UPDATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
+            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            resourceType: 'telehealth_room',
+            resourceId: appointmentId,
+            riskLevel: 'LOW',
+            details: {
+                telehealth_action: 'room_created',
+            },
         });
 
+        const providerSessionTokenRef = await createTelehealthJoinSession({
+            appointmentId,
+            organizationId: appointment.organization_id,
+            participantRole: 'provider',
+            roomUrl,
+            meetingToken: providerToken.token,
+        });
+
+        const patientSessionTokenRef = await createTelehealthJoinSession({
+            appointmentId,
+            organizationId: appointment.organization_id,
+            participantRole: 'patient',
+            roomUrl,
+            meetingToken: patientToken.token,
+        });
+
+        return NextResponse.json({
+            appointmentId,
+            providerSessionTokenRef,
+            patientSessionTokenRef,
+            patientJoinPath: `/telehealth/join?session=${encodeURIComponent(patientSessionTokenRef)}`,
+        });
     } catch (error: unknown) {
         logError({ action: 'ERROR_CREATING_ROOM', error: sanitizeError(error) });
         return NextResponse.json(
