@@ -7,6 +7,7 @@ import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { sendInvitationEmail, isEmailConfigured } from '@/lib/email/resend';
+import { InvitationCreateSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handleGet(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
@@ -70,22 +71,11 @@ async function handlePost(context: AuthContext) {
         }
 
         const body = await context.request.json();
-        const { email, role = 'USER', specialty } = body;
-
-        if (!email) {
-            return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+        const validation = validateRequest(InvitationCreateSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
-
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
-        }
-
-        // Validate role
-        if (!['USER', 'ADMIN', 'AUDITOR'].includes(role)) {
-            return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
-        }
+        const { email, role, specialty } = validation.data;
 
         // Check for existing pending invitation
         const { data: existing } = await supabase

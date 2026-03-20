@@ -331,6 +331,47 @@ export const TelehealthEndSessionSchema = z.object({
     roomName: z.string().max(100).optional(),
 });
 
+export const EHRConfigurationSchema = z.object({
+    ehr_system: z.string().min(1).max(100),
+    display_name: z.string().min(1).max(100),
+    api_endpoint: z.string().url('Invalid API endpoint URL').max(500).optional().nullable(),
+    client_id: z.string().max(255).optional().nullable(),
+});
+
+export const EHRConsentSchema = z.object({
+    share_diagnoses: z.boolean().optional(),
+    share_medications: z.boolean().optional(),
+    share_notes: z.boolean().optional(),
+    share_labs: z.boolean().optional(),
+    share_appointments: z.boolean().optional(),
+    share_assessments: z.boolean().optional(),
+});
+
+export const ManagedBillingClaimCreateSchema = z.object({
+    patientId: UUIDSchema,
+    providerId: UUIDSchema,
+    encounterId: UUIDSchema.optional().nullable(),
+    serviceDate: z.string().min(1).max(50),
+    diagnosisCodes: z.array(z.string().max(20)).max(20).optional().default([]),
+    procedureCodes: z.array(z.string().max(20)).max(20).optional().default([]),
+    billedAmount: z.number().min(0).max(1000000).optional().default(0),
+    payerName: z.string().min(1).max(255),
+});
+
+export const ProfileApprovalSchema = z.object({
+    changeId: UUIDSchema,
+    userId: UUIDSchema.optional(),
+    fieldName: z.string().max(100).optional(),
+    newValue: z.union([z.string().max(255), z.null()]).optional(),
+    action: z.enum(['approve', 'reject']),
+});
+
+export const InvitationCreateSchema = z.object({
+    email: z.string().email('Invalid email format').max(255),
+    role: z.enum(['USER', 'ADMIN', 'AUDITOR']).optional().default('USER'),
+    specialty: z.string().max(100).optional().nullable(),
+});
+
 // Auth schemas
 export const LoginAttemptSchema = z.object({
     email: z.string().email().max(255),
@@ -342,8 +383,6 @@ export const CheckLockoutSchema = z.object({
 });
 
 export const CompleteSignupSchema = z.object({
-    userId: UUIDSchema,
-    email: z.string().email().max(255),
     firstName: z.string().min(1).max(50),
     lastName: z.string().min(1).max(50),
     organizationName: z.string().min(1).max(100),

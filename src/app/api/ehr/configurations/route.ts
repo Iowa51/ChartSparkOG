@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { EHRConfigurationSchema, validateRequest } from '@/lib/validation/schemas';
 
 // GET: Fetch EHR configurations for current user's organization
 async function handleGet(context: AuthContext) {
@@ -55,11 +56,11 @@ async function handlePost(context: AuthContext) {
         }
 
         const body = await context.request.json();
-        const { ehr_system, display_name, api_endpoint, client_id } = body;
-
-        if (!ehr_system || !display_name) {
-            return NextResponse.json({ error: 'ehr_system and display_name are required' }, { status: 400 });
+        const validation = validateRequest(EHRConfigurationSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
+        const { ehr_system, display_name, api_endpoint, client_id } = validation.data;
 
         // Upsert EHR configuration
         const { data, error } = await supabase
@@ -110,5 +111,6 @@ async function handlePost(context: AuthContext) {
 export const GET = withAuth(handleGet);
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
-    requireOrganization: true
+    requireOrganization: true,
+    requireMFA: true,
 });

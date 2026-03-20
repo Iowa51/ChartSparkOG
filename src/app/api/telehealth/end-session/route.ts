@@ -3,19 +3,18 @@
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
+import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { TelehealthEndSessionSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     try {
         const body = await context.request.json();
-        const { appointmentId, roomName } = body;
-
-        if (!appointmentId) {
-            return NextResponse.json(
-                { error: 'appointmentId required' },
-                { status: 400 }
-            );
+        const validation = validateRequest(TelehealthEndSessionSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
+        const { appointmentId, roomName } = validation.data;
 
         const supabase = await createClient();
 
@@ -55,17 +54,21 @@ async function handler(context: AuthContext) {
             }
 
             // Audit log
-            await supabase.from('audit_logs').insert({
-                event_type: 'TELEHEALTH_SESSION_ENDED',
-                user_id: context.user.id,
-                user_email: context.user.email,
-                user_role: context.user.role,
-                organization_id: context.user.organizationId,
-                resource_type: 'telehealth_room',
-                resource_id: appointmentId,
-                ip_address: context.request.headers.get('x-forwarded-for') || 'unknown',
-                user_agent: context.request.headers.get('user-agent') || 'unknown',
-                risk_level: 'LOW',
+            await logAuditEvent({
+                eventType: 'APPOINTMENT_UPDATE',
+                userId: context.user.id,
+                userEmail: context.user.email,
+                userRole: context.user.role,
+                organizationId: context.user.organizationId ?? undefined,
+                ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
+                userAgent: context.request.headers.get('user-agent') || 'unknown',
+                resourceType: 'telehealth_room',
+                resourceId: appointmentId,
+                riskLevel: 'LOW',
+                details: {
+                    telehealth_action: 'session_ended',
+                    roomName: roomName || null,
+                },
             }).catch(() => { });
         }
 
@@ -102,4 +105,6 @@ async function handler(context: AuthContext) {
 
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
+    requireMFA: true,
 });

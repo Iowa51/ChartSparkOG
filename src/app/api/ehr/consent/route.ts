@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { EHRConsentSchema, validateRequest } from '@/lib/validation/schemas';
 
 // GET: Fetch consent settings for current user's organization
 async function handleGet(context: AuthContext) {
@@ -67,6 +68,10 @@ async function handlePut(context: AuthContext) {
         }
 
         const body = await context.request.json();
+        const validation = validateRequest(EHRConsentSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+        }
         const {
             share_diagnoses,
             share_medications,
@@ -74,7 +79,7 @@ async function handlePut(context: AuthContext) {
             share_labs,
             share_appointments,
             share_assessments
-        } = body;
+        } = validation.data;
 
         // Upsert consent settings
         const { data, error } = await supabase

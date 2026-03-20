@@ -11,6 +11,7 @@ import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEventAsync } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { ManagedBillingClaimCreateSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handleGet(context: AuthContext) {
     try {
@@ -84,21 +85,26 @@ async function handlePost(context: AuthContext) {
         }
 
         const body = await context.request.json();
+        const validation = validateRequest(ManagedBillingClaimCreateSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+        }
+        const validatedBody = validation.data;
         const claimNumber = `CLM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
         const { data: claim, error } = await supabase
             .from('billing_claims')
             .insert({
                 organization_id: context.user.organizationId,
-                patient_id: body.patientId,
-                provider_id: body.providerId,
-                encounter_id: body.encounterId,
+                patient_id: validatedBody.patientId,
+                provider_id: validatedBody.providerId,
+                encounter_id: validatedBody.encounterId,
                 claim_number: claimNumber,
-                service_date: body.serviceDate,
-                diagnosis_codes: body.diagnosisCodes || [],
-                procedure_codes: body.procedureCodes || [],
-                billed_amount: body.billedAmount || 0,
-                payer_name: body.payerName,
+                service_date: validatedBody.serviceDate,
+                diagnosis_codes: validatedBody.diagnosisCodes,
+                procedure_codes: validatedBody.procedureCodes,
+                billed_amount: validatedBody.billedAmount,
+                payer_name: validatedBody.payerName,
                 status: 'draft',
             })
             .select()
@@ -118,7 +124,7 @@ async function handlePost(context: AuthContext) {
             userAgent,
             resourceType: 'billing_claim',
             resourceId: claim.id,
-            details: { action: 'CLAIM_CREATE', claimNumber: claim.claim_number, patient_id: body.patientId },
+            details: { action: 'CLAIM_CREATE', claimNumber: claim.claim_number, patient_id: validatedBody.patientId },
             phiAccessed: true,
             riskLevel: 'MEDIUM',
         });

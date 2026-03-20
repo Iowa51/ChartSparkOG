@@ -6,18 +6,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
-
-interface SignupData {
-    // SEC-REMEDIATION: userId and email are now IGNORED from request body
-    // We get these from the authenticated session instead
-    firstName: string;
-    lastName: string;
-    organizationName: string;
-}
+import { CompleteSignupSchema, validateRequest } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
     try {
-        const body: SignupData = await request.json();
+        const body = await request.json();
+        const validation = validateRequest(CompleteSignupSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+        }
+        const { firstName, lastName, organizationName } = validation.data;
 
         // SEC-REMEDIATION: Get authenticated user from session, NEVER trust client-provided userId
         const supabase = await createClient();
@@ -54,23 +52,6 @@ export async function POST(request: NextRequest) {
         const email = user.email;
 
         // Validate required fields from body (but NOT userId/email)
-        const { firstName, lastName, organizationName } = body;
-
-        if (!firstName || !lastName || !organizationName) {
-            return NextResponse.json(
-                { error: 'First name, last name, and organization name are required' },
-                { status: 400 }
-            );
-        }
-
-        // Basic validation
-        if (firstName.length > 50 || lastName.length > 50 || organizationName.length > 100) {
-            return NextResponse.json(
-                { error: 'Field values too long' },
-                { status: 400 }
-            );
-        }
-
         // Use service role client for privileged database operations
         const serviceSupabase = createServiceRoleClient();
         if (!serviceSupabase) {
