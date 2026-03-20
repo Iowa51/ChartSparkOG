@@ -23,6 +23,21 @@ async function handlePost(context: AuthContext) {
         }
         const { encounterId, action, metadata, patientId } = validation.data;
 
+        // SEC-SPRINT8: Verify encounter belongs to caller's organization before any write
+        const { data: encounter, error: encounterError } = await supabase
+            .from('encounters')
+            .select('id, organization_id')
+            .eq('id', encounterId)
+            .single();
+
+        if (encounterError || !encounter) {
+            return NextResponse.json({ error: 'Encounter not found' }, { status: 404 });
+        }
+
+        if (encounter.organization_id !== context.user.organizationId) {
+            return NextResponse.json({ error: 'Access denied - encounter belongs to different organization' }, { status: 403 });
+        }
+
         // 1. Log the encounter tracking event
         const { error: trackingError } = await supabase
             .from('encounter_tracking')
