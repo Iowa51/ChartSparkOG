@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { CheckLockoutSchema, validateRequest } from '@/lib/validation/schemas';
 
 const LOCKOUT_CONFIG = {
     maxAttempts: 5,
@@ -13,12 +14,12 @@ const LOCKOUT_CONFIG = {
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { email } = body;
-
-        if (!email) {
-            return NextResponse.json({ error: 'Email required' }, { status: 400 });
+        const rawBody = await request.json();
+        const validation = validateRequest(CheckLockoutSchema, rawBody);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
+        const { email } = validation.data;
 
         // Skip lockout check only in explicit demo mode AND non-production
         const isDemoMode = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_DEMO_MODE === 'true';

@@ -358,6 +358,11 @@ export const ManagedBillingClaimCreateSchema = z.object({
     payerName: z.string().min(1).max(255),
 });
 
+export const ManagedBillingOnboardingSchema = z.object({
+    practiceNpi: z.string().regex(/^\d{10}$/, 'Practice NPI must be exactly 10 digits'),
+    practiceTaxId: z.string().regex(/^\d{9}$/, 'Practice tax ID must be exactly 9 digits'),
+});
+
 export const ProfileApprovalSchema = z.object({
     changeId: UUIDSchema,
     userId: UUIDSchema.optional(),
@@ -386,6 +391,18 @@ export const CompleteSignupSchema = z.object({
     firstName: z.string().min(1).max(50),
     lastName: z.string().min(1).max(50),
     organizationName: z.string().min(1).max(100),
+});
+
+export const CreateCheckoutSchema = z.object({
+    tierCode: z.enum(['STARTER', 'ELITE']),
+    priceId: z.string().min(1).max(255),
+});
+
+export const EncounterTrackingSchema = z.object({
+    encounterId: UUIDSchema,
+    action: z.enum(['started', 'paused', 'resumed', 'captured', 'completed']),
+    metadata: z.record(z.string(), z.unknown()).optional().default({}),
+    patientId: UUIDSchema.optional(),
 });
 
 // Validation helper function

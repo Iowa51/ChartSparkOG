@@ -12,6 +12,7 @@ import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEventAsync } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { ManagedBillingOnboardingSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handleGet(context: AuthContext) {
     try {
@@ -68,7 +69,12 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Database not available' }, { status: 503 });
         }
 
-        const body = await context.request.json();
+        const rawBody = await context.request.json();
+        const validation = validateRequest(ManagedBillingOnboardingSchema, rawBody);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+        }
+        const body = validation.data;
 
         // Check if already enrolled
         const { data: existing } = await supabase

@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createCheckoutSession } from '@/lib/subscriptions/stripe-client';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { CreateCheckoutSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -17,11 +18,12 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Demo mode - checkout disabled' }, { status: 400 });
         }
 
-        const { tierCode, priceId } = await context.request.json();
-
-        if (!tierCode || !priceId) {
-            return NextResponse.json({ error: 'tierCode and priceId required' }, { status: 400 });
+        const rawBody = await context.request.json();
+        const validation = validateRequest(CreateCheckoutSchema, rawBody);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
+        const { tierCode, priceId } = validation.data;
 
         // Get org subscription for Stripe customer ID (need profiles for backward compat)
         const { data: profile } = await supabase

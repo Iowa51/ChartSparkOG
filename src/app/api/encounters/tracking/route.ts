@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { EncounterTrackingSchema, validateRequest } from '@/lib/validation/schemas';
 
 /**
  * API Route to track clinical encounter states and maintain a secure audit trail.
@@ -15,11 +16,12 @@ import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
-        const { encounterId, action, metadata, patientId } = await context.request.json();
-
-        if (!encounterId || !action) {
-            return NextResponse.json({ error: 'Missing encounterId or action' }, { status: 400 });
+        const rawBody = await context.request.json();
+        const validation = validateRequest(EncounterTrackingSchema, rawBody);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
+        const { encounterId, action, metadata, patientId } = validation.data;
 
         // 1. Log the encounter tracking event
         const { error: trackingError } = await supabase
