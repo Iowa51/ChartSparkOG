@@ -30,7 +30,7 @@ async function handlePost(context: AuthContext) {
             userAgent,
             resourceType: 'billing_claim',
             resourceId: claimId,
-            details: { action: 'CLAIM_VALIDATE', isValid: result.isValid ?? summary?.isValid },
+            details: { action: 'CLAIM_VALIDATE', isValid: result.isValid },
             phiAccessed: true,
             riskLevel: 'LOW',
         });

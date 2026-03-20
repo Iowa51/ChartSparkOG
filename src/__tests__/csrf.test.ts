@@ -6,6 +6,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { validateOrigin, isAllowedOrigin, checkCSRF } from '@/lib/security/csrf';
 import { NextRequest } from 'next/server';
 
+const testEnv = process.env as Record<string, string | undefined>;
+
 // Helper to create a mock NextRequest with specified headers
 function createMockRequest(
     method: string = 'POST',
@@ -52,10 +54,10 @@ describe('validateOrigin', () => {
 
     it('rejects request with no origin or referer in production', () => {
         const origEnv = process.env.NODE_ENV;
-        process.env.NODE_ENV = 'production';
+        testEnv.NODE_ENV = 'production';
         const request = createMockRequest('POST', { host: 'localhost:3000' });
         expect(validateOrigin(request)).toBe(false);
-        process.env.NODE_ENV = origEnv;
+        testEnv.NODE_ENV = origEnv;
     });
 });
 
@@ -91,12 +93,12 @@ describe('checkCSRF', () => {
 
     it('returns 403 for POST without origin', () => {
         const origEnv = process.env.NODE_ENV;
-        process.env.NODE_ENV = 'production';
+        testEnv.NODE_ENV = 'production';
         const request = createMockRequest('POST', { host: 'localhost:3000' });
         const result = checkCSRF(request);
         expect(result).not.toBeNull();
         expect(result?.status).toBe(403);
-        process.env.NODE_ENV = origEnv;
+        testEnv.NODE_ENV = origEnv;
     });
 
     it('returns null for POST with valid origin', () => {

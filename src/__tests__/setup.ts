@@ -3,13 +3,15 @@
 
 import { vi } from 'vitest';
 
+const testEnv = process.env as Record<string, string | undefined>;
+
 // Mock environment variables
-process.env.NODE_ENV = 'test';
-process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
+testEnv.NODE_ENV = 'test';
+testEnv.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000';
 
 // PHI encryption key for testing (32+ chars required for AES-256)
 // This is a TEST-ONLY key — never use in production
-process.env.PHI_ENCRYPTION_KEY = 'test-encryption-key-for-vitest-chartspark-32chars!';
+testEnv.PHI_ENCRYPTION_KEY = 'test-encryption-key-for-vitest-chartspark-32chars!';
 
 // Mock console methods to reduce noise in test output
 // vi.spyOn(console, 'warn').mockImplementation(() => {});
