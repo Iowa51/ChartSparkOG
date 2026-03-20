@@ -3,9 +3,17 @@ import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { checkRateLimitByKey } from '@/lib/security/rate-limit';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { VerifyMFASchema, validateRequest } from '@/lib/validation/schemas';
+
+// SEC-SPRINT8: Stable application-level MFA error codes — never expose upstream messages
+const MFA_ERROR_CODES = {
+    MFA_INVALID_CODE: 'The verification code is incorrect. Please try again.',
+    MFA_EXPIRED: 'The verification code has expired. Please request a new one.',
+    MFA_PROVIDER_ERROR: 'MFA verification is temporarily unavailable. Please try again.',
+    MFA_RATE_LIMITED: 'Too many attempts. Please wait before trying again.',
+} as const;
 
 async function handlePost(context: AuthContext) {
     try {
@@ -54,7 +62,12 @@ async function handlePost(context: AuthContext) {
                 phiAccessed: false,
                 riskLevel: 'MEDIUM',
             });
-            return NextResponse.json({ error: challengeError.message }, { status: 400 });
+            // SEC-SPRINT8: Log raw upstream error server-side only, return stable code to client
+            logWarn({ action: 'MFA_CHALLENGE_UPSTREAM_ERROR', error: sanitizeError(challengeError) });
+            return NextResponse.json({
+                error: 'MFA_PROVIDER_ERROR',
+                message: MFA_ERROR_CODES.MFA_PROVIDER_ERROR,
+            }, { status: 400 });
         }
 
         const { error: verifyError } = await supabase.auth.mfa.verify({
@@ -78,7 +91,12 @@ async function handlePost(context: AuthContext) {
                 phiAccessed: false,
                 riskLevel: 'MEDIUM',
             });
-            return NextResponse.json({ error: verifyError.message }, { status: 400 });
+            // SEC-SPRINT8: Log raw upstream error server-side only, return stable code to client
+            logWarn({ action: 'MFA_VERIFY_UPSTREAM_ERROR', error: sanitizeError(verifyError) });
+            return NextResponse.json({
+                error: 'MFA_INVALID_CODE',
+                message: MFA_ERROR_CODES.MFA_INVALID_CODE,
+            }, { status: 400 });
         }
 
         await logAuditEvent({
