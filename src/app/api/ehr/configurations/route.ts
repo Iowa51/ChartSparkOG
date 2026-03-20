@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // GET: Fetch EHR configurations for current user's organization
@@ -83,14 +84,20 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Failed to save configuration' }, { status: 500 });
         }
 
-        // Log to audit trail
-        await supabase.from('audit_logs').insert({
-            action: 'EHR_CONNECTION_ATTEMPT',
-            user_id: context.user.id,
-            organization_id: context.user.organizationId,
-            resource_type: 'ehr_configuration',
-            resource_id: data.id,
-            details: { ehr_system, display_name }
+        await logAuditEvent({
+            eventType: 'EHR_CONNECTION_ATTEMPT',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            resourceType: 'ehr_configuration',
+            resourceId: data.id,
+            details: {
+                ehr_system,
+                display_name,
+            },
+            phiAccessed: false,
+            riskLevel: 'LOW',
         });
 
         return NextResponse.json({ configuration: data, message: 'EHR connection initiated' });

@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // GET: Fetch consent settings for current user's organization
@@ -99,21 +100,26 @@ async function handlePut(context: AuthContext) {
             return NextResponse.json({ error: 'Failed to save consent settings' }, { status: 500 });
         }
 
-        // Log to audit trail
-        await supabase.from('audit_logs').insert({
-            action: 'EHR_CONSENT_UPDATED',
-            user_id: context.user.id,
-            organization_id: context.user.organizationId,
-            resource_type: 'ehr_consent_settings',
-            resource_id: data.id,
+        await logAuditEvent({
+            eventType: 'EHR_CONSENT_UPDATED',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            resourceType: 'ehr_consent_settings',
+            resourceId: data.id,
             details: {
-                share_diagnoses,
-                share_medications,
-                share_notes,
-                share_labs,
-                share_appointments,
-                share_assessments
-            }
+                consent_fields_updated: [
+                    'share_diagnoses',
+                    'share_medications',
+                    'share_notes',
+                    'share_labs',
+                    'share_appointments',
+                    'share_assessments',
+                ],
+            },
+            phiAccessed: false,
+            riskLevel: 'LOW',
         });
 
         return NextResponse.json({

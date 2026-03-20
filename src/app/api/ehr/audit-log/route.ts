@@ -26,7 +26,7 @@ async function handleGet(context: AuthContext) {
             .select(`
                 id, 
                 created_at, 
-                action, 
+                event_type, 
                 details,
                 user_id,
                 users (
@@ -35,7 +35,7 @@ async function handleGet(context: AuthContext) {
                     email
                 )
             `)
-            .like('action', 'EHR_%')
+            .like('event_type', 'EHR_%')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
@@ -55,7 +55,7 @@ async function handleGet(context: AuthContext) {
                 id: log.id,
                 timestamp: log.created_at,
                 system: log.details?.ehr_system || log.details?.display_name || 'ChartSpark',
-                action: formatEventType(log.action),
+                action: formatEventType(log.event_type),
                 user: userName,
                 records: log.details?.records_affected || 0,
                 status: 'success'

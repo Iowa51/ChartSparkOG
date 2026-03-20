@@ -39,6 +39,24 @@ async function handleGet(context: AuthContext) {
             return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
         }
 
+        await logAuditEvent({
+            eventType: 'phi_read',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'patient',
+            resourceId: id,
+            details: {
+                record_id: id,
+                organization_id: context.user.organizationId,
+            },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
+
         return NextResponse.json(patient);
     } catch (error) {
         logError({

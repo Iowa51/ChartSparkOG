@@ -300,9 +300,9 @@ CREATE POLICY "Super admin full access audit" ON public.audit_logs
   FOR ALL TO authenticated
   USING (public.get_user_role() = 'SUPER_ADMIN');
 
--- System can insert audit logs
-CREATE POLICY "System can insert audit logs" ON public.audit_logs
-  FOR INSERT TO authenticated
+-- Only service_role can insert audit logs
+CREATE POLICY "Service role can insert audit logs" ON public.audit_logs
+  FOR INSERT TO service_role
   WITH CHECK (TRUE);
 
 -- ============================================

@@ -30,24 +30,24 @@ async function handleGet(context: AuthContext) {
       *,
       patient:patients(id, first_name, last_name),
       provider:profiles(id, first_name, last_name)
-    `).eq('id', id).single();
+    `).eq('id', id).eq('organization_id', context.user.organizationId).single();
         if (error) throw error;
 
-        // SEC-HIGH-07: Organization isolation check
-        if (appointment.organization_id && !canAccessOrganization(context.user, appointment.organization_id)) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                userId: context.user.id,
-                userEmail: context.user.email,
-                userRole: context.user.role,
-                organizationId: context.user.organizationId ?? undefined,
-                resourceType: 'appointment',
-                resourceId: id,
-                details: { reason: 'Cross-organization appointment access attempt' },
-                riskLevel: 'CRITICAL',
-            });
-            return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
-        }
+        await logAuditEvent({
+            eventType: 'phi_read',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            resourceType: 'appointment',
+            resourceId: id,
+            details: {
+                record_id: id,
+                organization_id: context.user.organizationId,
+            },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
 
         return NextResponse.json({ appointment });
     } catch (error) {
@@ -64,7 +64,7 @@ async function handlePatch(context: AuthContext) {
 
         // Fetch existing appointment to verify org ownership
         const { data: existing, error: fetchError } = await supabase
-            .from('appointments').select('organization_id').eq('id', id).single();
+            .from('appointments').select('organization_id').eq('id', id).eq('organization_id', context.user.organizationId).single();
         if (fetchError || !existing) {
             return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
         }
@@ -94,12 +94,21 @@ async function handlePatch(context: AuthContext) {
         const { data: appointment, error } = await supabase.from('appointments').update(validation.data).eq('id', id).select().single();
         if (error) throw error;
 
-        await supabase.from('audit_logs').insert({
-            user_id: context.user.id,
-            action: 'update',
-            resource_type: 'appointment',
-            resource_id: id,
-            changes: validation.data
+        await logAuditEvent({
+            eventType: 'APPOINTMENT_UPDATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            resourceType: 'appointment',
+            resourceId: id,
+            details: {
+                record_id: id,
+                organization_id: context.user.organizationId,
+                updated_fields: Object.keys(validation.data),
+            },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
         });
 
         return NextResponse.json({ appointment });
@@ -118,7 +127,7 @@ async function handleDelete(context: AuthContext) {
 
         // Fetch existing appointment to verify org ownership
         const { data: existing, error: fetchError } = await supabase
-            .from('appointments').select('organization_id').eq('id', id).single();
+            .from('appointments').select('organization_id').eq('id', id).eq('organization_id', context.user.organizationId).single();
         if (fetchError || !existing) {
             return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
         }
@@ -143,6 +152,23 @@ async function handleDelete(context: AuthContext) {
             cancelled_at: new Date().toISOString()
         }).eq('id', id);
         if (error) throw error;
+
+        await logAuditEvent({
+            eventType: 'APPOINTMENT_DELETE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            resourceType: 'appointment',
+            resourceId: id,
+            details: {
+                record_id: id,
+                organization_id: context.user.organizationId,
+                status: 'cancelled',
+            },
+            phiAccessed: true,
+            riskLevel: 'HIGH',
+        });
 
         return NextResponse.json({ success: true });
     } catch (error) {

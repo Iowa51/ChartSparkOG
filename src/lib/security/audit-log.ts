@@ -6,6 +6,7 @@ import { sendEmail } from '@/lib/email/resend';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export type AuditEventType =
+    | 'phi_read'
     | 'LOGIN_SUCCESS'
     | 'LOGIN_FAILURE'
     | 'LOGOUT'
@@ -65,6 +66,8 @@ export type AuditEventType =
     | 'APPOINTMENT_CREATE'
     | 'APPOINTMENT_UPDATE'
     | 'APPOINTMENT_DELETE'
+    | 'EHR_CONNECTION_ATTEMPT'
+    | 'EHR_CONSENT_UPDATED'
     | 'AI_DIAGNOSE_REQUEST'
     | 'AI_RECOMMENDATION_REQUEST'
     | 'AI_TREATMENT_PLAN_REQUEST'
@@ -146,6 +149,7 @@ export function getRiskLevel(eventType: AuditEventType): RiskLevel {
     ];
 
     const mediumEvents: AuditEventType[] = [
+        'phi_read',
         'PATIENT_VIEW',
         'NOTE_VIEW',
         'PATIENT_UPDATE',
