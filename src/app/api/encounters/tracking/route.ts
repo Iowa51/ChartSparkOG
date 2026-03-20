@@ -30,9 +30,8 @@ async function handlePost(context: AuthContext) {
                 encounter_id: encounterId,
                 user_id: context.user.id,
                 organization_id: context.user.organizationId,
-                action: action,
+                event_type: action,
                 metadata: metadata || {},
-                client_timestamp: new Date().toISOString()
             });
 
         if (trackingError) throw trackingError;
@@ -66,7 +65,8 @@ async function handlePost(context: AuthContext) {
                     status: 'completed',
                     updated_at: new Date().toISOString()
                 })
-                .eq('id', encounterId);
+                .eq('id', encounterId)
+                .eq('organization_id', context.user.organizationId);
         }
 
         return NextResponse.json({ success: true, action, timestamp: new Date().toISOString() });
