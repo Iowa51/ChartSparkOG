@@ -48,31 +48,16 @@ export async function enrollMFA(): Promise<MFAEnrollmentResult> {
  * Verify MFA code during enrollment or login
  */
 export async function verifyMFA(factorId: string, code: string): Promise<boolean> {
-    const supabase = createClient();
-    if (!supabase) {
-        throw new Error('Supabase client not available');
-    }
-
-    // Create a challenge
-    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-        factorId,
+    const response = await fetch('/api/auth/verify-mfa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ factorId, code }),
     });
 
-    if (challengeError) {
-        logError({ action: 'MFA_CHALLENGE_ERROR', error: sanitizeError(challengeError) });
-        throw new Error(challengeError.message);
-    }
-
-    // Verify the code
-    const { data, error } = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId: challengeData.id,
-        code,
-    });
-
-    if (error) {
-        logError({ action: 'MFA_VERIFICATION_ERROR', error: sanitizeError(error) });
-        throw new Error(error.message);
+    if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: 'MFA verification failed' }));
+        logError({ action: 'MFA_VERIFICATION_ERROR', error: payload.error || 'MFA verification failed' });
+        throw new Error(payload.error || 'MFA verification failed');
     }
 
     return true;

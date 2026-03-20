@@ -8,6 +8,7 @@ import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { sendInvitationEmail, isEmailConfigured } from '@/lib/email/resend';
 import { InvitationCreateSchema, validateRequest } from '@/lib/validation/schemas';
+import { checkRateLimitByKey } from '@/lib/security/rate-limit';
 
 async function handleGet(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
@@ -76,6 +77,11 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
         const { email, role, specialty } = validation.data;
+
+        const rateLimit = await checkRateLimitByKey(user.id, 'emailSend', '/api/admin/invitations');
+        if (!rateLimit.success && rateLimit.response) {
+            return rateLimit.response;
+        }
 
         // Check for existing pending invitation
         const { data: existing } = await supabase

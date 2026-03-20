@@ -405,6 +405,11 @@ export const EncounterTrackingSchema = z.object({
     patientId: UUIDSchema.optional(),
 });
 
+export const VerifyMFASchema = z.object({
+    factorId: UUIDSchema,
+    code: z.string().regex(/^\d{6}$/, 'Verification code must be exactly 6 digits'),
+});
+
 // Validation helper function
 export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown): {
     success: true;
