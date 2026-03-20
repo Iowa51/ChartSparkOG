@@ -70,12 +70,18 @@ async function handleGet(context: RiskAssessmentContext): Promise<NextResponse> 
     );
 
     // Query database - no demo fallback
-    const { data: assessments, error } = await supabase
+    let query = supabase
         .from('risk_assessments')
         .select('*')
         .eq('patient_id', patientId)
         .order('assessment_date', { ascending: false })
         .limit(50);
+
+    if (!isSuperAdmin(user) && user.organizationId) {
+        query = query.eq('organization_id', user.organizationId);
+    }
+
+    const { data: assessments, error } = await query;
 
     if (error) {
         logError({ action: 'RISK_ASSESSMENTS_DATABASE_ERROR', error: sanitizeError(error) });
@@ -155,7 +161,8 @@ async function handlePost(context: RiskAssessmentContext): Promise<NextResponse>
         await supabase
             .from('patients')
             .update(updateData)
-            .eq('id', assessmentData.patient_id);
+            .eq('id', assessmentData.patient_id)
+            .eq('organization_id', userProfile.organization_id);
     }
 
     // Log PHI access

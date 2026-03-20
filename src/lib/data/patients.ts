@@ -116,6 +116,7 @@ export async function getPatients(
  */
 export async function getPatientById(
     patientId: string,
+    organizationId: string,
     options: { includeDetails?: boolean } = {}
 ): Promise<Patient | PatientWithDetails> {
     try {
@@ -127,6 +128,7 @@ export async function getPatientById(
             .from('patients')
             .select('*')
             .eq('id', patientId)
+            .eq('organization_id', organizationId)
             .single();
 
         if (error) {
@@ -426,6 +428,7 @@ export async function createPatient(
  */
 export async function updatePatient(
     patientId: string,
+    organizationId: string,
     userId: string,
     input: PatientUpdateInput
 ): Promise<Patient> {
@@ -447,6 +450,7 @@ export async function updatePatient(
             .from('patients')
             .update(input)
             .eq('id', patientId)
+            .eq('organization_id', organizationId)
             .select()
             .single();
 

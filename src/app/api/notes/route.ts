@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { withAuth, AuthContext, canAccessPatient } from '@/lib/auth/api-auth';
 import { logAuditEvent, logAuditEventAsync, logPHIAccess } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { NoteCreateSchema, validateRequest } from '@/lib/validation/schemas';
@@ -111,6 +111,10 @@ async function handlePost(context: AuthContext) {
         }
 
         const validatedData = validation.data;
+        const canAccessTargetPatient = await canAccessPatient(user, validatedData.patient_id);
+        if (!canAccessTargetPatient) {
+            return NextResponse.json({ error: 'Patient not found' }, { status: 403 });
+        }
 
         const { data: note, error } = await supabase
             .from('clinical_notes')
@@ -135,7 +139,8 @@ async function handlePost(context: AuthContext) {
             .update({
                 last_visit_date: rawData.note_date || new Date().toISOString().split('T')[0]
             })
-            .eq('id', validatedData.patient_id);
+            .eq('id', validatedData.patient_id)
+            .eq('organization_id', user.organizationId);
 
         await logPHIAccess(
             user.id,

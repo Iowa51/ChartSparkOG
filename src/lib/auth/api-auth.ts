@@ -282,15 +282,16 @@ export async function canAccessPatient(
 
     try {
         const supabase = await createClient();
-        if (!supabase) return false;
+        if (!supabase || !user.organizationId) return false;
 
         const { data: patient } = await supabase
             .from('patients')
-            .select('organization_id')
+            .select('id')
             .eq('id', patientId)
+            .eq('organization_id', user.organizationId)
             .single();
 
-        return patient?.organization_id === user.organizationId;
+        return Boolean(patient);
     } catch {
         return false;
     }

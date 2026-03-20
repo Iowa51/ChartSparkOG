@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { withAuth, AuthContext, canAccessPatient } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
@@ -109,6 +109,10 @@ async function handlePost(context: AuthContext) {
             respiratory_rate, spo2, weight, weight_unit, height, height_unit,
             pain_scale, waist_circumference, waist_unit
         } = validation.data;
+        const canAccessTargetPatient = await canAccessPatient(context.user, patient_id);
+        if (!canAccessTargetPatient) {
+            return NextResponse.json({ error: 'Patient not found' }, { status: 403 });
+        }
 
         // Calculate BMI
         let bmi: number | null = null;

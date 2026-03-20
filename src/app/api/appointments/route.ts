@@ -4,7 +4,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { withAuth, AuthContext, canAccessPatient } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
@@ -93,6 +93,10 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
         const appointmentData = validation.data;
+        const canAccessTargetPatient = await canAccessPatient(context.user, appointmentData.patient_id);
+        if (!canAccessTargetPatient) {
+            return NextResponse.json({ error: 'Patient not found' }, { status: 403 });
+        }
 
         const { data: appointment, error } = await supabase
             .from('appointments')
@@ -112,7 +116,8 @@ async function handlePost(context: AuthContext) {
             .update({
                 next_appointment_date: appointmentData.appointment_datetime.split('T')[0]
             })
-            .eq('id', appointmentData.patient_id);
+            .eq('id', appointmentData.patient_id)
+            .eq('organization_id', context.user.organizationId);
 
         // Log appointment creation
         await logAuditEvent({

@@ -19,25 +19,7 @@ async function handleGet(context: AuthContext) {
         if (!id) return NextResponse.json({ error: 'Missing patient id' }, { status: 400 });
 
         // Get patient with all related details
-        const patient = await getPatientById(id, { includeDetails: true });
-
-        // Verify user has access to this patient's organization
-        if (patient.organization_id !== context.user.organizationId) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                userId: context.user.id,
-                userEmail: context.user.email,
-                organizationId: context.user.organizationId ?? undefined,
-                ipAddress,
-                userAgent,
-                resourceType: 'patient',
-                resourceId: id,
-                details: { reason: 'Cross-organization access attempt' },
-                phiAccessed: false,
-                riskLevel: 'CRITICAL',
-            });
-            return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
-        }
+        const patient = await getPatientById(id, context.user.organizationId || '', { includeDetails: true });
 
         await logAuditEvent({
             eventType: 'phi_read',
@@ -90,7 +72,12 @@ async function handlePatch(context: AuthContext) {
         delete (safeUpdates as Record<string, unknown>)['updated_at'];
 
         // Use data layer to update patient
-        const patient = await updatePatient(id, context.user.organizationId || '', safeUpdates as unknown as PatientUpdateInput);
+        const patient = await updatePatient(
+            id,
+            context.user.organizationId || '',
+            context.user.id,
+            safeUpdates as unknown as PatientUpdateInput
+        );
 
         return NextResponse.json(patient);
     } catch (error) {
@@ -111,7 +98,7 @@ async function handleDelete(context: AuthContext) {
         if (!id) return NextResponse.json({ error: 'Missing patient id' }, { status: 400 });
 
         // Soft delete - set status to archived
-        await updatePatient(id, context.user.organizationId || '', { status: 'archived' });
+        await updatePatient(id, context.user.organizationId || '', context.user.id, { status: 'archived' });
 
         // Log PHI deletion (high risk event)
         await logPHIAccess(
