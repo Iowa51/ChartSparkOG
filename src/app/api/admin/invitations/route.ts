@@ -151,6 +151,27 @@ async function handlePost(context: AuthContext) {
             userAgent,
         });
 
+        // SEC-SPRINT11: Emit ROLE_CHANGED for HIPAA access control audit trail.
+        // The invitation assigns a role to a future user — this is the admin approval event.
+        await logAuditEvent({
+            eventType: 'ROLE_CHANGED',
+            userId: user.id,
+            userEmail: user.email,
+            organizationId: user.organizationId,
+            resourceType: 'invitation',
+            resourceId: invitation.id,
+            details: {
+                previousRole: null,
+                newRole: role,
+                changedBy: user.id,
+                targetEmail: email,
+            },
+            phiAccessed: false,
+            riskLevel: 'HIGH',
+            ipAddress,
+            userAgent,
+        });
+
         // Get organization name for the email
         const { data: org } = await supabase
             .from('organizations')

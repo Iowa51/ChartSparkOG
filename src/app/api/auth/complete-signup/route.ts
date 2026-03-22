@@ -149,6 +149,20 @@ export async function POST(request: NextRequest) {
                 riskLevel: 'LOW',
                 details: { isNewOrg: true },
             });
+
+            // SEC-SPRINT11: Emit ROLE_CHANGED for initial org admin role assignment
+            await logAuditEvent({
+                eventType: 'ROLE_CHANGED',
+                userId,
+                userEmail: email,
+                organizationId: org.id,
+                resourceType: 'user',
+                resourceId: userId,
+                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                userAgent: request.headers.get('user-agent') || 'unknown',
+                riskLevel: 'HIGH',
+                details: { previousRole: null, newRole: 'ADMIN', changedBy: userId },
+            });
         } catch {
             // Non-critical - audit log failure shouldn't fail registration
         }
