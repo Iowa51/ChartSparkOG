@@ -93,9 +93,8 @@ ON profiles(organization_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_org_created_at
 ON audit_logs(organization_id, created_at DESC);
 
--- action: Filtering by action type
-CREATE INDEX IF NOT EXISTS idx_audit_logs_action
-ON audit_logs(action);
+-- SEC-SPRINT9: Legacy action column index removed — column no longer exists.
+-- Replaced by event_type and resource_type indexes in sprint9 migration.
 
 -- user_id: Viewing user's activity
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id
