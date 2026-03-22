@@ -307,51 +307,61 @@ export async function logSecurityEvent(
     });
 }
 
+// SEC-SPRINT10: Stable alert code descriptions for breach notification emails.
+// Emails contain ONLY the alert code, timestamp, severity, and a fixed description.
+// Full context (user ID, org ID, IP, details) stays in audit_logs only.
+const ALERT_DESCRIPTIONS: Record<string, string> = {
+    DATA_BREACH_SUSPECTED: 'A potential data breach has been detected. Immediate investigation is required.',
+    UNAUTHORIZED_ACCESS: 'An unauthorized access attempt was detected against a protected resource.',
+    SUSPICIOUS_ACTIVITY: 'Suspicious activity pattern detected that may indicate a security threat.',
+    RATE_LIMIT_EXCEEDED: 'Rate limiting threshold exceeded, indicating possible automated attack.',
+};
+
 /**
  * C2: Trigger security alert for critical events
- * HIPAA Breach Notification Rule — sends email via Resend and logs to console.
- * PHI is NOT included in the email body; PHI details are logged separately in audit_logs.
+ * HIPAA Breach Notification Rule — sends minimal email via Resend and logs to console.
+ * SEC-SPRINT10: Email body reduced to stable alert taxonomy — no PII, no freeform details.
+ * The audit_logs table is the record of truth for full context.
  */
 async function triggerSecurityAlert(entry: AuditLogEntry): Promise<void> {
     const timestamp = new Date().toISOString();
 
     // Always log as secondary output
-    logError({ action: 'SECURITY_ALERT', resourceType: entry.eventType, userId: entry.userId, timestamp });
+    logError({ action: 'SECURITY_ALERT', resourceType: entry.eventType, timestamp });
 
     // Send breach notification email via Resend (server-side only)
     if (typeof window === 'undefined') {
         try {
-            const sanitizedDetails = entry.details ? sanitizeDetails(entry.details) : {};
+            const alertCode = entry.eventType;
+            const description = ALERT_DESCRIPTIONS[alertCode] || 'A critical security event has been recorded.';
+            const severity = entry.riskLevel;
 
             await sendEmail({
                 to: 'support@chartspark.io',
-                subject: `[SECURITY ALERT] ${entry.eventType} — ${timestamp}`,
+                subject: `[SECURITY ALERT] ${alertCode} — ${severity}`,
                 html: `
 <!DOCTYPE html>
 <html>
 <body style="font-family: sans-serif; padding: 20px; color: #1e293b;">
   <div style="background: #dc2626; color: white; padding: 16px 24px; border-radius: 8px 8px 0 0;">
-    <h2 style="margin: 0;">Security Alert — ${entry.eventType}</h2>
+    <h2 style="margin: 0;">Security Alert</h2>
   </div>
   <div style="border: 1px solid #e2e8f0; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
     <table style="width: 100%; border-collapse: collapse;">
-      <tr><td style="padding: 8px 0; font-weight: bold;">Event Type</td><td>${entry.eventType}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Alert Code</td><td>${alertCode}</td></tr>
       <tr><td style="padding: 8px 0; font-weight: bold;">Timestamp</td><td>${timestamp}</td></tr>
-      <tr><td style="padding: 8px 0; font-weight: bold;">User ID</td><td>${entry.userId || 'Unknown'}</td></tr>
-      <tr><td style="padding: 8px 0; font-weight: bold;">Organization ID</td><td>${entry.organizationId || 'Unknown'}</td></tr>
-      <tr><td style="padding: 8px 0; font-weight: bold;">IP Address</td><td>${entry.ipAddress || 'Unknown'}</td></tr>
-      <tr><td style="padding: 8px 0; font-weight: bold;">Risk Level</td><td>${entry.riskLevel}</td></tr>
-      <tr><td style="padding: 8px 0; font-weight: bold;">Details (sanitized)</td><td><pre>${JSON.stringify(sanitizedDetails, null, 2)}</pre></td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Severity</td><td>${severity}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Description</td><td>${description}</td></tr>
     </table>
     <hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;">
     <p style="color: #64748b; font-size: 13px;">
-      This is an automated security alert from ChartSpark. PHI has been redacted from this email.
-      Check the audit_logs table for full details.
+      This is an automated security alert from ChartSpark. For full context
+      including user, organization, and event details, consult the audit_logs table.
     </p>
   </div>
 </body>
 </html>`,
-                text: `SECURITY ALERT: ${entry.eventType}\nTimestamp: ${timestamp}\nUser ID: ${entry.userId || 'Unknown'}\nOrg ID: ${entry.organizationId || 'Unknown'}\nIP: ${entry.ipAddress || 'Unknown'}\nRisk: ${entry.riskLevel}\n\nCheck audit_logs for full details. PHI has been redacted from this notification.`,
+                text: `SECURITY ALERT\nAlert Code: ${alertCode}\nTimestamp: ${timestamp}\nSeverity: ${severity}\nDescription: ${description}\n\nConsult the audit_logs table for full context.`,
             });
         } catch (emailError) {
             // Email failure must not suppress the alert — log and continue
