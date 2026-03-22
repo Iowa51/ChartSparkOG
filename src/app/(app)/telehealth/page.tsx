@@ -120,7 +120,8 @@ export default function TelehealthPage() {
 
             const data = await response.json();
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-            const patientLink = `${baseUrl}${data.patientJoinPath}`;
+            // SEC-SPRINT10: Invite link uses opaque appointment ID only, no bearer token
+            const patientLink = `${baseUrl}${data.patientInvitePath}`;
 
             setCallSession({
                 appointmentId: data.appointmentId,

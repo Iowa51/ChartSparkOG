@@ -107,11 +107,12 @@ async function handler(context: AuthContext) {
                 meetingToken: 'demo-patient-token',
             });
 
+            // SEC-SPRINT10: Invite path contains only the opaque appointment ID, never a bearer token.
+            // The accept-invite endpoint looks up the patient token server-side and sets an HTTP-only cookie.
             return NextResponse.json({
                 appointmentId,
                 providerSessionTokenRef,
-                patientSessionTokenRef,
-                patientJoinPath: `/api/telehealth/accept-invite?t=${encodeURIComponent(patientSessionTokenRef)}`,
+                patientInvitePath: `/api/telehealth/accept-invite?appointment=${encodeURIComponent(appointmentId)}`,
                 isDemo: true,
             });
         }
@@ -231,11 +232,11 @@ async function handler(context: AuthContext) {
             meetingToken: patientToken.token,
         });
 
+        // SEC-SPRINT10: Invite path contains only the opaque appointment ID, never a bearer token.
         return NextResponse.json({
             appointmentId,
             providerSessionTokenRef,
-            patientSessionTokenRef,
-            patientJoinPath: `/api/telehealth/accept-invite?t=${encodeURIComponent(patientSessionTokenRef)}`,
+            patientInvitePath: `/api/telehealth/accept-invite?appointment=${encodeURIComponent(appointmentId)}`,
         });
     } catch (error: unknown) {
         logError({ action: 'ERROR_CREATING_ROOM', error: sanitizeError(error) });

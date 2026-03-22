@@ -104,6 +104,30 @@ export async function createTelehealthJoinSession(params: CreateTelehealthJoinSe
     return buildSessionRef(tokenId, expiresAt);
 }
 
+/**
+ * SEC-SPRINT10: Look up a valid patient session ref by appointment ID.
+ * Used by accept-invite to set the cookie without the token ever appearing in a URL.
+ */
+export async function getPatientSessionRefByAppointment(appointmentId: string): Promise<string | null> {
+    const supabase = requireServiceRoleClient();
+    const { data, error } = await supabase
+        .from('telehealth_session_tokens')
+        .select('token_id, expires_at')
+        .eq('appointment_id', appointmentId)
+        .eq('participant_role', 'patient')
+        .eq('used', false)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error || !data) {
+        return null;
+    }
+
+    return buildSessionRef(data.token_id, data.expires_at);
+}
+
 export async function resolveTelehealthJoinSession(sessionTokenRef: string): Promise<TelehealthJoinSessionAccess | null> {
     const decoded = decodeTelehealthSessionRef(sessionTokenRef);
     if (!decoded || Date.parse(decoded.expiresAt) <= Date.now()) {
