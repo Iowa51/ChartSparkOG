@@ -64,19 +64,22 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
         }
 
         try {
-            const demoRoleMap: Record<string, string> = {
-                'super@chartspark.com': 'SUPER_ADMIN',
-                'admin@chartspark.com': 'ADMIN',
-                'auditor@chartspark.com': 'AUDITOR',
-                'clinician@chartspark.com': 'USER',
-            };
-            const detectedDemoRole = demoRoleMap[email.toLowerCase()];
+            // SEC-SPRINT11: Demo role map only exists in non-production builds.
+            // In production, this entire block is dead-code-eliminated by the bundler.
+            if (process.env.NODE_ENV !== 'production' && demoModeEnabled) {
+                const demoRoleMap: Record<string, string> = {
+                    'super@chartspark.com': 'SUPER_ADMIN',
+                    'admin@chartspark.com': 'ADMIN',
+                    'auditor@chartspark.com': 'AUDITOR',
+                    'clinician@chartspark.com': 'USER',
+                };
+                const detectedDemoRole = demoRoleMap[email.toLowerCase()];
 
-            if (demoModeEnabled && detectedDemoRole) {
-                console.log('[LOGIN] Demo mode bypass for:', email);
-                const redirectPath = roleRoutes[detectedDemoRole] || defaultRedirect;
-                router.push(redirectPath);
-                return;
+                if (detectedDemoRole) {
+                    const redirectPath = roleRoutes[detectedDemoRole] || defaultRedirect;
+                    router.push(redirectPath);
+                    return;
+                }
             }
 
             if (!supabase) {
@@ -136,8 +139,15 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
             if (!finalUserData) {
                 console.error("Error fetching user profile from both tables:", userError);
 
-                if (demoModeEnabled) {
-                    const detectedRole = demoRoleMap[email.toLowerCase()];
+                // SEC-SPRINT11: Demo fallback only in non-production builds
+                if (process.env.NODE_ENV !== 'production' && demoModeEnabled) {
+                    const demoRoles: Record<string, string> = {
+                        'super@chartspark.com': 'SUPER_ADMIN',
+                        'admin@chartspark.com': 'ADMIN',
+                        'auditor@chartspark.com': 'AUDITOR',
+                        'clinician@chartspark.com': 'USER',
+                    };
+                    const detectedRole = demoRoles[email.toLowerCase()];
                     if (detectedRole) {
                         await fetch('/api/auth/record-attempt', {
                             method: 'POST',
@@ -311,7 +321,10 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
                     </div>
                 </div>
 
-                {demoModeEnabled && (
+                {/* SEC-SPRINT11: Demo credential buttons only render in non-production builds.
+                    process.env.NODE_ENV is replaced at build time, so this entire block
+                    is dead-code-eliminated from production bundles. */}
+                {process.env.NODE_ENV !== 'production' && demoModeEnabled && (
                     <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-4 border-t border-slate-100 dark:border-slate-800">
                         <div className="flex items-center gap-2 mb-3">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
