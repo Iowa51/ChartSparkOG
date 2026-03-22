@@ -33,25 +33,8 @@ async function handler(context: AuthContext) {
             );
         }
 
-        await logAuditEvent({
-            eventType: 'phi_read',
-            userId: context.user.id,
-            userEmail: context.user.email,
-            userRole: context.user.role,
-            organizationId: context.user.organizationId ?? undefined,
-            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: context.request.headers.get('user-agent') || 'unknown',
-            resourceType: 'appointment',
-            resourceId: appointment.id,
-            details: {
-                access_context: 'telehealth_room_creation',
-                resource_type: 'appointment',
-                resource_id: appointment.id,
-            },
-            phiAccessed: true,
-            riskLevel: 'MEDIUM',
-        });
-
+        // SEC-SPRINT11: Authorization check MUST happen BEFORE any room creation or audit logging.
+        // Verify the caller's organization owns this appointment.
         if (
             appointment.organization_id !== context.user.organizationId &&
             context.user.role !== 'SUPER_ADMIN'
@@ -69,6 +52,24 @@ async function handler(context: AuthContext) {
                 { status: 400 }
             );
         }
+
+        // Audit PHI access only AFTER authorization has been confirmed
+        await logAuditEvent({
+            eventType: 'phi_read',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId ?? undefined,
+            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
+            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            resourceType: 'appointment',
+            resourceId: appointment.id,
+            details: {
+                access_context: 'telehealth_room_creation',
+            },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
 
         let roomUrl = appointment.telehealth_room_url || null;
         const roomName = roomUrl ? roomUrl.split('/').pop() || '' : `room-${randomUUID()}`;
@@ -99,7 +100,9 @@ async function handler(context: AuthContext) {
                 meetingToken: 'demo-provider-token',
             });
 
-            const patientSessionTokenRef = await createTelehealthJoinSession({
+            // SEC-SPRINT11: Patient token created in DB only — never assigned to a local
+            // or included in any response. accept-invite looks it up by appointment ID.
+            await createTelehealthJoinSession({
                 appointmentId,
                 organizationId: appointment.organization_id,
                 participantRole: 'patient',
@@ -107,8 +110,6 @@ async function handler(context: AuthContext) {
                 meetingToken: 'demo-patient-token',
             });
 
-            // SEC-SPRINT10: Invite path contains only the opaque appointment ID, never a bearer token.
-            // The accept-invite endpoint looks up the patient token server-side and sets an HTTP-only cookie.
             return NextResponse.json({
                 appointmentId,
                 providerSessionTokenRef,
@@ -224,7 +225,9 @@ async function handler(context: AuthContext) {
             meetingToken: providerToken.token,
         });
 
-        const patientSessionTokenRef = await createTelehealthJoinSession({
+        // SEC-SPRINT11: Patient token created in DB only — never assigned to a local
+        // or included in any response. accept-invite looks it up by appointment ID.
+        await createTelehealthJoinSession({
             appointmentId,
             organizationId: appointment.organization_id,
             participantRole: 'patient',
@@ -232,7 +235,6 @@ async function handler(context: AuthContext) {
             meetingToken: patientToken.token,
         });
 
-        // SEC-SPRINT10: Invite path contains only the opaque appointment ID, never a bearer token.
         return NextResponse.json({
             appointmentId,
             providerSessionTokenRef,
