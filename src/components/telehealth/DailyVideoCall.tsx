@@ -30,7 +30,9 @@ interface ParticipantState {
     isLocal: boolean;
 }
 
-interface SessionAccessState {
+// SEC-SPRINT9: Session access kept in ref, not state, to avoid persisting
+// roomUrl/meetingToken in React state beyond the moment of use.
+interface SessionAccessData {
     roomUrl: string;
     token?: string;
 }
@@ -53,7 +55,8 @@ export default function DailyVideoCall({
     const [linkCopied, setLinkCopied] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
     const [connectionQuality] = useState<"excellent" | "good" | "poor">("excellent");
-    const [sessionAccess, setSessionAccess] = useState<SessionAccessState | null>(null);
+    const sessionAccessRef = useRef<SessionAccessData | null>(null);
+    const [sessionReady, setSessionReady] = useState(false);
 
     useEffect(() => {
         if (!isJoining) {
@@ -153,10 +156,11 @@ export default function DailyVideoCall({
                 }
 
                 if (isMounted) {
-                    setSessionAccess({
+                    sessionAccessRef.current = {
                         roomUrl: payload.roomUrl,
                         token: payload.token || undefined,
-                    });
+                    };
+                    setSessionReady(true);
                 }
             } catch (error) {
                 if (isMounted) {
@@ -177,9 +181,13 @@ export default function DailyVideoCall({
         let call: DailyCall | null = null;
 
         const initCall = async () => {
-            if (!sessionAccess) {
+            if (!sessionReady || !sessionAccessRef.current) {
                 return;
             }
+
+            // SEC-SPRINT9: Consume session access from ref and clear immediately
+            const access = sessionAccessRef.current;
+            sessionAccessRef.current = null;
 
             try {
                 const existingCall = DailyIframe.getCallInstance();
@@ -251,8 +259,8 @@ export default function DailyVideoCall({
                 });
 
                 await call.join({
-                    url: sessionAccess.roomUrl,
-                    token: sessionAccess.token,
+                    url: access.roomUrl,
+                    token: access.token,
                     userName: userName,
                 });
             } catch (error) {
@@ -268,7 +276,7 @@ export default function DailyVideoCall({
             isMounted = false;
             cleanup();
         };
-    }, [sessionAccess, userName, onError, onLeave, updateParticipants, cleanup]);
+    }, [sessionReady, userName, onError, onLeave, updateParticipants, cleanup]);
 
     const toggleAudio = async () => {
         if (callRef.current) {

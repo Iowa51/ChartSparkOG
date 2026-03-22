@@ -111,7 +111,7 @@ async function handler(context: AuthContext) {
                 appointmentId,
                 providerSessionTokenRef,
                 patientSessionTokenRef,
-                patientJoinPath: `/telehealth/join?session=${encodeURIComponent(patientSessionTokenRef)}`,
+                patientJoinPath: `/api/telehealth/accept-invite?t=${encodeURIComponent(patientSessionTokenRef)}`,
                 isDemo: true,
             });
         }
@@ -235,7 +235,7 @@ async function handler(context: AuthContext) {
             appointmentId,
             providerSessionTokenRef,
             patientSessionTokenRef,
-            patientJoinPath: `/telehealth/join?session=${encodeURIComponent(patientSessionTokenRef)}`,
+            patientJoinPath: `/api/telehealth/accept-invite?t=${encodeURIComponent(patientSessionTokenRef)}`,
         });
     } catch (error: unknown) {
         logError({ action: 'ERROR_CREATING_ROOM', error: sanitizeError(error) });

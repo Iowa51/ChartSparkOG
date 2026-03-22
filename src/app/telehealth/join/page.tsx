@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import DailyIframe, { DailyCall, DailyParticipant } from "@daily-co/daily-js";
 import {
@@ -24,14 +23,10 @@ interface ParticipantState {
     isLocal: boolean;
 }
 
-interface SessionAccessState {
-    roomUrl: string;
-    token?: string;
-}
-
 function PatientVideoCall() {
-    const searchParams = useSearchParams();
-    const sessionTokenRef = searchParams.get("session");
+    // SEC-SPRINT9: Session access stored in a ref, not React state, to avoid
+    // persisting roomUrl/meetingToken beyond the moment of use.
+    const sessionAccessRef = useRef<{ roomUrl: string; token?: string } | null>(null);
 
     const callRef = useRef<DailyCall | null>(null);
     const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -45,7 +40,7 @@ function PatientVideoCall() {
     const [callDuration, setCallDuration] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [patientName, setPatientName] = useState("");
-    const [sessionAccess, setSessionAccess] = useState<SessionAccessState | null>(null);
+    const [sessionReady, setSessionReady] = useState(false);
 
     useEffect(() => {
         if (isConnected) {
@@ -121,21 +116,20 @@ function PatientVideoCall() {
         }
     }, []);
 
+    // SEC-SPRINT9: Session token delivered via HTTP-only cookie set by accept-invite
+    // endpoint. The join-session API reads the cookie server-side — no token in URL or JS.
     useEffect(() => {
         let isMounted = true;
 
         const loadSession = async () => {
-            if (!sessionTokenRef) {
-                return;
-            }
-
             try {
+                // POST with no body — join-session reads the httpOnly cookie
                 const response = await fetch("/api/telehealth/join-session", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ sessionTokenRef }),
+                    body: JSON.stringify({}),
                 });
 
                 const payload = await response.json();
@@ -144,10 +138,11 @@ function PatientVideoCall() {
                 }
 
                 if (isMounted) {
-                    setSessionAccess({
+                    sessionAccessRef.current = {
                         roomUrl: payload.roomUrl,
                         token: payload.token || undefined,
-                    });
+                    };
+                    setSessionReady(true);
                 }
             } catch (err) {
                 if (isMounted) {
@@ -161,16 +156,20 @@ function PatientVideoCall() {
         return () => {
             isMounted = false;
         };
-    }, [sessionTokenRef]);
+    }, []);
 
     const joinCall = async () => {
-        if (!sessionAccess || !patientName.trim()) {
+        if (!sessionAccessRef.current || !patientName.trim()) {
             setError("Please enter your name to join the session.");
             return;
         }
 
         setIsJoining(true);
         setError(null);
+
+        // SEC-SPRINT9: Consume session access from ref and clear immediately
+        const access = sessionAccessRef.current;
+        sessionAccessRef.current = null;
 
         try {
             const existingCall = DailyIframe.getCallInstance();
@@ -214,8 +213,8 @@ function PatientVideoCall() {
             });
 
             await call.join({
-                url: sessionAccess.roomUrl,
-                token: sessionAccess.token || undefined,
+                url: access.roomUrl,
+                token: access.token || undefined,
                 userName: patientName.trim(),
             });
         } catch (err) {
@@ -257,7 +256,7 @@ function PatientVideoCall() {
 
     const remoteParticipant = participants.find(participant => !participant.isLocal);
 
-    if (!sessionTokenRef || (!sessionAccess && error)) {
+    if (!sessionReady && error) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
                 <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-12 text-center max-w-md">
@@ -309,7 +308,7 @@ function PatientVideoCall() {
 
                     <button
                         onClick={joinCall}
-                        disabled={!patientName.trim() || !sessionAccess}
+                        disabled={!patientName.trim() || !sessionReady}
                         className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-blue-600 text-white font-black uppercase tracking-widest text-sm shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
                     >
                         <Video className="h-5 w-5" />
