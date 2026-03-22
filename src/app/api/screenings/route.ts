@@ -171,8 +171,6 @@ async function handlePost(context: AuthContext) {
             details: {
                 action: 'SCREENING_SAVE',
                 instrument,
-                total_score,
-                severity,
                 has_risk_flags: (risk_flags?.length || 0) > 0,
             },
             phiAccessed: true,

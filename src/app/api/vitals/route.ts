@@ -193,8 +193,7 @@ async function handlePost(context: AuthContext) {
             details: {
                 action: 'VITALS_SAVE',
                 hasEncounterReference: Boolean(encounter_id),
-                has_abnormal: abnormalFlags.length > 0,
-                abnormal_flags: abnormalFlags,
+                hasAbnormalFlags: abnormalFlags.length > 0,
             },
             phiAccessed: true,
             riskLevel: abnormalFlags.length > 0 ? 'MEDIUM' : 'LOW',
