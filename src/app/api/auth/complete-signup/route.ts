@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { sendWelcomeEmail, isEmailConfigured } from '@/lib/email/resend';
 import { CompleteSignupSchema, validateRequest } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
@@ -165,6 +166,14 @@ export async function POST(request: NextRequest) {
             });
         } catch {
             // Non-critical - audit log failure shouldn't fail registration
+        }
+
+        // Send welcome email (non-blocking)
+        if (isEmailConfigured() && email) {
+            const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://chart-spark-og.vercel.app'}/login`;
+            sendWelcomeEmail(email, firstName, organizationName, loginUrl).catch((err) => {
+                logWarn({ action: 'WELCOME_EMAIL_FAILED', error: sanitizeError(err) });
+            });
         }
 
         return NextResponse.json({

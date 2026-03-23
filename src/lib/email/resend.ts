@@ -1,5 +1,9 @@
 import { Resend } from 'resend';
+import { render } from '@react-email/render';
 import { logWarn, logError, logInfo, sanitizeError } from '@/lib/logging/safe-logger';
+import WelcomeEmail, { welcomePlainText } from './templates/welcome';
+import MFACodeEmail, { mfaCodePlainText } from './templates/mfa-code';
+import PasswordResetEmail, { passwordResetPlainText } from './templates/password-reset';
 
 // Initialize Resend with API key
 const resend = process.env.RESEND_API_KEY
@@ -7,7 +11,8 @@ const resend = process.env.RESEND_API_KEY
     : null;
 
 // Email configuration
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'ChartSpark <noreply@chartspark.app>';
+const FROM_EMAIL = 'ChartSpark <noreply@chartspark.io>';
+const REPLY_TO = 'support@chartspark.io';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://chart-spark-og.vercel.app';
 
 export interface SendEmailOptions {
@@ -38,6 +43,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
     try {
         const { data, error } = await resend.emails.send({
             from: FROM_EMAIL,
+            replyTo: REPLY_TO,
             to: options.to,
             subject: options.subject,
             html: options.html,
@@ -56,6 +62,74 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
         return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
     }
 }
+
+// =============================================
+// TEMPLATE-BASED SENDER FUNCTIONS
+// =============================================
+
+/**
+ * Send a welcome email after account creation
+ */
+export async function sendWelcomeEmail(
+    to: string,
+    firstName: string,
+    organizationName: string,
+    loginUrl: string
+): Promise<{ success: boolean; error?: string }> {
+    const html = await render(WelcomeEmail({ firstName, organizationName, loginUrl }));
+    const text = welcomePlainText({ firstName, organizationName, loginUrl });
+
+    return sendEmail({
+        to,
+        subject: `Welcome to ChartSpark, ${firstName}`,
+        html,
+        text,
+    });
+}
+
+/**
+ * Send an MFA verification code email
+ */
+export async function sendMFACodeEmail(
+    to: string,
+    firstName: string,
+    code: string,
+    expiresInMinutes: number
+): Promise<{ success: boolean; error?: string }> {
+    const html = await render(MFACodeEmail({ firstName, code, expiresInMinutes }));
+    const text = mfaCodePlainText({ firstName, code, expiresInMinutes });
+
+    return sendEmail({
+        to,
+        subject: `Your ChartSpark verification code: ${code}`,
+        html,
+        text,
+    });
+}
+
+/**
+ * Send a password reset email
+ */
+export async function sendPasswordResetEmail(
+    to: string,
+    firstName: string,
+    resetUrl: string,
+    expiresInMinutes: number
+): Promise<{ success: boolean; error?: string }> {
+    const html = await render(PasswordResetEmail({ firstName, resetUrl, expiresInMinutes }));
+    const text = passwordResetPlainText({ firstName, resetUrl, expiresInMinutes });
+
+    return sendEmail({
+        to,
+        subject: 'Reset your ChartSpark password',
+        html,
+        text,
+    });
+}
+
+// =============================================
+// LEGACY SENDER FUNCTIONS
+// =============================================
 
 /**
  * Send an invitation email to a new user
@@ -77,38 +151,45 @@ export async function sendInvitationEmail(data: InvitationEmailData): Promise<{ 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+  <div style="background: #1a2e4a; padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
     <h1 style="color: white; margin: 0; font-size: 28px;">ChartSpark</h1>
     <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Clinical Documentation Platform</p>
   </div>
-  
-  <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
-    <h2 style="color: #1e293b; margin-top: 0;">You're Invited!</h2>
-    
-    <p style="color: #475569;">
-      <strong>${data.inviterName}</strong> has invited you to join 
+
+  <div style="background: #fafaf8; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+    <h2 style="color: #1a2e4a; margin-top: 0;">You're Invited!</h2>
+
+    <p style="color: #4a5568;">
+      <strong>${data.inviterName}</strong> has invited you to join
       <strong>${data.organizationName}</strong> on ChartSpark as a <strong>${data.role}</strong>.
     </p>
-    
+
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${inviteUrl}" 
-         style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+      <a href="${inviteUrl}"
+         style="display: inline-block; background: #2a9d8f; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
         Accept Invitation
       </a>
     </div>
-    
-    <p style="color: #64748b; font-size: 14px;">
+
+    <p style="color: #94a3b8; font-size: 14px;">
       This invitation will expire on <strong>${expiresFormatted}</strong>.
     </p>
-    
+
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-    
+
     <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">
       If you didn't expect this invitation, you can safely ignore this email.
       <br><br>
       If the button doesn't work, copy and paste this link into your browser:
       <br>
-      <a href="${inviteUrl}" style="color: #0ea5e9; word-break: break-all;">${inviteUrl}</a>
+      <a href="${inviteUrl}" style="color: #2a9d8f; word-break: break-all;">${inviteUrl}</a>
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+
+    <p style="color: #94a3b8; font-size: 13px; text-align: center; margin: 0;">
+      ChartSpark — Secure Mental Health Records<br>
+      Questions? Reply to this email or contact <a href="mailto:support@chartspark.io" style="color: #2a9d8f;">support@chartspark.io</a>
     </p>
   </div>
 </body>
@@ -126,6 +207,9 @@ ${inviteUrl}
 This invitation will expire on ${expiresFormatted}.
 
 If you didn't expect this invitation, you can safely ignore this email.
+
+ChartSpark — Secure Mental Health Records
+Questions? Contact support@chartspark.io
   `;
 
     return sendEmail({
@@ -133,62 +217,6 @@ If you didn't expect this invitation, you can safely ignore this email.
         subject: `You're invited to join ${data.organizationName} on ChartSpark`,
         html,
         text,
-    });
-}
-
-/**
- * Send a password reset email
- */
-export async function sendPasswordResetEmail(
-    email: string,
-    resetToken: string
-): Promise<{ success: boolean; error?: string }> {
-    const resetUrl = `${APP_URL}/reset-password?token=${resetToken}`;
-
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">ChartSpark</h1>
-  </div>
-  
-  <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
-    <h2 style="color: #1e293b; margin-top: 0;">Reset Your Password</h2>
-    
-    <p style="color: #475569;">
-      We received a request to reset your password. Click the button below to create a new password.
-    </p>
-    
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${resetUrl}" 
-         style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-        Reset Password
-      </a>
-    </div>
-    
-    <p style="color: #64748b; font-size: 14px;">
-      This link will expire in 1 hour.
-    </p>
-    
-    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-    
-    <p style="color: #94a3b8; font-size: 12px; margin-bottom: 0;">
-      If you didn't request a password reset, you can safely ignore this email.
-    </p>
-  </div>
-</body>
-</html>
-  `;
-
-    return sendEmail({
-        to: email,
-        subject: 'Reset your ChartSpark password',
-        html,
     });
 }
 
