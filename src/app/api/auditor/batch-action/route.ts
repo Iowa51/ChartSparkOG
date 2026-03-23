@@ -5,20 +5,26 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { AuditorBatchActionSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
 
         const body = await context.request.json();
-        const { action, submissionIds, reason } = body;
-
-        if (!action || !submissionIds || !Array.isArray(submissionIds) || submissionIds.length === 0) {
-            return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+        const validation = validateRequest(AuditorBatchActionSchema, body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
         }
+
+        const { action, submissionIds, reason } = validation.data;
 
         if (action === 'approve') {
             // Batch approve submissions
+            // F-027: Scope to user's organization to prevent cross-org manipulation
             const { error: updateError } = await supabase
                 .from('submissions')
                 .update({
@@ -26,7 +32,8 @@ async function handlePost(context: AuthContext) {
                     updated_at: new Date().toISOString(),
                 })
                 .in('id', submissionIds)
-                .eq('status', 'pending_audit'); // Only approve pending ones
+                .eq('status', 'pending_audit')
+                .eq('organization_id', context.user.organizationId);
 
             if (updateError) {
                 logError({ action: 'ERROR_APPROVING_SUBMISSIONS', error: sanitizeError(updateError) });
@@ -38,11 +45,8 @@ async function handlePost(context: AuthContext) {
             });
 
         } else if (action === 'flag') {
-            if (!reason) {
-                return NextResponse.json({ message: "Flag reason is required" }, { status: 400 });
-            }
-
             // Update submissions to flagged status
+            // F-027: Scope to user's organization to prevent cross-org manipulation
             const { error: updateError } = await supabase
                 .from('submissions')
                 .update({
@@ -50,7 +54,8 @@ async function handlePost(context: AuthContext) {
                     updated_at: new Date().toISOString(),
                 })
                 .in('id', submissionIds)
-                .eq('status', 'pending_audit');
+                .eq('status', 'pending_audit')
+                .eq('organization_id', context.user.organizationId);
 
             if (updateError) {
                 logError({ action: 'ERROR_FLAGGING_SUBMISSIONS', error: sanitizeError(updateError) });
@@ -91,4 +96,5 @@ async function handlePost(context: AuthContext) {
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['AUDITOR', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

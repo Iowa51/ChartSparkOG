@@ -71,6 +71,7 @@ async function handler(context: AuthContext) {
                 .from('patients')
                 .select('*')
                 .eq('id', patient_id)
+                .eq('organization_id', context.user.organizationId)
                 .single();
 
             if (patient) {
@@ -83,10 +84,11 @@ async function handler(context: AuthContext) {
                 demographics = `${age} ${patient.gender || ''} ${patient.first_name} ${patient.last_name}`.trim();
             }
 
-            // Recent notes
+            // Recent notes — SEC-CODEX-2: scope to patient to prevent cross-patient PHI leak
             const { data: notes } = await supabase
                 .from('notes')
                 .select('subjective, objective, assessment, plan, created_at')
+                .eq('patient_id', patient_id)
                 .eq('organization_id', context.user.organizationId!)
                 .order('created_at', { ascending: false })
                 .limit(5);
@@ -103,6 +105,7 @@ async function handler(context: AuthContext) {
                     .from('vitals')
                     .select('weight, weight_unit, bp_systolic, bp_diastolic, recorded_at')
                     .eq('patient_id', patient_id)
+                    .eq('organization_id', context.user.organizationId)
                     .order('recorded_at', { ascending: true })
                     .limit(6);
 
@@ -132,6 +135,7 @@ async function handler(context: AuthContext) {
                     .from('screening_scores')
                     .select('instrument, total_score, administered_at')
                     .eq('patient_id', patient_id)
+                    .eq('organization_id', context.user.organizationId)
                     .order('administered_at', { ascending: true })
                     .limit(30);
 
@@ -208,7 +212,7 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'smart_triage',
-            details: { action: 'CHART_SUMMARY', patient_id, isDemo },
+            details: { action: 'CHART_SUMMARY', isDemo },
             phiAccessed: true,
             riskLevel: 'MEDIUM',
         });
@@ -226,4 +230,6 @@ async function handler(context: AuthContext) {
 
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
+    requireMFA: true,
 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 
 interface SystemStatus {
     name: string;
@@ -20,7 +21,8 @@ interface RecentActivity {
     status: 'success' | 'warning' | 'error';
 }
 
-export async function GET(req: NextRequest) {
+async function handleGet(context: AuthContext) {
+    const req = context.request;
     const startTime = Date.now();
     const systems: SystemStatus[] = [];
     const activities: RecentActivity[] = [];
@@ -190,15 +192,15 @@ export async function GET(req: NextRequest) {
         if (supabase) {
             const { data: logs } = await supabase
                 .from('audit_logs')
-                .select('action, entity_type, created_at')
-                .order('created_at', { ascending: false })
+                .select('event_type, resource_type, timestamp')
+                .order('timestamp', { ascending: false })
                 .limit(5);
 
             if (logs && logs.length > 0) {
-                logs.forEach((log: { action: string; entity_type: string; created_at: string }) => {
+                logs.forEach((log: { event_type: string; resource_type: string | null; timestamp: string }) => {
                     activities.push({
-                        time: log.created_at,
-                        event: `${log.action} ${log.entity_type}`,
+                        time: log.timestamp,
+                        event: `${log.event_type} ${log.resource_type || 'system'}`,
                         status: 'success',
                     });
                 });
@@ -226,3 +228,8 @@ export async function GET(req: NextRequest) {
         timestamp: new Date().toISOString(),
     });
 }
+
+export const GET = withAuth(handleGet, {
+    requiredRole: ['SUPER_ADMIN'],
+    requireMFA: true,
+});

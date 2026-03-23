@@ -40,7 +40,7 @@ CREATE INDEX IF NOT EXISTS idx_patients_mrn ON patients(mrn);
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS patient_allergies (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
   allergy TEXT NOT NULL,
   severity TEXT CHECK (severity IN ('mild', 'moderate', 'severe')),
@@ -61,7 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_patient_allergies_allergy ON patient_allergies(al
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS patient_medications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
   medication TEXT NOT NULL,
   dosage TEXT,
@@ -92,7 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_patient_medications_medication ON patient_medicat
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS patient_problems (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
   problem TEXT NOT NULL,
   icd10_code TEXT,
@@ -120,7 +120,7 @@ CREATE INDEX IF NOT EXISTS idx_patient_problems_icd10 ON patient_problems(icd10_
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS patient_insurance (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
   provider TEXT NOT NULL,
   policy_number TEXT,
@@ -208,14 +208,17 @@ CREATE TRIGGER patient_mrn_trigger
 
 -- Reuse the existing update_updated_at_column function
 
+DROP TRIGGER IF EXISTS update_patient_medications_updated_at ON patient_medications;
 CREATE TRIGGER update_patient_medications_updated_at
   BEFORE UPDATE ON patient_medications
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_patient_problems_updated_at ON patient_problems;
 CREATE TRIGGER update_patient_problems_updated_at
   BEFORE UPDATE ON patient_problems
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_patient_insurance_updated_at ON patient_insurance;
 CREATE TRIGGER update_patient_insurance_updated_at
   BEFORE UPDATE ON patient_insurance
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -235,6 +238,7 @@ ALTER TABLE patient_insurance ENABLE ROW LEVEL SECURITY;
 -- =============================================
 
 -- Users can view allergies for patients in their org
+DROP POLICY IF EXISTS "Users can view org patient allergies" ON patient_allergies;
 CREATE POLICY "Users can view org patient allergies"
   ON patient_allergies FOR SELECT
   TO authenticated
@@ -247,6 +251,7 @@ CREATE POLICY "Users can view org patient allergies"
   );
 
 -- Users can add allergies for patients in their org
+DROP POLICY IF EXISTS "Users can add patient allergies" ON patient_allergies;
 CREATE POLICY "Users can add patient allergies"
   ON patient_allergies FOR INSERT
   TO authenticated
@@ -259,6 +264,7 @@ CREATE POLICY "Users can add patient allergies"
   );
 
 -- Users can update allergies for patients in their org
+DROP POLICY IF EXISTS "Users can update patient allergies" ON patient_allergies;
 CREATE POLICY "Users can update patient allergies"
   ON patient_allergies FOR UPDATE
   TO authenticated
@@ -271,6 +277,7 @@ CREATE POLICY "Users can update patient allergies"
   );
 
 -- Users can delete allergies for patients in their org
+DROP POLICY IF EXISTS "Users can delete patient allergies" ON patient_allergies;
 CREATE POLICY "Users can delete patient allergies"
   ON patient_allergies FOR DELETE
   TO authenticated
@@ -287,6 +294,7 @@ CREATE POLICY "Users can delete patient allergies"
 -- =============================================
 
 -- Users can view medications for patients in their org
+DROP POLICY IF EXISTS "Users can view org patient medications" ON patient_medications;
 CREATE POLICY "Users can view org patient medications"
   ON patient_medications FOR SELECT
   TO authenticated
@@ -299,6 +307,7 @@ CREATE POLICY "Users can view org patient medications"
   );
 
 -- Users can add medications for patients in their org
+DROP POLICY IF EXISTS "Users can add patient medications" ON patient_medications;
 CREATE POLICY "Users can add patient medications"
   ON patient_medications FOR INSERT
   TO authenticated
@@ -311,6 +320,7 @@ CREATE POLICY "Users can add patient medications"
   );
 
 -- Users can update medications for patients in their org
+DROP POLICY IF EXISTS "Users can update patient medications" ON patient_medications;
 CREATE POLICY "Users can update patient medications"
   ON patient_medications FOR UPDATE
   TO authenticated
@@ -323,6 +333,7 @@ CREATE POLICY "Users can update patient medications"
   );
 
 -- Users can delete medications for patients in their org
+DROP POLICY IF EXISTS "Users can delete patient medications" ON patient_medications;
 CREATE POLICY "Users can delete patient medications"
   ON patient_medications FOR DELETE
   TO authenticated
@@ -339,6 +350,7 @@ CREATE POLICY "Users can delete patient medications"
 -- =============================================
 
 -- Users can view problems for patients in their org
+DROP POLICY IF EXISTS "Users can view org patient problems" ON patient_problems;
 CREATE POLICY "Users can view org patient problems"
   ON patient_problems FOR SELECT
   TO authenticated
@@ -351,6 +363,7 @@ CREATE POLICY "Users can view org patient problems"
   );
 
 -- Users can add problems for patients in their org
+DROP POLICY IF EXISTS "Users can add patient problems" ON patient_problems;
 CREATE POLICY "Users can add patient problems"
   ON patient_problems FOR INSERT
   TO authenticated
@@ -363,6 +376,7 @@ CREATE POLICY "Users can add patient problems"
   );
 
 -- Users can update problems for patients in their org
+DROP POLICY IF EXISTS "Users can update patient problems" ON patient_problems;
 CREATE POLICY "Users can update patient problems"
   ON patient_problems FOR UPDATE
   TO authenticated
@@ -375,6 +389,7 @@ CREATE POLICY "Users can update patient problems"
   );
 
 -- Users can delete problems for patients in their org
+DROP POLICY IF EXISTS "Users can delete patient problems" ON patient_problems;
 CREATE POLICY "Users can delete patient problems"
   ON patient_problems FOR DELETE
   TO authenticated
@@ -391,6 +406,7 @@ CREATE POLICY "Users can delete patient problems"
 -- =============================================
 
 -- Users can view insurance for patients in their org
+DROP POLICY IF EXISTS "Users can view org patient insurance" ON patient_insurance;
 CREATE POLICY "Users can view org patient insurance"
   ON patient_insurance FOR SELECT
   TO authenticated
@@ -403,6 +419,7 @@ CREATE POLICY "Users can view org patient insurance"
   );
 
 -- Users can add insurance for patients in their org
+DROP POLICY IF EXISTS "Users can add patient insurance" ON patient_insurance;
 CREATE POLICY "Users can add patient insurance"
   ON patient_insurance FOR INSERT
   TO authenticated
@@ -415,6 +432,7 @@ CREATE POLICY "Users can add patient insurance"
   );
 
 -- Users can update insurance for patients in their org
+DROP POLICY IF EXISTS "Users can update patient insurance" ON patient_insurance;
 CREATE POLICY "Users can update patient insurance"
   ON patient_insurance FOR UPDATE
   TO authenticated
@@ -427,6 +445,7 @@ CREATE POLICY "Users can update patient insurance"
   );
 
 -- Users can delete insurance for patients in their org
+DROP POLICY IF EXISTS "Users can delete patient insurance" ON patient_insurance;
 CREATE POLICY "Users can delete patient insurance"
   ON patient_insurance FOR DELETE
   TO authenticated

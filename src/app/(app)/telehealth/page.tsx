@@ -24,7 +24,7 @@ const DailyVideoCall = dynamic(
 
 const upcomingAppointments = [
     {
-        id: 1,
+        id: "11111111-1111-4111-8111-111111111111",
         patientName: "Michael Chen",
         time: "10:00 AM",
         date: "Today",
@@ -33,7 +33,7 @@ const upcomingAppointments = [
         type: "Follow-up"
     },
     {
-        id: 2,
+        id: "22222222-2222-4222-8222-222222222222",
         patientName: "Sarah Johnson",
         time: "2:00 PM",
         date: "Today",
@@ -42,7 +42,7 @@ const upcomingAppointments = [
         type: "Initial Assessment"
     },
     {
-        id: 3,
+        id: "33333333-3333-4333-8333-333333333333",
         patientName: "Emily Rodriguez",
         time: "9:00 AM",
         date: "Tomorrow",
@@ -51,7 +51,7 @@ const upcomingAppointments = [
         type: "Therapy Session"
     },
     {
-        id: 4,
+        id: "44444444-4444-4444-8444-444444444444",
         patientName: "James Wilson",
         time: "11:30 AM",
         date: "Tomorrow",
@@ -86,9 +86,8 @@ const sessionHistory = [
 ];
 
 interface CallSession {
-    roomUrl: string;
-    roomName: string;
-    providerToken: string;
+    appointmentId: string;
+    providerSessionTokenRef: string;
     patientLink: string;
     patientName: string;
 }
@@ -98,20 +97,18 @@ export default function TelehealthPage() {
     const [callSession, setCallSession] = useState<CallSession | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const handleStartCall = async (appointmentId: number, patientName: string) => {
+    const handleStartCall = async (appointmentId: string, patientName: string) => {
         setIsStartingCall(true);
         setError(null);
 
         try {
-            console.log("[Telehealth] Creating room for appointment:", appointmentId);
-
             const response = await fetch("/api/telehealth/create-room", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    appointmentId: appointmentId.toString(),
+                    appointmentId,
                     patientName: patientName,
                 }),
             });
@@ -122,21 +119,17 @@ export default function TelehealthPage() {
             }
 
             const data = await response.json();
-            console.log("[Telehealth] Room created:", data);
-
-            // Generate patient link pointing to our patient-facing join page
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-            const patientLink = `${baseUrl}/telehealth/join?room=${encodeURIComponent(data.roomUrl)}&t=${encodeURIComponent(data.patientToken || '')}`;
+            // SEC-SPRINT10: Invite link uses opaque appointment ID only, no bearer token
+            const patientLink = `${baseUrl}${data.patientInvitePath}`;
 
             setCallSession({
-                roomUrl: data.roomUrl,
-                roomName: data.roomName,
-                providerToken: data.providerToken,
+                appointmentId: data.appointmentId,
+                providerSessionTokenRef: data.providerSessionTokenRef,
                 patientLink: patientLink,
                 patientName: patientName,
             });
         } catch (err) {
-            console.error("[Telehealth] Error starting call:", err);
             setError(err instanceof Error ? err.message : "Failed to start telehealth session");
         } finally {
             setIsStartingCall(false);
@@ -153,11 +146,11 @@ export default function TelehealthPage() {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                        roomName: callSession.roomName,
+                        appointmentId: callSession.appointmentId,
                     }),
                 });
-            } catch (err) {
-                console.error("[Telehealth] Error ending session:", err);
+            } catch {
+                // Allow the UI to recover even if server cleanup fails.
             }
         }
         setCallSession(null);
@@ -304,8 +297,7 @@ export default function TelehealthPage() {
                                 </div>
                             ) : callSession ? (
                                 <DailyVideoCall
-                                    roomUrl={callSession.roomUrl}
-                                    token={callSession.providerToken}
+                                    sessionTokenRef={callSession.providerSessionTokenRef}
                                     userName="Provider"
                                     patientLink={callSession.patientLink}
                                     onLeave={handleEndCall}

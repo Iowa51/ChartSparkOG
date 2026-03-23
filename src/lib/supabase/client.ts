@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr';
+import { devWarn } from '@/lib/logging/safe-logger';
 
 // Track if we've warned about missing config
 let hasWarnedMissingConfig = false;
@@ -24,7 +25,7 @@ export function createClient() {
             process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
         if (isDemoMode) {
             if (!hasWarnedMissingConfig) {
-                console.warn('[Supabase Client] Not configured - running in demo mode. Some features will be limited.');
+                devWarn('Supabase Client', 'Not configured - running in demo mode. Some features will be limited.');
                 hasWarnedMissingConfig = true;
             }
             // QUAL-001: For backward compatibility with existing code that doesn't

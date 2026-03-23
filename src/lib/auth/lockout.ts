@@ -1,7 +1,9 @@
 // src/lib/auth/lockout.ts
 // Account lockout to prevent brute force attacks
 
-import { createClient } from '@/lib/supabase/client';
+// F-036: Use service role client for server-side lockout operations (bypasses RLS, pre-auth)
+import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export const LOCKOUT_CONFIG = {
     maxAttempts: 5,
@@ -21,11 +23,16 @@ export interface LockoutStatus {
  * Note: This requires the login_attempts table to be created in Supabase
  */
 export async function checkAccountLockout(email: string): Promise<LockoutStatus> {
-    const supabase = createClient();
+    let supabase;
+    try {
+        supabase = createServiceRoleClient();
+    } catch {
+        // F-036: Fail closed when service unavailable
+        return { locked: true, remainingAttempts: 0 };
+    }
 
     if (!supabase) {
-        // In demo mode, don't lock out
-        return { locked: false, remainingAttempts: LOCKOUT_CONFIG.maxAttempts };
+        return { locked: true, remainingAttempts: 0 };
     }
 
     try {
@@ -40,9 +47,9 @@ export async function checkAccountLockout(email: string): Promise<LockoutStatus>
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Error checking lockout:', error);
-            // On error, allow login attempt
-            return { locked: false, remainingAttempts: LOCKOUT_CONFIG.maxAttempts };
+            logError({ action: 'LOCKOUT_CHECK_ERROR', error: sanitizeError(error) });
+            // F-036: Fail closed on DB errors
+            return { locked: true, remainingAttempts: 0 };
         }
 
         const failedCount = attempts?.length || 0;
@@ -71,8 +78,9 @@ export async function checkAccountLockout(email: string): Promise<LockoutStatus>
             remainingAttempts: Math.max(0, LOCKOUT_CONFIG.maxAttempts - failedCount),
         };
     } catch (err) {
-        console.error('Lockout check exception:', err);
-        return { locked: false, remainingAttempts: LOCKOUT_CONFIG.maxAttempts };
+        logError({ action: 'LOCKOUT_CHECK_EXCEPTION', error: sanitizeError(err) });
+        // F-036: Fail closed on exceptions
+        return { locked: true, remainingAttempts: 0 };
     }
 }
 
@@ -85,10 +93,15 @@ export async function recordLoginAttempt(
     ipAddress?: string,
     userAgent?: string
 ): Promise<void> {
-    const supabase = createClient();
+    let supabase;
+    try {
+        supabase = createServiceRoleClient();
+    } catch {
+        return;
+    }
 
     if (!supabase) {
-        return; // Demo mode
+        return;
     }
 
     try {
@@ -109,7 +122,7 @@ export async function recordLoginAttempt(
                 .eq('success', false);
         }
     } catch (err) {
-        console.error('Error recording login attempt:', err);
+        logError({ action: 'LOCKOUT_RECORD_ATTEMPT_ERROR', error: sanitizeError(err) });
     }
 }
 
@@ -117,7 +130,12 @@ export async function recordLoginAttempt(
  * Get recent login history for a user (for security dashboard)
  */
 export async function getLoginHistory(email: string, limit = 10): Promise<any[]> {
-    const supabase = createClient();
+    let supabase;
+    try {
+        supabase = createServiceRoleClient();
+    } catch {
+        return [];
+    }
 
     if (!supabase) {
         return [];
@@ -132,13 +150,13 @@ export async function getLoginHistory(email: string, limit = 10): Promise<any[]>
             .limit(limit);
 
         if (error) {
-            console.error('Error fetching login history:', error);
+            logError({ action: 'LOCKOUT_FETCH_HISTORY_ERROR', error: sanitizeError(error) });
             return [];
         }
 
         return data || [];
     } catch (err) {
-        console.error('Login history exception:', err);
+        logError({ action: 'LOCKOUT_HISTORY_EXCEPTION', error: sanitizeError(err) });
         return [];
     }
 }
@@ -147,7 +165,12 @@ export async function getLoginHistory(email: string, limit = 10): Promise<any[]>
  * Clear all login attempts for an account (admin action)
  */
 export async function clearLockout(email: string): Promise<boolean> {
-    const supabase = createClient();
+    let supabase;
+    try {
+        supabase = createServiceRoleClient();
+    } catch {
+        return false;
+    }
 
     if (!supabase) {
         return false;
@@ -162,7 +185,7 @@ export async function clearLockout(email: string): Promise<boolean> {
 
         return !error;
     } catch (err) {
-        console.error('Clear lockout exception:', err);
+        logError({ action: 'LOCKOUT_CLEAR_EXCEPTION', error: sanitizeError(err) });
         return false;
     }
 }

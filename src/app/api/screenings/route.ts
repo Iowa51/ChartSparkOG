@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { withAuth, AuthContext, canAccessPatient } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
-
-const VALID_INSTRUMENTS = ['PHQ9', 'GAD7', 'CSSRS', 'AUDITC', 'DAST10', 'MDQ', 'PCL5'] as const;
+import { ScreeningCreateSchema, validateRequest } from '@/lib/validation/schemas';
 
 // GET /api/screenings?patient_id=...&instrument=...&limit=6
 async function handleGet(context: AuthContext) {
@@ -30,9 +29,19 @@ async function handleGet(context: AuthContext) {
             return NextResponse.json({ screenings: [], isDemo: true });
         }
 
+        // C3: Enforce org isolation — reject if no orgId
+        const orgId = context.user.organizationId;
+        if (!orgId) {
+            return NextResponse.json(
+                { error: 'Organization context required' },
+                { status: 403 }
+            );
+        }
+
         let query = supabase
             .from('screening_scores')
             .select('*')
+            .eq('organization_id', orgId)
             .order('administered_at', { ascending: false })
             .limit(limit);
 
@@ -56,7 +65,7 @@ async function handleGet(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'screening_scores',
-            details: { action: 'SCREENING_VIEW', patient_id, instrument },
+            details: { action: 'SCREENING_VIEW', instrument, hasPatientFilter: Boolean(patient_id) },
             phiAccessed: true,
             riskLevel: 'LOW',
         });
@@ -77,23 +86,27 @@ async function handlePost(context: AuthContext) {
 
     try {
         const body = await context.request.json();
+
+        // F-011: Validate with Zod schema (UUID, bounded score, typed item_responses, size limits)
+        const validation = validateRequest(ScreeningCreateSchema, body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
+        }
         const {
             patient_id, encounter_id, instrument,
             total_score, severity, item_responses,
             clinical_notes, risk_flags
-        } = body;
+        } = validation.data;
 
-        if (!patient_id || !instrument || total_score === undefined || !item_responses) {
+        // C3: Enforce org isolation on POST
+        const orgId = context.user.organizationId;
+        if (!orgId) {
             return NextResponse.json(
-                { error: 'patient_id, instrument, total_score, and item_responses are required' },
-                { status: 400 }
-            );
-        }
-
-        if (!VALID_INSTRUMENTS.includes(instrument)) {
-            return NextResponse.json(
-                { error: `Invalid instrument. Must be one of: ${VALID_INSTRUMENTS.join(', ')}` },
-                { status: 400 }
+                { error: 'Organization context required' },
+                { status: 403 }
             );
         }
 
@@ -112,10 +125,18 @@ async function handlePost(context: AuthContext) {
             });
         }
 
+        const canAccessTargetPatient = await canAccessPatient(context.user, patient_id);
+        if (!canAccessTargetPatient) {
+            return NextResponse.json(
+                { error: 'Patient not found' },
+                { status: 403 }
+            );
+        }
+
         const { data: screening, error } = await supabase
             .from('screening_scores')
             .insert({
-                organization_id: context.user.organizationId,
+                organization_id: orgId,
                 patient_id,
                 encounter_id: encounter_id || null,
                 administered_by: context.user.id,
@@ -149,10 +170,7 @@ async function handlePost(context: AuthContext) {
             resourceId: screening.id,
             details: {
                 action: 'SCREENING_SAVE',
-                patient_id,
                 instrument,
-                total_score,
-                severity,
                 has_risk_flags: (risk_flags?.length || 0) > 0,
             },
             phiAccessed: true,
@@ -171,8 +189,12 @@ async function handlePost(context: AuthContext) {
 
 export const GET = withAuth(handleGet, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
+    requireMFA: true,
 });
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireOrganization: true,
+    requireMFA: true,
 });

@@ -1311,11 +1311,11 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                             if (SpeechRecognition) {
                                                                 // First, explicitly request microphone permission via getUserMedia
                                                                 // This triggers Chrome's native permission dialog
-                                                                console.log('[Scribe] Requesting microphone permission...');
+                                                                if (process.env.NODE_ENV === 'development') console.log('[Scribe] Requesting microphone permission...');
 
                                                                 navigator.mediaDevices.getUserMedia({ audio: true })
                                                                     .then((stream) => {
-                                                                        console.log('[Scribe] Microphone permission granted!');
+                                                                        if (process.env.NODE_ENV === 'development') console.log('[Scribe] Microphone permission granted!');
                                                                         // Stop the stream immediately - we just needed the permission
                                                                         stream.getTracks().forEach(track => track.stop());
 
@@ -1327,7 +1327,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                             recognition.lang = 'en-US';
 
                                                                             recognition.onstart = () => {
-                                                                                console.log('[Scribe] Speech recognition started successfully!');
+                                                                                if (process.env.NODE_ENV === 'development') console.log('[Scribe] Speech recognition started');
                                                                             };
 
                                                                             recognition.onresult = (event: any) => {
@@ -1335,12 +1335,12 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                                 for (let i = 0; i < event.results.length; i++) {
                                                                                     transcript += event.results[i][0].transcript;
                                                                                 }
-                                                                                console.log('[Scribe] Transcript:', transcript);
+                                                                                // PHI removed: transcript content must never be logged
                                                                                 setScribeTranscription(transcript);
                                                                             };
 
                                                                             recognition.onerror = (event: any) => {
-                                                                                console.error('[Scribe] Speech recognition error:', event.error);
+                                                                                if (process.env.NODE_ENV === 'development') console.error('[Scribe] Speech recognition error:', event.error);
                                                                                 setIsRecording(false);
 
                                                                                 // Provide clear, actionable error messages instead of demo fallback
@@ -1359,7 +1359,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                                     );
                                                                                 } else if (event.error === 'no-speech') {
                                                                                     // This is normal - just means no speech detected yet
-                                                                                    console.log('[Scribe] No speech detected');
+                                                                                    // No speech - non-actionable, no log needed
                                                                                 } else if (event.error === 'network') {
                                                                                     alert(
                                                                                         '🌐 Network Error\n\n' +
@@ -1380,36 +1380,22 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                                     );
                                                                                 } else if (event.error === 'aborted') {
                                                                                     // User stopped recording, this is fine
-                                                                                    console.log('[Scribe] Recognition aborted');
+                                                                                    // Recognition aborted by user - expected, no log needed
                                                                                 } else {
                                                                                     alert('Speech recognition error: ' + event.error + '\n\nPlease try refreshing the page or use Google Chrome.');
                                                                                 }
                                                                             };
 
                                                                             recognition.onend = () => {
-                                                                                console.log('[Scribe] Speech recognition ended');
+                                                                                if (process.env.NODE_ENV === 'development') console.log('[Scribe] Recognition ended');
                                                                                 setIsRecording(false);
                                                                                 if (scribeTranscription) {
                                                                                     setHasRecording(true);
                                                                                 }
                                                                             };
 
-                                                                            // Additional event handlers for debugging
                                                                             recognition.onaudiostart = () => {
-                                                                                console.log('[Scribe] Audio capture started - microphone is listening');
                                                                                 setScribeTranscription("🎤 Listening... Speak now!");
-                                                                            };
-
-                                                                            recognition.onaudioend = () => {
-                                                                                console.log('[Scribe] Audio capture ended');
-                                                                            };
-
-                                                                            recognition.onspeechstart = () => {
-                                                                                console.log('[Scribe] Speech detected!');
-                                                                            };
-
-                                                                            recognition.onspeechend = () => {
-                                                                                console.log('[Scribe] Speech ended');
                                                                             };
 
                                                                             // Set state before starting
@@ -1419,16 +1405,16 @@ Prognosis: Favorable with continued treatment adherence.`;
 
                                                                             recognitionRef.current = recognition;
                                                                             recognition.start();
-                                                                            console.log('[Scribe] Called recognition.start() - waiting for audio...');
+                                                                            if (process.env.NODE_ENV === 'development') console.log('[Scribe] Recognition started');
 
                                                                         } catch (err) {
-                                                                            console.error('[Scribe] Failed to start speech recognition:', err);
+                                                                            if (process.env.NODE_ENV === 'development') console.error('[Scribe] Failed to start speech recognition:', err);
                                                                             setIsRecording(false);
                                                                             alert('Failed to start speech recognition. Please try again or use a different browser.');
                                                                         }
                                                                     })
                                                                     .catch((err) => {
-                                                                        console.error('[Scribe] Microphone access denied:', err);
+                                                                        if (process.env.NODE_ENV === 'development') console.error('[Scribe] Microphone access denied:', err);
                                                                         alert(
                                                                             '🎤 Microphone Access Required\n\n' +
                                                                             'Please grant microphone permission to use AI Scribe:\n\n' +
@@ -1443,7 +1429,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                     });
                                                             } else {
                                                                 // Fallback demo mode for unsupported browsers - no alert, just start demo
-                                                                console.log('[Scribe] Using demo mode - SpeechRecognition not available');
+                                                                if (process.env.NODE_ENV === 'development') console.log('[Scribe] Using demo mode');
                                                                 setIsRecording(true);
                                                                 setRecordingTime(0);
                                                                 setScribeTranscription("");

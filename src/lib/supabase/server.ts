@@ -1,5 +1,6 @@
 import { createServerClient as createSSRServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { devWarn } from '@/lib/logging/safe-logger';
 
 // Track if we've warned about missing config
 let hasWarnedMissingConfig = false;
@@ -25,7 +26,7 @@ export async function createClient() {
             process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
         if (isDemoMode) {
             if (!hasWarnedMissingConfig) {
-                console.warn('[Supabase Server] Not configured - running in demo mode');
+                devWarn('Supabase Server', 'Not configured - running in demo mode');
                 hasWarnedMissingConfig = true;
             }
             // QUAL-001: Type assertion for backward compatibility

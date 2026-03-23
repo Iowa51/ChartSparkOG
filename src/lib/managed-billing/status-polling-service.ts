@@ -8,6 +8,7 @@
 import { OfficeAllySFTPAdapter, getOfficeAllyAdapter } from "./office-ally-sftp";
 import { ERAParser } from "./era-parser";
 import { createClient } from "@supabase/supabase-js";
+import { logInfo, logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export class StatusPollingService {
     /**
@@ -53,7 +54,7 @@ export class StatusPollingService {
 
             return { processed: processedCount, errors: errorCount };
         } catch (err) {
-            console.error(`Status Polling failed for org ${orgId}:`, err);
+            logError({ action: 'STATUS_POLLING_FAILED', organizationId: orgId, error: sanitizeError(err) });
             throw err;
         }
     }
@@ -63,7 +64,7 @@ export class StatusPollingService {
      */
     private static async handleERA(content: string, orgId: string, fileName: string) {
         const messages = ERAParser.parse(content);
-        console.log(`[StatusPolling] Processing ERA ${fileName} with ${messages.length} payments`);
+        logInfo({ action: 'STATUS_POLLING_PROCESSING_ERA', resourceId: fileName, count: messages.length });
         // Logic for database updates would go here
     }
 
@@ -71,13 +72,13 @@ export class StatusPollingService {
      * Handle 277CA Claim Acknowledgement
      */
     private static async handleStatusAck(content: string, orgId: string, fileName: string) {
-        console.log(`[StatusPolling] Processing Claim Ack (277CA) ${fileName}`);
+        logInfo({ action: 'STATUS_POLLING_PROCESSING_277CA', resourceId: fileName });
     }
 
     /**
      * Handle 999 Functional Acknowledgement
      */
     private static async handleFunctionalAck(content: string, orgId: string, fileName: string) {
-        console.log(`[StatusPolling] Processing Functional Ack (999) ${fileName}`);
+        logInfo({ action: 'STATUS_POLLING_PROCESSING_999', resourceId: fileName });
     }
 }

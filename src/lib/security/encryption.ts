@@ -8,8 +8,19 @@ import { promisify } from 'util';
 const scryptAsync = promisify(scrypt);
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
-// Legacy static salt (for backward compatibility only)
-const LEGACY_SALT = 'chartspark-salt';
+// C9: Legacy salt moved to env var — hardcoded fallback removed.
+// MIGRATION NOTE: If ENCRYPTION_SALT changes, existing legacy-encrypted data will
+// need re-encryption. Do NOT auto-migrate — run a controlled migration job instead.
+const getLegacySalt = (): string => {
+    const salt = process.env.ENCRYPTION_SALT;
+    if (!salt) {
+        throw new Error(
+            'ENCRYPTION_SALT must be set. This is required for decrypting legacy-format data. ' +
+            'Set it to the value previously hardcoded (check deployment docs) and add to .env.local'
+        );
+    }
+    return salt;
+};
 
 // Get encryption key from environment (must be 32+ characters)
 const getEncryptionKey = (): string => {
@@ -181,8 +192,8 @@ async function decryptLegacy(encryptedData: string): Promise<string> {
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
 
-    // Use legacy static salt
-    const key = (await scryptAsync(getEncryptionKey(), LEGACY_SALT, 32)) as Buffer;
+    // Use legacy salt from env var
+    const key = (await scryptAsync(getEncryptionKey(), getLegacySalt(), 32)) as Buffer;
 
     const decipher = createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(authTag);
@@ -270,9 +281,11 @@ export async function decryptPHIFields<T extends Record<string, any>>(
  * Use when you need to search encrypted data without decrypting
  */
 export async function hashForSearch(plaintext: string): Promise<string> {
+    // C9: Search salt derived from ENCRYPTION_SALT to avoid separate hardcoded value
+    const searchSalt = getLegacySalt() + '-search';
     const key = (await scryptAsync(
         plaintext + getEncryptionKey(),
-        'chartspark-search-salt',
+        searchSalt,
         32
     )) as Buffer;
     return key.toString('hex');

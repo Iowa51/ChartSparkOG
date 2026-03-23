@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { getErrorStatusCode } from '@/lib/security/audit-error-codes';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { AIDiagnoseSchema, validateRequest } from '@/lib/validation/schemas';
@@ -25,7 +26,7 @@ async function handler(context: AuthContext) {
 
         // Log AI PHI processing - patient clinical data sent to AI
         await logAuditEvent({
-            eventType: 'NOTE_VIEW', // AI is processing clinical notes
+            eventType: 'AI_DIAGNOSE_REQUEST', // F-024: Use correct AI-specific audit type
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -48,7 +49,7 @@ async function handler(context: AuthContext) {
         return NextResponse.json(result);
 
     } catch (error: unknown) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        const errorStatus = getErrorStatusCode(error);
         logError({ action: 'AI_DIAGNOSE_ERROR', error: sanitizeError(error) });
 
         await logAuditEvent({
@@ -65,21 +66,21 @@ async function handler(context: AuthContext) {
         });
 
         // Map known error patterns to user-friendly messages without exposing internals
-        if (errorMsg.includes('not configured')) {
+        if (!safeAzureOpenAI.isAvailable()) {
             return NextResponse.json(
                 { error: 'Azure OpenAI is not configured. Please set up your API credentials.' },
                 { status: 503 }
             );
         }
 
-        if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
+        if (errorStatus === 401) {
             return NextResponse.json(
                 { error: 'Azure OpenAI authentication failed. Please check your API key.' },
                 { status: 401 }
             );
         }
 
-        if (errorMsg.includes('429') || errorMsg.includes('rate limit')) {
+        if (errorStatus === 429) {
             return NextResponse.json(
                 { error: 'Rate limit exceeded. Please wait a moment and try again.' },
                 { status: 429 }
@@ -95,4 +96,5 @@ async function handler(context: AuthContext) {
 
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

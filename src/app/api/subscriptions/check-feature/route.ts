@@ -29,8 +29,8 @@ async function handleGet(context: AuthContext) {
         return NextResponse.json({ hasAccess });
     } catch (error) {
         logError({ action: 'FEATURE_CHECK_ERROR', error: sanitizeError(error) });
-        // Fail open - allow access on error
-        return NextResponse.json({ hasAccess: true });
+        // Fail CLOSED - deny access on error (HIPAA safety)
+        return NextResponse.json({ hasAccess: false, error: 'Feature check unavailable' }, { status: 503 });
     }
 }
 

@@ -5,19 +5,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
-
-interface SignupData {
-    // SEC-REMEDIATION: userId and email are now IGNORED from request body
-    // We get these from the authenticated session instead
-    firstName: string;
-    lastName: string;
-    organizationName: string;
-}
+import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEvent } from '@/lib/security/audit-log';
+import { CompleteSignupSchema, validateRequest } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
     try {
-        const body: SignupData = await request.json();
+        const body = await request.json();
+        const validation = validateRequest(CompleteSignupSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+        }
+        const { firstName, lastName, organizationName } = validation.data;
 
         // SEC-REMEDIATION: Get authenticated user from session, NEVER trust client-provided userId
         const supabase = await createClient();
@@ -54,23 +53,6 @@ export async function POST(request: NextRequest) {
         const email = user.email;
 
         // Validate required fields from body (but NOT userId/email)
-        const { firstName, lastName, organizationName } = body;
-
-        if (!firstName || !lastName || !organizationName) {
-            return NextResponse.json(
-                { error: 'First name, last name, and organization name are required' },
-                { status: 400 }
-            );
-        }
-
-        // Basic validation
-        if (firstName.length > 50 || lastName.length > 50 || organizationName.length > 100) {
-            return NextResponse.json(
-                { error: 'Field values too long' },
-                { status: 400 }
-            );
-        }
-
         // Use service role client for privileged database operations
         const serviceSupabase = createServiceRoleClient();
         if (!serviceSupabase) {
@@ -151,21 +133,35 @@ export async function POST(request: NextRequest) {
             }
         } catch (featureError) {
             // Non-critical - log but don't fail registration
-            console.warn('Feature assignment warning:', featureError);
+            logWarn({ action: 'SIGNUP_FEATURE_ASSIGNMENT_WARNING', error: sanitizeError(featureError) });
         }
 
-        // Audit log - SEC-REMEDIATION: No PHI in details
+        // SEC-SPRINT8: Route audit writes through canonical helper
         try {
-            await serviceSupabase.from('audit_logs').insert({
-                event_type: 'USER_CREATED',
-                user_id: userId,
-                user_email: email,
-                user_role: 'ADMIN',
-                organization_id: org.id,
-                ip_address: request.headers.get('x-forwarded-for') || 'unknown',
-                user_agent: request.headers.get('user-agent') || 'unknown',
-                risk_level: 'LOW',
+            await logAuditEvent({
+                eventType: 'USER_CREATED',
+                userId,
+                userEmail: email,
+                userRole: 'ADMIN',
+                organizationId: org.id,
+                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                userAgent: request.headers.get('user-agent') || 'unknown',
+                riskLevel: 'LOW',
                 details: { isNewOrg: true },
+            });
+
+            // SEC-SPRINT11: Emit ROLE_CHANGED for initial org admin role assignment
+            await logAuditEvent({
+                eventType: 'ROLE_CHANGED',
+                userId,
+                userEmail: email,
+                organizationId: org.id,
+                resourceType: 'user',
+                resourceId: userId,
+                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                userAgent: request.headers.get('user-agent') || 'unknown',
+                riskLevel: 'HIGH',
+                details: { previousRole: null, newRole: 'ADMIN', changedBy: userId },
             });
         } catch {
             // Non-critical - audit log failure shouldn't fail registration

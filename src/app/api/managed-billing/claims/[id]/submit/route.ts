@@ -9,6 +9,8 @@ import { createClient } from '@/lib/supabase/server';
 import { submitClaimToClearinghouse } from '@/lib/managed-billing/clearinghouse-service';
 import { withAuth, AuthContext, isSuperAdmin } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handlePost(context: AuthContext) {
     try {
@@ -49,6 +51,22 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: result.error }, { status: 500 });
         }
 
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_CREATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'billing_claim',
+            resourceId: id,
+            details: { action: 'CLAIM_SUBMIT', submissionId: result.submissionId },
+            phiAccessed: true,
+            riskLevel: 'HIGH',
+        });
+
         return NextResponse.json({
             success: true,
             submissionId: result.submissionId,
@@ -60,4 +78,4 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const POST = withAuth(handlePost);
+export const POST = withAuth(handlePost, { requireOrganization: true, requireMFA: true });

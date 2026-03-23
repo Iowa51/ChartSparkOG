@@ -1,8 +1,12 @@
-// HIPAA-compliant audit logging — server components and API routes only
+// F-028: Consolidated HIPAA-compliant audit logging service
+// Uses service role client to bypass RLS (audit logs should always be written)
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { sendEmail } from '@/lib/email/resend';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export type AuditEventType =
+    | 'phi_read'
     | 'LOGIN_SUCCESS'
     | 'LOGIN_FAILURE'
     | 'LOGOUT'
@@ -62,11 +66,20 @@ export type AuditEventType =
     | 'APPOINTMENT_CREATE'
     | 'APPOINTMENT_UPDATE'
     | 'APPOINTMENT_DELETE'
+    | 'EHR_CONNECTION_ATTEMPT'
+    | 'EHR_CONSENT_UPDATED'
     | 'AI_DIAGNOSE_REQUEST'
     | 'AI_RECOMMENDATION_REQUEST'
     | 'AI_TREATMENT_PLAN_REQUEST'
     | 'AI_CHAT_REQUEST'
-    | 'AI_GENERATE_NOTE_REQUEST';
+    | 'AI_GENERATE_NOTE_REQUEST'
+    // Billing events (F-028: consolidated from legacy managed billing audit flow)
+    | 'BILLING_RECORD_VIEW'
+    | 'BILLING_RECORD_CREATE'
+    | 'BILLING_CLAIM_GENERATED'
+    | 'BILLING_CLAIM_SUBMITTED'
+    | 'BILLING_CLAIM_STATUS_CHANGED'
+    | 'BILLING_PAYMENT_RECEIVED';
 
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -97,6 +110,7 @@ function sanitizeDetails(details: Record<string, any>): Record<string, any> {
         'insurance_id', 'medical_record', 'diagnosis', 'medication',
         'treatment', 'symptoms', 'notes', 'content', 'patient', 'name',
     ];
+    const sensitiveDiagnosticFields = ['error', 'message', 'stack'];
 
     const sanitized: Record<string, any> = {};
 
@@ -105,6 +119,8 @@ function sanitizeDetails(details: Record<string, any>): Record<string, any> {
 
         if (phiFields.some(phi => lowerKey.includes(phi))) {
             sanitized[key] = '[REDACTED]';
+        } else if (sensitiveDiagnosticFields.some(field => lowerKey.includes(field)) && typeof value === 'string') {
+            sanitized[key] = '[REDACTED_DIAGNOSTIC]';
         } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
             sanitized[key] = sanitizeDetails(value);
         } else {
@@ -136,6 +152,7 @@ export function getRiskLevel(eventType: AuditEventType): RiskLevel {
     ];
 
     const mediumEvents: AuditEventType[] = [
+        'phi_read',
         'PATIENT_VIEW',
         'NOTE_VIEW',
         'PATIENT_UPDATE',
@@ -158,7 +175,7 @@ export function getRiskLevel(eventType: AuditEventType): RiskLevel {
 export function logAuditEventAsync(entry: AuditLogEntry): void {
     // Fire and forget - don't await
     logAuditEvent(entry).catch(err => {
-        console.error('Async audit log error:', err);
+        logError({ action: 'AUDIT_LOG_ASYNC_ERROR', error: sanitizeError(err) });
     });
 }
 
@@ -167,10 +184,17 @@ export function logAuditEventAsync(entry: AuditLogEntry): void {
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
     try {
-        const supabase = await createClient();
+        // F-028: Use service role client to bypass RLS (audit logs must always be written)
+        let supabase;
+        try {
+            supabase = createServiceRoleClient();
+        } catch {
+            // In demo mode or missing config, just log to console
+            console.log('[AUDIT]', entry.eventType, sanitizeDetails(entry.details || {}));
+            return;
+        }
 
         if (!supabase) {
-            // In demo mode, just log to console
             console.log('[AUDIT]', entry.eventType, sanitizeDetails(entry.details || {}));
             return;
         }
@@ -195,7 +219,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
         });
 
         if (error) {
-            console.error('Failed to log audit event:', error);
+            logError({ action: 'AUDIT_LOG_DB_WRITE_FAILED', error: sanitizeError(error) });
         }
 
         // For critical events, trigger alert
@@ -203,7 +227,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
             await triggerSecurityAlert(entry);
         }
     } catch (err) {
-        console.error('Audit logging error:', err);
+        logError({ action: 'AUDIT_LOG_ERROR', error: sanitizeError(err) });
     }
 }
 
@@ -283,32 +307,66 @@ export async function logSecurityEvent(
     });
 }
 
+// SEC-SPRINT10: Stable alert code descriptions for breach notification emails.
+// Emails contain ONLY the alert code, timestamp, severity, and a fixed description.
+// Full context (user ID, org ID, IP, details) stays in audit_logs only.
+const ALERT_DESCRIPTIONS: Record<string, string> = {
+    DATA_BREACH_SUSPECTED: 'A potential data breach has been detected. Immediate investigation is required.',
+    UNAUTHORIZED_ACCESS: 'An unauthorized access attempt was detected against a protected resource.',
+    SUSPICIOUS_ACTIVITY: 'Suspicious activity pattern detected that may indicate a security threat.',
+    RATE_LIMIT_EXCEEDED: 'Rate limiting threshold exceeded, indicating possible automated attack.',
+};
+
 /**
- * Trigger security alert for critical events
+ * C2: Trigger security alert for critical events
+ * HIPAA Breach Notification Rule — sends minimal email via Resend and logs to console.
+ * SEC-SPRINT10: Email body reduced to stable alert taxonomy — no PII, no freeform details.
+ * The audit_logs table is the record of truth for full context.
  */
 async function triggerSecurityAlert(entry: AuditLogEntry): Promise<void> {
-    console.error('[SECURITY ALERT]', entry.eventType, entry);
+    const timestamp = new Date().toISOString();
 
-    // In production, this would:
-    // 1. Send email to security team
-    // 2. Send SMS for critical alerts
-    // 3. Trigger SIEM integration
-    // 4. Create incident ticket
+    // Always log as secondary output
+    logError({ action: 'SECURITY_ALERT', resourceType: entry.eventType, timestamp });
 
-    // For now, just log prominently
+    // Send breach notification email via Resend (server-side only)
     if (typeof window === 'undefined') {
-        // Server-side
-        console.error(`
-================================================================================
-🚨 CRITICAL SECURITY ALERT 🚨
-================================================================================
-Event Type: ${entry.eventType}
-User: ${entry.userEmail || 'Unknown'} (${entry.userId || 'N/A'})
-IP Address: ${entry.ipAddress || 'Unknown'}
-Time: ${new Date().toISOString()}
-Details: ${JSON.stringify(entry.details, null, 2)}
-================================================================================
-    `);
+        try {
+            const alertCode = entry.eventType;
+            const description = ALERT_DESCRIPTIONS[alertCode] || 'A critical security event has been recorded.';
+            const severity = entry.riskLevel;
+
+            await sendEmail({
+                to: 'support@chartspark.io',
+                subject: `[SECURITY ALERT] ${alertCode} — ${severity}`,
+                html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; padding: 20px; color: #1e293b;">
+  <div style="background: #dc2626; color: white; padding: 16px 24px; border-radius: 8px 8px 0 0;">
+    <h2 style="margin: 0;">Security Alert</h2>
+  </div>
+  <div style="border: 1px solid #e2e8f0; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr><td style="padding: 8px 0; font-weight: bold;">Alert Code</td><td>${alertCode}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Timestamp</td><td>${timestamp}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Severity</td><td>${severity}</td></tr>
+      <tr><td style="padding: 8px 0; font-weight: bold;">Description</td><td>${description}</td></tr>
+    </table>
+    <hr style="margin: 16px 0; border: none; border-top: 1px solid #e2e8f0;">
+    <p style="color: #64748b; font-size: 13px;">
+      This is an automated security alert from ChartSpark. For full context
+      including user, organization, and event details, consult the audit_logs table.
+    </p>
+  </div>
+</body>
+</html>`,
+                text: `SECURITY ALERT\nAlert Code: ${alertCode}\nTimestamp: ${timestamp}\nSeverity: ${severity}\nDescription: ${description}\n\nConsult the audit_logs table for full context.`,
+            });
+        } catch (emailError) {
+            // Email failure must not suppress the alert — log and continue
+            logError({ action: 'SECURITY_ALERT_EMAIL_FAILED', error: sanitizeError(emailError) });
+        }
     }
 }
 
@@ -326,7 +384,12 @@ export async function queryAuditLogs(options: {
     limit?: number;
     offset?: number;
 }): Promise<AuditLogEntry[]> {
-    const supabase = await createClient();
+    let supabase;
+    try {
+        supabase = createServiceRoleClient();
+    } catch {
+        return [];
+    }
 
     if (!supabase) {
         return [];
@@ -368,7 +431,7 @@ export async function queryAuditLogs(options: {
     const { data, error } = await query;
 
     if (error) {
-        console.error('Error querying audit logs:', error);
+        logError({ action: 'AUDIT_LOG_QUERY_ERROR', error: sanitizeError(error) });
         return [];
     }
 

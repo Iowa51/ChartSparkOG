@@ -40,12 +40,14 @@ ALTER TABLE cpt_checklists ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_sessions ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Anyone can read checklists
+DROP POLICY IF EXISTS "Anyone can read cpt checklists" ON cpt_checklists;
 CREATE POLICY "Anyone can read cpt checklists"
     ON cpt_checklists
     FOR SELECT
     USING (true);
 
 -- Policy: Only admins can manage checklists
+DROP POLICY IF EXISTS "Admins can manage cpt checklists" ON cpt_checklists;
 CREATE POLICY "Admins can manage cpt checklists"
     ON cpt_checklists
     FOR ALL
@@ -58,24 +60,28 @@ CREATE POLICY "Admins can manage cpt checklists"
     );
 
 -- Policy: Auditors can view their own sessions
+DROP POLICY IF EXISTS "Auditors can view own sessions" ON audit_sessions;
 CREATE POLICY "Auditors can view own sessions"
     ON audit_sessions
     FOR SELECT
     USING (auth.uid() = auditor_id);
 
 -- Policy: Auditors can create their own sessions
+DROP POLICY IF EXISTS "Auditors can create sessions" ON audit_sessions;
 CREATE POLICY "Auditors can create sessions"
     ON audit_sessions
     FOR INSERT
     WITH CHECK (auth.uid() = auditor_id);
 
 -- Policy: Auditors can update their own sessions
+DROP POLICY IF EXISTS "Auditors can update own sessions" ON audit_sessions;
 CREATE POLICY "Auditors can update own sessions"
     ON audit_sessions
     FOR UPDATE
     USING (auth.uid() = auditor_id);
 
 -- Policy: Admins can view all sessions
+DROP POLICY IF EXISTS "Admins can view all sessions" ON audit_sessions;
 CREATE POLICY "Admins can view all sessions"
     ON audit_sessions
     FOR SELECT

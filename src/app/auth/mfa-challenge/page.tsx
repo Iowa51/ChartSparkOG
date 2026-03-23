@@ -20,11 +20,12 @@ import {
     ArrowLeft,
 } from 'lucide-react';
 import { getMFAFactors, verifyMFA, MFAFactor } from '@/lib/auth/mfa';
+import { sanitizeRedirectPath } from '@/lib/security/redirects';
 
 function MFAChallengeContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const redirectTo = searchParams.get('redirect') || '/dashboard';
+    const redirectTo = sanitizeRedirectPath(searchParams.get('redirect'));
 
     const [loading, setLoading] = useState(true);
     const [verifying, setVerifying] = useState(false);

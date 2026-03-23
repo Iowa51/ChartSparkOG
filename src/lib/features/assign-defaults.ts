@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import type { FeatureTier } from '@/types/database';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 /**
  * Tier hierarchy for determining eligible features
@@ -36,7 +37,7 @@ export async function assignDefaultFeatures(
             .eq('is_active', true);
 
         if (featuresError) {
-            console.error('Error fetching features:', featuresError);
+            logError({ action: 'FEATURES_FETCH_ERROR', error: sanitizeError(featuresError), userId });
             return { success: false, error: featuresError.message };
         }
 
@@ -63,13 +64,13 @@ export async function assignDefaultFeatures(
             });
 
         if (insertError) {
-            console.error('Error assigning features:', insertError);
+            logError({ action: 'FEATURES_ASSIGN_ERROR', error: sanitizeError(insertError), userId });
             return { success: false, error: insertError.message };
         }
 
         return { success: true };
     } catch (err) {
-        console.error('Exception assigning default features:', err);
+        logError({ action: 'FEATURES_ASSIGN_DEFAULTS_EXCEPTION', error: sanitizeError(err), userId });
         return { success: false, error: (err as Error).message };
     }
 }
@@ -120,13 +121,13 @@ export async function toggleUserFeature(
             });
 
         if (error) {
-            console.error('Error toggling feature:', error);
+            logError({ action: 'FEATURES_TOGGLE_ERROR', error: sanitizeError(error), userId });
             return { success: false, error: error.message };
         }
 
         return { success: true };
     } catch (err) {
-        console.error('Exception toggling feature:', err);
+        logError({ action: 'FEATURES_TOGGLE_EXCEPTION', error: sanitizeError(err), userId });
         return { success: false, error: (err as Error).message };
     }
 }

@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 // SEC-011: Security headers for HIPAA compliance
-const securityHeaders = [
+const baseSecurityHeaders = [
   {
     key: 'X-DNS-Prefetch-Control',
     value: 'on',
@@ -27,39 +27,59 @@ const securityHeaders = [
     key: 'Referrer-Policy',
     value: 'strict-origin-when-cross-origin',
   },
-  // SEC-011: Removed unsafe-eval, kept unsafe-inline for Tailwind
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.daily.co", // SEC-011: Added Daily.co scripts + unsafe-eval required by Daily.co SDK
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' blob: data: https:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://*.daily.co wss://*.daily.co https://*.wss.daily.co https://*.sentry.io https://*.ingest.sentry.io", // Added Sentry
-      "frame-src 'self' https://*.daily.co", // SEC-011: Allow Daily.co frames for telehealth
-      "media-src 'self' blob: https://*.daily.co", // Allow video/audio streams
-      "worker-src 'self' blob:", // Allow web workers for Daily.co
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      "base-uri 'self'",
-      "upgrade-insecure-requests",
-    ].join('; '),
-  },
 ];
 
-// Telehealth-specific headers with camera/mic permissions
+// F-021: CSP WITHOUT unsafe-eval for non-telehealth routes
+const defaultCSP = {
+  key: 'Content-Security-Policy',
+  value: [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' blob: data: https:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://*.sentry.io https://*.ingest.sentry.io",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "base-uri 'self'",
+    "upgrade-insecure-requests",
+  ].join('; '),
+};
+
+// F-021: CSP WITH unsafe-eval only for telehealth routes (required by Daily.co SDK)
+const telehealthCSP = {
+  key: 'Content-Security-Policy',
+  value: [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.daily.co",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' blob: data: https:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://*.daily.co wss://*.daily.co https://*.wss.daily.co https://*.sentry.io https://*.ingest.sentry.io",
+    "frame-src 'self' https://*.daily.co",
+    "media-src 'self' blob: https://*.daily.co",
+    "worker-src 'self' blob:",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "base-uri 'self'",
+    "upgrade-insecure-requests",
+  ].join('; '),
+};
+
+// Telehealth-specific headers with camera/mic permissions and Daily.co CSP
 const telehealthHeaders = [
-  ...securityHeaders.filter(h => h.key !== 'Permissions-Policy'),
+  ...baseSecurityHeaders,
+  telehealthCSP,
   {
     key: 'Permissions-Policy',
     value: 'camera=(self), microphone=(self), geolocation=()',
   },
 ];
 
-// Default headers with all permissions disabled
+// Default headers with strict CSP and all permissions disabled
 const defaultHeaders = [
-  ...securityHeaders,
+  ...baseSecurityHeaders,
+  defaultCSP,
   {
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(), geolocation=()',
@@ -99,15 +119,14 @@ const nextConfig: NextConfig = {
         source: '/telehealth/:path*',
         headers: telehealthHeaders,
       },
-      // Allow microphone on notes pages for AI Scribe
       {
-        source: '/notes/:path*',
+        source: '/api/telehealth/:path*',
         headers: telehealthHeaders,
       },
-      // All other routes EXCEPT /notes and /telehealth - strict permissions
+      // All other routes EXCEPT telehealth - strict permissions
       // Using regex to exclude specific paths
       {
-        source: '/((?!notes|telehealth).*)',
+        source: '/((?!telehealth|api/telehealth).*)',
         headers: defaultHeaders,
       },
       // Also apply to root path

@@ -116,6 +116,7 @@ export async function getPatients(
  */
 export async function getPatientById(
     patientId: string,
+    organizationId: string,
     options: { includeDetails?: boolean } = {}
 ): Promise<Patient | PatientWithDetails> {
     try {
@@ -127,6 +128,7 @@ export async function getPatientById(
             .from('patients')
             .select('*')
             .eq('id', patientId)
+            .eq('organization_id', organizationId)
             .single();
 
         if (error) {
@@ -195,51 +197,40 @@ export async function searchPatients(
             status = 'active'
         } = options;
 
-        const trimmedQuery = query.trim().toLowerCase();
+        const trimmedQuery = query.trim();
+        const { from, to } = getPaginationRange(page, pageSize);
 
-        // Fetch all patients for the org (filtered by status), then search client-side
-        // This is more reliable than complex .or() filters which can fail on missing columns
-        let dbQuery = supabase
+        let dataQuery = supabase
             .from('patients')
             .select('*')
             .eq('organization_id', organizationId);
 
         if (status && status !== 'all') {
-            dbQuery = dbQuery.eq('status', status);
+            dataQuery = dataQuery.eq('status', status);
         }
 
-        const { data: allPatients, error } = await dbQuery
-            .order('created_at', { ascending: false });
+        const { data, error } = await dataQuery.order('created_at', { ascending: false });
 
         if (error) {
             handleDatabaseError(error, 'searchPatients');
         }
 
-        // Client-side search across name, email, phone fields
-        const terms = trimmedQuery.split(/\s+/).filter(t => t.length > 0);
+        const searchNeedle = trimmedQuery.toLowerCase();
+        const filteredPatients = (data || []).filter((patient: Patient) => {
+            const searchableFields = [
+                patient.first_name,
+                patient.last_name,
+                patient.email,
+                patient.phone,
+            ];
 
-        const filtered = (allPatients || []).filter((patient: any) => {
-            const firstName = (patient.first_name || '').toLowerCase();
-            const lastName = (patient.last_name || '').toLowerCase();
-            const email = (patient.email || '').toLowerCase();
-            const phone = (patient.phone || '').toLowerCase();
-            const fullName = `${firstName} ${lastName}`;
-
-            // Every search term must match at least one field
-            return terms.every(term =>
-                firstName.includes(term) ||
-                lastName.includes(term) ||
-                fullName.includes(term) ||
-                email.includes(term) ||
-                phone.includes(term)
+            return searchableFields.some((field) =>
+                typeof field === 'string' && field.toLowerCase().includes(searchNeedle)
             );
         });
 
-        // Apply pagination
-        const total = filtered.length;
-        const totalPages = Math.ceil(total / pageSize);
-        const startIdx = (page - 1) * pageSize;
-        const paginatedData = filtered.slice(startIdx, startIdx + pageSize);
+        const paginatedPatients = filteredPatients.slice(from, to + 1);
+        const total = filteredPatients.length;
 
         await createAuditLog({
             event_type: 'PATIENTS_SEARCH',
@@ -251,11 +242,11 @@ export async function searchPatients(
         });
 
         return {
-            data: paginatedData,
+            data: paginatedPatients,
             count: total,
             page,
             pageSize,
-            totalPages,
+            totalPages: getTotalPages(total, pageSize),
         };
     } catch (error) {
         if (error instanceof Error && error.name !== 'DatabaseError') {
@@ -428,6 +419,7 @@ export async function createPatient(
  */
 export async function updatePatient(
     patientId: string,
+    organizationId: string,
     userId: string,
     input: PatientUpdateInput
 ): Promise<Patient> {
@@ -449,6 +441,7 @@ export async function updatePatient(
             .from('patients')
             .update(input)
             .eq('id', patientId)
+            .eq('organization_id', organizationId)
             .select()
             .single();
 

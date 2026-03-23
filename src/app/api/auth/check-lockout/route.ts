@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { CheckLockoutSchema, validateRequest } from '@/lib/validation/schemas';
 
 const LOCKOUT_CONFIG = {
     maxAttempts: 5,
@@ -13,17 +14,17 @@ const LOCKOUT_CONFIG = {
 
 export async function POST(request: NextRequest) {
     try {
-        const body = await request.json();
-        const { email } = body;
-
-        if (!email) {
-            return NextResponse.json({ error: 'Email required' }, { status: 400 });
+        const rawBody = await request.json();
+        const validation = validateRequest(CheckLockoutSchema, rawBody);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
+        const { email } = validation.data;
 
-        // Skip lockout check only in explicit demo mode
-        const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+        // Skip lockout check only in explicit demo mode AND non-production
+        const isDemoMode = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
         if (isDemoMode) {
-            console.log('[LOCKOUT] Skipping lockout check - demo mode');
+            logInfo({ action: 'LOCKOUT_SKIP_DEMO_MODE' });
             return NextResponse.json({ locked: false, remainingAttempts: 99 });
         }
 
@@ -33,15 +34,21 @@ export async function POST(request: NextRequest) {
         try {
             supabase = createServiceRoleClient();
         } catch (err: unknown) {
-            // Service role key not configured - allow login but log warning
-            console.warn('Lockout check: Service role client not configured.', err);
-            return NextResponse.json({ locked: false, remainingAttempts: 5 });
+            // F-019: FAIL CLOSED - infrastructure unavailable
+            logError({ action: 'LOCKOUT_SERVICE_ROLE_UNAVAILABLE', error: sanitizeError(err) });
+            return NextResponse.json(
+                { locked: true, error: 'Security infrastructure unavailable' },
+                { status: 503 }
+            );
         }
 
         if (!supabase) {
-            // Missing credentials - allow login attempts
-            console.warn('Lockout check: Supabase not configured, allowing login');
-            return NextResponse.json({ locked: false, remainingAttempts: 5 });
+            // F-019: FAIL CLOSED - infrastructure unavailable
+            logError({ action: 'LOCKOUT_SUPABASE_UNAVAILABLE', error: 'Service role client returned null' });
+            return NextResponse.json(
+                { locked: true, error: 'Security infrastructure unavailable' },
+                { status: 503 }
+            );
         }
 
         // Get recent failed attempts
@@ -59,7 +66,7 @@ export async function POST(request: NextRequest) {
             if (error) {
                 // Handle missing table gracefully (table may not exist yet)
                 if (error.code === '42P01' || error.message?.includes('does not exist')) {
-                    console.warn('login_attempts table not found - allowing login (run migrations to enable lockout)');
+                    logWarn({ action: 'LOCKOUT_TABLE_NOT_FOUND', status: 'allowing_login' });
                     return NextResponse.json({ locked: false, remainingAttempts: 5 });
                 }
                 // SEC-REMEDIATION: FAIL CLOSED on other database errors
@@ -98,7 +105,7 @@ export async function POST(request: NextRequest) {
             // Handle missing table gracefully
             const errObj = dbError as { code?: string; message?: string };
             if (errObj?.code === '42P01' || errObj?.message?.includes('does not exist')) {
-                console.warn('login_attempts table not found - allowing login');
+                logWarn({ action: 'LOCKOUT_TABLE_NOT_FOUND', status: 'allowing_login' });
                 return NextResponse.json({ locked: false, remainingAttempts: 5 });
             }
             // SEC-REMEDIATION: FAIL CLOSED - don't allow login on other errors

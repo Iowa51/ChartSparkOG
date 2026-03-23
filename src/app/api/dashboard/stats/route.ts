@@ -18,30 +18,31 @@ async function handleGet(context: AuthContext) {
         }
 
         const orgId = context.user.organizationId;
-
-        // Active patients count
-        const { count: activePatients } = await supabase
-            .from('patients')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', orgId)
-            .eq('status', 'active');
-
-        // Today's notes count
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
 
-        const { count: todayNotes } = await supabase
-            .from('notes')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', orgId)
-            .gte('created_at', todayStart.toISOString());
+        // F-041: Run all three count queries in parallel
+        const [patientsResult, notesResult, encountersResult] = await Promise.all([
+            supabase
+                .from('patients')
+                .select('*', { count: 'exact', head: true })
+                .eq('organization_id', orgId)
+                .eq('status', 'active'),
+            supabase
+                .from('notes')
+                .select('*', { count: 'exact', head: true })
+                .eq('organization_id', orgId)
+                .gte('created_at', todayStart.toISOString()),
+            supabase
+                .from('encounters')
+                .select('*', { count: 'exact', head: true })
+                .eq('organization_id', orgId)
+                .in('status', ['scheduled', 'in_progress']),
+        ]);
 
-        // Pending encounters (status = 'scheduled' or 'in_progress')
-        const { count: pendingEncounters } = await supabase
-            .from('encounters')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', orgId)
-            .in('status', ['scheduled', 'in_progress']);
+        const activePatients = patientsResult.count;
+        const todayNotes = notesResult.count;
+        const pendingEncounters = encountersResult.count;
 
         return NextResponse.json({
             stats: {
@@ -56,4 +57,4 @@ async function handleGet(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet, { requireOrganization: true });
+export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });

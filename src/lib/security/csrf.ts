@@ -2,6 +2,7 @@
 // SEC-REMEDIATION: CSRF protection for state-changing routes
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logWarn } from '@/lib/logging/safe-logger';
 
 /**
  * Validate that the request origin matches our allowed origins.
@@ -22,7 +23,7 @@ export function validateOrigin(request: NextRequest): boolean {
                     return true;
                 }
                 // Log warning when blocking direct API calls in development
-                console.warn('[CSRF] Blocked request without origin/referer. Set ALLOW_DIRECT_API_CALLS=true to allow direct API testing.');
+                logWarn({ action: 'CSRF_BLOCKED_NO_ORIGIN', status: 'Set ALLOW_DIRECT_API_CALLS=true to allow direct API testing' });
                 return false;
             }
             return false;
@@ -113,10 +114,7 @@ export function requireSameOrigin(
 
         // Validate origin
         if (!validateOrigin(request)) {
-            console.warn('CSRF: Origin validation failed', {
-                origin: request.headers.get('origin'),
-                host: request.headers.get('host'),
-            });
+            logWarn({ action: 'CSRF_ORIGIN_VALIDATION_FAILED' });
             return NextResponse.json(
                 { error: 'Invalid request origin' },
                 { status: 403 }

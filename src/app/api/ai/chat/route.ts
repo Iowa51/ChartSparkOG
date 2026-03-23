@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { getSafeAuditErrorDetails } from '@/lib/security/audit-error-codes';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { AIChatSchema, validateRequest } from '@/lib/validation/schemas';
@@ -32,7 +33,7 @@ async function handler(context: AuthContext) {
 
         // Log AI chat - may contain PHI in questions
         await logAuditEvent({
-            eventType: 'NOTE_VIEW', // User querying AI about clinical data
+            eventType: 'AI_CHAT_REQUEST', // F-024: Use correct AI-specific audit type
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -60,6 +61,7 @@ async function handler(context: AuthContext) {
 
     } catch (error: unknown) {
         logError({ action: 'AI_CHAT_ERROR', error: sanitizeError(error) });
+        const { errorCode, errorStatus } = getSafeAuditErrorDetails(error);
 
         await logAuditEvent({
             eventType: 'API_ERROR',
@@ -69,7 +71,7 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'ai_chat',
-            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            details: { errorCode, errorStatus },
             phiAccessed: false,
             riskLevel: 'LOW',
         });
@@ -83,4 +85,5 @@ async function handler(context: AuthContext) {
 
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

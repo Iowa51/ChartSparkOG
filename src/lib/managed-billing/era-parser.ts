@@ -78,9 +78,15 @@ export class ERAParser {
                     traceNumber = parts[2];
                     break;
                 case 'NM1':
+                    // F-013: Merged both NM1 handlers into single case block
                     if (parts[1] === 'PR') payerName = parts[3];
                     if (parts[1] === 'PE') payeeName = parts[3];
                     if (parts[1] === 'PE' && parts[8] === 'XX') npi = parts[9];
+                    if (parts[1] === 'QC' && currentClaim) {
+                        currentClaim.patientLastName = parts[3];
+                        currentClaim.patientFirstName = parts[4];
+                        currentClaim.patientMemberId = parts[9];
+                    }
                     break;
                 case 'REF':
                     if (parts[1] === '2U') payerId = parts[2];
@@ -96,13 +102,6 @@ export class ERAParser {
                         payerClaimControlNumber: parts[7],
                         adjustments: []
                     };
-                    break;
-                case 'NM1':
-                    if (parts[1] === 'QC' && currentClaim) {
-                        currentClaim.patientLastName = parts[3];
-                        currentClaim.patientFirstName = parts[4];
-                        currentClaim.patientMemberId = parts[9];
-                    }
                     break;
                 case 'DTM':
                     if (parts[1] === '232' && currentClaim) {

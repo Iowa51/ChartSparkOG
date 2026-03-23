@@ -81,19 +81,44 @@ export async function getAllTemplatesForOrganization(
     try {
         const supabase = await createClient();
 
-        const { data, error } = await supabase
-            .from('note_templates')
-            .select('*')
-            .or(`is_system.eq.true,organization_id.eq.${organizationId}`)
-            .order('is_system', { ascending: false })
-            .order('is_default', { ascending: false })
-            .order('name', { ascending: true });
+        // SEC-SPRINT8: Fetch system + org templates with separate safe queries
+        // instead of dynamic .or() filter string interpolation
+        const [systemResult, orgResult] = await Promise.all([
+            supabase
+                .from('note_templates')
+                .select('*')
+                .eq('is_system', true),
+            supabase
+                .from('note_templates')
+                .select('*')
+                .eq('organization_id', organizationId),
+        ]);
 
-        if (error) {
-            handleDatabaseError(error, 'getAllTemplatesForOrganization');
+        if (systemResult.error) {
+            handleDatabaseError(systemResult.error, 'getAllTemplatesForOrganization:system');
+        }
+        if (orgResult.error) {
+            handleDatabaseError(orgResult.error, 'getAllTemplatesForOrganization:org');
         }
 
-        return data || [];
+        const combined = [...(systemResult.data || []), ...(orgResult.data || [])];
+
+        // De-duplicate in case a system template also has organization_id set
+        const seen = new Set<string>();
+        const unique = combined.filter(t => {
+            if (seen.has(t.id)) return false;
+            seen.add(t.id);
+            return true;
+        });
+
+        // Sort: system first, then defaults, then by name
+        unique.sort((a, b) => {
+            if (a.is_system !== b.is_system) return a.is_system ? -1 : 1;
+            if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
+        return unique;
     } catch (error) {
         if (error instanceof Error && error.name !== 'DatabaseError') {
             handleDatabaseError(error, 'getAllTemplatesForOrganization');

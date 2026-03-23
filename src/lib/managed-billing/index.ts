@@ -15,5 +15,3 @@ export * from './invoice-service';
 export * from './clearinghouse-service';
 export * from './era-service';
 
-// Audit & Logging
-export * from './audit-logger';

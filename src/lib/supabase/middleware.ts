@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { devWarn, devError } from '@/lib/logging/safe-logger';
 
 // Role-based route permissions
 const protectedRoutes: Record<string, string[]> = {
@@ -54,27 +55,26 @@ export async function updateSession(request: NextRequest) {
     const isProduction = process.env.NODE_ENV === 'production';
     const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-    // SEC-REMEDIATION: Allow demo mode in production ONLY if Supabase is configured
-    // This enables demo features while still having real authentication
-    if (isProduction && process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (!supabaseUrl || !supabaseAnonKey)) {
-        console.error('SECURITY: Demo mode requires Supabase configuration in production');
+    // SEC-F018: Block demo mode entirely in production
+    if (isProduction && isDemoMode) {
+        devError('Middleware', 'CRITICAL: Demo mode is forbidden in production. Set NEXT_PUBLIC_DEMO_MODE=false or remove it.');
         return NextResponse.json(
-            { error: 'Security configuration error' },
+            { error: 'Server configuration error - demo mode not allowed in production' },
             { status: 500 }
         );
     }
 
     // SEC-003: Fail closed in production if Supabase not configured
     if (!supabaseUrl || !supabaseAnonKey) {
-        if (isProduction && !isDemoMode) {
-            console.error('CRITICAL: Supabase environment variables missing in production');
+        if (isProduction) {
+            devError('Middleware', 'CRITICAL: Supabase environment variables missing in production');
             return NextResponse.json(
                 { error: 'Server configuration error' },
                 { status: 500 }
             );
         }
-        // Allow in development/demo mode
-        console.warn('WARNING: Supabase not configured, allowing traffic in development/demo');
+        // Allow in development only
+        devWarn('Middleware', 'Supabase not configured, allowing traffic in development');
         return supabaseResponse;
     }
 
@@ -117,7 +117,7 @@ export async function updateSession(request: NextRequest) {
     if (matchedRoute) {
         // Demo mode: allow access without authentication
         if (isDemoMode && !user) {
-            console.log('[MIDDLEWARE] Demo mode - allowing unauthenticated access to:', path);
+            devWarn('Middleware', 'Demo mode - allowing unauthenticated access to:', path);
             return supabaseResponse;
         }
 
@@ -163,14 +163,14 @@ export async function updateSession(request: NextRequest) {
                     userRole = detectedRole;
                 } else {
                     // Unknown email in demo mode - deny access
-                    console.warn('Middleware: Unknown user in demo mode', user.email);
+                    devWarn('Middleware', 'Unknown user in demo mode');
                     const loginUrl = new URL('/login', request.url);
                     loginUrl.searchParams.set('error', 'profile_not_found');
                     return NextResponse.redirect(loginUrl);
                 }
             } else {
                 // Production: HARD FAIL if role cannot be determined
-                console.error('Middleware: Failed to fetch user role in production', userError);
+                devError('Middleware', 'Failed to fetch user role in production');
                 const loginUrl = new URL('/login', request.url);
                 loginUrl.searchParams.set('error', 'session_invalid');
                 return NextResponse.redirect(loginUrl);
@@ -178,7 +178,7 @@ export async function updateSession(request: NextRequest) {
         } else {
             // Check if account is active
             if (userData.is_active === false) {
-                console.warn('Middleware: Deactivated account attempted access', user.email);
+                devWarn('Middleware', 'Deactivated account attempted access');
                 const loginUrl = new URL('/login', request.url);
                 loginUrl.searchParams.set('error', 'account_deactivated');
                 return NextResponse.redirect(loginUrl);
@@ -204,7 +204,7 @@ export async function updateSession(request: NextRequest) {
         if (!mfaDisabledByEnv && mfaRequiredRoles.includes(userRole) && !isMFAExemptPath) {
             const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
             if (mfaError) {
-                console.error('Middleware: MFA check failed', mfaError);
+                devError('Middleware', 'MFA check failed');
                 return NextResponse.redirect(new URL('/settings/security/mfa?required=true', request.url));
             }
             if (mfaData.currentLevel !== 'aal2') {
@@ -213,7 +213,7 @@ export async function updateSession(request: NextRequest) {
                     return NextResponse.redirect(new URL('/auth/mfa-challenge?redirect=' + encodeURIComponent(path), request.url));
                 } else {
                     // User needs to enroll in MFA
-                    console.warn('Middleware: MFA required but not enrolled', user.email);
+                    devWarn('Middleware', 'MFA required but not enrolled');
                     return NextResponse.redirect(new URL('/settings/security/mfa?required=true&role=' + userRole, request.url));
                 }
             }

@@ -7,12 +7,15 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { logBillingAction } from '@/lib/managed-billing/audit-logger';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { ManagedBillingOnboardingSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handleGet(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const supabase = await createClient();
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 503 });
@@ -32,6 +35,20 @@ async function handleGet(context: AuthContext) {
             return NextResponse.json({ enrolled: false, status: 'not_enrolled' });
         }
 
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_VIEW',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'managed_billing_subscription',
+            details: { action: 'ONBOARDING_STATUS_VIEW' },
+            phiAccessed: false,
+            riskLevel: 'LOW',
+        });
+
         return NextResponse.json({
             enrolled: true,
             status: subscription.status,
@@ -46,12 +63,18 @@ async function handleGet(context: AuthContext) {
 
 async function handlePost(context: AuthContext) {
     try {
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         const supabase = await createClient();
         if (!supabase) {
             return NextResponse.json({ error: 'Database not available' }, { status: 503 });
         }
 
-        const body = await context.request.json();
+        const rawBody = await context.request.json();
+        const validation = validateRequest(ManagedBillingOnboardingSchema, rawBody);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
+        }
+        const body = validation.data;
 
         // Check if already enrolled
         const { data: existing } = await supabase
@@ -80,12 +103,19 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Failed to create subscription' }, { status: 500 });
         }
 
-        await logBillingAction({
-            organizationId: context.user.organizationId!,
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_CREATE',
             userId: context.user.id,
-            entityType: 'config',
-            entityId: subscription.id,
-            action: 'onboarding_completed',
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: context.user.organizationId || undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'managed_billing_subscription',
+            resourceId: subscription.id,
+            details: { action: 'ONBOARDING_COMPLETED' },
+            phiAccessed: false,
+            riskLevel: 'MEDIUM',
         });
 
         return NextResponse.json({ success: true, subscriptionId: subscription.id }, { status: 201 });
@@ -95,8 +125,9 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet, { requireOrganization: true });
+export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
     requireOrganization: true,
+    requireMFA: true,
 });

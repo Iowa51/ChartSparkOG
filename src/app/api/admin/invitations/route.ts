@@ -7,6 +7,8 @@ import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { sendInvitationEmail, isEmailConfigured } from '@/lib/email/resend';
+import { InvitationCreateSchema, validateRequest } from '@/lib/validation/schemas';
+import { checkRateLimitByKey } from '@/lib/security/rate-limit';
 
 async function handleGet(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
@@ -70,21 +72,15 @@ async function handlePost(context: AuthContext) {
         }
 
         const body = await context.request.json();
-        const { email, role = 'USER', specialty } = body;
-
-        if (!email) {
-            return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+        const validation = validateRequest(InvitationCreateSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
+        const { email, role, specialty } = validation.data;
 
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
-        }
-
-        // Validate role
-        if (!['USER', 'ADMIN', 'AUDITOR'].includes(role)) {
-            return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+        const rateLimit = await checkRateLimitByKey(user.id, 'emailSend', '/api/admin/invitations');
+        if (!rateLimit.success && rateLimit.response) {
+            return rateLimit.response;
         }
 
         // Check for existing pending invitation
@@ -151,6 +147,27 @@ async function handlePost(context: AuthContext) {
             details: { invitedEmail: email, role, specialty },
             phiAccessed: false,
             riskLevel: 'MEDIUM',
+            ipAddress,
+            userAgent,
+        });
+
+        // SEC-SPRINT11: Emit ROLE_CHANGED for HIPAA access control audit trail.
+        // The invitation assigns a role to a future user — this is the admin approval event.
+        await logAuditEvent({
+            eventType: 'ROLE_CHANGED',
+            userId: user.id,
+            userEmail: user.email,
+            organizationId: user.organizationId,
+            resourceType: 'invitation',
+            resourceId: invitation.id,
+            details: {
+                previousRole: null,
+                newRole: role,
+                changedBy: user.id,
+                targetEmail: email,
+            },
+            phiAccessed: false,
+            riskLevel: 'HIGH',
             ipAddress,
             userAgent,
         });
@@ -223,8 +240,10 @@ async function handlePost(context: AuthContext) {
 
 export const GET = withAuth(handleGet, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

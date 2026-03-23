@@ -5,22 +5,30 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { ProfileApprovalSchema, validateRequest } from '@/lib/validation/schemas';
+
+const ALLOWED_PROFILE_FIELDS = ['first_name', 'last_name', 'specialty', 'phone', 'license_number'];
 
 async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
 
         const body = await context.request.json();
-        const { changeId, userId, fieldName, newValue, action } = body;
-
-        if (!changeId || !action) {
-            return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+        const validation = validateRequest(ProfileApprovalSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
+        const { changeId, userId, fieldName, newValue, action } = validation.data;
 
         if (action === 'approve') {
+            // SEC-CRITICAL-04: Validate fieldName against whitelist to prevent arbitrary column updates
+            if (!userId || !fieldName || !ALLOWED_PROFILE_FIELDS.includes(fieldName)) {
+                return NextResponse.json({ message: "Invalid or disallowed field name" }, { status: 400 });
+            }
+
             // Update the user's profile with the new value
-            const updateData: Record<string, string> = {};
-            updateData[fieldName] = newValue;
+            const updateData: Record<string, string | null> = {};
+            updateData[fieldName] = newValue ?? null;
 
             const { error: updateError } = await supabase
                 .from('users')
@@ -79,4 +87,5 @@ async function handlePost(context: AuthContext) {
 
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

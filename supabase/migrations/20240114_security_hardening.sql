@@ -50,6 +50,7 @@ CREATE POLICY "Auditors can view org patients"
   );
 
 -- Recreate write policies excluding AUDITOR
+DROP POLICY IF EXISTS "Non-auditors can create patients" ON patients;
 CREATE POLICY "Non-auditors can create patients"
   ON patients FOR INSERT
   TO authenticated
@@ -58,6 +59,7 @@ CREATE POLICY "Non-auditors can create patients"
     AND organization_id = get_user_organization_id()
   );
 
+DROP POLICY IF EXISTS "Non-auditors can update patients" ON patients;
 CREATE POLICY "Non-auditors can update patients"
   ON patients FOR UPDATE
   TO authenticated
@@ -78,6 +80,7 @@ CREATE POLICY "Auditors can view org notes"
     AND organization_id = get_user_organization_id()
   );
 
+DROP POLICY IF EXISTS "Non-auditors can create notes" ON notes;
 CREATE POLICY "Non-auditors can create notes"
   ON notes FOR INSERT
   TO authenticated
@@ -99,6 +102,7 @@ CREATE POLICY "Auditors can view org encounters"
     AND organization_id = get_user_organization_id()
   );
 
+DROP POLICY IF EXISTS "Non-auditors can create encounters" ON encounters;
 CREATE POLICY "Non-auditors can create encounters"
   ON encounters FOR INSERT
   TO authenticated

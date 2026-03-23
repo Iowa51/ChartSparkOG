@@ -706,10 +706,10 @@ CREATE POLICY "Super admins and auditors can view audit logs"
   TO authenticated
   USING (get_user_role() IN ('SUPER_ADMIN', 'AUDITOR'));
 
--- System can insert audit logs
-CREATE POLICY "System can insert audit logs"
+-- Only service_role can insert audit logs
+CREATE POLICY "Service role can insert audit logs"
   ON audit_logs FOR INSERT
-  TO authenticated
+  TO service_role
   WITH CHECK (TRUE);
 
 -- Super Admin can manage audit logs

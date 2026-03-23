@@ -4,6 +4,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { ValidateCodesSchema, validateRequest } from '@/lib/validation/schemas';
 
 // Mock database of common valid codes for demo purposes
 const VALID_ICD10_CODES = [
@@ -17,21 +18,15 @@ const VALID_CPT_CODES = [
 async function handler(context: AuthContext) {
     try {
         const body = await context.request.json();
-        const { codes } = body;
-
-        if (!Array.isArray(codes)) {
+        const validation = validateRequest(ValidateCodesSchema, body);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Invalid input: codes must be an array' },
+                { error: 'Validation failed', details: validation.errors },
                 { status: 400 }
             );
         }
 
-        if (codes.length > 100) {
-            return NextResponse.json(
-                { error: 'Too many codes (max 100)' },
-                { status: 400 }
-            );
-        }
+        const { codes } = validation.data;
 
         const results = codes.map(codeData => {
             const { code, type } = codeData; // type: 'ICD10' | 'CPT'
@@ -103,4 +98,5 @@ async function handler(context: AuthContext) {
 // SEC-004: Export with authentication (feature requirement removed for demo mode)
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

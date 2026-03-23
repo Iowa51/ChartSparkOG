@@ -5,6 +5,8 @@
  * OPTIMIZATION: Reduces unnecessary server load and prevents race conditions
  */
 
+import { logWarn } from '@/lib/logging/safe-logger';
+
 type PendingRequest<T> = {
     promise: Promise<T>;
     timestamp: number;
@@ -132,7 +134,7 @@ export async function dedupedMutation<T>(
     mutator: () => Promise<T>
 ): Promise<T | null> {
     if (activeMutations.has(key)) {
-        console.warn(`[Dedup] Blocked duplicate mutation: ${key}`);
+        logWarn({ action: 'DEDUP_BLOCKED_DUPLICATE_MUTATION', resourceId: key });
         return null;
     }
 

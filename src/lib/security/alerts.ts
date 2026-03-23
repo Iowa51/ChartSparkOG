@@ -2,6 +2,7 @@
 // Security alert system
 
 import { AuditLogEntry, RiskLevel } from './audit-log';
+import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 
 export interface SecurityAlert {
     id: string;
@@ -38,8 +39,8 @@ export async function sendSecurityAlert(event: AuditLogEntry): Promise<void> {
         alertStore.pop();
     }
 
-    // Log to console
-    console.error(`[SECURITY ALERT - ${event.riskLevel}]`, alert.title);
+    // Log security alert
+    logError({ action: 'SECURITY_ALERT', status: event.riskLevel, resourceType: event.eventType });
 
     // In production, send notifications:
     // 1. Email to security team
@@ -105,12 +106,12 @@ async function sendEmailAlert(alert: SecurityAlert): Promise<void> {
     const alertEmail = process.env.ALERT_EMAIL;
 
     if (!alertEmail) {
-        console.log('[Alert] No ALERT_EMAIL configured, skipping email notification');
+        logInfo({ action: 'ALERT_EMAIL_NOT_CONFIGURED', status: 'skipping_email' });
         return;
     }
 
     // In production, use your email service (SendGrid, AWS SES, etc.)
-    console.log(`[Alert] Would send email to ${alertEmail}:`, alert.title);
+    logInfo({ action: 'ALERT_WOULD_SEND_EMAIL', status: 'pending_implementation' });
 
     // Example implementation:
     // await sendEmail({
@@ -127,12 +128,12 @@ async function sendSMSAlert(alert: SecurityAlert): Promise<void> {
     const alertPhone = process.env.ALERT_PHONE;
 
     if (!alertPhone) {
-        console.log('[Alert] No ALERT_PHONE configured, skipping SMS notification');
+        logInfo({ action: 'ALERT_PHONE_NOT_CONFIGURED', status: 'skipping_sms' });
         return;
     }
 
     // In production, use your SMS service (Twilio, AWS SNS, etc.)
-    console.log(`[Alert] Would send SMS to ${alertPhone}:`, alert.title);
+    logInfo({ action: 'ALERT_WOULD_SEND_SMS', status: 'pending_implementation' });
 
     // Example implementation:
     // await sendSMS({
@@ -171,7 +172,7 @@ async function sendWebhookAlert(alert: SecurityAlert): Promise<void> {
             }),
         });
     } catch (error) {
-        console.error('Failed to send webhook alert:', error);
+        logError({ action: 'ALERT_WEBHOOK_SEND_FAILED', error: sanitizeError(error) });
     }
 }
 

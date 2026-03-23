@@ -3,43 +3,33 @@
 // SEC-REMEDIATION: Fail-closed for auth endpoints, circuit breaker for persistent failures
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 
-// Determine if Upstash is available
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
 export interface RateLimitConfig {
-    limit: number;      // Max requests
-    window: number;     // Time window in milliseconds
-    failClosed?: boolean; // If true, deny requests on rate limit errors (default: false)
+    limit: number;
+    window: number;
+    failClosed?: boolean;
 }
 
-export const RATE_LIMITS: Record<string, RateLimitConfig> = {
-    // General API: 100 requests per minute
+export const RATE_LIMITS = {
     api: { limit: 100, window: 60 * 1000, failClosed: false },
-
-    // Auth endpoints: 10 requests per minute (prevent brute force)
-    // SEC-REMEDIATION: Fail-closed for security-critical auth endpoints
     auth: { limit: 10, window: 60 * 1000, failClosed: true },
-
-    // AI endpoints: 20 requests per minute (expensive operations)
     ai: { limit: 20, window: 60 * 1000, failClosed: false },
-
-    // Export endpoints: 5 requests per minute
     export: { limit: 5, window: 60 * 1000, failClosed: false },
-
-    // Login attempts: 5 per 15 minutes
-    // SEC-REMEDIATION: Fail-closed for login to prevent brute force on errors
     login: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
-
-    // Telehealth: 50 room creations per hour (increased for demo)
+    mfaVerify: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
+    passwordReset: { limit: 3, window: 60 * 60 * 1000, failClosed: true },
+    emailSend: { limit: 5, window: 60 * 60 * 1000, failClosed: true },
     telehealth: { limit: 50, window: 60 * 60 * 1000, failClosed: false },
-};
+} satisfies Record<string, RateLimitConfig>;
 
-// In-memory fallback store (for development/demo without Redis)
+export type RateLimitKey = keyof typeof RATE_LIMITS;
+
 const inMemoryStore = new Map<string, { count: number; resetTime: number }>();
 
-// Circuit breaker state for rate limit service failures
 interface CircuitBreakerState {
     failures: number;
     lastFailure: number;
@@ -52,17 +42,12 @@ const circuitBreaker: CircuitBreakerState = {
     isOpen: false,
 };
 
-// Circuit breaker config
-const CIRCUIT_BREAKER_THRESHOLD = 5;  // Open after 5 consecutive failures
-const CIRCUIT_BREAKER_RESET_MS = 30000; // Reset after 30 seconds
+const CIRCUIT_BREAKER_THRESHOLD = 5;
+const CIRCUIT_BREAKER_RESET_MS = 30000;
 
-/**
- * Check circuit breaker state and update if needed
- */
 function checkCircuitBreaker(): boolean {
     const now = Date.now();
 
-    // Reset circuit breaker if enough time has passed
     if (circuitBreaker.isOpen && (now - circuitBreaker.lastFailure) > CIRCUIT_BREAKER_RESET_MS) {
         circuitBreaker.isOpen = false;
         circuitBreaker.failures = 0;
@@ -71,44 +56,75 @@ function checkCircuitBreaker(): boolean {
     return circuitBreaker.isOpen;
 }
 
-/**
- * Record a rate limit service failure
- */
 function recordFailure(): void {
     circuitBreaker.failures++;
     circuitBreaker.lastFailure = Date.now();
 
     if (circuitBreaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
         circuitBreaker.isOpen = true;
-        console.error('[RATE-LIMIT] Circuit breaker OPEN - rate limit service experiencing persistent failures');
+        logError({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_OPEN', error: 'Rate limit service experiencing persistent failures' });
     }
 }
 
-/**
- * Record a successful rate limit check
- */
 function recordSuccess(): void {
     circuitBreaker.failures = 0;
     circuitBreaker.isOpen = false;
 }
 
-/**
- * Get rate limit configuration for a given path
- */
-export function getRateLimitConfig(pathname: string): RateLimitConfig {
+function resolveRateLimitKey(pathname: string): RateLimitKey {
+    if (pathname === '/api/auth/verify-mfa') {
+        return 'mfaVerify';
+    }
+    if (pathname === '/api/auth/reset-password') {
+        return 'passwordReset';
+    }
+    if (pathname === '/api/admin/invitations') {
+        return 'emailSend';
+    }
     if (pathname.startsWith('/api/auth') || pathname.includes('/login')) {
-        return RATE_LIMITS.auth;
+        return 'auth';
     }
     if (pathname.startsWith('/api/ai') || pathname.includes('/openai')) {
-        return RATE_LIMITS.ai;
+        return 'ai';
     }
     if (pathname.startsWith('/api/telehealth')) {
-        return RATE_LIMITS.telehealth;
+        return 'telehealth';
     }
     if (pathname.includes('/export') || pathname.includes('/download')) {
-        return RATE_LIMITS.export;
+        return 'export';
     }
-    return RATE_LIMITS.api;
+    return 'api';
+}
+
+export function getRateLimitConfig(pathname: string): RateLimitConfig {
+    return RATE_LIMITS[resolveRateLimitKey(pathname)];
+}
+
+function getRateLimitConfigByKey(rateLimitKey: RateLimitKey): RateLimitConfig {
+    return RATE_LIMITS[rateLimitKey];
+}
+
+function getRateLimitPrefix(rateLimitKey: RateLimitKey): string {
+    switch (rateLimitKey) {
+        case 'auth':
+            return 'ratelimit:auth';
+        case 'ai':
+            return 'ratelimit:ai';
+        case 'telehealth':
+            return 'ratelimit:telehealth';
+        case 'export':
+            return 'ratelimit:export';
+        case 'login':
+            return 'ratelimit:login';
+        case 'mfaVerify':
+            return 'ratelimit:mfa-verify';
+        case 'passwordReset':
+            return 'ratelimit:password-reset';
+        case 'emailSend':
+            return 'ratelimit:email-send';
+        default:
+            return 'ratelimit:api';
+    }
 }
 
 export interface RateLimitResult {
@@ -119,12 +135,9 @@ export interface RateLimitResult {
     retryAfter?: number;
 }
 
-/**
- * Check rate limit using in-memory store (fallback)
- */
-function checkInMemoryRateLimit(identifier: string, pathname: string): RateLimitResult {
-    const config = getRateLimitConfig(pathname);
-    const key = `${identifier}:${pathname}`;
+function checkInMemoryRateLimitByKey(identifier: string, rateLimitKey: RateLimitKey, scope = ''): RateLimitResult {
+    const config = getRateLimitConfigByKey(rateLimitKey);
+    const key = `${rateLimitKey}:${scope}:${identifier}`;
     const now = Date.now();
 
     const record = inMemoryStore.get(key);
@@ -149,24 +162,28 @@ function checkInMemoryRateLimit(identifier: string, pathname: string): RateLimit
             remaining: config.limit - record.count,
             resetTime: record.resetTime,
         };
-    } else {
-        const resetTime = now + config.window;
-        inMemoryStore.set(key, { count: 1, resetTime });
-
-        return {
-            allowed: true,
-            limit: config.limit,
-            remaining: config.limit - 1,
-            resetTime,
-        };
     }
+
+    const resetTime = now + config.window;
+    inMemoryStore.set(key, { count: 1, resetTime });
+
+    return {
+        allowed: true,
+        limit: config.limit,
+        remaining: config.limit - 1,
+        resetTime,
+    };
 }
 
-/**
- * Check rate limit using Upstash Redis
- */
-async function checkUpstashRateLimit(identifier: string, pathname: string): Promise<RateLimitResult> {
-    // Dynamic import to avoid bundling issues if not used
+function checkInMemoryRateLimit(identifier: string, pathname: string): RateLimitResult {
+    return checkInMemoryRateLimitByKey(identifier, resolveRateLimitKey(pathname), pathname);
+}
+
+async function checkUpstashRateLimitByKey(
+    identifier: string,
+    rateLimitKey: RateLimitKey,
+    scope = ''
+): Promise<RateLimitResult> {
     const { Ratelimit } = await import('@upstash/ratelimit');
     const { Redis } = await import('@upstash/redis');
 
@@ -175,27 +192,20 @@ async function checkUpstashRateLimit(identifier: string, pathname: string): Prom
         token: UPSTASH_TOKEN!,
     });
 
-    const config = getRateLimitConfig(pathname);
+    const config = getRateLimitConfigByKey(rateLimitKey);
     const windowMs = config.window;
     const windowStr = windowMs >= 3600000
         ? `${Math.floor(windowMs / 3600000)} h`
         : `${Math.floor(windowMs / 60000)} m`;
 
-    // Determine prefix based on endpoint type
-    let prefix = 'ratelimit:api';
-    if (pathname.startsWith('/api/auth')) prefix = 'ratelimit:auth';
-    else if (pathname.startsWith('/api/ai')) prefix = 'ratelimit:ai';
-    else if (pathname.startsWith('/api/telehealth')) prefix = 'ratelimit:telehealth';
-    else if (pathname.includes('/export')) prefix = 'ratelimit:export';
-
     const limiter = new Ratelimit({
         redis,
         limiter: Ratelimit.slidingWindow(config.limit, windowStr as `${number} ${'s' | 'm' | 'h' | 'd'}`),
         analytics: true,
-        prefix,
+        prefix: getRateLimitPrefix(rateLimitKey),
     });
 
-    const key = `${identifier}:${pathname}`;
+    const key = `${scope}:${identifier}`;
     const { success, limit, reset, remaining } = await limiter.limit(key);
 
     if (!success) {
@@ -216,11 +226,48 @@ async function checkUpstashRateLimit(identifier: string, pathname: string): Prom
     };
 }
 
-/**
- * Main rate limit check function
- * Uses Upstash if configured, otherwise falls back to in-memory
- * SEC-REMEDIATION: Respects failClosed config per endpoint type
- */
+async function checkUpstashRateLimit(identifier: string, pathname: string): Promise<RateLimitResult> {
+    return checkUpstashRateLimitByKey(identifier, resolveRateLimitKey(pathname), pathname);
+}
+
+async function checkRateLimitWithKey(
+    identifier: string,
+    rateLimitKey: RateLimitKey,
+    scope = ''
+): Promise<RateLimitResult> {
+    if (checkCircuitBreaker()) {
+        logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FALLBACK', status: 'using_in_memory' });
+        return checkInMemoryRateLimitByKey(identifier, rateLimitKey, scope);
+    }
+
+    if (UPSTASH_URL && UPSTASH_TOKEN) {
+        const result = await checkUpstashRateLimitByKey(identifier, rateLimitKey, scope);
+        recordSuccess();
+        return result;
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+        logWarn({ action: 'RATE_LIMIT_UPSTASH_NOT_CONFIGURED', status: 'using_in_memory_fallback' });
+    }
+
+    return checkInMemoryRateLimitByKey(identifier, rateLimitKey, scope);
+}
+
+function rateLimitExceededResponse(result: RateLimitResult): NextResponse {
+    return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        {
+            status: 429,
+            headers: {
+                'X-RateLimit-Limit': String(result.limit),
+                'X-RateLimit-Remaining': String(result.remaining),
+                'X-RateLimit-Reset': String(result.resetTime),
+                'Retry-After': String(result.retryAfter || 60),
+            },
+        }
+    );
+}
+
 export async function checkRateLimit(
     request: NextRequest
 ): Promise<{ success: boolean; response?: NextResponse }> {
@@ -234,29 +281,24 @@ export async function checkRateLimit(
     let result: RateLimitResult;
 
     try {
-        // Check circuit breaker first
         if (checkCircuitBreaker()) {
-            // Circuit is open - use in-memory fallback
-            console.warn('[RATE-LIMIT] Circuit breaker open, using in-memory fallback');
+            logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FALLBACK', status: 'using_in_memory' });
             result = checkInMemoryRateLimit(ip, pathname);
         } else if (UPSTASH_URL && UPSTASH_TOKEN) {
-            // Use Upstash Redis for distributed rate limiting
             result = await checkUpstashRateLimit(ip, pathname);
             recordSuccess();
         } else {
-            // Fall back to in-memory (single instance only)
             if (process.env.NODE_ENV === 'production') {
-                console.warn('[RATE-LIMIT] Upstash not configured, using in-memory fallback. This is not suitable for multi-instance deployments.');
+                logWarn({ action: 'RATE_LIMIT_UPSTASH_NOT_CONFIGURED', status: 'using_in_memory_fallback' });
             }
             result = checkInMemoryRateLimit(ip, pathname);
         }
     } catch (error) {
         recordFailure();
-        console.error('[RATE-LIMIT] Rate limit check error:', error instanceof Error ? error.message : 'Unknown error');
+        logError({ action: 'RATE_LIMIT_CHECK_ERROR', error: sanitizeError(error) });
 
-        // SEC-REMEDIATION: Fail-closed for security-critical endpoints
         if (config.failClosed) {
-            console.warn(`[RATE-LIMIT] Fail-closed: Denying request to ${pathname} due to rate limit service error`);
+            logWarn({ action: 'RATE_LIMIT_FAIL_CLOSED', status: 'denying_request' });
             return {
                 success: false,
                 response: NextResponse.json(
@@ -266,35 +308,49 @@ export async function checkRateLimit(
             };
         }
 
-        // Fail-open for non-critical endpoints (but log it)
         return { success: true };
     }
 
     if (!result.allowed) {
-        return {
-            success: false,
-            response: NextResponse.json(
-                { error: 'Too many requests. Please try again later.' },
-                {
-                    status: 429,
-                    headers: {
-                        'X-RateLimit-Limit': String(result.limit),
-                        'X-RateLimit-Remaining': String(result.remaining),
-                        'X-RateLimit-Reset': String(result.resetTime),
-                        'Retry-After': String(result.retryAfter || 60),
-                    },
-                }
-            ),
-        };
+        return { success: false, response: rateLimitExceededResponse(result) };
     }
 
     return { success: true };
 }
 
-/**
- * Legacy synchronous rate limit check (for in-memory only)
- * Kept for backward compatibility
- */
+export async function checkRateLimitByKey(
+    identifier: string,
+    rateLimitKey: RateLimitKey,
+    scope: string = rateLimitKey
+): Promise<{ success: boolean; response?: NextResponse }> {
+    const config = getRateLimitConfigByKey(rateLimitKey);
+
+    try {
+        const result = await checkRateLimitWithKey(identifier, rateLimitKey, scope);
+
+        if (!result.allowed) {
+            return { success: false, response: rateLimitExceededResponse(result) };
+        }
+
+        return { success: true };
+    } catch (error) {
+        recordFailure();
+        logError({ action: 'RATE_LIMIT_CHECK_ERROR', error: sanitizeError(error) });
+
+        if (config.failClosed) {
+            return {
+                success: false,
+                response: NextResponse.json(
+                    { error: 'Service temporarily unavailable. Please try again.' },
+                    { status: 503 }
+                ),
+            };
+        }
+
+        return { success: true };
+    }
+}
+
 export function checkRateLimitSync(
     identifier: string,
     pathname: string
@@ -302,9 +358,6 @@ export function checkRateLimitSync(
     return checkInMemoryRateLimit(identifier, pathname);
 }
 
-/**
- * Get rate limit headers for response
- */
 export function getRateLimitHeaders(result: RateLimitResult): Record<string, string> {
     const headers: Record<string, string> = {
         'X-RateLimit-Limit': String(result.limit),
@@ -319,9 +372,6 @@ export function getRateLimitHeaders(result: RateLimitResult): Record<string, str
     return headers;
 }
 
-/**
- * Clean up expired entries from in-memory store
- */
 export function cleanupRateLimitStore(): void {
     const now = Date.now();
     for (const [key, record] of inMemoryStore.entries()) {
@@ -331,14 +381,10 @@ export function cleanupRateLimitStore(): void {
     }
 }
 
-/**
- * Get circuit breaker status (for monitoring/debugging)
- */
 export function getCircuitBreakerStatus(): { isOpen: boolean; failures: number; lastFailure: number } {
     return { ...circuitBreaker };
 }
 
-// Run cleanup every 5 minutes (in-memory only)
 if (typeof setInterval !== 'undefined') {
     setInterval(cleanupRateLimitStore, 5 * 60 * 1000);
 }
