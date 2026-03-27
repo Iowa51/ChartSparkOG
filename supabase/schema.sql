@@ -712,10 +712,9 @@ CREATE POLICY "Service role can insert audit logs"
   TO service_role
   WITH CHECK (TRUE);
 
--- Super Admin can manage audit logs
-CREATE POLICY "Super admins can manage audit logs"
-  ON audit_logs FOR ALL
+-- SEC-PT3-F4: Super Admin read-only access to audit logs (was FOR ALL — fixed in Sprint 4 migration)
+CREATE POLICY "Super admin read access audit"
+  ON audit_logs FOR SELECT
   TO authenticated
-  USING (get_user_role() = 'SUPER_ADMIN')
-  WITH CHECK (get_user_role() = 'SUPER_ADMIN');
+  USING (get_user_role() = 'SUPER_ADMIN');
 
