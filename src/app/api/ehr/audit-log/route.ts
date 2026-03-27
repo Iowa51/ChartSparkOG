@@ -84,4 +84,5 @@ function formatEventType(eventType: string): string {
     return mappings[eventType] || eventType.replace('EHR_', '').replace(/_/g, ' ');
 }
 
-export const GET = withAuth(handleGet, { requireMFA: true });
+// SEC-PT2-F3: Audit logs restricted to ADMIN/SUPER_ADMIN (was accessible to any authenticated user)
+export const GET = withAuth(handleGet, { requiredRole: ['ADMIN', 'SUPER_ADMIN'], requireMFA: true });

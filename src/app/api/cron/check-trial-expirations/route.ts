@@ -16,18 +16,11 @@ import { isValidBearerSecret } from '@/lib/security/timing-safe';
  */
 function validateCronSecret(request: NextRequest): { valid: boolean; error?: string } {
     const cronSecret = process.env.CRON_SECRET;
-    const isProduction = process.env.NODE_ENV === 'production';
 
-    // SEC-REMEDIATION: In production, CRON_SECRET is REQUIRED
-    if (isProduction && !cronSecret) {
-        logError({ action: 'SECURITY_CRON_SECRET_NOT_SET_IN_PRODUCTION', error: 'SECURITY: CRON_SECRET not set in production' });
-        return { valid: false, error: 'Server configuration error' };
-    }
-
-    // In development without secret, allow for testing
+    // SEC-PT2-F5: CRON_SECRET required in ALL environments — fail closed
     if (!cronSecret) {
-        logWarn({ action: 'CRON_SECRET_NOT_SET', status: 'allowing_in_development' });
-        return { valid: true };
+        logError({ action: 'CRON_SECRET_NOT_SET', error: 'CRON_SECRET must be configured in all environments' });
+        return { valid: false, error: 'CRON_SECRET not configured' };
     }
 
     // Verify authorization header

@@ -4,25 +4,25 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { withAuth, AuthContext, canAccessPatient } from '@/lib/auth/api-auth';
+import { withAuth, AuthContext, canAccessPatient, isAdmin } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { z } from 'zod';
 import { UUIDSchema, validateRequest } from '@/lib/validation/schemas';
 
-// Schema matching the actual DB columns used by this route
+// SEC-PT2-F4: .strict() rejects unknown fields. status removed — always server-set.
+// provider_id only honoured for ADMIN/SUPER_ADMIN callers.
 const AppointmentPostSchema = z.object({
     patient_id: UUIDSchema,
     provider_id: UUIDSchema.optional(),
     appointment_datetime: z.string().min(1, 'Appointment datetime is required').max(50),
     appointment_type: z.string().max(100).optional(),
-    status: z.enum(['scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']).optional().default('scheduled'),
     notes: z.string().max(2000).optional().nullable(),
     duration_minutes: z.number().int().min(1).max(480).optional(),
     is_telehealth: z.boolean().optional().default(false),
     reason: z.string().max(500).optional().nullable(),
-});
+}).strict();
 
 async function handleGet(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
@@ -98,12 +98,23 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Patient not found' }, { status: 403 });
         }
 
+        // SEC-PT2-F4: Explicit field mapping — no spread operator.
+        // provider_id only honoured for admins; status always server-set.
         const { data: appointment, error } = await supabase
             .from('appointments')
             .insert([{
-                ...appointmentData,
+                patient_id: appointmentData.patient_id,
+                appointment_datetime: appointmentData.appointment_datetime,
+                appointment_type: appointmentData.appointment_type,
+                notes: appointmentData.notes,
+                duration_minutes: appointmentData.duration_minutes,
+                is_telehealth: appointmentData.is_telehealth ?? false,
+                reason: appointmentData.reason,
                 organization_id: context.user.organizationId,
-                provider_id: appointmentData.provider_id || context.user.id
+                provider_id: (isAdmin(context.user) && appointmentData.provider_id)
+                    ? appointmentData.provider_id
+                    : context.user.id,
+                status: 'scheduled',
             }])
             .select()
             .single();
