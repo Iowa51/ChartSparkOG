@@ -104,7 +104,16 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
                     body: JSON.stringify({ email, success: false }),
                 }).catch(() => { });
 
-                setError(authError.message);
+                // SEC-PT1-F2: Generic error message to prevent account enumeration.
+                // Supabase returns different messages for "invalid credentials" vs
+                // "email not confirmed" which leaks account existence.
+                const isRateLimited = authError.message?.toLowerCase().includes('rate')
+                    || authError.status === 429;
+                setError(
+                    isRateLimited
+                        ? 'Too many attempts. Please try again later.'
+                        : 'Invalid email or password. Please try again.'
+                );
                 setIsLoading(false);
                 return;
             }

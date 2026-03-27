@@ -20,6 +20,8 @@ export const RATE_LIMITS = {
     ai: { limit: 20, window: 60 * 1000, failClosed: false },
     export: { limit: 5, window: 60 * 1000, failClosed: false },
     login: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
+    // SEC-PT1-F3: Per-email rate limiting to prevent brute force via IP rotation
+    loginEmail: { limit: 10, window: 15 * 60 * 1000, failClosed: true },
     mfaVerify: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
     passwordReset: { limit: 3, window: 60 * 60 * 1000, failClosed: true },
     emailSend: { limit: 5, window: 60 * 60 * 1000, failClosed: true },
@@ -116,6 +118,8 @@ function getRateLimitPrefix(rateLimitKey: RateLimitKey): string {
             return 'ratelimit:export';
         case 'login':
             return 'ratelimit:login';
+        case 'loginEmail':
+            return 'ratelimit:login-email';
         case 'mfaVerify':
             return 'ratelimit:mfa-verify';
         case 'passwordReset':
