@@ -16,7 +16,7 @@ async function handlePost(context: AuthContext) {
         const claimId = context.params?.id;
         if (!claimId) return NextResponse.json({ error: 'Missing claim id' }, { status: 400 });
 
-        const result = await validateClaimForSubmission(claimId);
+        const result = await validateClaimForSubmission(claimId, context.user.organizationId || undefined);
         const summary = getValidationSummary(result);
 
         const { ipAddress, userAgent } = getRequestMetadata(context.request);

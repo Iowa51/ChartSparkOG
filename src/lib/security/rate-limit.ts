@@ -239,7 +239,15 @@ async function checkRateLimitWithKey(
     rateLimitKey: RateLimitKey,
     scope = ''
 ): Promise<RateLimitResult> {
+    const config = getRateLimitConfigByKey(rateLimitKey);
+
+    // SEC-PT2-F10: When circuit breaker is open AND endpoint is failClosed,
+    // reject immediately instead of falling back to unreliable in-memory store.
     if (checkCircuitBreaker()) {
+        if (config.failClosed) {
+            logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FAIL_CLOSED', status: 'rejecting_request' });
+            return { allowed: false, limit: config.limit, remaining: 0, resetTime: Date.now() + 30000, retryAfter: 30 };
+        }
         logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FALLBACK', status: 'using_in_memory' });
         return checkInMemoryRateLimitByKey(identifier, rateLimitKey, scope);
     }
@@ -305,6 +313,17 @@ export async function checkRateLimit(
 
     try {
         if (checkCircuitBreaker()) {
+            // SEC-PT2-F10: Fail closed for auth endpoints when circuit breaker is open
+            if (config.failClosed) {
+                logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FAIL_CLOSED', status: 'rejecting_request' });
+                return {
+                    success: false,
+                    response: NextResponse.json(
+                        { error: 'Service temporarily unavailable. Please try again.' },
+                        { status: 503 }
+                    ),
+                };
+            }
             logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FALLBACK', status: 'using_in_memory' });
             result = checkInMemoryRateLimit(ip, pathname);
         } else if (UPSTASH_URL && UPSTASH_TOKEN) {
