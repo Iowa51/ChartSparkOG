@@ -108,7 +108,8 @@ async function handlePost(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet);
+// SEC-PT1-F7: MFA required on GET to prevent unauthenticated MFA-bypass enumeration of EHR integrations
+export const GET = withAuth(handleGet, { requireMFA: true });
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
     requireOrganization: true,

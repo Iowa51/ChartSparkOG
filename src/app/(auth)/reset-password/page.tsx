@@ -72,6 +72,10 @@ export default function ResetPasswordPage() {
                 throw updateError;
             }
 
+            // SEC-PT1-F5: Revoke all sessions globally after password reset.
+            // If an attacker had an active session, it is now invalidated.
+            await supabase.auth.signOut({ scope: 'global' });
+
             setSuccess(true);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to reset password. Please try again.");
@@ -101,7 +105,7 @@ export default function ResetPasswordPage() {
                         Password updated
                     </h2>
                     <p className="text-slate-500 dark:text-slate-400 mb-6">
-                        Your password has been successfully reset. You can now sign in with your new password.
+                        Password updated successfully. All sessions have been signed out for security. Please sign in with your new password.
                     </p>
                     <button
                         onClick={() => router.push("/login")}
