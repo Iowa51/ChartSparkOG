@@ -115,11 +115,8 @@ export async function updateSession(request: NextRequest) {
 
     // If accessing a protected route
     if (matchedRoute) {
-        // Demo mode: allow access without authentication
-        if (isDemoMode && !user) {
-            devWarn('Middleware', 'Demo mode - allowing unauthenticated access to:', path);
-            return supabaseResponse;
-        }
+        // SEC-PT1-F1: Demo mode must NEVER bypass authentication.
+        // Removed unauthenticated demo access — all routes require login regardless of NODE_ENV.
 
         // Not authenticated - redirect to login
         if (!user) {
