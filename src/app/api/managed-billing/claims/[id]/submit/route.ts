@@ -22,32 +22,34 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Database not available' }, { status: 500 });
         }
 
-        // Verify claim belongs to organization
-        const { data: claim } = await supabase
+        // SEC-PT5-F6: Atomic status transition — UPDATE WHERE status IN (...) RETURNING.
+        // Only one concurrent request can succeed; the second gets 0 rows.
+        const { data: claim, error: updateError } = await supabase
             .from('billing_claims')
-            .select('id, organization_id, status')
+            .update({ status: 'submitting' })
             .eq('id', id)
+            .in('status', ['draft', 'ready', 'rejected'])
+            .select('id, organization_id, status')
             .single();
 
-        if (!claim) {
-            return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
+        if (updateError || !claim) {
+            return NextResponse.json(
+                { error: 'Claim not available for submission (not found or already submitted)' },
+                { status: 409 }
+            );
         }
 
         if (claim.organization_id !== context.user.organizationId && !isSuperAdmin(context.user)) {
+            // Roll back status — this shouldn't happen with RLS but defense-in-depth
+            await supabase.from('billing_claims').update({ status: 'draft' }).eq('id', id);
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-        }
-
-        // Check claim is ready to submit
-        if (!['draft', 'ready', 'rejected'].includes(claim.status)) {
-            return NextResponse.json(
-                { error: 'Claim cannot be submitted in current status' },
-                { status: 400 }
-            );
         }
 
         const result = await submitClaimToClearinghouse(id);
 
         if (!result.success) {
+            // Revert to 'ready' so the claim can be retried
+            await supabase.from('billing_claims').update({ status: 'ready' }).eq('id', id);
             return NextResponse.json({ error: result.error }, { status: 500 });
         }
 

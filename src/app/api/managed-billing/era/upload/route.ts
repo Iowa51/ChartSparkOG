@@ -19,11 +19,12 @@ async function handlePost(context: AuthContext) {
     try {
         const formData = await context.request.formData();
         const file = formData.get('file');
-        const organizationId = formData.get('organizationId');
+        // SEC-PT5-F3: Always use server-side org ID — never trust client form data
+        const organizationId = context.user.organizationId;
 
-        if (!(file instanceof File) || typeof organizationId !== 'string') {
+        if (!(file instanceof File) || !organizationId) {
             return NextResponse.json(
-                { error: 'File and organizationId required' },
+                { error: 'File required and user must belong to an organization' },
                 { status: 400 }
             );
         }

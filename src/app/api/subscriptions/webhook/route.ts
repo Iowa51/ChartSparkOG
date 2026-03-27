@@ -12,6 +12,17 @@ import { requireServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, sanitizeError, devLog, logWarn } from '@/lib/logging/safe-logger';
 import type Stripe from 'stripe';
 
+// SEC-PT5-F4: Server-side price-to-tier mapping — never trust metadata
+const PRICE_ID_TO_TIER: Record<string, 'STARTER' | 'ELITE'> = {
+    [process.env.STRIPE_STARTER_PRICE_ID || '']: 'STARTER',
+    [process.env.STRIPE_ELITE_PRICE_ID || '']: 'ELITE',
+};
+
+function mapPriceIdToTierCode(priceId: string | undefined): 'STARTER' | 'ELITE' | null {
+    if (!priceId) return null;
+    return PRICE_ID_TO_TIER[priceId] || null;
+}
+
 export async function POST(request: NextRequest) {
     if (!stripe) {
         logWarn({ action: 'WEBHOOK_STRIPE_NOT_CONFIGURED' });
@@ -66,17 +77,35 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Webhook idempotency check failed' }, { status: 500 });
     }
 
+    // SEC-PT5-F2: Use Stripe event timestamp for all date calculations
+    const eventTime = new Date(event.created * 1000);
+
     try {
         switch (event.type) {
             case 'checkout.session.completed': {
                 const session = event.data.object as Stripe.Checkout.Session;
-                const { organizationId, tierCode } = session.metadata || {};
+                const { organizationId } = session.metadata || {};
 
-                if (organizationId && tierCode) {
-                    devLog('Webhook', `Activating subscription for org ${organizationId}`);
+                if (organizationId && session.subscription) {
+                    // SEC-PT5-F4: Derive tierCode from actual Stripe line items, not metadata
+                    let validatedTierCode: 'STARTER' | 'ELITE' | null = null;
+                    try {
+                        const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 1 });
+                        const priceId = lineItems.data[0]?.price?.id;
+                        validatedTierCode = mapPriceIdToTierCode(priceId);
+                    } catch (lineItemErr) {
+                        logError({ action: 'WEBHOOK_LINE_ITEM_FETCH_FAILED', error: sanitizeError(lineItemErr) });
+                    }
+
+                    if (!validatedTierCode) {
+                        logError({ action: 'WEBHOOK_UNKNOWN_TIER', resourceId: session.id, error: 'Price ID does not map to known tier' });
+                        break;
+                    }
+
+                    devLog('Webhook', `Activating subscription for org ${organizationId} tier ${validatedTierCode}`);
                     await activateSubscription(
                         organizationId,
-                        tierCode as 'STARTER' | 'ELITE',
+                        validatedTierCode,
                         session.subscription as string
                     );
                 }
@@ -87,7 +116,6 @@ export async function POST(request: NextRequest) {
                 const subscription = event.data.object as Stripe.Subscription;
                 devLog('Webhook', `Subscription updated: ${subscription.id}`);
 
-                // Handle subscription updates (e.g., plan changes, renewals)
                 const { data: existingSub } = await supabase
                     .from('organization_subscriptions')
                     .select('organization_id')
@@ -112,7 +140,7 @@ export async function POST(request: NextRequest) {
                         status,
                         current_period_start: new Date(subData.current_period_start * 1000).toISOString(),
                         current_period_end: new Date(subData.current_period_end * 1000).toISOString(),
-                        updated_at: new Date().toISOString(),
+                        updated_at: eventTime.toISOString(),
                     })
                     .eq('stripe_subscription_id', subscription.id)
                     .eq('organization_id', existingSub.organization_id);
@@ -123,17 +151,17 @@ export async function POST(request: NextRequest) {
                 const subscription = event.data.object as Stripe.Subscription;
                 devLog('Webhook', `Subscription deleted: ${subscription.id}`);
 
-                const now = new Date();
-                const deletionDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                // SEC-PT5-F2: Use event timestamp for deterministic dates
+                const deletionDate = new Date(eventTime.getTime() + 30 * 24 * 60 * 60 * 1000);
 
                 await supabase
                     .from('organization_subscriptions')
                     .update({
                         status: 'canceled',
-                        canceled_at: now.toISOString(),
-                        read_only_started_at: now.toISOString(),
+                        canceled_at: eventTime.toISOString(),
+                        read_only_started_at: eventTime.toISOString(),
                         deletion_scheduled_at: deletionDate.toISOString(),
-                        updated_at: now.toISOString(),
+                        updated_at: eventTime.toISOString(),
                     })
                     .eq('stripe_subscription_id', subscription.id);
                 break;
@@ -143,14 +171,13 @@ export async function POST(request: NextRequest) {
                 const invoice = event.data.object as Stripe.Invoice;
                 devLog('Webhook', `Payment failed for invoice: ${invoice.id}`);
 
-                // Update subscription status to past_due
                 const invoiceData = invoice as unknown as { subscription?: string | null };
                 if (invoiceData.subscription) {
                     await supabase
                         .from('organization_subscriptions')
                         .update({
                             status: 'past_due',
-                            updated_at: new Date().toISOString(),
+                            updated_at: eventTime.toISOString(),
                         })
                         .eq('stripe_subscription_id', invoiceData.subscription);
                 }
@@ -161,14 +188,13 @@ export async function POST(request: NextRequest) {
                 const invoice = event.data.object as Stripe.Invoice;
                 devLog('Webhook', `Invoice paid: ${invoice.id}`);
 
-                // Ensure subscription is active after successful payment
                 const invoiceData = invoice as unknown as { subscription?: string | null };
                 if (invoiceData.subscription) {
                     await supabase
                         .from('organization_subscriptions')
                         .update({
                             status: 'active',
-                            updated_at: new Date().toISOString(),
+                            updated_at: eventTime.toISOString(),
                         })
                         .eq('stripe_subscription_id', invoiceData.subscription);
                 }
@@ -179,15 +205,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
 
     } catch (error) {
+        // SEC-PT5-F1: DO NOT delete idempotency record on failure.
+        // Let it persist so Stripe retries see the duplicate and skip.
+        // Manual admin reprocessing can clear specific records if needed.
         logError({
             action: 'webhook_processing_error',
             error: sanitizeError(error),
             resourceType: 'stripe_webhook',
+            resourceId: event.id,
         });
-        await supabase
-            .from('processed_webhook_events')
-            .delete()
-            .eq('stripe_event_id', event.id);
         return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
     }
 }
