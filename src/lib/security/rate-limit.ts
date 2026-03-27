@@ -272,12 +272,31 @@ function rateLimitExceededResponse(result: RateLimitResult): NextResponse {
     );
 }
 
+/**
+ * SEC-PT2-F2: Extract client IP with production hardening.
+ * In production (Vercel), x-real-ip is set by the platform from the actual
+ * client socket and cannot be spoofed. x-forwarded-for is client-controllable
+ * and must NOT be trusted in production for rate-limit keying.
+ */
+function getClientIp(request: NextRequest): string {
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // x-real-ip is set by Vercel from the actual TCP connection — trusted
+    const realIp = request.headers.get('x-real-ip');
+    if (realIp) return realIp.trim();
+
+    // In production, never fall back to spoofable x-forwarded-for
+    if (isProduction) return 'anonymous';
+
+    // Non-production: allow x-forwarded-for for local dev behind proxies
+    const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0].trim();
+    return forwarded || 'anonymous';
+}
+
 export async function checkRateLimit(
     request: NextRequest
 ): Promise<{ success: boolean; response?: NextResponse }> {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-        request.headers.get('x-real-ip') ||
-        'anonymous';
+    const ip = getClientIp(request);
 
     const pathname = request.nextUrl.pathname;
     const config = getRateLimitConfig(pathname);
