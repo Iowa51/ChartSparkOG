@@ -87,7 +87,7 @@ const sessionHistory = [
 
 interface CallSession {
     appointmentId: string;
-    providerSessionTokenRef: string;
+    // SEC-PT4-F2: providerSessionTokenRef removed — delivered via HTTP-only cookie
     patientLink: string;
     patientName: string;
 }
@@ -125,7 +125,6 @@ export default function TelehealthPage() {
 
             setCallSession({
                 appointmentId: data.appointmentId,
-                providerSessionTokenRef: data.providerSessionTokenRef,
                 patientLink: patientLink,
                 patientName: patientName,
             });
@@ -297,7 +296,6 @@ export default function TelehealthPage() {
                                 </div>
                             ) : callSession ? (
                                 <DailyVideoCall
-                                    sessionTokenRef={callSession.providerSessionTokenRef}
                                     userName="Provider"
                                     patientLink={callSession.patientLink}
                                     onLeave={handleEndCall}
