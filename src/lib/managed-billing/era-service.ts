@@ -116,13 +116,24 @@ export async function processERAFile(
             }
         }
 
+        // SEC-PT5-F9: ERA amount bounds check — reject unreasonable amounts
+        const MAX_ERA_PAYMENT_CENTS = parseInt(process.env.MAX_ERA_PAYMENT_AMOUNT || '10000000', 10); // Default $100k in cents
+
         // Update matched claims in parallel (with concurrency limit)
         const BATCH_SIZE = 10;
         for (let i = 0; i < claimUpdates.length; i += BATCH_SIZE) {
             const batch = claimUpdates.slice(i, i + BATCH_SIZE);
             await Promise.all(
-                batch.map(({ id, payment }) =>
-                    supabase
+                batch.map(({ id, payment }) => {
+                    // Reject negative amounts and amounts exceeding the absolute cap
+                    if (payment.paidAmount < 0 || payment.paidAmount > MAX_ERA_PAYMENT_CENTS) {
+                        devError('ERA', `Suspicious amount skipped: paid=${payment.paidAmount} for claim ${id}`);
+                        unmatched++;
+                        matched--;
+                        return Promise.resolve();
+                    }
+
+                    return supabase
                         .from('billing_claims')
                         .update({
                             status: 'paid',
@@ -137,8 +148,8 @@ export async function processERAFile(
                             era_file_id: eraFile.id,
                             payment_verified: true,
                         })
-                        .eq('id', id)
-                )
+                        .eq('id', id);
+                })
             );
         }
 
