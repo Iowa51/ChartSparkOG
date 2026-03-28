@@ -83,11 +83,8 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
             }
 
             if (!supabase) {
-                if (demoModeEnabled) {
-                    setError('Demo mode: Use a demo account (see buttons below)');
-                } else {
-                    setError('Authentication service not configured');
-                }
+                // SEC-PT8-F2: Normalized error — no distinct messages for service state
+                setError('Authentication service unavailable. Please try again later.');
                 setIsLoading(false);
                 return;
             }
