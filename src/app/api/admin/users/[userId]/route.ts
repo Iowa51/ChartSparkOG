@@ -55,7 +55,8 @@ async function handlePatch(context: AuthContext) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        if (targetUser.organization_id !== context.user.organizationId) {
+        // SEC-PT8-F4: SUPER_ADMIN can manage users across orgs; ADMIN is same-org only
+        if (context.user.role !== 'SUPER_ADMIN' && targetUser.organization_id !== context.user.organizationId) {
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });
         }
 
@@ -79,12 +80,15 @@ async function handlePatch(context: AuthContext) {
             );
         }
 
-        // Perform the update
+        // Perform the update — SUPER_ADMIN uses target's org, ADMIN uses own org
+        const updateOrgId = context.user.role === 'SUPER_ADMIN'
+            ? targetUser.organization_id
+            : context.user.organizationId;
         const { error: updateError } = await supabase
             .from('users')
             .update(updates)
             .eq('id', userId)
-            .eq('organization_id', context.user.organizationId);
+            .eq('organization_id', updateOrgId);
 
         if (updateError) {
             logError({ action: 'ADMIN_USER_UPDATE_ERROR', error: sanitizeError(updateError) });
