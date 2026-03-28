@@ -161,19 +161,28 @@ export default function UserFeaturesPage({ params }: { params: Promise<{ id: str
         setPendingChanges(prev => new Map(prev).set(featureId, newValue));
     };
 
+    // SEC-PT7-F5: Feature changes via server-side API — granted_by set server-side
     const handleSave = async () => {
         if (pendingChanges.size === 0) return;
 
         setSaving(true);
         try {
             for (const [featureId, enabled] of pendingChanges) {
-                await toggleUserFeature(userId, featureId, enabled, currentUserId || userId);
+                const response = await fetch(`/api/admin/users/${userId}/features`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ featureId, enabled }),
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to update feature');
+                }
             }
             setPendingChanges(new Map());
             alert('Features updated successfully');
         } catch (error) {
             console.error('Error saving features:', error);
-            alert('Error saving features');
+            alert(error instanceof Error ? error.message : 'Error saving features');
         } finally {
             setSaving(false);
         }

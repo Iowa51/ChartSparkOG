@@ -54,7 +54,7 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
             if (lockoutCheck.ok) {
                 const lockoutData = await lockoutCheck.json();
                 if (lockoutData.locked) {
-                    setError(lockoutData.message || 'Account temporarily locked. Please try again later.');
+                    setError('Too many attempts. Please try again later.');
                     setIsLoading(false);
                     return;
                 }
@@ -119,7 +119,7 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
             }
 
             if (!authData.session?.user) {
-                setError("Authentication failed. Please try again.");
+                setError('Invalid email or password. Please try again.');
                 setIsLoading(false);
                 return;
             }
@@ -171,14 +171,14 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
                 }
 
                 await supabase.auth.signOut();
-                setError("Unable to load your profile. Please contact support.");
+                setError('Invalid email or password. Please try again.');
                 setIsLoading(false);
                 return;
             }
 
             if (finalUserData.is_active === false) {
                 await supabase.auth.signOut();
-                setError("Your account has been deactivated. Please contact support.");
+                setError('Invalid email or password. Please try again.');
                 setIsLoading(false);
                 return;
             }
@@ -205,7 +205,7 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
 
         } catch (err) {
             console.error("Login error:", err);
-            setError("An unexpected error occurred. Please try again.");
+            setError('Invalid email or password. Please try again.');
             setIsLoading(false);
         }
     };

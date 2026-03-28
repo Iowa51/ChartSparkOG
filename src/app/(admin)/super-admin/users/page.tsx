@@ -97,25 +97,27 @@ export default function UsersPage() {
         }
     };
 
+    // SEC-PT7-F3: User modifications via server-side API with audit logging
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         try {
             if (editingUser) {
-                // Update existing
-                const { error } = await supabase
-                    .from('users')
-                    .update({
+                // Update existing via audited server-side API
+                const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
                         first_name: formData.first_name,
                         last_name: formData.last_name,
-                        role: formData.role,
-                        organization_id: formData.organization_id || null,
-                        subscription_tier: formData.subscription_tier,
                         specialty: formData.specialty,
-                    })
-                    .eq('id', editingUser.id);
+                    }),
+                });
 
-                if (error) throw error;
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to update user');
+                }
             } else {
                 // For demo mode, create a mock user locally
                 const newUser: User = {
@@ -168,12 +170,17 @@ export default function UsersPage() {
 
     const handleToggleActive = async (user: User) => {
         try {
-            const { error } = await supabase
-                .from('users')
-                .update({ is_active: !user.is_active })
-                .eq('id', user.id);
+            const response = await fetch(`/api/admin/users/${user.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: !user.is_active }),
+            });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to toggle user status');
+            }
+
             fetchUsers();
         } catch (error) {
             console.error("Error toggling user status:", error);
