@@ -2,12 +2,12 @@ import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { checkSQLInjection, checkXSS, checkPathTraversal } from "@/lib/security/intrusion-detection";
+import { getClientIP } from "@/lib/utils/get-client-ip";
 
 export async function middleware(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-        request.headers.get('x-real-ip') ||
-        'unknown';
+    // SEC-PT8-F1: Use centralized IP extraction with production guard
+    const ip = getClientIP(request);
 
     // Apply rate limiting and intrusion detection to API routes
     if (pathname.startsWith('/api')) {

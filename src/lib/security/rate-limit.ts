@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -280,31 +281,12 @@ function rateLimitExceededResponse(result: RateLimitResult): NextResponse {
     );
 }
 
-/**
- * SEC-PT2-F2: Extract client IP with production hardening.
- * In production (Vercel), x-real-ip is set by the platform from the actual
- * client socket and cannot be spoofed. x-forwarded-for is client-controllable
- * and must NOT be trusted in production for rate-limit keying.
- */
-function getClientIp(request: NextRequest): string {
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    // x-real-ip is set by Vercel from the actual TCP connection — trusted
-    const realIp = request.headers.get('x-real-ip');
-    if (realIp) return realIp.trim();
-
-    // In production, never fall back to spoofable x-forwarded-for
-    if (isProduction) return 'anonymous';
-
-    // Non-production: allow x-forwarded-for for local dev behind proxies
-    const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0].trim();
-    return forwarded || 'anonymous';
-}
+// SEC-PT8-F1: IP extraction delegated to centralized getClientIP() in get-client-ip.ts
 
 export async function checkRateLimit(
     request: NextRequest
 ): Promise<{ success: boolean; response?: NextResponse }> {
-    const ip = getClientIp(request);
+    const ip = getClientIP(request);
 
     const pathname = request.nextUrl.pathname;
     const config = getRateLimitConfig(pathname);
