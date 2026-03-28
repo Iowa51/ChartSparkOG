@@ -7,12 +7,11 @@ import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { resolveTelehealthJoinSession } from '@/lib/security/telehealth-session-tokens';
 import { getAuthenticatedUser } from '@/lib/auth/api-auth';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 export async function POST(request: NextRequest) {
     try {
-        const ipAddress = request.headers.get('x-real-ip')
-            || (process.env.NODE_ENV !== 'production' ? request.headers.get('x-forwarded-for')?.split(',')[0].trim() : null)
-            || 'unknown';
+        const ipAddress = getClientIP(request);
         const userAgent = request.headers.get('user-agent') || 'unknown';
 
         // Determine flow: patient (cookie) vs provider (cookie set by create-room)

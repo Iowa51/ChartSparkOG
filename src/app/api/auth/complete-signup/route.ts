@@ -10,6 +10,7 @@ import { logAuditEvent } from '@/lib/security/audit-log';
 import { sendWelcomeEmail, isEmailConfigured } from '@/lib/email/resend';
 import { CompleteSignupSchema, validateRequest } from '@/lib/validation/schemas';
 import { validateOrigin } from '@/lib/security/csrf';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 export async function POST(request: NextRequest) {
     // SEC-PT6-F4: CSRF origin validation for pre-auth state-changing route
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
                 userEmail: email,
                 userRole: 'ADMIN',
                 organizationId: org.id,
-                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                ipAddress: getClientIP(request),
                 userAgent: request.headers.get('user-agent') || 'unknown',
                 riskLevel: 'LOW',
                 details: { isNewOrg: true },
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
                 organizationId: org.id,
                 resourceType: 'user',
                 resourceId: userId,
-                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                ipAddress: getClientIP(request),
                 userAgent: request.headers.get('user-agent') || 'unknown',
                 riskLevel: 'HIGH',
                 details: { previousRole: null, newRole: 'ADMIN', changedBy: userId },

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 const AuditLogViewSchema = z.object({
     page: z.number().int().min(1).optional().default(1),
@@ -26,6 +27,7 @@ async function handlePost(context: AuthContext) {
         }
 
         const { page, resultCount } = parsed.data;
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
         await logAuditEvent({
             eventType: 'AUDIT_LOG_VIEW',
@@ -33,8 +35,8 @@ async function handlePost(context: AuthContext) {
             userEmail: context.user.email,
             userRole: context.user.role,
             organizationId: context.user.organizationId ?? undefined,
-            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            ipAddress,
+            userAgent,
             resourceType: 'audit_logs',
             details: { page, resultCount },
             phiAccessed: false,

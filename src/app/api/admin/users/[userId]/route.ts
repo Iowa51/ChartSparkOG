@@ -59,6 +59,26 @@ async function handlePatch(context: AuthContext) {
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });
         }
 
+        // SEC-PT7-F2: Peer-admin protection
+        // ADMINs cannot modify other ADMIN or SUPER_ADMIN accounts — only SUPER_ADMIN can
+        if (
+            ['ADMIN', 'SUPER_ADMIN'].includes(targetUser.role) &&
+            context.user.role === 'ADMIN'
+        ) {
+            return NextResponse.json(
+                { error: 'Only super-admins can modify admin accounts' },
+                { status: 403 }
+            );
+        }
+
+        // Prevent self-deactivation
+        if (userId === context.user.id && updates.is_active === false) {
+            return NextResponse.json(
+                { error: 'Cannot deactivate your own account' },
+                { status: 403 }
+            );
+        }
+
         // Perform the update
         const { error: updateError } = await supabase
             .from('users')

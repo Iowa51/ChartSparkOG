@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { TelehealthEndSessionSchema, validateRequest } from '@/lib/validation/schemas';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handler(context: AuthContext) {
     try {
@@ -56,14 +57,15 @@ async function handler(context: AuthContext) {
             }
 
             // SEC-PT4-F4: Audit PHI access AFTER authorization confirmed
+            const { ipAddress, userAgent } = getRequestMetadata(context.request);
             await logAuditEvent({
                 eventType: 'phi_read',
                 userId: context.user.id,
                 userEmail: context.user.email,
                 userRole: context.user.role,
                 organizationId: context.user.organizationId ?? undefined,
-                ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-                userAgent: context.request.headers.get('user-agent') || 'unknown',
+                ipAddress,
+                userAgent,
                 resourceType: 'appointment',
                 resourceId: appointment.id,
                 details: {
@@ -89,8 +91,8 @@ async function handler(context: AuthContext) {
                 userEmail: context.user.email,
                 userRole: context.user.role,
                 organizationId: context.user.organizationId ?? undefined,
-                ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-                userAgent: context.request.headers.get('user-agent') || 'unknown',
+                ipAddress,
+                userAgent,
                 resourceType: 'telehealth_room',
                 resourceId: appointmentId,
                 riskLevel: 'LOW',

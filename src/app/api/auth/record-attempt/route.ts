@@ -7,6 +7,7 @@ import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { LoginAttemptSchema, validateRequest } from '@/lib/validation/schemas';
 import { validateOrigin } from '@/lib/security/csrf';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 // F-020: In-memory IP-based rate limiting for record-attempt endpoint
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -31,9 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-        const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-            request.headers.get('x-real-ip') ||
-            'unknown';
+        const ipAddress = getClientIP(request);
 
         // F-020: Rate limit by IP to prevent lockout flooding
         if (isRateLimited(ipAddress)) {

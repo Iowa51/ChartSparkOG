@@ -12,6 +12,7 @@ import { withAuth, AuthContext, canAccessPatient, isSuperAdmin } from '@/lib/aut
 import { logPHIAccess } from '@/lib/security/audit-log';
 import { z } from 'zod';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 // Prevent static generation
 export const dynamic = 'force-dynamic';
@@ -65,7 +66,7 @@ async function handleGet(context: RiskAssessmentContext): Promise<NextResponse> 
         'PATIENT',
         patientId,
         'VIEW',
-        request.headers.get('x-forwarded-for') || undefined,
+        getClientIP(request) || undefined,
         request.headers.get('user-agent') || undefined
     );
 
@@ -174,7 +175,7 @@ async function handlePost(context: RiskAssessmentContext): Promise<NextResponse>
         'PATIENT',
         assessmentData.patient_id,
         'CREATE',
-        request.headers.get('x-forwarded-for') || undefined,
+        getClientIP(request) || undefined,
         request.headers.get('user-agent') || undefined
     );
 

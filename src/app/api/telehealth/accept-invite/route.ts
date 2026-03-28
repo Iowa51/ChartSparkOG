@@ -6,13 +6,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPatientSessionRefByAppointment } from '@/lib/security/telehealth-session-tokens';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 export async function GET(request: NextRequest) {
     const appointmentId = request.nextUrl.searchParams.get('appointment');
     const destination = new URL('/telehealth/join', request.url);
-    const ipAddress = request.headers.get('x-real-ip')
-        || (process.env.NODE_ENV !== 'production' ? request.headers.get('x-forwarded-for')?.split(',')[0].trim() : null)
-        || 'unknown';
+    const ipAddress = getClientIP(request);
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
     if (!appointmentId || appointmentId.length < 32) {

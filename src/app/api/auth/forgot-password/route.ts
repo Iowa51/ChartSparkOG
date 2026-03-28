@@ -10,6 +10,7 @@ import { logError, logInfo, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { checkRateLimitByKey } from '@/lib/security/rate-limit';
 import { validateOrigin } from '@/lib/security/csrf';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 const ForgotPasswordSchema = z.object({
     email: z.string().email().max(320),
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
     }
 
-    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+    const ipAddress = getClientIP(request);
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
     try {
