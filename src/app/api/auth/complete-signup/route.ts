@@ -9,8 +9,13 @@ import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { sendWelcomeEmail, isEmailConfigured } from '@/lib/email/resend';
 import { CompleteSignupSchema, validateRequest } from '@/lib/validation/schemas';
+import { validateOrigin } from '@/lib/security/csrf';
 
 export async function POST(request: NextRequest) {
+    // SEC-PT6-F4: CSRF origin validation for pre-auth state-changing route
+    if (!validateOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
     try {
         const body = await request.json();
         const validation = validateRequest(CompleteSignupSchema, body);

@@ -9,6 +9,7 @@ import { sendPasswordResetEmail, isEmailConfigured } from '@/lib/email/resend';
 import { logError, logInfo, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { checkRateLimitByKey } from '@/lib/security/rate-limit';
+import { validateOrigin } from '@/lib/security/csrf';
 
 const ForgotPasswordSchema = z.object({
     email: z.string().email().max(320),
@@ -17,6 +18,11 @@ const ForgotPasswordSchema = z.object({
 const RESET_EXPIRY_MINUTES = 60;
 
 export async function POST(request: NextRequest) {
+    // SEC-PT6-F4: CSRF origin validation for pre-auth state-changing route
+    if (!validateOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
+
     const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 

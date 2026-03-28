@@ -6,6 +6,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { LoginAttemptSchema, validateRequest } from '@/lib/validation/schemas';
+import { validateOrigin } from '@/lib/security/csrf';
 
 // F-020: In-memory IP-based rate limiting for record-attempt endpoint
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -24,6 +25,11 @@ function isRateLimited(ip: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+    // SEC-PT6-F4: CSRF origin validation for pre-auth state-changing route
+    if (!validateOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
+
     try {
         const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
             request.headers.get('x-real-ip') ||

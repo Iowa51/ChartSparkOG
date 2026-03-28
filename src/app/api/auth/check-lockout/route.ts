@@ -6,6 +6,7 @@ import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { CheckLockoutSchema, validateRequest } from '@/lib/validation/schemas';
 import { checkRateLimitByKey } from '@/lib/security/rate-limit';
+import { validateOrigin } from '@/lib/security/csrf';
 
 // SEC-PT1-F3: 30-minute lockout in production, 5 minutes in development
 const isProduction = process.env.NODE_ENV === 'production';
@@ -16,6 +17,11 @@ const LOCKOUT_CONFIG = {
 };
 
 export async function POST(request: NextRequest) {
+    // SEC-PT6-F4: CSRF origin validation for pre-auth state-changing route
+    if (!validateOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
+
     try {
         const rawBody = await request.json();
         const validation = validateRequest(CheckLockoutSchema, rawBody);
