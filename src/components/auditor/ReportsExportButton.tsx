@@ -29,6 +29,16 @@ interface Props {
     issues: CommonIssue[];
 }
 
+// SEC-PT6-F2: HTML entity encoding to prevent stored XSS in report export
+function escapeHtml(unsafe: string): string {
+    return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 export function ReportsExportButton({ stats, organizations, issues }: Props) {
     const [isExporting, setIsExporting] = useState(false);
 
@@ -209,7 +219,7 @@ export function ReportsExportButton({ stats, organizations, issues }: Props) {
             <tbody>
                 ${organizations.map(org => `
                 <tr>
-                    <td><strong>${org.name}</strong></td>
+                    <td><strong>${escapeHtml(org.name)}</strong></td>
                     <td>${org.audited}</td>
                     <td>${org.approved}</td>
                     <td>${org.flagged}</td>
@@ -243,11 +253,11 @@ export function ReportsExportButton({ stats, organizations, issues }: Props) {
                 ${issues.map(issue => `
                 <tr>
                     <td>
-                        <span class="severity-dot severity-${issue.severity}"></span>
-                        ${issue.reason}
+                        <span class="severity-dot severity-${escapeHtml(issue.severity)}"></span>
+                        ${escapeHtml(issue.reason)}
                     </td>
                     <td>${issue.count}</td>
-                    <td style="text-transform: capitalize;">${issue.severity}</td>
+                    <td style="text-transform: capitalize;">${escapeHtml(issue.severity)}</td>
                 </tr>
                 `).join('')}
             </tbody>
