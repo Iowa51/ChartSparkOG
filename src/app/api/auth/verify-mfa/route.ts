@@ -18,10 +18,10 @@ const MFA_ERROR_CODES = {
 async function handlePost(context: AuthContext) {
     try {
         const { ipAddress, userAgent } = getRequestMetadata(context.request);
-        const rateLimitIdentifier = ipAddress !== 'unknown'
-            ? ipAddress
-            : context.user.id;
-        const rateLimitResult = await checkRateLimitByKey(rateLimitIdentifier, 'mfaVerify', 'verify-mfa');
+        // SEC-PT2-F6: Always rate-limit MFA by user ID, not IP.
+        // User is authenticated at this point so ID is always available.
+        // IP-based keying allowed brute-force via IP rotation.
+        const rateLimitResult = await checkRateLimitByKey(context.user.id, 'mfaVerify', 'verify-mfa');
 
         if (!rateLimitResult.success) {
             return rateLimitResult.response ?? NextResponse.json(

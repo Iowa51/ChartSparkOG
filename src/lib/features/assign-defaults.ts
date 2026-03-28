@@ -1,4 +1,6 @@
-import { createClient } from '@/lib/supabase/client';
+// SEC-PT8-F3: This module runs server-side only — uses service role client.
+// NEVER import this in client components (files with "use client").
+import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import type { FeatureTier } from '@/types/database';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
@@ -21,7 +23,7 @@ export async function assignDefaultFeatures(
     grantedBy: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const supabase = createClient();
+        const supabase = createServiceRoleClient();
         if (!supabase) {
             return { success: false, error: 'Supabase client not available' };
         }
@@ -90,7 +92,7 @@ export async function toggleUserFeature(
     }
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const supabase = createClient();
+        const supabase = createServiceRoleClient();
         if (!supabase) {
             return { success: false, error: 'Supabase client not available' };
         }
@@ -137,7 +139,7 @@ export async function toggleUserFeature(
  */
 export async function getUserFeaturesWithStatus(userId: string) {
     try {
-        const supabase = createClient();
+        const supabase = createServiceRoleClient();
         if (!supabase) {
             return { features: [], error: 'Supabase client not available' };
         }

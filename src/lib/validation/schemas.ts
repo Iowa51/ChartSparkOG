@@ -378,13 +378,23 @@ export const EHRConsentSchema = z.object({
     share_assessments: z.boolean().optional(),
 });
 
+// SEC-PT5-F7: ICD-10 and CPT format validation at creation time (not post-INSERT)
+const ICD10CodeSchema = z.string().max(20).regex(
+    /^[A-Z][0-9]{2}(\.[0-9A-Z]{1,4})?$/,
+    'Invalid ICD-10 code format (e.g. A00, A00.1, Z99.89)'
+);
+const CPTCodeSchema = z.string().max(20).regex(
+    /^[0-9]{5}[A-Z0-9]?$/,
+    'Invalid CPT code format (e.g. 99213, 90837)'
+);
+
 export const ManagedBillingClaimCreateSchema = z.object({
     patientId: UUIDSchema,
     providerId: UUIDSchema,
     encounterId: UUIDSchema.optional().nullable(),
     serviceDate: z.string().min(1).max(50),
-    diagnosisCodes: z.array(z.string().max(20)).max(20).optional().default([]),
-    procedureCodes: z.array(z.string().max(20)).max(20).optional().default([]),
+    diagnosisCodes: z.array(ICD10CodeSchema).max(20).optional().default([]),
+    procedureCodes: z.array(CPTCodeSchema).max(20).optional().default([]),
     billedAmount: z.number().min(0).max(1000000).optional().default(0),
     payerName: z.string().min(1).max(255),
 });

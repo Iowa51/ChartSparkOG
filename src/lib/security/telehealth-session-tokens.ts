@@ -22,6 +22,7 @@ interface DecodedSessionRef {
 
 export interface TelehealthJoinSessionAccess {
     appointmentId: string;
+    organizationId: string;
     participantRole: TelehealthParticipantRole;
     roomUrl: string;
     meetingToken?: string;
@@ -144,7 +145,7 @@ export async function resolveTelehealthJoinSession(sessionTokenRef: string): Pro
         .eq('token_id', decoded.tokenId)
         .eq('used', false)
         .gt('expires_at', new Date().toISOString())
-        .select('appointment_id, participant_role, encrypted_room_url, encrypted_meeting_token')
+        .select('appointment_id, organization_id, participant_role, encrypted_room_url, encrypted_meeting_token')
         .single();
 
     if (error || !data) {
@@ -153,6 +154,7 @@ export async function resolveTelehealthJoinSession(sessionTokenRef: string): Pro
 
     return {
         appointmentId: data.appointment_id,
+        organizationId: data.organization_id,
         participantRole: data.participant_role as TelehealthParticipantRole,
         roomUrl: await decryptPHI(data.encrypted_room_url),
         meetingToken: data.encrypted_meeting_token

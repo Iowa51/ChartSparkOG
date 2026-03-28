@@ -133,11 +133,11 @@ async function handlePost(context: AuthContext) {
 
         if (error) throw error;
 
-        // Update patient's last visit date
+        // SEC-PT6-F3: Always use server-generated date — never trust rawData.note_date
         await supabase
             .from('patients')
             .update({
-                last_visit_date: rawData.note_date || new Date().toISOString().split('T')[0]
+                last_visit_date: new Date().toISOString().split('T')[0]
             })
             .eq('id', validatedData.patient_id)
             .eq('organization_id', user.organizationId);

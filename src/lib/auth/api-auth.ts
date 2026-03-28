@@ -8,6 +8,8 @@ import { logWarn, logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 // F-022: HIPAA-compliant server-side session timeout (15 minutes)
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
+// SEC-PT1-F4: Absolute session expiry — force re-auth after 8 hours regardless of activity
+const ABSOLUTE_SESSION_TIMEOUT_MS = 8 * 60 * 60 * 1000;
 
 export interface AuthenticatedUser {
     id: string;
@@ -74,6 +76,19 @@ export async function getAuthenticatedUser(
             return null;
         }
 
+        // SEC-PT1-F4: Absolute session expiry — reject if JWT issued more than 8 hours ago
+        if (authUser.created_at) {
+            const sessionCreated = new Date(authUser.created_at).getTime();
+            // Use the Supabase auth session's last_sign_in_at as proxy for session start
+            const signInTime = authUser.last_sign_in_at
+                ? new Date(authUser.last_sign_in_at).getTime()
+                : sessionCreated;
+            if (Date.now() - signInTime > ABSOLUTE_SESSION_TIMEOUT_MS) {
+                logWarn({ action: 'API_AUTH_ABSOLUTE_SESSION_TIMEOUT', userId: user.id });
+                return null;
+            }
+        }
+
         // F-022: Server-side session timeout enforcement (HIPAA 15-min inactivity)
         if (profile?.last_activity_at) {
             const lastActivity = new Date(profile.last_activity_at).getTime();
@@ -84,13 +99,16 @@ export async function getAuthenticatedUser(
         }
 
         if (profile) {
-            // F-022: Update last_activity_at (fire-and-forget, don't block the request)
-            supabase
+            // SEC-PT1-F4: Blocking update — ensures activity timestamp is persisted reliably
+            const { error: updateError } = await supabase
                 .from('profiles')
                 .update({ last_activity_at: new Date().toISOString() })
-                .eq('id', user.id)
-                .then(() => {})
-                .catch(() => {});
+                .eq('id', user.id);
+
+            if (updateError) {
+                logWarn({ action: 'API_AUTH_ACTIVITY_UPDATE_FAILED', userId: user.id, error: sanitizeError(updateError) });
+                // Allow request to proceed — don't block legitimate users on DB write failure
+            }
         }
 
         return {

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { TelehealthEndSessionSchema, validateRequest } from '@/lib/validation/schemas';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handler(context: AuthContext) {
     try {
@@ -21,7 +22,7 @@ async function handler(context: AuthContext) {
         if (supabase) {
             const { data: appointment, error: appointmentError } = await supabase
                 .from('appointments')
-                .select('id, organization_id, telehealth_room_url')
+                .select('id, organization_id, provider_id, telehealth_room_url')
                 .eq('id', appointmentId)
                 .single();
 
@@ -32,33 +33,47 @@ async function handler(context: AuthContext) {
                 );
             }
 
+            // SEC-PT4-F4: Authorization BEFORE audit — prevents false phi_read entries.
+            // Strict equality check (no truthy guard on organizationId — withAuth ensures it).
+            if (
+                appointment.organization_id !== context.user.organizationId &&
+                context.user.role !== 'SUPER_ADMIN'
+            ) {
+                return NextResponse.json(
+                    { error: 'Access denied' },
+                    { status: 403 }
+                );
+            }
+
+            // SEC-PT4-F5 (Medium): Only the assigned provider or admin can end a session
+            if (
+                appointment.provider_id !== context.user.id &&
+                !['ADMIN', 'SUPER_ADMIN'].includes(context.user.role)
+            ) {
+                return NextResponse.json(
+                    { error: 'Not authorized to end this session' },
+                    { status: 403 }
+                );
+            }
+
+            // SEC-PT4-F4: Audit PHI access AFTER authorization confirmed
+            const { ipAddress, userAgent } = getRequestMetadata(context.request);
             await logAuditEvent({
                 eventType: 'phi_read',
                 userId: context.user.id,
                 userEmail: context.user.email,
                 userRole: context.user.role,
                 organizationId: context.user.organizationId ?? undefined,
-                ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-                userAgent: context.request.headers.get('user-agent') || 'unknown',
+                ipAddress,
+                userAgent,
                 resourceType: 'appointment',
                 resourceId: appointment.id,
                 details: {
                     access_context: 'telehealth_end_session',
-                    resource_type: 'appointment',
-                    resource_id: appointment.id,
                 },
                 phiAccessed: true,
                 riskLevel: 'MEDIUM',
             });
-
-            if (context.user.organizationId &&
-                appointment.organization_id !== context.user.organizationId &&
-                context.user.role !== 'SUPER_ADMIN') {
-                return NextResponse.json(
-                    { error: 'Access denied' },
-                    { status: 403 }
-                );
-            }
 
             const { error } = await supabase
                 .from('appointments')
@@ -76,8 +91,8 @@ async function handler(context: AuthContext) {
                 userEmail: context.user.email,
                 userRole: context.user.role,
                 organizationId: context.user.organizationId ?? undefined,
-                ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-                userAgent: context.request.headers.get('user-agent') || 'unknown',
+                ipAddress,
+                userAgent,
                 resourceType: 'telehealth_room',
                 resourceId: appointmentId,
                 riskLevel: 'LOW',

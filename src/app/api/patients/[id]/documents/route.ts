@@ -141,8 +141,8 @@ async function handlePost(context: AuthContext) {
             return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
         }
 
-        // Generate secure file path
-        const filePath = generateSecureFilePath(context.user.id, file.name, `patients/${patientId}`);
+        // SEC-PT6-F1: File path prefixed with org ID for storage RLS org isolation
+        const filePath = generateSecureFilePath(context.user.id, file.name, `${context.user.organizationId}/patients/${patientId}`);
 
         // Upload to Supabase Storage
         const fileBuffer = Buffer.from(await file.arrayBuffer());

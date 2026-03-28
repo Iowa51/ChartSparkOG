@@ -1,41 +1,151 @@
-import { NextResponse } from 'next/server';
+// SEC-PT7-F6: Telehealth join session — provider flow uses withAuth(),
+// patient flow validates via HTTP-only cookie token only.
+
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { resolveTelehealthJoinSession } from '@/lib/security/telehealth-session-tokens';
-import { TelehealthJoinSessionSchema, validateRequest } from '@/lib/validation/schemas';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
-export async function POST(request: Request) {
+/**
+ * Provider join flow — wrapped with withAuth for full authentication,
+ * MFA, and organization validation via centralized middleware.
+ */
+async function handleProviderJoin(context: AuthContext) {
     try {
-        const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
-        const userAgent = request.headers.get('user-agent') || 'unknown';
+        const ipAddress = getClientIP(context.request);
+        const userAgent = context.request.headers.get('user-agent') || 'unknown';
 
-        // SEC-SPRINT9: Read session token ref from HTTP-only cookie first (patient flow),
-        // fall back to request body (provider flow via DailyVideoCall component).
         const cookieStore = await cookies();
-        const cookieToken = cookieStore.get('telehealth_session')?.value;
+        const providerCookie = cookieStore.get('telehealth_provider_session')?.value;
 
-        let sessionTokenRef: string;
-
-        if (cookieToken && cookieToken.length >= 32) {
-            sessionTokenRef = cookieToken;
-        } else {
-            const body = await request.json();
-            const validation = validateRequest(TelehealthJoinSessionSchema, body);
-
-            if (!validation.success) {
-                return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
-            }
-            sessionTokenRef = validation.data.sessionTokenRef;
+        if (!providerCookie || providerCookie.length < 32) {
+            await logAuditEvent({
+                eventType: 'SUSPICIOUS_ACTIVITY',
+                userId: context.user.id,
+                ipAddress,
+                userAgent,
+                resourceType: 'telehealth_session',
+                details: { reason: 'provider_join_without_cookie' },
+                riskLevel: 'HIGH',
+            });
+            return NextResponse.json({ error: 'Session token required' }, { status: 403 });
         }
 
-        const session = await resolveTelehealthJoinSession(sessionTokenRef);
+        const session = await resolveTelehealthJoinSession(providerCookie);
         if (!session) {
-            // SEC-SPRINT8: 403 — token is invalid, expired, or already used (single-use)
+            await logAuditEvent({
+                eventType: 'SUSPICIOUS_ACTIVITY',
+                userId: context.user.id,
+                ipAddress,
+                userAgent,
+                resourceType: 'telehealth_session',
+                details: { reason: 'invalid_or_expired_provider_token' },
+                riskLevel: 'HIGH',
+            });
             return NextResponse.json({ error: 'Telehealth session token is invalid, expired, or already used' }, { status: 403 });
         }
 
-        // SEC-SPRINT9: Audit event for telehealth token redemption — PHI access trail
+        // Verify provider's org matches token's org
+        if (session.organizationId !== context.user.organizationId) {
+            await logAuditEvent({
+                eventType: 'SUSPICIOUS_ACTIVITY',
+                userId: context.user.id,
+                ipAddress,
+                userAgent,
+                resourceType: 'telehealth_session',
+                resourceId: session.appointmentId,
+                details: { reason: 'cross_org_provider_join_attempt' },
+                riskLevel: 'HIGH',
+            });
+            return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        }
+
+        // Audit successful provider join with full identity
+        await logAuditEvent({
+            eventType: 'phi_read',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            organizationId: context.user.organizationId ?? undefined,
+            ipAddress,
+            userAgent,
+            resourceType: 'telehealth_session',
+            resourceId: session.appointmentId,
+            details: {
+                access_context: 'telehealth_token_redemption',
+                participant_role: session.participantRole,
+            },
+            phiAccessed: true,
+            riskLevel: 'MEDIUM',
+        });
+
+        const response = NextResponse.json({
+            appointmentId: session.appointmentId,
+            participantRole: session.participantRole,
+            roomUrl: session.roomUrl,
+            token: session.meetingToken ?? null,
+        });
+
+        response.cookies.set('telehealth_provider_session', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 0,
+            path: '/',
+        });
+
+        return response;
+    } catch (error) {
+        logError({ action: 'TELEHEALTH_PROVIDER_JOIN_ERROR', error: sanitizeError(error) });
+        return NextResponse.json({ error: 'Failed to load telehealth session' }, { status: 500 });
+    }
+}
+
+// Provider flow uses centralized withAuth middleware
+const providerJoin = withAuth(handleProviderJoin, {
+    requireOrganization: true,
+    requireMFA: true,
+});
+
+/**
+ * Patient join flow — lightweight cookie-only validation.
+ * Patients may not have full accounts.
+ */
+async function handlePatientJoin(request: NextRequest): Promise<NextResponse> {
+    try {
+        const ipAddress = getClientIP(request);
+        const userAgent = request.headers.get('user-agent') || 'unknown';
+
+        const cookieStore = await cookies();
+        const patientCookie = cookieStore.get('telehealth_session')?.value;
+
+        if (!patientCookie || patientCookie.length < 32) {
+            await logAuditEvent({
+                eventType: 'SUSPICIOUS_ACTIVITY',
+                ipAddress,
+                userAgent,
+                resourceType: 'telehealth_session',
+                details: { reason: 'no_session_cookie_present' },
+                riskLevel: 'HIGH',
+            });
+            return NextResponse.json({ error: 'Session token required' }, { status: 403 });
+        }
+
+        const session = await resolveTelehealthJoinSession(patientCookie);
+        if (!session) {
+            await logAuditEvent({
+                eventType: 'SUSPICIOUS_ACTIVITY',
+                ipAddress,
+                userAgent,
+                resourceType: 'telehealth_session',
+                details: { reason: 'invalid_or_expired_patient_token' },
+                riskLevel: 'HIGH',
+            });
+            return NextResponse.json({ error: 'Telehealth session token is invalid, expired, or already used' }, { status: 403 });
+        }
+
         await logAuditEvent({
             eventType: 'phi_read',
             ipAddress,
@@ -50,7 +160,6 @@ export async function POST(request: Request) {
             riskLevel: 'MEDIUM',
         });
 
-        // SEC-SPRINT9: Clear the cookie after successful redemption
         const response = NextResponse.json({
             appointmentId: session.appointmentId,
             participantRole: session.participantRole,
@@ -58,19 +167,32 @@ export async function POST(request: Request) {
             token: session.meetingToken ?? null,
         });
 
-        if (cookieToken) {
-            response.cookies.set('telehealth_session', '', {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 0,
-                path: '/',
-            });
-        }
+        response.cookies.set('telehealth_session', '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 0,
+            path: '/',
+        });
 
         return response;
     } catch (error) {
-        logError({ action: 'TELEHEALTH_JOIN_SESSION_ERROR', error: sanitizeError(error) });
+        logError({ action: 'TELEHEALTH_PATIENT_JOIN_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to load telehealth session' }, { status: 500 });
     }
+}
+
+/**
+ * Route dispatcher — checks which cookie is present to determine flow.
+ * Provider cookie → withAuth flow. Patient cookie → lightweight flow.
+ */
+export async function POST(request: NextRequest) {
+    const cookieStore = await cookies();
+    const providerCookie = cookieStore.get('telehealth_provider_session')?.value;
+
+    if (providerCookie && providerCookie.length >= 32) {
+        return providerJoin(request);
+    }
+
+    return handlePatientJoin(request);
 }

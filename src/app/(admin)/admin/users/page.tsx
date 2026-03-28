@@ -116,39 +116,49 @@ export default function AdminUsersPage() {
         setShowEditModal(true);
     };
 
+    // SEC-PT6-F7: User modifications via server-side API with audit logging
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingUser) return;
 
         try {
-            const { error } = await supabase
-                .from('users')
-                .update({
+            const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     first_name: formData.first_name,
                     last_name: formData.last_name,
                     specialty: formData.specialty,
-                })
-                .eq('id', editingUser.id);
+                }),
+            });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to update user');
+            }
 
             setShowEditModal(false);
             setEditingUser(null);
             if (organizationId) fetchUsers(organizationId);
         } catch (error) {
             console.error("Error updating user:", error);
-            alert("Failed to update user");
+            alert(error instanceof Error ? error.message : "Failed to update user");
         }
     };
 
     const handleToggleActive = async (user: User) => {
         try {
-            const { error } = await supabase
-                .from('users')
-                .update({ is_active: !user.is_active })
-                .eq('id', user.id);
+            const response = await fetch(`/api/admin/users/${user.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_active: !user.is_active }),
+            });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to toggle user status');
+            }
+
             if (organizationId) fetchUsers(organizationId);
         } catch (error) {
             console.error("Error toggling user status:", error);

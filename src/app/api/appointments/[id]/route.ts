@@ -179,4 +179,5 @@ async function handleDelete(context: AuthContext) {
 
 export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
 export const PATCH = withAuth(handlePatch, { requireOrganization: true, requireMFA: true });
-export const DELETE = withAuth(handleDelete, { requireOrganization: true, requireMFA: true });
+// SEC-PT2-F9: Appointment deletion restricted to ADMIN/SUPER_ADMIN (matches patient/note DELETE pattern)
+export const DELETE = withAuth(handleDelete, { requiredRole: ['ADMIN', 'SUPER_ADMIN'], requireOrganization: true, requireMFA: true });

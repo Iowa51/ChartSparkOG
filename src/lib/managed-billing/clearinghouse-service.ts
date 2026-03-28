@@ -400,9 +400,10 @@ export async function getAllClearinghouseConfigs(): Promise<GlobalConfig[]> {
         return [];
     }
 
+    // SEC-PT5-F5: Exclude credential fields — encrypted secrets must never leave the server
     const { data } = await supabase
         .from('global_clearinghouse_config')
-        .select('*')
+        .select('id, clearinghouse, is_active, api_endpoint, environment, submitter_id, submitter_name, submitter_npi, submitter_tax_id, sftp_host, sftp_port, sftp_username, created_at, updated_at')
         .order('clearinghouse');
 
     return data || [];

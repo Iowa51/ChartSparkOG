@@ -5,6 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import {
     getAllClearinghouseConfigs,
@@ -13,6 +14,24 @@ import {
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEventAsync } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+
+// SEC-PT5-F8: Zod schema for clearinghouse config update — whitelist fields,
+// explicitly exclude api_endpoint to prevent clearinghouse redirection.
+const ClearinghouseConfigUpdateSchema = z.object({
+    clearinghouse: z.string().min(1).max(100),
+    is_active: z.boolean().optional(),
+    environment: z.enum(['production', 'test']).optional(),
+    api_key_encrypted: z.string().optional(),
+    api_secret_encrypted: z.string().optional(),
+    sftp_host: z.string().max(255).optional(),
+    sftp_port: z.number().int().min(1).max(65535).optional(),
+    sftp_username: z.string().max(255).optional(),
+    sftp_password_encrypted: z.string().optional(),
+    submitter_id: z.string().max(100).optional(),
+    submitter_name: z.string().max(255).optional(),
+    submitter_npi: z.string().max(20).optional(),
+    submitter_tax_id: z.string().max(20).optional(),
+}).strict();
 
 async function handleGet(context: AuthContext) {
     try {
@@ -43,7 +62,15 @@ async function handleGet(context: AuthContext) {
 async function handlePut(context: AuthContext) {
     try {
         const { ipAddress, userAgent } = getRequestMetadata(context.request);
-        const config = await context.request.json();
+        const rawConfig = await context.request.json();
+
+        // SEC-PT5-F8: Validate against strict schema — rejects unknown fields (including api_endpoint)
+        const parsed = ClearinghouseConfigUpdateSchema.safeParse(rawConfig);
+        if (!parsed.success) {
+            return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
+        }
+        const config = parsed.data;
+
         const result = await updateClearinghouseConfig(config);
 
         if (!result.success) {

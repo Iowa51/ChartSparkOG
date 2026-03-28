@@ -7,6 +7,7 @@ import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { EncounterTrackingSchema, validateRequest } from '@/lib/validation/schemas';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 /**
  * API Route to track clinical encounter states and maintain a secure audit trail.
@@ -52,14 +53,15 @@ async function handlePost(context: AuthContext) {
         if (trackingError) throw trackingError;
 
         // 2. Create a high-level security audit log entry
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         await logAuditEvent({
             eventType: 'ENCOUNTER_UPDATE',
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
             organizationId: context.user.organizationId ?? undefined,
-            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            ipAddress,
+            userAgent,
             resourceType: 'encounter',
             resourceId: encounterId,
             details: {

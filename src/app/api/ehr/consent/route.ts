@@ -144,7 +144,8 @@ async function handlePut(context: AuthContext) {
     }
 }
 
-export const GET = withAuth(handleGet, { requireMFA: true });
+// SEC-PT2-F8: Consent settings restricted to ADMIN/SUPER_ADMIN (was accessible to any authenticated user)
+export const GET = withAuth(handleGet, { requiredRole: ['ADMIN', 'SUPER_ADMIN'], requireMFA: true });
 export const PUT = withAuth(handlePut, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
     requireOrganization: true,

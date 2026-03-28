@@ -5,14 +5,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { CheckLockoutSchema, validateRequest } from '@/lib/validation/schemas';
+import { checkRateLimitByKey } from '@/lib/security/rate-limit';
+import { validateOrigin } from '@/lib/security/csrf';
 
+// SEC-PT1-F3: 30-minute lockout in production, 5 minutes in development
+const isProduction = process.env.NODE_ENV === 'production';
 const LOCKOUT_CONFIG = {
     maxAttempts: 5,
-    lockoutDuration: 5 * 60 * 1000, // 5 minutes (reduced for demo/recovery)
+    lockoutDuration: isProduction ? 30 * 60 * 1000 : 5 * 60 * 1000,
     resetAttemptsAfter: 15 * 60 * 1000, // 15 minutes
 };
 
 export async function POST(request: NextRequest) {
+    // SEC-PT6-F4: CSRF origin validation for pre-auth state-changing route
+    if (!validateOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
+
     try {
         const rawBody = await request.json();
         const validation = validateRequest(CheckLockoutSchema, rawBody);
@@ -20,6 +29,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
         const { email } = validation.data;
+
+        // SEC-PT1-F3: Per-email rate limiting to prevent brute force via IP rotation.
+        // This limit applies across all IPs for the same email address.
+        const emailRateLimit = await checkRateLimitByKey(
+            email.toLowerCase(),
+            'loginEmail',
+            'check-lockout'
+        );
+        if (!emailRateLimit.success && emailRateLimit.response) {
+            return NextResponse.json(
+                { locked: true, message: 'Too many login attempts for this account. Please try again later.' },
+                { status: 429 }
+            );
+        }
 
         // Skip lockout check only in explicit demo mode AND non-production
         const isDemoMode = process.env.NODE_ENV !== 'production' && process.env.NEXT_PUBLIC_DEMO_MODE === 'true';

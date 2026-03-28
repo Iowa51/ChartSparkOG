@@ -7,9 +7,16 @@ import { createClient } from '@/lib/supabase/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { sendWelcomeEmail, isEmailConfigured } from '@/lib/email/resend';
 import { CompleteSignupSchema, validateRequest } from '@/lib/validation/schemas';
+import { validateOrigin } from '@/lib/security/csrf';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 export async function POST(request: NextRequest) {
+    // SEC-PT6-F4: CSRF origin validation for pre-auth state-changing route
+    if (!validateOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
     try {
         const body = await request.json();
         const validation = validateRequest(CompleteSignupSchema, body);
@@ -144,7 +151,7 @@ export async function POST(request: NextRequest) {
                 userEmail: email,
                 userRole: 'ADMIN',
                 organizationId: org.id,
-                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                ipAddress: getClientIP(request),
                 userAgent: request.headers.get('user-agent') || 'unknown',
                 riskLevel: 'LOW',
                 details: { isNewOrg: true },
@@ -158,13 +165,21 @@ export async function POST(request: NextRequest) {
                 organizationId: org.id,
                 resourceType: 'user',
                 resourceId: userId,
-                ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+                ipAddress: getClientIP(request),
                 userAgent: request.headers.get('user-agent') || 'unknown',
                 riskLevel: 'HIGH',
                 details: { previousRole: null, newRole: 'ADMIN', changedBy: userId },
             });
         } catch {
             // Non-critical - audit log failure shouldn't fail registration
+        }
+
+        // Send welcome email (non-blocking)
+        if (isEmailConfigured() && email) {
+            const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://chart-spark-og.vercel.app'}/login`;
+            sendWelcomeEmail(email, firstName, organizationName, loginUrl).catch((err) => {
+                logWarn({ action: 'WELCOME_EMAIL_FAILED', error: sanitizeError(err) });
+            });
         }
 
         return NextResponse.json({

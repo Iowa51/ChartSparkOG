@@ -54,7 +54,7 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
             if (lockoutCheck.ok) {
                 const lockoutData = await lockoutCheck.json();
                 if (lockoutData.locked) {
-                    setError(lockoutData.message || 'Account temporarily locked. Please try again later.');
+                    setError('Too many attempts. Please try again later.');
                     setIsLoading(false);
                     return;
                 }
@@ -83,11 +83,8 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
             }
 
             if (!supabase) {
-                if (demoModeEnabled) {
-                    setError('Demo mode: Use a demo account (see buttons below)');
-                } else {
-                    setError('Authentication service not configured');
-                }
+                // SEC-PT8-F2: Normalized error — no distinct messages for service state
+                setError('Authentication service unavailable. Please try again later.');
                 setIsLoading(false);
                 return;
             }
@@ -104,13 +101,22 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
                     body: JSON.stringify({ email, success: false }),
                 }).catch(() => { });
 
-                setError(authError.message);
+                // SEC-PT1-F2: Generic error message to prevent account enumeration.
+                // Supabase returns different messages for "invalid credentials" vs
+                // "email not confirmed" which leaks account existence.
+                const isRateLimited = authError.message?.toLowerCase().includes('rate')
+                    || authError.status === 429;
+                setError(
+                    isRateLimited
+                        ? 'Too many attempts. Please try again later.'
+                        : 'Invalid email or password. Please try again.'
+                );
                 setIsLoading(false);
                 return;
             }
 
             if (!authData.session?.user) {
-                setError("Authentication failed. Please try again.");
+                setError('Invalid email or password. Please try again.');
                 setIsLoading(false);
                 return;
             }
@@ -162,14 +168,14 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
                 }
 
                 await supabase.auth.signOut();
-                setError("Unable to load your profile. Please contact support.");
+                setError('Invalid email or password. Please try again.');
                 setIsLoading(false);
                 return;
             }
 
             if (finalUserData.is_active === false) {
                 await supabase.auth.signOut();
-                setError("Your account has been deactivated. Please contact support.");
+                setError('Invalid email or password. Please try again.');
                 setIsLoading(false);
                 return;
             }
@@ -196,7 +202,7 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
 
         } catch (err) {
             console.error("Login error:", err);
-            setError("An unexpected error occurred. Please try again.");
+            setError('Invalid email or password. Please try again.');
             setIsLoading(false);
         }
     };

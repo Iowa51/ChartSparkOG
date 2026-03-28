@@ -96,15 +96,20 @@ async function handleDelete(context: AuthContext) {
             return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
         }
 
-        // Fetch the document to get file_path before deleting
+        // SEC-PT2-F1: Fetch document with explicit org check to prevent cross-org deletion
         const { data: doc, error: fetchError } = await supabase
             .from('patient_documents')
-            .select('id, file_path, uploaded_by')
+            .select('id, file_path, uploaded_by, organization_id')
             .eq('id', docId)
             .eq('patient_id', patientId)
             .single();
 
         if (fetchError || !doc) {
+            return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+        }
+
+        // Verify document belongs to the user's organization
+        if (doc.organization_id !== context.user.organizationId) {
             return NextResponse.json({ error: 'Document not found' }, { status: 404 });
         }
 

@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { logError, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { getClientIP } from '@/lib/utils/get-client-ip';
 
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -20,6 +21,8 @@ export const RATE_LIMITS = {
     ai: { limit: 20, window: 60 * 1000, failClosed: false },
     export: { limit: 5, window: 60 * 1000, failClosed: false },
     login: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
+    // SEC-PT1-F3: Per-email rate limiting to prevent brute force via IP rotation
+    loginEmail: { limit: 10, window: 15 * 60 * 1000, failClosed: true },
     mfaVerify: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
     passwordReset: { limit: 3, window: 60 * 60 * 1000, failClosed: true },
     emailSend: { limit: 5, window: 60 * 60 * 1000, failClosed: true },
@@ -116,6 +119,8 @@ function getRateLimitPrefix(rateLimitKey: RateLimitKey): string {
             return 'ratelimit:export';
         case 'login':
             return 'ratelimit:login';
+        case 'loginEmail':
+            return 'ratelimit:login-email';
         case 'mfaVerify':
             return 'ratelimit:mfa-verify';
         case 'passwordReset':
@@ -235,7 +240,15 @@ async function checkRateLimitWithKey(
     rateLimitKey: RateLimitKey,
     scope = ''
 ): Promise<RateLimitResult> {
+    const config = getRateLimitConfigByKey(rateLimitKey);
+
+    // SEC-PT2-F10: When circuit breaker is open AND endpoint is failClosed,
+    // reject immediately instead of falling back to unreliable in-memory store.
     if (checkCircuitBreaker()) {
+        if (config.failClosed) {
+            logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FAIL_CLOSED', status: 'rejecting_request' });
+            return { allowed: false, limit: config.limit, remaining: 0, resetTime: Date.now() + 30000, retryAfter: 30 };
+        }
         logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FALLBACK', status: 'using_in_memory' });
         return checkInMemoryRateLimitByKey(identifier, rateLimitKey, scope);
     }
@@ -268,12 +281,12 @@ function rateLimitExceededResponse(result: RateLimitResult): NextResponse {
     );
 }
 
+// SEC-PT8-F1: IP extraction delegated to centralized getClientIP() in get-client-ip.ts
+
 export async function checkRateLimit(
     request: NextRequest
 ): Promise<{ success: boolean; response?: NextResponse }> {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-        request.headers.get('x-real-ip') ||
-        'anonymous';
+    const ip = getClientIP(request);
 
     const pathname = request.nextUrl.pathname;
     const config = getRateLimitConfig(pathname);
@@ -282,6 +295,17 @@ export async function checkRateLimit(
 
     try {
         if (checkCircuitBreaker()) {
+            // SEC-PT2-F10: Fail closed for auth endpoints when circuit breaker is open
+            if (config.failClosed) {
+                logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FAIL_CLOSED', status: 'rejecting_request' });
+                return {
+                    success: false,
+                    response: NextResponse.json(
+                        { error: 'Service temporarily unavailable. Please try again.' },
+                        { status: 503 }
+                    ),
+                };
+            }
             logWarn({ action: 'RATE_LIMIT_CIRCUIT_BREAKER_FALLBACK', status: 'using_in_memory' });
             result = checkInMemoryRateLimit(ip, pathname);
         } else if (UPSTASH_URL && UPSTASH_TOKEN) {

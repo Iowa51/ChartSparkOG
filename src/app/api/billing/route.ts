@@ -110,6 +110,39 @@ async function handlePost(context: AuthContext) {
         // F-012: Removed TOCTOU SELECT-then-INSERT duplicate check.
         // Duplicate prevention relies solely on DB UNIQUE constraint + 23505 error handler below.
 
+        // SEC-PT6-F6: Validate service_date is not in the future
+        if (billingData.service_date) {
+            const serviceDate = new Date(billingData.service_date);
+            if (isNaN(serviceDate.getTime()) || serviceDate > new Date()) {
+                return NextResponse.json({ error: 'Service date cannot be in the future' }, { status: 400 });
+            }
+        }
+
+        // SEC-PT6-F6: Validate encounter appointment is in a billable status
+        if (billingData.encounter_id) {
+            const { data: encounter } = await supabase
+                .from('encounters')
+                .select('appointment_id')
+                .eq('id', billingData.encounter_id)
+                .eq('organization_id', context.user.organizationId)
+                .single();
+
+            if (encounter?.appointment_id) {
+                const { data: appointment } = await supabase
+                    .from('appointments')
+                    .select('status')
+                    .eq('id', encounter.appointment_id)
+                    .single();
+
+                if (appointment && !['completed', 'confirmed', 'in_progress'].includes(appointment.status)) {
+                    return NextResponse.json(
+                        { error: 'Cannot create billing for cancelled or no-show appointments' },
+                        { status: 400 }
+                    );
+                }
+            }
+        }
+
         const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
         // SEC-INTEGRITY-2: Explicit fields only — no spread of raw client data

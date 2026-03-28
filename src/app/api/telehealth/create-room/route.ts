@@ -8,6 +8,7 @@ import { logAuditEvent } from '@/lib/security/audit-log';
 import { createTelehealthJoinSession } from '@/lib/security/telehealth-session-tokens';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { TelehealthCreateRoomSchema, validateRequest } from '@/lib/validation/schemas';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 
 async function handler(context: AuthContext) {
     try {
@@ -45,6 +46,17 @@ async function handler(context: AuthContext) {
             );
         }
 
+        // SEC-PT4-F3: Only the assigned provider or an admin can initiate a telehealth room
+        if (
+            appointment.provider_id !== context.user.id &&
+            !['ADMIN', 'SUPER_ADMIN'].includes(context.user.role)
+        ) {
+            return NextResponse.json(
+                { error: 'Only the assigned provider or an admin can start this session' },
+                { status: 403 }
+            );
+        }
+
         const allowedStatuses = ['scheduled', 'confirmed', 'in_progress'];
         if (!allowedStatuses.includes(appointment.status)) {
             return NextResponse.json(
@@ -54,14 +66,15 @@ async function handler(context: AuthContext) {
         }
 
         // Audit PHI access only AFTER authorization has been confirmed
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
         await logAuditEvent({
             eventType: 'phi_read',
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
             organizationId: context.user.organizationId ?? undefined,
-            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            ipAddress,
+            userAgent,
             resourceType: 'appointment',
             resourceId: appointment.id,
             details: {
@@ -110,12 +123,20 @@ async function handler(context: AuthContext) {
                 meetingToken: 'demo-patient-token',
             });
 
-            return NextResponse.json({
+            // SEC-PT4-F2: Provider token delivered via HTTP-only cookie, not response body
+            const demoResponse = NextResponse.json({
                 appointmentId,
-                providerSessionTokenRef,
                 patientInvitePath: `/api/telehealth/accept-invite?appointment=${encodeURIComponent(appointmentId)}`,
                 isDemo: true,
             });
+            demoResponse.cookies.set('telehealth_provider_session', providerSessionTokenRef, {
+                httpOnly: true,
+                secure: false, // Demo mode is always non-production
+                sameSite: 'strict',
+                maxAge: 300,
+                path: '/',
+            });
+            return demoResponse;
         }
 
         if (!roomUrl) {
@@ -207,8 +228,8 @@ async function handler(context: AuthContext) {
             userEmail: context.user.email,
             userRole: context.user.role,
             organizationId: context.user.organizationId ?? undefined,
-            ipAddress: context.request.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: context.request.headers.get('user-agent') || 'unknown',
+            ipAddress,
+            userAgent,
             resourceType: 'telehealth_room',
             resourceId: appointmentId,
             riskLevel: 'LOW',
@@ -235,11 +256,19 @@ async function handler(context: AuthContext) {
             meetingToken: patientToken.token,
         });
 
-        return NextResponse.json({
+        // SEC-PT4-F2: Provider token delivered via HTTP-only cookie, not response body
+        const response = NextResponse.json({
             appointmentId,
-            providerSessionTokenRef,
             patientInvitePath: `/api/telehealth/accept-invite?appointment=${encodeURIComponent(appointmentId)}`,
         });
+        response.cookies.set('telehealth_provider_session', providerSessionTokenRef, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 300,
+            path: '/',
+        });
+        return response;
     } catch (error: unknown) {
         logError({ action: 'ERROR_CREATING_ROOM', error: sanitizeError(error) });
         return NextResponse.json(

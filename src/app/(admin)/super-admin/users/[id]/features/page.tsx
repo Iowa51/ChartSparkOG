@@ -205,23 +205,22 @@ export default function SuperAdminUserFeaturesPage({ params }: { params: Promise
         setOverrideFeature(null);
     };
 
+    // SEC-PT8-F3: Feature mutations via server-side API — granted_by set server-side
     const handleSave = async () => {
         if (pendingChanges.size === 0) return;
 
         setSaving(true);
         try {
             for (const [featureId, change] of pendingChanges) {
-                await toggleUserFeature(
-                    userId,
-                    featureId,
-                    change.enabled,
-                    currentUserId || userId,
-                    {
-                        isTierOverride: change.isOverride,
-                        overrideReason: change.reason,
-                        expiresAt: change.expiresAt
-                    }
-                );
+                const response = await fetch(`/api/admin/users/${userId}/features`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ featureId, enabled: change.enabled }),
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Failed to update feature');
+                }
             }
             setPendingChanges(new Map());
             alert('Features updated successfully');
