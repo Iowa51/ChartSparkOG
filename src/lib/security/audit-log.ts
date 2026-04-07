@@ -2,7 +2,6 @@
 // Uses service role client to bypass RLS (audit logs should always be written)
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
-import { sendEmail } from '@/lib/email/resend';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export type AuditEventType =
@@ -200,26 +199,32 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
         }
 
         // Sanitize details to remove any PHI
-        const sanitizedDetails = entry.details ? sanitizeDetails(entry.details) : null;
+        const sanitizedDetails = entry.details ? sanitizeDetails(entry.details) : {};
 
+        // DB schema uses compact column names; HIPAA metadata goes into details JSONB.
+        // A full-schema migration lives at supabase/migrations/20260407_fix_audit_logs_schema.sql
         const { error } = await supabase.from('audit_logs').insert({
-            timestamp: new Date().toISOString(),
-            event_type: entry.eventType,
+            action: entry.eventType,
             user_id: entry.userId,
-            user_email: entry.userEmail,
-            user_role: entry.userRole,
             organization_id: entry.organizationId,
-            ip_address: entry.ipAddress,
-            user_agent: entry.userAgent,
-            resource_type: entry.resourceType,
-            resource_id: entry.resourceId,
-            details: sanitizedDetails,
-            phi_accessed: entry.phiAccessed || false,
-            risk_level: entry.riskLevel || getRiskLevel(entry.eventType),
+            entity_type: entry.resourceType || null,
+            entity_id: entry.resourceId || null,
+            ip_address: entry.ipAddress || null,
+            details: {
+                ...sanitizedDetails,
+                user_email: entry.userEmail,
+                user_role: entry.userRole,
+                user_agent: entry.userAgent,
+                phi_accessed: entry.phiAccessed || false,
+                risk_level: entry.riskLevel || getRiskLevel(entry.eventType),
+            },
         });
 
         if (error) {
-            logError({ action: 'AUDIT_LOG_DB_WRITE_FAILED', error: sanitizeError(error) });
+            const errMsg = (error as { message?: string; code?: string; details?: string })?.message
+                || (error as { code?: string })?.code
+                || sanitizeError(error);
+            logError({ action: 'AUDIT_LOG_DB_WRITE_FAILED', error: errMsg });
         }
 
         // For critical events, trigger alert
@@ -336,6 +341,8 @@ async function triggerSecurityAlert(entry: AuditLogEntry): Promise<void> {
             const description = ALERT_DESCRIPTIONS[alertCode] || 'A critical security event has been recorded.';
             const severity = entry.riskLevel;
 
+            // Dynamic import to avoid pulling Node.js-only Resend library into Edge Runtime
+            const { sendEmail } = await import('@/lib/email/resend');
             await sendEmail({
                 to: 'support@chartspark.io',
                 subject: `[SECURITY ALERT] ${alertCode} — ${severity}`,

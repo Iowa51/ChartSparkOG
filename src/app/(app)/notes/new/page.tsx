@@ -32,6 +32,7 @@ import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/
 import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
 import { getCodeInfo } from "@/lib/billing/code-library";
 import { quickSuggestCodes } from "@/lib/billing/code-analyzer";
+import { useToast } from "@/components/ui/toast";
 
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
@@ -70,6 +71,7 @@ const PREBUILT_PHRASES: Record<string, string[]> = {
 };
 
 export default function NewNotePage() {
+    const toast = useToast();
     const searchParams = useSearchParams();
     const router = useRouter();
     const templateId = searchParams.get("template") || "tpl-progress-note";
@@ -177,16 +179,16 @@ export default function NewNotePage() {
     const [scribeTranscription, setScribeTranscription] = useState("");
     const [recordingTime, setRecordingTime] = useState(0);
     const [hasRecording, setHasRecording] = useState(false);
-    const [speechSupported, setSpeechSupported] = useState(true);
-    const recognitionRef = React.useRef<any>(null);
 
-    // Check for Web Speech API support
-    React.useEffect(() => {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            setSpeechSupported(false);
-        }
-    }, []);
+    // MediaRecorder-based recording state
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+    const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+    const audioChunksRef = React.useRef<Blob[]>([]);
+    const audioBlobRef = React.useRef<Blob | null>(null);
+    const durationIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+    const mediaStreamRef = React.useRef<MediaStream | null>(null);
+    const mimeTypeRef = React.useRef<string>("audio/webm");
 
     // State for clinician's manual notes/input
     const [clinicianInput, setClinicianInput] = useState("");
@@ -561,7 +563,7 @@ export default function NewNotePage() {
     const handleGenerateNote = async () => {
         const hasPhrases = Object.values(selectedPhrases).some(p => p.length > 0);
         if (!clinicianInput && !isRecording && demoTranscript.length === 0 && !hasPhrases) {
-            alert("Please provide some input (voice, typing, or phrases) before generating a note.");
+            toast.warning("No input provided", "Please add voice, typed notes, or phrases before generating a note.");
             return;
         }
 
@@ -815,7 +817,7 @@ Prognosis: Favorable with continued treatment adherence.`;
             .join('\n\n');
 
         if (!fullNote.trim()) {
-            alert('Please generate a note first before copying.');
+            toast.warning("Nothing to copy", "Please generate or write a note first.");
             return;
         }
 
@@ -842,14 +844,14 @@ Prognosis: Favorable with continued treatment adherence.`;
     const handleSaveNote = async (markComplete: boolean = false) => {
         // Validate we have a patient
         if (!currentPatient?.id) {
-            alert('No patient selected. Please select a patient before saving.');
+            toast.warning("No patient selected", "Please select a patient before saving.");
             return;
         }
 
         // Check if note has content
         const hasContent = Object.values(noteSections).some(v => v && v.trim().length > 0);
         if (!hasContent) {
-            alert('Please generate or write some note content before saving.');
+            toast.warning("Note is empty", "Please generate or write some note content before saving.");
             return;
         }
 
@@ -914,7 +916,7 @@ Prognosis: Favorable with continued treatment adherence.`;
             }
         } catch (error) {
             console.error('Error saving note:', error);
-            alert(error instanceof Error ? error.message : 'Failed to save note. Please try again.');
+            toast.error("Failed to save note", error instanceof Error ? error.message : 'Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -1261,196 +1263,90 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                         AI Voice Scribe
                                                     </label>
                                                     {isRecording && (
-                                                        <span className="text-xs font-mono text-red-500 flex items-center gap-1">
+                                                        <span className="text-xs font-mono text-red-500 flex items-center gap-1.5">
                                                             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                                                            Recording...
+                                                            {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, '0')}
                                                         </span>
                                                     )}
                                                 </div>
-
-                                                {/* Browser Support Warning */}
-                                                {!speechSupported && (
-                                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                                                        <div className="flex items-start gap-3">
-                                                            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                                                            <div className="space-y-1">
-                                                                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
-                                                                    Speech Recognition Not Available
-                                                                </p>
-                                                                <p className="text-xs text-amber-700 dark:text-amber-300">
-                                                                    Your browser doesn&apos;t support the Web Speech API. For live voice transcription, please use:
-                                                                </p>
-                                                                <ul className="text-xs text-amber-700 dark:text-amber-300 list-disc list-inside mt-1">
-                                                                    <li><strong>Google Chrome</strong> (recommended)</li>
-                                                                    <li><strong>Microsoft Edge</strong></li>
-                                                                    <li><strong>Safari</strong> on macOS/iOS</li>
-                                                                </ul>
-                                                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 italic">
-                                                                    Demo mode is available below for testing purposes.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
 
                                                 {/* Recording Control Button */}
                                                 <button
                                                     onClick={() => {
                                                         if (isRecording) {
                                                             // Stop recording
+                                                            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                                                                mediaRecorderRef.current.stop();
+                                                            }
+                                                            // Stop all tracks to release microphone
+                                                            if (mediaStreamRef.current) {
+                                                                mediaStreamRef.current.getTracks().forEach(track => track.stop());
+                                                                mediaStreamRef.current = null;
+                                                            }
+                                                            // Clear duration interval
+                                                            if (durationIntervalRef.current) {
+                                                                clearInterval(durationIntervalRef.current);
+                                                                durationIntervalRef.current = null;
+                                                            }
                                                             setIsRecording(false);
-                                                            setHasRecording(true);
-                                                            if (recognitionRef.current) {
-                                                                recognitionRef.current.stop();
-                                                            }
                                                         } else {
-                                                            // Start recording with Web Speech API
-                                                            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                                                            console.log('[Scribe] SpeechRecognition available:', !!SpeechRecognition);
+                                                            // Start recording with MediaRecorder
+                                                            navigator.mediaDevices.getUserMedia({ audio: true })
+                                                                .then((stream) => {
+                                                                    mediaStreamRef.current = stream;
 
-                                                            if (SpeechRecognition) {
-                                                                // First, explicitly request microphone permission via getUserMedia
-                                                                // This triggers Chrome's native permission dialog
-                                                                if (process.env.NODE_ENV === 'development') console.log('[Scribe] Requesting microphone permission...');
-
-                                                                navigator.mediaDevices.getUserMedia({ audio: true })
-                                                                    .then((stream) => {
-                                                                        if (process.env.NODE_ENV === 'development') console.log('[Scribe] Microphone permission granted!');
-                                                                        // Stop the stream immediately - we just needed the permission
-                                                                        stream.getTracks().forEach(track => track.stop());
-
-                                                                        // Now start speech recognition
-                                                                        try {
-                                                                            const recognition = new SpeechRecognition();
-                                                                            recognition.continuous = true;
-                                                                            recognition.interimResults = true;
-                                                                            recognition.lang = 'en-US';
-
-                                                                            recognition.onstart = () => {
-                                                                                if (process.env.NODE_ENV === 'development') console.log('[Scribe] Speech recognition started');
-                                                                            };
-
-                                                                            recognition.onresult = (event: any) => {
-                                                                                let transcript = '';
-                                                                                for (let i = 0; i < event.results.length; i++) {
-                                                                                    transcript += event.results[i][0].transcript;
-                                                                                }
-                                                                                // PHI removed: transcript content must never be logged
-                                                                                setScribeTranscription(transcript);
-                                                                            };
-
-                                                                            recognition.onerror = (event: any) => {
-                                                                                if (process.env.NODE_ENV === 'development') console.error('[Scribe] Speech recognition error:', event.error);
-                                                                                setIsRecording(false);
-
-                                                                                // Provide clear, actionable error messages instead of demo fallback
-                                                                                if (event.error === 'not-allowed') {
-                                                                                    alert(
-                                                                                        '🎤 Microphone Access Required\n\n' +
-                                                                                        'To use AI Scribe, please enable microphone access:\n\n' +
-                                                                                        '1. Click the lock/tune icon (🔒) in the address bar\n' +
-                                                                                        '2. Find "Microphone" and set it to "Allow"\n' +
-                                                                                        '3. Refresh this page (Ctrl+R)\n' +
-                                                                                        '4. Click "Start AI Scribe" again\n\n' +
-                                                                                        'If still not working, check:\n' +
-                                                                                        '• Windows Settings → Privacy → Microphone\n' +
-                                                                                        '• Ensure Chrome has microphone access enabled\n\n' +
-                                                                                        'Recommended Browser: Google Chrome or Microsoft Edge'
-                                                                                    );
-                                                                                } else if (event.error === 'no-speech') {
-                                                                                    // This is normal - just means no speech detected yet
-                                                                                    // No speech - non-actionable, no log needed
-                                                                                } else if (event.error === 'network') {
-                                                                                    alert(
-                                                                                        '🌐 Network Error\n\n' +
-                                                                                        'Speech recognition requires an internet connection.\n' +
-                                                                                        'Please check your network and try again.\n\n' +
-                                                                                        'Note: Some browsers (like Vivaldi) block speech recognition.\n' +
-                                                                                        'Recommended: Use Google Chrome or Microsoft Edge.'
-                                                                                    );
-                                                                                } else if (event.error === 'service-not-allowed') {
-                                                                                    alert(
-                                                                                        '⚠️ Browser Not Compatible\n\n' +
-                                                                                        'Your browser blocks speech recognition services.\n\n' +
-                                                                                        'Please use one of these browsers:\n' +
-                                                                                        '• Google Chrome (Recommended)\n' +
-                                                                                        '• Microsoft Edge\n' +
-                                                                                        '• Safari (Mac/iOS only)\n\n' +
-                                                                                        'Note: Firefox and Vivaldi do NOT support this feature.'
-                                                                                    );
-                                                                                } else if (event.error === 'aborted') {
-                                                                                    // User stopped recording, this is fine
-                                                                                    // Recognition aborted by user - expected, no log needed
-                                                                                } else {
-                                                                                    alert('Speech recognition error: ' + event.error + '\n\nPlease try refreshing the page or use Google Chrome.');
-                                                                                }
-                                                                            };
-
-                                                                            recognition.onend = () => {
-                                                                                if (process.env.NODE_ENV === 'development') console.log('[Scribe] Recognition ended');
-                                                                                setIsRecording(false);
-                                                                                if (scribeTranscription) {
-                                                                                    setHasRecording(true);
-                                                                                }
-                                                                            };
-
-                                                                            recognition.onaudiostart = () => {
-                                                                                setScribeTranscription("🎤 Listening... Speak now!");
-                                                                            };
-
-                                                                            // Set state before starting
-                                                                            setIsRecording(true);
-                                                                            setRecordingTime(0);
-                                                                            setScribeTranscription("Initializing speech recognition...");
-
-                                                                            recognitionRef.current = recognition;
-                                                                            recognition.start();
-                                                                            if (process.env.NODE_ENV === 'development') console.log('[Scribe] Recognition started');
-
-                                                                        } catch (err) {
-                                                                            if (process.env.NODE_ENV === 'development') console.error('[Scribe] Failed to start speech recognition:', err);
-                                                                            setIsRecording(false);
-                                                                            alert('Failed to start speech recognition. Please try again or use a different browser.');
+                                                                    // Pick best supported mimeType
+                                                                    const mimeTypes = ['audio/webm', 'audio/ogg', 'audio/mp4'];
+                                                                    let selectedMime = '';
+                                                                    for (const mime of mimeTypes) {
+                                                                        if (MediaRecorder.isTypeSupported(mime)) {
+                                                                            selectedMime = mime;
+                                                                            break;
                                                                         }
-                                                                    })
-                                                                    .catch((err) => {
-                                                                        if (process.env.NODE_ENV === 'development') console.error('[Scribe] Microphone access denied:', err);
-                                                                        alert(
-                                                                            '🎤 Microphone Access Required\n\n' +
-                                                                            'Please grant microphone permission to use AI Scribe:\n\n' +
-                                                                            '1. Click the lock icon (🔒) in the address bar\n' +
-                                                                            '2. Set "Microphone" to "Allow"\n' +
-                                                                            '3. Refresh the page and try again\n\n' +
-                                                                            'If still not working:\n' +
-                                                                            '• Windows: Settings → Privacy → Microphone → Allow apps to access\n' +
-                                                                            '• Make sure Chrome has microphone permission\n\n' +
-                                                                            'Error: ' + (err.message || err.name || 'Access denied')
-                                                                        );
-                                                                    });
-                                                            } else {
-                                                                // Fallback demo mode for unsupported browsers - no alert, just start demo
-                                                                if (process.env.NODE_ENV === 'development') console.log('[Scribe] Using demo mode');
-                                                                setIsRecording(true);
-                                                                setRecordingTime(0);
-                                                                setScribeTranscription("");
-                                                                setTimeout(() => {
-                                                                    setIsRecording(false);
-                                                                    setHasRecording(true);
-                                                                    setScribeTranscription(
-                                                                        "Patient reports feeling much better since last visit. Sleep has improved significantly, now getting 7-8 hours per night. " +
-                                                                        "No side effects reported from current medication. Mood is stable, describes it as 'pretty good most days'. " +
-                                                                        "Appetite is normal. Energy levels have improved. Denies any suicidal or homicidal ideation. " +
-                                                                        "Patient is compliant with medication regimen. Wants to continue current treatment plan."
+                                                                    }
+                                                                    mimeTypeRef.current = selectedMime || 'audio/webm';
+
+                                                                    const recorder = new MediaRecorder(stream, selectedMime ? { mimeType: selectedMime } : undefined);
+                                                                    audioChunksRef.current = [];
+                                                                    audioBlobRef.current = null;
+
+                                                                    recorder.ondataavailable = (event) => {
+                                                                        if (event.data.size > 0) {
+                                                                            audioChunksRef.current.push(event.data);
+                                                                        }
+                                                                    };
+
+                                                                    recorder.onstop = () => {
+                                                                        // Assemble chunks into a single Blob
+                                                                        const blob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
+                                                                        audioBlobRef.current = blob;
+                                                                        setHasRecording(true);
+                                                                    };
+
+                                                                    mediaRecorderRef.current = recorder;
+                                                                    recorder.start(1000); // 1-second chunks
+
+                                                                    // Start duration counter
+                                                                    setRecordingDuration(0);
+                                                                    durationIntervalRef.current = setInterval(() => {
+                                                                        setRecordingDuration(prev => prev + 1);
+                                                                    }, 1000);
+
+                                                                    setIsRecording(true);
+                                                                    setScribeTranscription("");
+                                                                })
+                                                                .catch((err) => {
+                                                                    if (process.env.NODE_ENV === 'development') console.error('[Scribe] Microphone access denied:', err);
+                                                                    toast.error(
+                                                                        'Microphone access denied',
+                                                                        'Allow microphone access in browser settings or use the Manual tab.'
                                                                     );
-                                                                }, 3000);
-                                                            }
+                                                                });
                                                         }
                                                     }}
                                                     className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
                                                         ? "bg-red-500 text-white shadow-red-500/30 ring-4 ring-red-500/20"
-                                                        : speechSupported
-                                                            ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
-                                                            : "bg-amber-600 text-white hover:bg-amber-700 shadow-amber-600/20"
+                                                        : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
                                                         }`}
                                                 >
                                                     {isRecording ? (
@@ -1458,18 +1354,23 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                             <MicOff className="h-4 w-4" />
                                                             Stop Recording
                                                         </>
-                                                    ) : speechSupported ? (
+                                                    ) : (
                                                         <>
                                                             <Mic className="h-4 w-4" />
                                                             Start AI Scribe
                                                         </>
-                                                    ) : (
-                                                        <>
-                                                            <Mic className="h-4 w-4" />
-                                                            Start Demo Mode
-                                                        </>
                                                     )}
                                                 </button>
+
+                                                {/* Audio ready indicator */}
+                                                {!isRecording && audioBlobRef.current && !scribeTranscription && (
+                                                    <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                                                        <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                                            Audio ready — tap Generate to transcribe and create note
+                                                        </span>
+                                                    </div>
+                                                )}
 
                                                 {/* Transcription Area */}
                                                 {(hasRecording || scribeTranscription) && (
@@ -1482,6 +1383,8 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                 onClick={() => {
                                                                     setScribeTranscription("");
                                                                     setHasRecording(false);
+                                                                    audioBlobRef.current = null;
+                                                                    audioChunksRef.current = [];
                                                                 }}
                                                                 className="text-[9px] text-muted-foreground hover:text-red-500 font-bold uppercase"
                                                             >
@@ -1491,19 +1394,114 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                         <textarea
                                                             value={scribeTranscription}
                                                             onChange={(e) => setScribeTranscription(e.target.value)}
-                                                            placeholder="Transcription will appear here after recording..."
+                                                            placeholder="Transcription will appear here after processing..."
                                                             className="w-full h-32 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
                                                         />
                                                         <button
-                                                            onClick={() => {
-                                                                // Use transcription as clinician input and generate
-                                                                setClinicianInput(scribeTranscription);
-                                                                handleGenerateNote();
+                                                            onClick={async () => {
+                                                                if (audioBlobRef.current) {
+                                                                    // Send audio to server for transcription + note generation
+                                                                    setIsTranscribing(true);
+                                                                    try {
+                                                                        const formData = new FormData();
+                                                                        const ext = mimeTypeRef.current.includes('ogg') ? 'ogg' : mimeTypeRef.current.includes('mp4') ? 'mp4' : 'webm';
+                                                                        formData.append('audio', audioBlobRef.current, `recording.${ext}`);
+                                                                        formData.append('templateFormat', template.format === 'soap' ? 'soap' : 'paragraph');
+                                                                        if (Object.values(selectedPhrases).some(p => p.length > 0)) {
+                                                                            formData.append('selectedPhrases', JSON.stringify(selectedPhrases));
+                                                                        }
+                                                                        if (patientId) {
+                                                                            formData.append('patientId', patientId);
+                                                                        }
+
+                                                                        const response = await fetch('/api/ai/transcribe-and-generate', {
+                                                                            method: 'POST',
+                                                                            body: formData,
+                                                                        });
+
+                                                                        if (!response.ok) {
+                                                                            throw new Error('Transcription request failed');
+                                                                        }
+
+                                                                        const data = await response.json();
+
+                                                                        // Show transcription
+                                                                        if (data.transcript) {
+                                                                            setScribeTranscription(data.transcript);
+                                                                        }
+
+                                                                        // Populate note sections
+                                                                        if (data.sections) {
+                                                                            let updatedSections: Record<string, string> = { ...noteSections };
+                                                                            if (template.format === "soap") {
+                                                                                template.sections.forEach(s => {
+                                                                                    const label = s.label.toLowerCase();
+                                                                                    if (label.includes("subjective")) updatedSections[s.id] = data.sections.subjective || '';
+                                                                                    else if (label.includes("objective")) updatedSections[s.id] = data.sections.objective || '';
+                                                                                    else if (label.includes("assessment")) updatedSections[s.id] = data.sections.assessment || '';
+                                                                                    else if (label.includes("plan")) updatedSections[s.id] = data.sections.plan || '';
+                                                                                });
+                                                                            } else {
+                                                                                updatedSections[template.sections[0].id] = data.sections.content ||
+                                                                                    `${data.sections.subjective}\n\n${data.sections.objective}\n\n${data.sections.assessment}\n\n${data.sections.plan}`;
+                                                                            }
+                                                                            setNoteSections(updatedSections);
+                                                                        }
+
+                                                                        // Populate suggested codes
+                                                                        if (data.suggestedCodes) {
+                                                                            setSuggestedCodes(data.suggestedCodes);
+                                                                        }
+
+                                                                        // Free memory
+                                                                        audioBlobRef.current = null;
+                                                                        audioChunksRef.current = [];
+                                                                    } catch (error) {
+                                                                        console.error('Transcription error:', error);
+                                                                        // Demo mode fallback: use demo transcript + generate demo note
+                                                                        const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+                                                                        if (isDemoMode) {
+                                                                            // Convert demo transcript array to readable text
+                                                                            const demoText = demoTranscript.map(t => `[${t.speaker}] ${t.text}`).join('\n');
+                                                                            setScribeTranscription(demoText);
+                                                                            const demoNote = generateDemoNote(templateId);
+                                                                            if (demoNote) {
+                                                                                let updatedSections: Record<string, string> = { ...noteSections };
+                                                                                if (template.format === "soap") {
+                                                                                    template.sections.forEach(s => {
+                                                                                        const label = s.label.toLowerCase();
+                                                                                        if (label.includes("subjective")) updatedSections[s.id] = demoNote.subjective || '';
+                                                                                        else if (label.includes("objective")) updatedSections[s.id] = demoNote.objective || '';
+                                                                                        else if (label.includes("assessment")) updatedSections[s.id] = demoNote.assessment || '';
+                                                                                        else if (label.includes("plan")) updatedSections[s.id] = demoNote.plan || '';
+                                                                                    });
+                                                                                }
+                                                                                setNoteSections(updatedSections);
+                                                                            }
+                                                                            if (demoNote?.suggestedCodes) setSuggestedCodes(demoNote.suggestedCodes);
+                                                                            audioBlobRef.current = null;
+                                                                            audioChunksRef.current = [];
+                                                                        } else {
+                                                                            toast.error('Transcription failed', 'Please try again or switch to the Manual tab.');
+                                                                        }
+                                                                    } finally {
+                                                                        setIsTranscribing(false);
+                                                                    }
+                                                                } else if (scribeTranscription.trim()) {
+                                                                    // Text-only: use existing generate flow
+                                                                    setClinicianInput(scribeTranscription);
+                                                                    handleGenerateNote();
+                                                                }
                                                             }}
-                                                            disabled={isGenerating || !scribeTranscription.trim()}
+                                                            disabled={isGenerating || isTranscribing || (!audioBlobRef.current && !scribeTranscription.trim())}
                                                             className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
-                                                            {isGenerating ? (
+                                                            {isTranscribing ? (
+                                                                <>
+                                                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                                                    Processing audio...
+                                                                </>
+                                                            ) : isGenerating ? (
                                                                 <>
                                                                     <RefreshCw className="h-4 w-4 animate-spin" />
                                                                     Generating...
@@ -1511,7 +1509,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                             ) : (
                                                                 <>
                                                                     <Sparkles className="h-4 w-4" />
-                                                                    Generate Note from Transcription
+                                                                    {audioBlobRef.current ? 'Transcribe & Generate Note' : 'Generate Note from Transcription'}
                                                                 </>
                                                             )}
                                                         </button>

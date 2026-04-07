@@ -3,6 +3,7 @@ import { DemoAuthGuard } from "@/components/auth/DemoAuthGuard";
 import { SessionTimeout } from "@/components/SessionTimeout";
 import { TrialBanner } from "@/components/subscriptions/trial-banner";
 import { ReadOnlyBanner } from "@/components/subscriptions/read-only-banner";
+import { ToastProvider } from "@/components/ui/toast";
 
 // Force dynamic rendering - app pages require authentication at runtime
 export const dynamic = 'force-dynamic';
@@ -16,16 +17,18 @@ export default function AppLayout({
     const enableTimeout = true;
 
     return (
-        <DemoAuthGuard>
-            <TrialBanner />
-            <ReadOnlyBanner />
-            <div className="min-h-screen flex bg-background">
-                <Sidebar />
-                <main className="flex-1 flex flex-col min-h-screen overflow-y-auto">
-                    {children}
-                </main>
-            </div>
-            <SessionTimeout enabled={enableTimeout} />
-        </DemoAuthGuard>
+        <ToastProvider>
+            <DemoAuthGuard>
+                <TrialBanner />
+                <ReadOnlyBanner />
+                <div className="min-h-screen flex bg-background">
+                    <Sidebar />
+                    <main className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+                        {children}
+                    </main>
+                </div>
+                <SessionTimeout enabled={enableTimeout} />
+            </DemoAuthGuard>
+        </ToastProvider>
     );
 }
