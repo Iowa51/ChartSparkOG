@@ -13,11 +13,35 @@ import { AIGenerateNoteSchema, validateRequest } from '@/lib/validation/schemas'
 
 
 async function handler(context: AuthContext) {
+    // Proxy to external scribe service if configured
+    const scribeUrl = process.env.SCRIBE_SERVICE_URL;
+    if (scribeUrl) {
+        const body = await context.request.json();
+        try {
+            console.log("Proxying generate-note request to scribe sidecar:", scribeUrl);
+            const proxyResponse = await fetch(`${scribeUrl}/api/ai/generate-note`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            console.log("Scribe generate-note proxy response status:", proxyResponse.status);
+            const data = await proxyResponse.json();
+            return NextResponse.json(data, { status: proxyResponse.status });
+        } catch (error) {
+            console.error("Scribe generate-note proxy failed:", error);
+            return NextResponse.json(
+                { success: false, error: "Note generation service unavailable" },
+                { status: 503 }
+            );
+        }
+    }
+
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
-    try {
-        const body = await context.request.json();
+    // Parse body once (request.json() can only be called once)
+    const body = await context.request.json();
 
+    try {
         // Validate input with Zod schema (enforces 50K char limit)
         const validation = validateRequest(AIGenerateNoteSchema, body);
         if (!validation.success) {

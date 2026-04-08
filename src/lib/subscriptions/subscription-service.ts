@@ -7,39 +7,49 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { devWarn, devError } from '@/lib/logging/safe-logger';
+import { Redis } from '@upstash/redis';
 
-// OPTIMIZATION: In-memory cache for subscription status
-// Reduces DB queries for frequently accessed subscription data
-interface CacheEntry<T> {
-    data: T;
-    expiresAt: number;
+// OPTIMIZATION: Redis cache for subscription status (serverless-safe)
+const CACHE_PREFIX = 'sub_cache:';
+const CACHE_TTL_SECONDS = 300; // 5 minutes
+
+function getRedisClient(): Redis | null {
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!url || !token) return null;
+    return new Redis({ url, token });
 }
 
-const subscriptionCache = new Map<string, CacheEntry<SubscriptionInfo>>();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-function getCachedSubscription(organizationId: string): SubscriptionInfo | null {
-    const entry = subscriptionCache.get(organizationId);
-    if (entry && entry.expiresAt > Date.now()) {
-        return entry.data;
+async function getCachedSubscription(organizationId: string): Promise<SubscriptionInfo | null> {
+    try {
+        const redis = getRedisClient();
+        if (!redis) return null;
+        const cached = await redis.get<SubscriptionInfo>(`${CACHE_PREFIX}${organizationId}`);
+        return cached ?? null;
+    } catch {
+        return null;
     }
-    // Remove expired entry
-    if (entry) {
-        subscriptionCache.delete(organizationId);
-    }
-    return null;
 }
 
-function setCachedSubscription(organizationId: string, data: SubscriptionInfo): void {
-    subscriptionCache.set(organizationId, {
-        data,
-        expiresAt: Date.now() + CACHE_TTL_MS,
-    });
+async function setCachedSubscription(organizationId: string, data: SubscriptionInfo): Promise<void> {
+    try {
+        const redis = getRedisClient();
+        if (!redis) return;
+        await redis.set(`${CACHE_PREFIX}${organizationId}`, data, { ex: CACHE_TTL_SECONDS });
+    } catch {
+        // Non-fatal: cache write failure should not break the flow
+    }
 }
 
 // Export for cache invalidation when subscription changes
-export function invalidateSubscriptionCache(organizationId: string): void {
-    subscriptionCache.delete(organizationId);
+export async function invalidateSubscriptionCache(organizationId: string): Promise<void> {
+    try {
+        const redis = getRedisClient();
+        if (!redis) return;
+        await redis.del(`${CACHE_PREFIX}${organizationId}`);
+    } catch {
+        // Non-fatal
+    }
 }
 
 export type SubscriptionStatus =
@@ -68,7 +78,7 @@ export interface SubscriptionInfo {
  */
 export async function getSubscriptionStatus(organizationId: string): Promise<SubscriptionInfo> {
     // Check cache first
-    const cached = getCachedSubscription(organizationId);
+    const cached = await getCachedSubscription(organizationId);
     if (cached) {
         return cached;
     }
@@ -83,7 +93,7 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
             canAccess: true,
             canEdit: true,
         };
-        setCachedSubscription(organizationId, demoResult);
+        await setCachedSubscription(organizationId, demoResult);
         return demoResult;
     }
 
@@ -104,7 +114,7 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
             canAccess: false,
             canEdit: false,
         };
-        setCachedSubscription(organizationId, result);
+        await setCachedSubscription(organizationId, result);
         return result;
     }
 
@@ -131,7 +141,7 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
                 canAccess: true,
                 canEdit: false,
             };
-            setCachedSubscription(organizationId, result);
+            await setCachedSubscription(organizationId, result);
             return result;
         }
 
@@ -145,7 +155,7 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
             trialEndsAt: subscription.trial_ends_at,
             daysRemaining,
         };
-        setCachedSubscription(organizationId, result);
+        await setCachedSubscription(organizationId, result);
         return result;
     }
 
@@ -163,7 +173,7 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
                 canAccess: false,
                 canEdit: false,
             };
-            setCachedSubscription(organizationId, result);
+            await setCachedSubscription(organizationId, result);
             return result;
         }
 
@@ -174,7 +184,7 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
             canEdit: false,
             deletionScheduledAt: subscription.deletion_scheduled_at,
         };
-        setCachedSubscription(organizationId, result);
+        await setCachedSubscription(organizationId, result);
         return result;
     }
 
@@ -188,7 +198,7 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
             canAccess: true,
             canEdit: true,
         };
-        setCachedSubscription(organizationId, result);
+        await setCachedSubscription(organizationId, result);
         return result;
     }
 
@@ -243,7 +253,7 @@ export async function createTrialSubscription(
     });
 
     // OPTIMIZATION: Invalidate cache after subscription creation
-    invalidateSubscriptionCache(organizationId);
+    await invalidateSubscriptionCache(organizationId);
 }
 
 /**
@@ -290,7 +300,7 @@ export async function activateSubscription(
         .eq('organization_id', organizationId);
 
     // OPTIMIZATION: Invalidate cache after subscription change
-    invalidateSubscriptionCache(organizationId);
+    await invalidateSubscriptionCache(organizationId);
 }
 
 /**

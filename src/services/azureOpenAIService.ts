@@ -43,17 +43,34 @@ class AzureOpenAIService {
     private apiVersion: string;
     private isConfigured: boolean;
     private client: AzureOpenAI | null;
+    private isInitialized: boolean;
 
     constructor() {
+        this.endpoint = undefined;
+        this.apiKey = undefined;
+        this.deploymentName = undefined;
+        this.apiVersion = "2024-08-01-preview";
+        this.isConfigured = false;
+        this.client = null;
+        this.isInitialized = false;
+    }
+
+    private _ensureInitialized(): void {
+        if (this.isInitialized) {
+            return;
+        }
+
+        this.isInitialized = true;
         this.endpoint = process.env.AZURE_OPENAI_ENDPOINT;
         this.apiKey = process.env.AZURE_OPENAI_API_KEY;
         this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
         this.apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-08-01-preview";
         this.isConfigured = !!(this.endpoint && this.apiKey && this.deploymentName);
-        this.client = null;
     }
 
     private _ensureClient(): AzureOpenAI {
+        this._ensureInitialized();
+
         if (!this.isConfigured) {
             throw new Error(
                 "Running in DEMO mode - no Azure credentials configured"

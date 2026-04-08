@@ -20,6 +20,23 @@ export interface Template {
 
 export const templates: Template[] = [
     {
+        id: "tpl-soap-note",
+        name: "SOAP Note",
+        description: "Standard SOAP format note (Subjective, Objective, Assessment, Plan).",
+        specialties: ["Psychiatry", "Psychology", "Family Medicine", "Internal Medicine"],
+        isSystem: true,
+        is_system: true,
+        is_default: false,
+        cpt_suggestions: ["99213", "99214", "99215"],
+        format: "soap",
+        sections: [
+            { id: "subjective", label: "Subjective", placeholder: "Chief complaint, HPI, ROS, current medications, patient-reported symptoms...", required: true },
+            { id: "objective", label: "Objective", placeholder: "Vitals, physical exam, mental status exam, lab results...", required: true },
+            { id: "assessment", label: "Assessment", placeholder: "Diagnostic formulation, ICD-10 codes, risk level...", required: true },
+            { id: "plan", label: "Plan", placeholder: "Medications, therapy, follow-up, patient education...", required: true }
+        ]
+    },
+    {
         id: "tpl-progress-note",
         name: "Progress Note (PRIMARY)",
         description: "Standard SOAP note optimized for insurance billing and clinical quality.",

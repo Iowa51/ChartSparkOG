@@ -9,6 +9,7 @@ import {
     CheckCircle,
     RefreshCw,
     Copy,
+    Check,
     Download,
     Send,
     Mic,
@@ -456,6 +457,9 @@ export default function NewNotePage() {
 
     // Format Smart Triage results as a clinical addendum string
     const formatTriageSummary = (result: any): string => {
+        if (!result || (result.result === null && !result.overall_safety_score)) {
+            return '';
+        }
         const lines: string[] = ['', '── Smart Triage: Medication Safety ──'];
 
         // Safety score
@@ -527,6 +531,10 @@ export default function NewNotePage() {
             if (!response.ok) return null;
 
             const data = await response.json();
+            if (data.result === null) {
+                setTriageSummary(null);
+                return null;
+            }
             const triageResult = data.result || data;
             const summary = formatTriageSummary({ ...triageResult, safety_score: data.safety_score, safety_level: data.safety_level });
             setTriageSummary(summary);
@@ -584,17 +592,19 @@ export default function NewNotePage() {
                     clinicianInput,
                     selectedPhrases,
                     templateId,
-                    templateFormat: template.format
+                    templateFormat: "soap"
                 })
             });
 
             const triageText = await triagePromise;
 
             if (!response.ok) {
-                // Fallback to demo note if API fails
-                console.warn('AI API failed, using fallback');
-                const phraseNote = generateNoteFromPhrases();
-                applyNoteToSections(phraseNote, triageText);
+                let errMsg = `Request failed (${response.status})`;
+                try {
+                    const errData = await response.json();
+                    errMsg = errData.error || errData.message || errMsg;
+                } catch {}
+                toast.error('Note generation failed', errMsg);
                 return;
             }
 
@@ -623,17 +633,13 @@ export default function NewNotePage() {
 
                 setNoteSections(updatedSections);
                 if (data.suggestedCodes) setSuggestedCodes(data.suggestedCodes);
+                setClinicianInput("");
             } else {
-                // Fallback
-                const phraseNote = generateNoteFromPhrases();
-                applyNoteToSections(phraseNote, triageText);
+                toast.error('Note generation failed', data.error || 'AI returned no content.');
             }
         } catch (error) {
             console.error('Error calling AI:', error);
-            const triageText = await triagePromise;
-            // Fallback to demo on error
-            const phraseNote = generateNoteFromPhrases();
-            applyNoteToSections(phraseNote, triageText);
+            toast.error('Note generation failed', error instanceof Error ? error.message : 'Network error');
         } finally {
             setIsGenerating(false);
             setAutoSaved(new Date().toLocaleTimeString());
@@ -1406,7 +1412,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                         const formData = new FormData();
                                                                         const ext = mimeTypeRef.current.includes('ogg') ? 'ogg' : mimeTypeRef.current.includes('mp4') ? 'mp4' : 'webm';
                                                                         formData.append('audio', audioBlobRef.current, `recording.${ext}`);
-                                                                        formData.append('templateFormat', template.format === 'soap' ? 'soap' : 'paragraph');
+                                                                        formData.append('templateFormat', 'soap');
                                                                         if (Object.values(selectedPhrases).some(p => p.length > 0)) {
                                                                             formData.append('selectedPhrases', JSON.stringify(selectedPhrases));
                                                                         }
@@ -1715,32 +1721,43 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                             <RefreshCw className={`h-3.5 w-3.5 ${isGenerating ? "animate-spin" : ""}`} />
                                             Re-Sync AI
                                         </button>
-                                        <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-4 py-2 hover:bg-muted border border-border rounded-xl transition-all">
-                                            <Copy className="h-3.5 w-3.5" />
-                                            Copy
+                                        <button onClick={copyFullNote} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-4 py-2 hover:bg-muted border border-border rounded-xl transition-all">
+                                            {noteCopied ? (
+                                                <>
+                                                    <Check className="h-3.5 w-3.5" />
+                                                    Copied!
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                    Copy
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Editor Sections */}
-                                <div className="divide-y divide-border/50">
-                                    {template.sections.map((section) => (
-                                        <div
-                                            key={section.id}
-                                            className="p-8 hover:bg-muted/10 transition-colors group relative"
-                                        >
-                                            <div className="flex justify-between items-center mb-4">
-                                                <label className="text-xs font-black text-foreground uppercase tracking-[0.2em] flex items-center gap-3">
-                                                    <div className="w-1.5 h-6 bg-primary/40 rounded-full" />
+                                {/* Editor Sections — continuous flowing document */}
+                                <div className="px-8 py-6 max-h-[75vh] overflow-y-auto">
+                                    {template.sections.map((section, idx) => (
+                                        <div key={section.id} className={`group relative ${idx > 0 ? 'mt-6' : ''}`}>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="text-xs font-black text-foreground uppercase tracking-[0.2em]">
                                                     {section.label}
                                                 </label>
                                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                    {section.required && !noteSections[section.id] && (
+                                                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md border border-amber-100 dark:border-amber-800">
+                                                            <AlertCircle className="h-3 w-3" />
+                                                            Required
+                                                        </span>
+                                                    )}
                                                     <button
                                                         onClick={() => handleRegenerateSection(section.id)}
-                                                        className="p-2 text-muted-foreground hover:text-primary rounded-lg bg-card border border-border shadow-sm"
+                                                        className="p-1.5 text-muted-foreground hover:text-primary rounded-lg"
                                                         title="Regenerate this section"
                                                     >
-                                                        <RefreshCw className="h-4 w-4" />
+                                                        <RefreshCw className="h-3.5 w-3.5" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -1748,14 +1765,20 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                                 value={noteSections[section.id] || ""}
                                                 onChange={(e) => handleSectionChange(section.id, e.target.value)}
                                                 placeholder={section.placeholder}
-                                                className="w-full min-h-[160px] text-base md:text-lg text-foreground bg-transparent leading-relaxed outline-none resize-none placeholder:text-muted-foreground/30 font-medium"
+                                                rows={1}
+                                                ref={(el) => {
+                                                    if (el) {
+                                                        el.style.height = 'auto';
+                                                        el.style.height = el.scrollHeight + 'px';
+                                                    }
+                                                }}
+                                                onInput={(e) => {
+                                                    const el = e.currentTarget;
+                                                    el.style.height = 'auto';
+                                                    el.style.height = el.scrollHeight + 'px';
+                                                }}
+                                                className="w-full text-base md:text-lg text-foreground bg-transparent leading-relaxed outline-none resize-none placeholder:text-muted-foreground/30 font-medium border-0 p-0 overflow-hidden block"
                                             />
-                                            {section.required && !noteSections[section.id] && (
-                                                <div className="absolute top-8 right-8 flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md border border-amber-100 dark:border-amber-800">
-                                                    <AlertCircle className="h-3 w-3" />
-                                                    Required
-                                                </div>
-                                            )}
                                         </div>
                                     ))}
                                 </div>

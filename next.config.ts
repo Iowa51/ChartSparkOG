@@ -86,6 +86,16 @@ const defaultHeaders = [
   },
 ];
 
+// AI Scribe headers — microphone needed for voice recording on note routes
+const scribeHeaders = [
+  ...baseSecurityHeaders,
+  defaultCSP,
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(self), geolocation=()',
+  },
+];
+
 const nextConfig: NextConfig = {
   // OPTIMIZATION: Image optimization settings
   images: {
@@ -111,6 +121,18 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'recharts', '@radix-ui/react-icons'],
   },
 
+  // Proxy /api/ai/* to external scribe service when SCRIBE_SERVICE_URL is set
+  async rewrites() {
+    const scribeUrl = process.env.SCRIBE_SERVICE_URL;
+    if (!scribeUrl) return [];
+    return [
+      {
+        source: '/api/ai/:path*',
+        destination: `${scribeUrl}/api/ai/:path*`,
+      },
+    ];
+  },
+
   // Apply security headers to all routes
   async headers() {
     return [
@@ -123,10 +145,15 @@ const nextConfig: NextConfig = {
         source: '/api/telehealth/:path*',
         headers: telehealthHeaders,
       },
-      // All other routes EXCEPT telehealth - strict permissions
+      // AI Scribe — allow microphone on note creation routes
+      {
+        source: '/notes/:path*',
+        headers: scribeHeaders,
+      },
+      // All other routes EXCEPT telehealth and notes - strict permissions
       // Using regex to exclude specific paths
       {
-        source: '/((?!telehealth|api/telehealth).*)',
+        source: '/((?!telehealth|api/telehealth|notes).*)',
         headers: defaultHeaders,
       },
       // Also apply to root path

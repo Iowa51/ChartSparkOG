@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout";
 import { DemoAuthGuard } from "@/components/auth/DemoAuthGuard";
+import { MFAGate } from "@/components/auth/MFAGate";
 import { SessionTimeout } from "@/components/SessionTimeout";
 import { TrialBanner } from "@/components/subscriptions/trial-banner";
 import { ReadOnlyBanner } from "@/components/subscriptions/read-only-banner";
@@ -28,6 +29,7 @@ export default function AppLayout({
                     </main>
                 </div>
                 <SessionTimeout enabled={enableTimeout} />
+                <MFAGate />
             </DemoAuthGuard>
         </ToastProvider>
     );

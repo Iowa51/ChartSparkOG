@@ -56,11 +56,23 @@ export default function NotesHistoryPage() {
 
                 const response = await fetch(url);
                 if (!response.ok) {
+                    // In demo mode, API returns 403 — use demo data
+                    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+                    if (isDemoMode) {
+                        setNotes(getDemoNotes());
+                        return;
+                    }
                     throw new Error('Failed to fetch notes');
                 }
                 const data = await response.json();
                 setNotes(data.notes || []);
             } catch (err) {
+                // Fallback to demo data if demo mode
+                const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+                if (isDemoMode) {
+                    setNotes(getDemoNotes());
+                    return;
+                }
                 setError(err instanceof Error ? err.message : 'Failed to load notes');
             } finally {
                 setLoading(false);
@@ -69,6 +81,57 @@ export default function NotesHistoryPage() {
 
         fetchNotes();
     }, [statusFilter]);
+
+    function getDemoNotes(): Note[] {
+        const now = new Date();
+        return [
+            {
+                id: 'demo-note-1',
+                patient_id: 'demo-p1',
+                content: 'Patient presents for follow-up of Major Depressive Disorder. Reports improvement in mood with current medication regimen. Sleep quality has improved to 7 hours nightly...',
+                status: 'signed',
+                created_at: new Date(now.getTime() - 2 * 86400000).toISOString(),
+                updated_at: new Date(now.getTime() - 2 * 86400000).toISOString(),
+                patient: { id: 'demo-p1', first_name: 'Maria', last_name: 'Gonzalez' },
+            },
+            {
+                id: 'demo-note-2',
+                patient_id: 'demo-p2',
+                content: 'CBT session focused on cognitive restructuring techniques for generalized anxiety. Patient engaged well. Identified 3 automatic negative thoughts and developed rational alternatives...',
+                status: 'draft',
+                created_at: new Date(now.getTime() - 1 * 86400000).toISOString(),
+                updated_at: new Date(now.getTime() - 1 * 86400000).toISOString(),
+                patient: { id: 'demo-p2', first_name: 'James', last_name: 'Thompson' },
+            },
+            {
+                id: 'demo-note-3',
+                patient_id: 'demo-p3',
+                content: 'Initial psychiatric evaluation. Patient referred by PCP for persistent anxiety and insomnia. Comprehensive history obtained including family, social, and substance use history...',
+                status: 'completed',
+                created_at: new Date(now.getTime() - 3 * 86400000).toISOString(),
+                updated_at: new Date(now.getTime() - 3 * 86400000).toISOString(),
+                patient: { id: 'demo-p3', first_name: 'Sarah', last_name: 'Chen' },
+            },
+            {
+                id: 'demo-note-4',
+                patient_id: 'demo-p4',
+                content: 'Medication management visit. Reviewed current medications including sertraline 100mg daily. Patient reports decreased anxiety but ongoing sleep difficulties. Discussed adding trazodone PRN...',
+                status: 'signed',
+                created_at: new Date(now.getTime() - 5 * 86400000).toISOString(),
+                updated_at: new Date(now.getTime() - 4 * 86400000).toISOString(),
+                patient: { id: 'demo-p4', first_name: 'Robert', last_name: 'Williams' },
+            },
+            {
+                id: 'demo-note-5',
+                patient_id: 'demo-p5',
+                content: 'Geriatric assessment for cognitive decline screening. MMSE score 24/30. Recommendation for neuropsych testing. Family meeting scheduled to discuss care planning...',
+                status: 'draft',
+                created_at: new Date(now.getTime() - 1 * 86400000).toISOString(),
+                updated_at: new Date(now.getTime() - 1 * 86400000).toISOString(),
+                patient: { id: 'demo-p5', first_name: 'Eleanor', last_name: 'Park' },
+            },
+        ];
+    }
 
     // Filter notes based on search query (client-side filtering for search)
     const filteredNotes = notes.filter(note => {
