@@ -1499,7 +1499,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                     handleGenerateNote();
                                                                 }
                                                             }}
-                                                            disabled={isGenerating || isTranscribing || (!audioBlobRef.current && !scribeTranscription.trim())}
+                                                            disabled={isGenerating || isTranscribing || (!hasRecording && !scribeTranscription.trim())}
                                                             className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             {isTranscribing ? (
@@ -1515,7 +1515,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                             ) : (
                                                                 <>
                                                                     <Sparkles className="h-4 w-4" />
-                                                                    {audioBlobRef.current ? 'Transcribe & Generate Note' : 'Generate Note from Transcription'}
+                                                                    {hasRecording ? 'Transcribe & Generate Note' : 'Generate Note from Transcription'}
                                                                 </>
                                                             )}
                                                         </button>
