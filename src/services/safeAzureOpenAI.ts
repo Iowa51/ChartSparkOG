@@ -13,6 +13,7 @@ import { devLog, devWarn, devError } from '@/lib/logging/safe-logger';
 
 class SafeAzureOpenAIService {
     private client: AzureOpenAI | null = null;
+    private whisperClient: AzureOpenAI | null = null;
     private deploymentName: string = '';
     private isConfigured: boolean = false;
     private isInitialized: boolean = false;
@@ -644,12 +645,30 @@ Time spent: ${15 + (variationSeed * 5)} minutes, greater than 50% in counseling 
         }
 
         try {
-            const client = this._getClient();
-            devLog('Azure OpenAI', `Transcribing audio: ${fileName} (${(audioBuffer.length / 1024).toFixed(1)}KB)`);
-
-            // Use the openai SDK's audio transcription endpoint
-            // For Azure OpenAI, the Whisper model deployment name is used
             const whisperDeployment = process.env.AZURE_OPENAI_WHISPER_DEPLOYMENT || 'whisper';
+
+            // Use a dedicated Whisper client if separate Whisper resource env vars are set
+            const whisperEndpoint = process.env.AZURE_WHISPER_ENDPOINT;
+            const whisperApiKey = process.env.AZURE_WHISPER_API_KEY;
+
+            let client: AzureOpenAI;
+            if (whisperEndpoint && whisperApiKey) {
+                if (!this.whisperClient) {
+                    const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-08-01-preview';
+                    this.whisperClient = new AzureOpenAI({
+                        endpoint: whisperEndpoint,
+                        apiKey: whisperApiKey,
+                        apiVersion,
+                        deployment: whisperDeployment,
+                    });
+                    devLog('Azure OpenAI', 'Created dedicated Whisper client');
+                }
+                client = this.whisperClient;
+            } else {
+                client = this._getClient();
+            }
+
+            devLog('Azure OpenAI', `Transcribing audio: ${fileName} (${(audioBuffer.length / 1024).toFixed(1)}KB)`);
 
             // Create a File-like object from the Buffer for the SDK
             // Use Uint8Array to satisfy TypeScript's BlobPart type requirements
