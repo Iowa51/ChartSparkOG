@@ -634,40 +634,48 @@ Time spent: ${15 + (variationSeed * 5)} minutes, greater than 50% in counseling 
         processingTime: string;
     }> {
         const startTime = Date.now();
+        const whisperEndpoint = process.env.AZURE_WHISPER_ENDPOINT;
+        const whisperApiKey = process.env.AZURE_WHISPER_API_KEY;
+        const whisperDeployment = process.env.AZURE_OPENAI_WHISPER_DEPLOYMENT || 'whisper';
+        const mainEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+        const mainApiKey = process.env.AZURE_OPENAI_API_KEY;
 
-        if (!this.isAvailable()) {
-            devLog('Azure OpenAI', 'Transcription running in DEMO mode');
-            return {
-                transcript: this.getDemoTranscript(),
-                isDemo: true,
-                processingTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
-            };
-        }
+        console.log('[WHISPER DEBUG] isAvailable:', this.isAvailable());
+        console.log('[WHISPER DEBUG] AZURE_WHISPER_ENDPOINT:', whisperEndpoint ? 'SET' : 'MISSING');
+        console.log('[WHISPER DEBUG] AZURE_WHISPER_API_KEY:', whisperApiKey ? 'SET' : 'MISSING');
+        console.log('[WHISPER DEBUG] AZURE_OPENAI_WHISPER_DEPLOYMENT:', process.env.AZURE_OPENAI_WHISPER_DEPLOYMENT || 'not set, defaulting to whisper');
+        console.log('[WHISPER DEBUG] AZURE_OPENAI_ENDPOINT:', mainEndpoint ? 'SET' : 'MISSING');
+        console.log('[WHISPER DEBUG] AZURE_OPENAI_API_KEY:', mainApiKey ? 'SET' : 'MISSING');
 
         try {
-            const whisperDeployment = process.env.AZURE_OPENAI_WHISPER_DEPLOYMENT || 'whisper';
-
-            // Use a dedicated Whisper client if separate Whisper resource env vars are set
-            const whisperEndpoint = process.env.AZURE_WHISPER_ENDPOINT;
-            const whisperApiKey = process.env.AZURE_WHISPER_API_KEY;
-
             let client: AzureOpenAI;
             if (whisperEndpoint && whisperApiKey) {
+                console.log('[WHISPER DEBUG] Using dedicated Whisper credentials');
                 if (!this.whisperClient) {
                     const apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2024-08-01-preview';
+                    console.log('[WHISPER DEBUG] Creating dedicated whisperClient');
                     this.whisperClient = new AzureOpenAI({
                         endpoint: whisperEndpoint,
                         apiKey: whisperApiKey,
                         apiVersion,
                         deployment: whisperDeployment,
                     });
-                    devLog('Azure OpenAI', 'Created dedicated Whisper client');
                 }
                 client = this.whisperClient;
-            } else {
+            } else if (mainEndpoint && mainApiKey) {
+                console.log('[WHISPER DEBUG] Whisper-specific credentials missing, falling back to main Azure OpenAI client');
                 client = this._getClient();
+            } else {
+                console.log('[WHISPER DEBUG] No Whisper or main Azure credentials available, returning demo transcript');
+                devLog('Azure OpenAI', 'Transcription running in DEMO mode');
+                return {
+                    transcript: this.getDemoTranscript(),
+                    isDemo: true,
+                    processingTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+                };
             }
 
+            console.log('[WHISPER DEBUG] Starting transcription request');
             devLog('Azure OpenAI', `Transcribing audio: ${fileName} (${(audioBuffer.length / 1024).toFixed(1)}KB)`);
 
             // Create a File-like object from the Buffer for the SDK
@@ -691,6 +699,7 @@ Time spent: ${15 + (variationSeed * 5)} minutes, greater than 50% in counseling 
             // The response is a string when response_format is 'text'
             const transcript = typeof response === 'string' ? response : (response as any).text || '';
 
+            console.log('[WHISPER DEBUG] Transcription request completed successfully');
             devLog('Azure OpenAI', `Transcription complete in ${processingTime} (${transcript.length} chars)`);
 
             return {
@@ -699,7 +708,8 @@ Time spent: ${15 + (variationSeed * 5)} minutes, greater than 50% in counseling 
                 processingTime,
             };
         } catch (error) {
-            devError('Azure OpenAI', 'Transcription error:', error);
+            console.error('[WHISPER ERROR] Full error:', error);
+            console.error('[WHISPER ERROR] Message:', error instanceof Error ? error.message : String(error));
 
             // Fall back to demo on error
             return {
