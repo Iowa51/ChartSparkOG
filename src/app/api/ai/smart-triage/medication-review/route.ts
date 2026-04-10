@@ -16,28 +16,6 @@ import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { MedicationReviewSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
-    const scribeUrl = process.env.SCRIBE_SERVICE_URL;
-    if (scribeUrl) {
-        const body = await context.request.json();
-        try {
-            console.log("Proxying medication-review request to scribe sidecar:", scribeUrl);
-            const proxyResponse = await fetch(`${scribeUrl}/api/ai/smart-triage/medication-review`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
-            console.log("Scribe medication-review proxy response status:", proxyResponse.status);
-            const data = await proxyResponse.json();
-            return NextResponse.json(data, { status: proxyResponse.status });
-        } catch (error) {
-            console.error("Scribe medication-review proxy failed:", error);
-            return NextResponse.json(
-                { success: false, error: "Smart triage service unavailable" },
-                { status: 503 }
-            );
-        }
-    }
-
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {

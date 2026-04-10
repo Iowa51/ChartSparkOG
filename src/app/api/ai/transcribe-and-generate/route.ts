@@ -27,30 +27,6 @@ const ALLOWED_AUDIO_TYPES = new Set([
 ]);
 
 async function handler(context: AuthContext) {
-    // Proxy to external scribe service if configured
-    const scribeUrl = process.env.SCRIBE_SERVICE_URL;
-    if (scribeUrl) {
-        try {
-            console.log("Proxying transcribe-and-generate request to scribe sidecar:", scribeUrl);
-            const proxyResponse = await fetch(`${scribeUrl}/api/ai/transcribe-and-generate`, {
-                method: "POST",
-                headers: {
-                    "content-type": context.request.headers.get("content-type") || "",
-                },
-                body: await context.request.arrayBuffer(),
-            });
-            const data = await proxyResponse.json();
-            console.log("Scribe transcribe-and-generate proxy response status:", proxyResponse.status);
-            return NextResponse.json(data, { status: proxyResponse.status });
-        } catch (error) {
-            console.error("Scribe transcribe-and-generate proxy failed:", error);
-            return NextResponse.json(
-                { success: false, error: "Transcription service unavailable" },
-                { status: 503 }
-            );
-        }
-    }
-
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
