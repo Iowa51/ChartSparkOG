@@ -9,7 +9,6 @@ import { logAuditEvent } from '@/lib/security/audit-log';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import {
     buildMedicationTriagePrompt,
-    getDemoMedicationTriageResponse,
     PROMPT_VERSION,
 } from '@/lib/ai/smart-triage-prompts';
 import { getSafetyLevel } from '@/lib/types/smart-triage';
@@ -17,6 +16,28 @@ import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { MedicationReviewSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
+    const scribeUrl = process.env.SCRIBE_SERVICE_URL;
+    if (scribeUrl) {
+        const body = await context.request.json();
+        try {
+            console.log("Proxying medication-review request to scribe sidecar:", scribeUrl);
+            const proxyResponse = await fetch(`${scribeUrl}/api/ai/smart-triage/medication-review`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+            console.log("Scribe medication-review proxy response status:", proxyResponse.status);
+            const data = await proxyResponse.json();
+            return NextResponse.json(data, { status: proxyResponse.status });
+        } catch (error) {
+            console.error("Scribe medication-review proxy failed:", error);
+            return NextResponse.json(
+                { success: false, error: "Smart triage service unavailable" },
+                { status: 503 }
+            );
+        }
+    }
+
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
@@ -133,6 +154,28 @@ async function handler(context: AuthContext) {
             }
         }
 
+        if (medications.length === 0) {
+            return NextResponse.json({
+                result: null,
+                safety_score: null,
+                safety_level: null,
+                isDemo: false,
+                cached: false,
+                message: 'No active medications found for this patient.',
+            });
+        }
+
+        if (!safeAzureOpenAI.isAvailable()) {
+            return NextResponse.json({
+                result: null,
+                safety_score: null,
+                safety_level: null,
+                isDemo: true,
+                cached: false,
+                message: 'AI service not configured.',
+            });
+        }
+
         // Build AI prompt
         const prompt = buildMedicationTriagePrompt({
             age: (patientData.age as number) || 35,
@@ -144,21 +187,19 @@ async function handler(context: AuthContext) {
         });
 
         let result;
-        let isDemo = false;
+        const isDemo = false;
 
-        // Call AI or use demo fallback
-        if (safeAzureOpenAI.isAvailable() && medications.length > 0) {
-            try {
-                const response = await safeAzureOpenAI.chat(prompt, []);
-                result = JSON.parse(response);
-            } catch (parseError) {
-                logError({ action: 'ERROR_PARSING_AI_RESPONSE', error: sanitizeError(parseError) });
-                result = getDemoMedicationTriageResponse();
-                isDemo = true;
-            }
-        } else {
-            result = getDemoMedicationTriageResponse();
-            isDemo = true;
+        try {
+            const response = await safeAzureOpenAI.chat(prompt, []);
+            result = JSON.parse(response);
+        } catch (parseError) {
+            logError({ action: 'ERROR_PARSING_AI_RESPONSE', error: sanitizeError(parseError) });
+            return NextResponse.json({
+                result: null,
+                safety_score: null,
+                isDemo: true,
+                error: 'Medication triage temporarily unavailable',
+            });
         }
 
         const safetyScore = result.overall_safety_score || 78;
@@ -213,8 +254,8 @@ async function handler(context: AuthContext) {
     } catch (error) {
         logError({ action: 'ERROR_IN_MEDICATION_REVIEW', error: sanitizeError(error) });
         return NextResponse.json(
-            { error: 'Failed to run medication triage', isDemo: true, result: getDemoMedicationTriageResponse() },
-            { status: 200 } // Return 200 with demo data for graceful degradation
+            { result: null, safety_score: null, isDemo: true, error: 'Medication triage temporarily unavailable' },
+            { status: 200 }
         );
     }
 }

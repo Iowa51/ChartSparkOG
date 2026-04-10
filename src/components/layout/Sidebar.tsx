@@ -37,7 +37,8 @@ const navSections = [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "Patients", href: "/patients", icon: Users },
       { label: "Encounters", href: "/encounters", icon: ClipboardList },
-      { label: "Templates", href: "/templates", icon: FileText },
+      { label: "Notes", href: "/notes", icon: FileText },
+      { label: "Templates", href: "/templates", icon: BookOpen },
       { label: "References", href: "/references", icon: BookOpen },
       { label: "Geriatric Guide", href: "/references/geriatric", icon: BookOpen },
     ]

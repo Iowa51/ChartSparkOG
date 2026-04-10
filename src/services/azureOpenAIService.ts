@@ -1,24 +1,76 @@
 /**
  * Azure OpenAI Service for ChartSpark
  * Handles all AI-powered features including clinical notes, treatment recommendations
- * 
+ *
  * Migrated to openai v4+ AzureOpenAI client (from deprecated @azure/openai v1.x)
  */
 
 import { AzureOpenAI } from "openai";
+import { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { logError, sanitizeError } from "@/lib/logging/safe-logger";
 
+interface SessionData {
+    patientName: string;
+    sessionDate: string;
+    sessionType: string;
+    chiefComplaint: string;
+    observations: string;
+    assessments: string;
+}
+
+interface PatientData {
+    diagnosis: string;
+    symptoms: string;
+    history: string;
+    previousTreatments: string;
+}
+
+interface HomeworkSessionData {
+    treatmentGoals: string;
+    sessionFocus: string;
+    patientCapabilities: string;
+}
+
+interface SentimentResult {
+    success: boolean;
+    analysis: string | null;
+}
+
 class AzureOpenAIService {
+    private endpoint: string | undefined;
+    private apiKey: string | undefined;
+    private deploymentName: string | undefined;
+    private apiVersion: string;
+    private isConfigured: boolean;
+    private client: AzureOpenAI | null;
+    private isInitialized: boolean;
+
     constructor() {
+        this.endpoint = undefined;
+        this.apiKey = undefined;
+        this.deploymentName = undefined;
+        this.apiVersion = "2024-08-01-preview";
+        this.isConfigured = false;
+        this.client = null;
+        this.isInitialized = false;
+    }
+
+    private _ensureInitialized(): void {
+        if (this.isInitialized) {
+            return;
+        }
+
+        this.isInitialized = true;
         this.endpoint = process.env.AZURE_OPENAI_ENDPOINT;
         this.apiKey = process.env.AZURE_OPENAI_API_KEY;
         this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
         this.apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-08-01-preview";
         this.isConfigured = !!(this.endpoint && this.apiKey && this.deploymentName);
-        this.client = null;
     }
 
-    _ensureClient() {
+    private _ensureClient(): AzureOpenAI {
+        this._ensureInitialized();
+
         if (!this.isConfigured) {
             throw new Error(
                 "Running in DEMO mode - no Azure credentials configured"
@@ -36,12 +88,7 @@ class AzureOpenAIService {
         return this.client;
     }
 
-    /**
-     * Generate clinical notes from session data
-     * @param {Object} sessionData - Patient session information
-     * @returns {Promise<string>} Generated clinical note
-     */
-    async generateClinicalNote(sessionData) {
+    async generateClinicalNote(sessionData: SessionData): Promise<string | null> {
         const { patientName, sessionDate, sessionType, chiefComplaint, observations, assessments } = sessionData;
 
         const prompt = `You are a mental health professional assistant. Generate a professional clinical note based on the following session information:
@@ -57,7 +104,7 @@ Generate a comprehensive SOAP (Subjective, Objective, Assessment, Plan) note tha
 
         try {
             const response = await this._ensureClient().chat.completions.create({
-                model: this.deploymentName,
+                model: this.deploymentName!,
                 messages: [
                     {
                         role: "system",
@@ -80,12 +127,7 @@ Generate a comprehensive SOAP (Subjective, Objective, Assessment, Plan) note tha
         }
     }
 
-    /**
-     * Generate treatment recommendations based on patient data
-     * @param {Object} patientData - Patient information and history
-     * @returns {Promise<string>} Treatment recommendations
-     */
-    async generateTreatmentRecommendations(patientData) {
+    async generateTreatmentRecommendations(patientData: PatientData): Promise<string | null> {
         const { diagnosis, symptoms, history, previousTreatments } = patientData;
 
         const prompt = `Based on the following patient information, provide evidence-based treatment recommendations:
@@ -99,7 +141,7 @@ Provide 3-5 evidence-based treatment recommendations with brief rationale for ea
 
         try {
             const response = await this._ensureClient().chat.completions.create({
-                model: this.deploymentName,
+                model: this.deploymentName!,
                 messages: [
                     {
                         role: "system",
@@ -122,12 +164,7 @@ Provide 3-5 evidence-based treatment recommendations with brief rationale for ea
         }
     }
 
-    /**
-     * Analyze patient sentiment from session notes
-     * @param {string} sessionNotes - Raw session notes
-     * @returns {Promise<Object>} Sentiment analysis results
-     */
-    async analyzeSentiment(sessionNotes) {
+    async analyzeSentiment(sessionNotes: string): Promise<SentimentResult> {
         const prompt = `Analyze the emotional tone and sentiment of the following patient session notes. Provide:
 1. Overall sentiment (positive, neutral, negative, mixed)
 2. Key emotional indicators
@@ -138,7 +175,7 @@ Session Notes: ${sessionNotes}`;
 
         try {
             const response = await this._ensureClient().chat.completions.create({
-                model: this.deploymentName,
+                model: this.deploymentName!,
                 messages: [
                     {
                         role: "system",
@@ -164,12 +201,7 @@ Session Notes: ${sessionNotes}`;
         }
     }
 
-    /**
-     * Generate therapy homework assignments
-     * @param {Object} sessionData - Current session information
-     * @returns {Promise<string>} Homework assignment suggestions
-     */
-    async generateHomework(sessionData) {
+    async generateHomework(sessionData: HomeworkSessionData): Promise<string | null> {
         const { treatmentGoals, sessionFocus, patientCapabilities } = sessionData;
 
         const prompt = `Generate 2-3 appropriate therapy homework assignments for a patient with the following information:
@@ -182,7 +214,7 @@ Provide practical, achievable homework assignments that support the treatment go
 
         try {
             const response = await this._ensureClient().chat.completions.create({
-                model: this.deploymentName,
+                model: this.deploymentName!,
                 messages: [
                     {
                         role: "system",
@@ -205,15 +237,9 @@ Provide practical, achievable homework assignments that support the treatment go
         }
     }
 
-    /**
-     * General AI chat for clinical decision support
-     * @param {string} userMessage - User's question or prompt
-     * @param {Array} conversationHistory - Previous messages in conversation
-     * @returns {Promise<string>} AI response
-     */
-    async chat(userMessage, conversationHistory = []) {
+    async chat(userMessage: string, conversationHistory: ChatCompletionMessageParam[] = []): Promise<string | null> {
         try {
-            const messages = [
+            const messages: ChatCompletionMessageParam[] = [
                 {
                     role: "system",
                     content: "You are an AI assistant for mental health professionals. Provide evidence-based clinical insights and support. Never provide emergency crisis intervention - always recommend contacting appropriate emergency services for crisis situations."
@@ -226,7 +252,7 @@ Provide practical, achievable homework assignments that support the treatment go
             ];
 
             const response = await this._ensureClient().chat.completions.create({
-                model: this.deploymentName,
+                model: this.deploymentName!,
                 messages: messages,
                 max_tokens: 800,
                 temperature: 0.7,

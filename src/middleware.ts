@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { checkRateLimit } from "@/lib/security/rate-limit";
-import { checkSQLInjection, checkXSS, checkPathTraversal } from "@/lib/security/intrusion-detection";
+import { checkSQLInjection, checkXSS, checkPathTraversal } from "@/lib/security/intrusion-detection-edge";
 import { getClientIP } from "@/lib/utils/get-client-ip";
 
 export async function middleware(request: NextRequest) {

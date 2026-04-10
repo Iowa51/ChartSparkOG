@@ -16,8 +16,9 @@ import {
     Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import PatientQuickSelectModal from "@/components/notes/PatientQuickSelectModal";
+import { createClient } from "@/lib/supabase/client";
 
 const quickTools = [
     {
@@ -53,7 +54,6 @@ const statusStyles = {
 };
 
 export default function DashboardPage() {
-    const [showPatientModal, setShowPatientModal] = useState(false);
     const [stats, setStats] = useState<any>(null);
     const [recentNotes, setRecentNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -114,14 +114,46 @@ export default function DashboardPage() {
             iconColor: "text-amber-600 dark:text-amber-400",
         },
     ] : [];
-    const userName = "Sarah";
     const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+    const [userName, setUserName] = useState("");
+
+    useEffect(() => {
+        const fetchUserName = async () => {
+            const supabase = createClient();
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) {
+                const { data } = await supabase
+                    .from('users')
+                    .select('first_name, last_name')
+                    .eq('id', authUser.id)
+                    .single();
+                if (data) {
+                    setUserName(`${data.first_name || ''} ${data.last_name || ''}`.trim());
+                }
+            }
+        };
+        fetchUserName();
+    }, []);
+
+    const greeting = useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 12) return "Good morning";
+        if (hour >= 12 && hour < 17) return "Good afternoon";
+        if (hour >= 17 && hour < 21) return "Good evening";
+        return "Good night";
+    }, []);
 
     return (
         <>
             <Header
-                title={`Good morning, ${userName} 👋`}
-                description="You have 3 notes pending review and 2 billing tasks for today."
+                title={`${greeting}${userName ? `, ${userName}` : ''} 👋`}
+                description={
+                    loading
+                        ? "Loading your activity..."
+                        : stats
+                            ? `You have ${stats.pendingEncounters ?? 0} pending encounter${stats.pendingEncounters === 1 ? '' : 's'} and ${stats.todayNotes ?? 0} note${stats.todayNotes === 1 ? '' : 's'} completed today.`
+                            : "Welcome back — start a new note or review your schedule."
+                }
                 breadcrumbs={[{ label: "Dashboard" }]}
             />
 

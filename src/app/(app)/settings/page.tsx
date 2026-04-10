@@ -2,6 +2,8 @@
 
 import { Header } from "@/components/layout";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { hasMFAEnabled } from "@/lib/auth/mfa";
 import {
     User,
     Bell,
@@ -49,7 +51,13 @@ export default function SettingsPage() {
     });
 
     // Security settings
+    const settingsRouter = useRouter();
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+
+    // Load actual MFA status from Supabase on mount
+    useEffect(() => {
+        hasMFAEnabled().then(setTwoFactorEnabled).catch(() => {});
+    }, []);
 
     // Appearance settings
     const [theme, setTheme] = useState<'Light' | 'Dark' | 'System'>('System');
@@ -354,7 +362,7 @@ export default function SettingsPage() {
                                             <p className="text-xs text-muted-foreground">{twoFactorEnabled ? '2FA is currently enabled on your account.' : 'Add an extra layer of security to your account.'}</p>
                                         </div>
                                         <button
-                                            onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
+                                            onClick={() => settingsRouter.push('/settings/security/mfa')}
                                             className={`text-xs font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-all ${twoFactorEnabled ? 'bg-emerald-500 text-white border-emerald-600' : 'text-primary hover:underline bg-primary/5 border-primary/10'}`}
                                         >
                                             {twoFactorEnabled ? '2FA Enabled ✓' : 'Enable 2FA'}

@@ -15,8 +15,15 @@ class SafeAzureOpenAIService {
     private client: AzureOpenAI | null = null;
     private deploymentName: string = '';
     private isConfigured: boolean = false;
+    private isInitialized: boolean = false;
 
-    constructor() {
+    private _ensureInitialized(): void {
+        if (this.isInitialized) {
+            return;
+        }
+
+        this.isInitialized = true;
+
         const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
         const apiKey = process.env.AZURE_OPENAI_API_KEY;
         const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
@@ -43,10 +50,30 @@ class SafeAzureOpenAIService {
         }
     }
 
+    private _getClient(): AzureOpenAI {
+        this._ensureInitialized();
+
+        if (!this.client || !this.isConfigured) {
+            throw new Error('Azure OpenAI is not configured. Please configure AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_DEPLOYMENT_NAME environment variables.');
+        }
+
+        return this.client;
+    }
+
+    private normalizeSOAPHeaders(note: string): string {
+        return note
+            .replace(/^\s*\*?\*?SUBJECTIVE\*?\*?:?\s*/im, 'SUBJECTIVE\n')
+            .replace(/^\s*\*?\*?OBJECTIVE\*?\*?:?\s*/im, '\nOBJECTIVE\n')
+            .replace(/^\s*\*?\*?ASSESSMENT\*?\*?:?\s*/im, '\nASSESSMENT\n')
+            .replace(/^\s*\*?\*?PLAN\*?\*?:?\s*/im, '\nPLAN\n')
+            .trim();
+    }
+
     /**
      * Check if Azure OpenAI is available
      */
     isAvailable(): boolean {
+        this._ensureInitialized();
         return this.isConfigured && this.client !== null;
     }
 
@@ -57,6 +84,8 @@ class SafeAzureOpenAIService {
         if (!this.isAvailable()) {
             throw new Error('Azure OpenAI is not configured. Please configure AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY, and AZURE_OPENAI_DEPLOYMENT_NAME environment variables.');
         }
+
+        const client = this._getClient();
 
         const systemPrompt = specialty === 'geriatric'
             ? `You are an expert geriatric medicine specialist AI assistant. Analyze the clinical notes and provide:
@@ -95,7 +124,7 @@ class SafeAzureOpenAIService {
             const startTime = Date.now();
             devLog('Azure OpenAI', 'Starting diagnosis request...');
 
-            const response = await this.client!.chat.completions.create({
+            const response = await client.chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     { role: "system", content: systemPrompt },
@@ -193,6 +222,8 @@ class SafeAzureOpenAIService {
             return this.getDemoTreatmentPlan();
         }
 
+        const client = this._getClient();
+
         const prompt = `Based on the following patient profile and diagnoses, generate a comprehensive treatment plan:
 
 Patient Profile:
@@ -212,7 +243,7 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
 
         try {
             const startTime = Date.now();
-            const response = await this.client!.chat.completions.create({
+            const response = await client.chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     { role: "system", content: "You are a clinical treatment planning specialist providing evidence-based recommendations." },
@@ -246,6 +277,8 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
             return "I'm currently running in demo mode. Azure OpenAI is not configured. In production, I would provide clinical decision support based on your query.";
         }
 
+        const client = this._getClient();
+
         try {
             const messages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
                 {
@@ -256,7 +289,7 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
                 { role: "user" as const, content: userMessage }
             ];
 
-            const response = await this.client!.chat.completions.create({
+            const response = await client.chat.completions.create({
                 model: this.deploymentName,
                 messages: messages,
                 max_tokens: 1000,
@@ -284,6 +317,8 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
             return;
         }
 
+        const client = this._getClient();
+
         try {
             const messages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [
                 {
@@ -294,7 +329,7 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
                 { role: "user" as const, content: userMessage }
             ];
 
-            const stream = await this.client!.chat.completions.create({
+            const stream = await client.chat.completions.create({
                 model: this.deploymentName,
                 messages: messages,
                 max_tokens: 1000,
@@ -330,6 +365,8 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
             return;
         }
 
+        const client = this._getClient();
+
         const prompt = `You are a clinical documentation specialist. Generate a detailed, professional SOAP note for a mental health or primary care visit.
 
 Based on the following observations provided by the clinician:
@@ -347,11 +384,14 @@ Based on the following observations provided by the clinician:
 4. Create a comprehensive treatment Plan with specific interventions
 5. Make the note sound natural and varied - avoid repetitive phrasing
 6. The note should be 200-400 words total, professionally formatted
-
-Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** sections.`;
+7. Output EXACTLY these section headers on their own lines with no markdown and no colons:
+SUBJECTIVE
+OBJECTIVE
+ASSESSMENT
+PLAN`;
 
         try {
-            const stream = await this.client!.chat.completions.create({
+            const stream = await client.chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     {
@@ -391,6 +431,8 @@ Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** se
             return this.getDemoSOAPNote(sessionData);
         }
 
+        const client = this._getClient();
+
         const prompt = `You are a clinical documentation specialist. Generate a detailed, professional SOAP note for a mental health or primary care visit.
 
 Based on the following observations provided by the clinician:
@@ -408,16 +450,19 @@ Based on the following observations provided by the clinician:
 4. Create a comprehensive treatment Plan with specific interventions
 5. Make the note sound natural and varied - avoid repetitive phrasing
 6. The note should be 200-400 words total, professionally formatted
-
-Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** sections.`;
+7. Output EXACTLY these section headers on their own lines with no markdown and no colons:
+SUBJECTIVE
+OBJECTIVE
+ASSESSMENT
+PLAN`;
 
         try {
-            const response = await this.client!.chat.completions.create({
+            const response = await client.chat.completions.create({
                 model: this.deploymentName,
                 messages: [
                     {
                         role: "system",
-                        content: "You are an expert clinical documentation specialist who writes detailed, professional SOAP notes. Each note should be unique with varied phrasing. Never generate identical notes."
+                        content: "You are an expert clinical documentation specialist who writes detailed, professional SOAP notes. Each note should be unique with varied phrasing. Never generate identical notes. Always return the exact headers SUBJECTIVE, OBJECTIVE, ASSESSMENT, and PLAN on separate lines, without markdown or colons."
                     },
                     { role: "user", content: prompt }
                 ],
@@ -426,7 +471,8 @@ Format with clear **SUBJECTIVE**, **OBJECTIVE**, **ASSESSMENT**, and **PLAN** se
                 top_p: 0.95
             });
 
-            return response.choices[0].message?.content || this.getDemoSOAPNote(sessionData);
+            const content = response.choices[0].message?.content;
+            return content ? this.normalizeSOAPHeaders(content) : this.getDemoSOAPNote(sessionData);
         } catch (error) {
             devError('Azure OpenAI', 'SOAP note error:', error);
             return this.getDemoSOAPNote(sessionData);
@@ -574,6 +620,97 @@ ${assessment}
 ${planItems.map((item, i) => `${i + 1}. ${item}`).join('\n')}
 
 Time spent: ${15 + (variationSeed * 5)} minutes, greater than 50% in counseling and coordination of care.`;
+    }
+
+    /**
+     * Transcribe audio using Azure OpenAI Whisper
+     * Accepts a Buffer of audio data and returns the transcript text.
+     * Falls back to a demo transcript if Azure is not configured.
+     */
+    async transcribeAudio(audioBuffer: Buffer, fileName: string = 'recording.webm'): Promise<{
+        transcript: string;
+        isDemo: boolean;
+        processingTime: string;
+    }> {
+        const startTime = Date.now();
+
+        if (!this.isAvailable()) {
+            devLog('Azure OpenAI', 'Transcription running in DEMO mode');
+            return {
+                transcript: this.getDemoTranscript(),
+                isDemo: true,
+                processingTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+            };
+        }
+
+        try {
+            const client = this._getClient();
+            devLog('Azure OpenAI', `Transcribing audio: ${fileName} (${(audioBuffer.length / 1024).toFixed(1)}KB)`);
+
+            // Use the openai SDK's audio transcription endpoint
+            // For Azure OpenAI, the Whisper model deployment name is used
+            const whisperDeployment = process.env.AZURE_OPENAI_WHISPER_DEPLOYMENT || 'whisper';
+
+            // Create a File-like object from the Buffer for the SDK
+            // Use Uint8Array to satisfy TypeScript's BlobPart type requirements
+            const uint8 = new Uint8Array(audioBuffer);
+            const file = new File([uint8], fileName, {
+                type: fileName.endsWith('.ogg') ? 'audio/ogg'
+                    : fileName.endsWith('.mp4') ? 'audio/mp4'
+                    : fileName.endsWith('.wav') ? 'audio/wav'
+                    : 'audio/webm',
+            });
+
+            const response = await client.audio.transcriptions.create({
+                model: whisperDeployment,
+                file: file,
+                language: 'en',
+                response_format: 'text',
+            });
+
+            const processingTime = `${((Date.now() - startTime) / 1000).toFixed(1)}s`;
+            // The response is a string when response_format is 'text'
+            const transcript = typeof response === 'string' ? response : (response as any).text || '';
+
+            devLog('Azure OpenAI', `Transcription complete in ${processingTime} (${transcript.length} chars)`);
+
+            return {
+                transcript: transcript.trim(),
+                isDemo: false,
+                processingTime,
+            };
+        } catch (error) {
+            devError('Azure OpenAI', 'Transcription error:', error);
+
+            // Fall back to demo on error
+            return {
+                transcript: this.getDemoTranscript(),
+                isDemo: true,
+                processingTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+            };
+        }
+    }
+
+    /**
+     * Generate a realistic demo transcript for when Whisper is unavailable.
+     * Varies with each call for realistic behavior.
+     */
+    private getDemoTranscript(): string {
+        const variationSeed = Date.now() % 5;
+
+        const transcripts = [
+            `So, how have you been feeling since our last visit? I've been doing a bit better actually. My sleep has improved and I've been getting about seven hours a night now. That's a significant improvement from the four to five hours you were reporting. Any changes in appetite or energy levels? My appetite is back to normal. Energy is still lower than I'd like, but definitely better than a month ago. I've started taking short walks in the morning, maybe 15 to 20 minutes. That's wonderful progress. How about the medication? Any side effects with the current dose of sertraline? The first week was rough with some nausea, but that's completely gone now. No other side effects I've noticed. I'd say my mood has been more stable overall. Less of those dips in the afternoon. Good. And any thoughts of self-harm or suicidal ideation? No, none at all. I feel like I have things to look forward to now. My daughter's graduation is coming up and I've been planning for that. I'm glad to hear it. Let's continue with the current medication and dosage. I'd like to see you back in four weeks.`,
+
+            `Patient presents today for medication management follow-up. She reports significant improvement in depressive symptoms since starting escitalopram 10mg daily six weeks ago. Sleep quality has improved from 3-4 hours to 6-7 hours nightly. Appetite has normalized. She reports decreased rumination and improved concentration at work. Patient denies suicidal ideation, homicidal ideation, or self-harm urges. She reports mild initial nausea that resolved after first week. No other adverse effects noted. Patient has been engaging in daily physical activity as recommended, walking 20-30 minutes per day. Mood is described as "much better, about 70 percent of normal." Anxiety symptoms have also decreased but she still reports occasional situational anxiety related to work deadlines. We discussed continuing current medication regimen and adding brief behavioral activation strategies for residual symptoms. Follow up in four weeks.`,
+
+            `Let's check in on how things are going. How's the anxiety been this week? It's been challenging to be honest. I had a panic attack on Tuesday at work. It came out of nowhere. Can you walk me through what happened? I was in a meeting and suddenly felt my heart racing, couldn't catch my breath, felt like the walls were closing in. I had to excuse myself and go to the bathroom. It lasted about 10 minutes. That sounds very distressing. Have you been using the breathing techniques we practiced? I tried but in the moment it was hard to remember. Afterward I used the 4-7-8 breathing and it helped calm me down. How about the buspirone? Are you taking it consistently? Yes, 10mg twice daily as prescribed. I think it helps with the baseline anxiety but doesn't seem to prevent these acute episodes. We might want to consider adjusting the dose or adding a PRN medication for acute episodes. Have you noticed any patterns or triggers? Usually work presentations or high-pressure meetings. Let's work on exposure therapy for those specific situations.`,
+
+            `Good afternoon. How have things been going with the new treatment plan? Honestly, I've been feeling the best I have in probably two years. The combination of the medication and therapy has really made a difference. That's excellent to hear. Tell me more about what's improved. Well, I'm sleeping through the night now, which hasn't happened in a long time. My mood is stable. I'm not having those crying spells anymore. I've reconnected with some friends and actually enjoy going out again. And how about the cognitive symptoms? Concentration and memory? Much better. I went back to reading, which I love. I finished two books this month. At work, I feel like I can focus on tasks without my mind wandering to negative thoughts. Those are really meaningful improvements. Any concerns about the medication? Not really. The dry mouth from the venlafaxine is still there but it's manageable. I drink more water. No weight changes, no sexual side effects. Good. Let's maintain the current regimen. You're clearly responding well.`,
+
+            `So tell me what brought you in today. I've just been feeling really overwhelmed. Between work and taking care of my father who has dementia, I feel like I'm barely keeping it together. When did you first start noticing these feelings? Probably about three months ago when Dad's condition started getting worse. He's needing more help with daily activities and I feel guilty when I'm not there. It sounds like you're carrying a tremendous burden. How is this affecting your daily life? I'm not sleeping well. I wake up at 3 AM and can't fall back asleep, just thinking about everything I need to do. My appetite is down. I've lost about 8 pounds without trying. I've been snapping at my kids which isn't like me. Have you had any thoughts of harming yourself? No, nothing like that. I just feel exhausted and burnt out. I still find joy in things, like playing with my kids, but I have less energy for it. That's important. It sounds like you may be experiencing what we call adjustment disorder with depressive features, possibly with some caregiver burnout. Let's talk about some strategies and whether medication might help support you through this period.`,
+        ];
+
+        return transcripts[variationSeed];
     }
 }
 

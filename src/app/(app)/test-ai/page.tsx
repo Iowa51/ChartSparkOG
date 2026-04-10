@@ -1,15 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout";
 import { Sparkles, MessageSquare, Send, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function TestAIPage() {
+    const router = useRouter();
+    const [authorized, setAuthorized] = useState<boolean | null>(null);
     const [message, setMessage] = useState("");
     const [response, setResponse] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+
+    useEffect(() => {
+        const checkRole = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                router.push('/dashboard');
+                return;
+            }
+            const { data } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+            if (data?.role !== 'SUPER_ADMIN') {
+                router.push('/dashboard');
+                return;
+            }
+            setAuthorized(true);
+        };
+        checkRole();
+    }, [router]);
+
+    if (authorized === null) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     const handleTest = async (e: React.FormEvent) => {
         e.preventDefault();

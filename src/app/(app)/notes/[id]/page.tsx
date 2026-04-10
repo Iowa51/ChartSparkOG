@@ -153,10 +153,8 @@ export default function NotePage() {
         if (!note) return;
         try {
             setSigning(true);
-            const response = await fetch(`/api/notes/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_signed: true }),
+            const response = await fetch(`/api/notes/${id}/sign`, {
+                method: 'POST',
             });
             if (!response.ok) {
                 const data = await response.json();

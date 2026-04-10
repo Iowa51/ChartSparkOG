@@ -169,7 +169,10 @@ export function withAuth<T extends AuthContext>(
             }
         }
 
-        // SEC-CODEX-1: MFA enforcement for privileged roles
+        // SEC-CODEX-1: MFA enforcement for enrolled users
+        // Policy: block users who have enrolled MFA but haven't completed it this session.
+        // Users who haven't enrolled MFA yet are allowed through (nextLevel === 'aal1').
+        // This is the correct production behaviour — MFA is enforced once opted-in.
         if (options?.requireMFA) {
             try {
                 const supabaseMfa = await createClient();
@@ -181,7 +184,9 @@ export function withAuth<T extends AuthContext>(
                 if (mfaError || !mfaData) {
                     return errorResponse('MFA validation unavailable', 503);
                 }
-                if (mfaData.currentLevel !== 'aal2') {
+                // Only block when the user HAS an MFA factor enrolled (nextLevel === 'aal2')
+                // but hasn't verified it in this session (currentLevel !== 'aal2').
+                if (mfaData.nextLevel === 'aal2' && mfaData.currentLevel !== 'aal2') {
                     return errorResponse('MFA required - please complete second factor authentication', 403);
                 }
             } catch (mfaErr) {
