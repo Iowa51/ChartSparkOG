@@ -11,13 +11,22 @@ export default defineConfig({
         include: ['src/**/*.{test,spec}.{js,ts,tsx}'],
         coverage: {
             provider: 'v8',
-            reporter: ['text', 'json', 'html'],
+            reporter: ['text', 'html', 'lcov'],
+            reportsDirectory: './coverage',
             include: ['src/**/*.{ts,tsx}'],
             exclude: [
                 'src/**/*.test.{ts,tsx}',
                 'src/**/*.spec.{ts,tsx}',
                 'src/__tests__/**',
+                '**/*.d.ts',
+                'node_modules/**',
+                '.next/**',
+                'dist/**',
             ],
+            thresholds: {
+                lines: 80,
+                branches: 75,
+            },
         },
     },
     resolve: {
