@@ -39,7 +39,8 @@
       "Bash(node:*)",
       "Bash(npx next:*)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/login)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(npx husky:*)"
     ]
   }
 }
