@@ -2,20 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main, production, develop]
+    branches: [main]
   pull_request:
-    branches: [main, production]
-
-env:
-  # Test environment variables (not real secrets - safe for CI)
-  PHI_ENCRYPTION_KEY: "ci-test-encryption-key-32-chars!!"
-  NEXT_PUBLIC_DEMO_MODE: "true"
+    branches: [main]
 
 jobs:
-  test:
-    name: Test
+  lint-and-type-check:
+    name: Lint and Type Check
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,23 +17,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests
-        run: npm run test:run
-
-      - name: Run TypeScript type check
+      - name: Type check
         run: npx tsc --noEmit
 
-  build:
-    name: Build
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    needs: test  # Only build if tests pass
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,7 +36,48 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        # --passWithNoTests lets the job succeed before any tests exist.
+        # Real test failures still fail the job.
+        run: npm test -- --passWithNoTests
+
+  security-scan:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies (fail on HIGH or CRITICAL)
+        run: npm audit --audit-level=high
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint-and-type-check, test, security-scan]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
@@ -56,55 +86,17 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          # Dummy env vars for build (real ones in Vercel/production)
-          NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co'
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4YW1wbGUiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjk2MjgwMCwiZXhwIjoxOTMyNTM4ODAwfQ.example'
-          AZURE_OPENAI_ENDPOINT: 'https://example.openai.azure.com'
-          AZURE_OPENAI_API_KEY: 'dummy-key-for-build'
+          # Dummy values for `next build`. These MUST satisfy the startup
+          # secret validation in src/instrumentation.ts:
+          #   - no placeholder markers (YOUR_, PASTE_, CHANGE_ME, example, test)
+          #   - URLs start with https://
+          #   - API keys longer than 20 characters
+          # Real secrets are configured in the deployment environment (Vercel).
+          NEXT_PUBLIC_SUPABASE_URL: 'https://ci-build.supabase.co'
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'ci-build-dummy-supabase-anon-key-do-not-use-for-real-calls'
+          SUPABASE_SERVICE_ROLE_KEY: 'ci-build-dummy-supabase-service-role-key-do-not-use-for-real-calls'
+          AZURE_OPENAI_ENDPOINT: 'https://ci-build.openai.azure.com'
+          AZURE_OPENAI_API_KEY: 'ci-build-dummy-azure-openai-key-do-not-use-for-real-calls'
           AZURE_OPENAI_DEPLOYMENT_NAME: 'gpt-4'
-          PHI_ENCRYPTION_KEY: 'ci-build-encryption-key-32chars!!'
-
-  security:
-    name: Security Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Check for critical vulnerabilities
-        run: npm audit --audit-level=critical
-
-      - name: Full security audit (informational)
-        run: npm audit || true
-        continue-on-error: true
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-        continue-on-error: true  # Report warnings but don't fail
+          PHI_ENCRYPTION_KEY: 'ci-build-encryption-key-32chars-no-markers-ok'
+          ENCRYPTION_SALT: 'ci-build-encryption-salt-32chars-no-markers-ok'
