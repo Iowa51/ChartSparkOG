@@ -177,7 +177,7 @@ export async function processERAFile(
 
     return { success: true, matched, unmatched };
   } catch (error) {
-    devError("ERA", "Processing error:", error);
+    logError({ action: "ERA_SERVICE_ERROR", error: sanitizeError(error) });
     return { success: false, matched: 0, unmatched: 0, error: "Processing failed" };
   }
 }
@@ -387,7 +387,7 @@ export async function matchERAPaymentToClaim(
 
     return { success: true };
   } catch (error) {
-    devError("ERA", "Match error:", error);
+    logError({ action: "ERA_SERVICE_ERROR", error: sanitizeError(error) });
     return { success: false, error: "Failed to match payment" };
   }
 }
@@ -414,7 +414,7 @@ export async function pollForERAFiles(): Promise<void> {
       // Would connect to SFTP and download ERA files
       devLog("ERA", `Would poll from ${config.clearinghouse}`);
     } catch (error) {
-      devError("ERA", `Poll error for ${config.clearinghouse}:`, error);
+      logError({ action: "ERA_SERVICE_ERROR", error: sanitizeError(error) });
     }
   }
 }
