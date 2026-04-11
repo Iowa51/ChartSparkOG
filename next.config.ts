@@ -96,6 +96,20 @@ const scribeHeaders = [
   },
 ];
 
+// HIPAA/PHI: prevent any proxy, CDN, or browser caching of API responses.
+// Applied as a non-terminating rule that stacks on top of the default /
+// telehealth header blocks via Next.js header merging.
+const apiCacheHeaders = [
+  {
+    key: 'Cache-Control',
+    value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+  },
+  {
+    key: 'Pragma',
+    value: 'no-cache',
+  },
+];
+
 const nextConfig: NextConfig = {
   // OPTIMIZATION: Image optimization settings
   images: {
@@ -160,6 +174,13 @@ const nextConfig: NextConfig = {
       {
         source: '/',
         headers: defaultHeaders,
+      },
+      // HIPAA: no-store cache headers on every API route. This rule stacks
+      // additively on top of the defaultHeaders / telehealthHeaders blocks
+      // above — Next.js merges headers from all matching header() entries.
+      {
+        source: '/api/:path*',
+        headers: apiCacheHeaders,
       },
     ];
   },
