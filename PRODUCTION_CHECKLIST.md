@@ -17,9 +17,9 @@ PHI_ENCRYPTION_KEY=your-32-char-minimum-key
 CRON_SECRET=your-cron-secret
 
 # Stripe - REQUIRED for billing
-STRIPE_SECRET_KEY=sk_live_xxx
-STRIPE_WEBHOOK_SECRET=whsec_xxx
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxx
+STRIPE_SECRET_KEY=<set-in-secret-manager>
+STRIPE_WEBHOOK_SECRET=<webhook-signing-secret>
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=<publishable-key>
 
 # Azure OpenAI - REQUIRED for AI features
 AZURE_OPENAI_API_KEY=your-key
@@ -27,8 +27,9 @@ AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com
 AZURE_OPENAI_DEPLOYMENT_NAME=your-deployment
 
 # Daily.co - REQUIRED for telehealth
-NEXT_PUBLIC_DAILY_API_KEY=your-daily-key
-DAILY_API_KEY=your-daily-key
+# Server-only. MUST NOT be exposed with a NEXT_PUBLIC_ prefix — the Daily API
+# key can mint meeting tokens and must never ship to the browser bundle.
+DAILY_API_KEY=<set-in-secret-manager>
 
 # Demo Mode - MUST be false or unset in production
 NEXT_PUBLIC_DEMO_MODE=false
