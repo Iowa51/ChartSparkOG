@@ -69,6 +69,11 @@ async function handleGet(context: AuthContext) {
 
     return NextResponse.json({ note });
   } catch (error) {
+    logError({
+      action: "note_fetch_error",
+      error: sanitizeError(error),
+      resourceType: "clinical_note",
+    });
     return NextResponse.json({ error: "Note not found" }, { status: 404 });
   }
 }
