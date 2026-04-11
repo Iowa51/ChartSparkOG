@@ -106,7 +106,23 @@ export async function getOfficeAllyAdapter(organizationId: string, supabase: any
         .single();
 
     if (error || !config) {
-        // Return a mock adapter if no config exists (for demo/testing)
+        // SEC-AUDIT-2026-04-10: Fail closed outside explicit test mode.
+        // Previously this silently returned a mock adapter whenever no
+        // clearinghouse config was present — which meant production could fall
+        // through to the mock path if credentials were ever lost or not yet
+        // seeded, causing "successful" uploads that never left the server.
+        const allowMock =
+            process.env.NODE_ENV !== 'production' &&
+            process.env.OFFICE_ALLY_ALLOW_MOCK === 'true';
+
+        if (!allowMock) {
+            throw new Error(
+                'Office Ally clearinghouse configuration is missing for this organization. ' +
+                'Refusing to fall back to a mock adapter. Set OFFICE_ALLY_ALLOW_MOCK=true in ' +
+                'a non-production environment to opt in to the mock adapter for local testing.'
+            );
+        }
+
         return new OfficeAllySFTPAdapter({
             host: 'ftp10officeally.com',
             port: 22,

@@ -12,10 +12,28 @@ import { sanitizeRedirectPath } from "@/lib/security/redirects";
 // as defense-in-depth. If no OAuth initiation cookie exists (e.g. password reset
 // magic links), we fall through — PKCE alone provides the CSRF guarantee.
 
+// SEC-AUDIT-2026-04-10: Redirect only to a configured canonical origin.
+// Trusting x-forwarded-host for the redirect host allowed an attacker-controlled
+// header to bend the post-auth redirect to an arbitrary hostname on proxies
+// that blindly forward it. We now resolve the redirect base from
+// NEXT_PUBLIC_APP_URL and fall back to the request origin only in development.
+function resolveRedirectBase(requestOrigin: string): string {
+    const configured = process.env.NEXT_PUBLIC_APP_URL;
+    if (configured) {
+        try {
+            return new URL(configured).origin;
+        } catch {
+            // fall through to requestOrigin
+        }
+    }
+    return requestOrigin;
+}
+
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get("code");
     const next = sanitizeRedirectPath(searchParams.get("next"));
+    const redirectBase = resolveRedirectBase(origin);
 
     if (code) {
         const supabase = await createServerClient();
@@ -24,18 +42,10 @@ export async function GET(request: Request) {
         // ensuring this code was requested by this browser session.
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!error) {
-            const forwardedHost = request.headers.get("x-forwarded-host");
-            const isLocalEnv = process.env.NODE_ENV === "development";
-            if (isLocalEnv) {
-                return NextResponse.redirect(`${origin}${next}`);
-            } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${next}`);
-            } else {
-                return NextResponse.redirect(`${origin}${next}`);
-            }
+            return NextResponse.redirect(`${redirectBase}${next}`);
         }
     }
 
     // return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+    return NextResponse.redirect(`${redirectBase}/auth/auth-code-error`);
 }

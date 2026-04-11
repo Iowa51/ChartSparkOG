@@ -1,15 +1,26 @@
 import { test, expect } from '@playwright/test';
 
+// SEC-AUDIT-2026-04-10: Test credentials sourced from environment — never
+// hardcoded. Missing values fail the suite loudly so CI can't silently start
+// authenticating against stale/demo accounts.
+const E2E_TEST_EMAIL = process.env.E2E_TEST_EMAIL;
+const E2E_TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
+
 /**
  * E2E: Patients Page
  * Tests patient list loading and navigation (requires authenticated session)
  */
 test.describe('Patients Page', () => {
     test.beforeEach(async ({ page }) => {
+        if (!E2E_TEST_EMAIL || !E2E_TEST_PASSWORD) {
+            throw new Error(
+                'E2E_TEST_EMAIL and E2E_TEST_PASSWORD must be set in the environment to run the Patients Page e2e suite.'
+            );
+        }
         // Login first
         await page.goto('/login');
-        await page.fill('input[type="email"], input[name="email"]', 'clinician@chartspark.com');
-        await page.fill('input[type="password"], input[name="password"]', 'Demo123!!');
+        await page.fill('input[type="email"], input[name="email"]', E2E_TEST_EMAIL);
+        await page.fill('input[type="password"], input[name="password"]', E2E_TEST_PASSWORD);
         await page.click('button[type="submit"]');
         await page.waitForURL('**/dashboard', { timeout: 15000 });
     });

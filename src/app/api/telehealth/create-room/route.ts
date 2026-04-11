@@ -6,6 +6,7 @@ import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { createTelehealthJoinSession } from '@/lib/security/telehealth-session-tokens';
+import { createTelehealthInviteToken } from '@/lib/security/telehealth-invite-tokens';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { TelehealthCreateRoomSchema, validateRequest } from '@/lib/validation/schemas';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
@@ -113,8 +114,8 @@ async function handler(context: AuthContext) {
                 meetingToken: 'demo-provider-token',
             });
 
-            // SEC-SPRINT11: Patient token created in DB only — never assigned to a local
-            // or included in any response. accept-invite looks it up by appointment ID.
+            // SEC-SPRINT11: Patient session token created in DB only — never assigned to a local
+            // or included in any response. accept-invite resolves it via the invite token lookup.
             await createTelehealthJoinSession({
                 appointmentId,
                 organizationId: appointment.organization_id,
@@ -123,10 +124,19 @@ async function handler(context: AuthContext) {
                 meetingToken: 'demo-patient-token',
             });
 
+            // SEC-AUDIT-2026-04-10: Issue an opaque invite token. The plaintext token
+            // is included in the invite URL and then discarded — only its SHA-256
+            // hash is stored server-side.
+            const demoInviteToken = await createTelehealthInviteToken({
+                appointmentId,
+                organizationId: appointment.organization_id,
+                participantRole: 'patient',
+            });
+
             // SEC-PT4-F2: Provider token delivered via HTTP-only cookie, not response body
             const demoResponse = NextResponse.json({
                 appointmentId,
-                patientInvitePath: `/api/telehealth/accept-invite?appointment=${encodeURIComponent(appointmentId)}`,
+                patientInvitePath: `/api/telehealth/accept-invite?token=${encodeURIComponent(demoInviteToken)}`,
                 isDemo: true,
             });
             demoResponse.cookies.set('telehealth_provider_session', providerSessionTokenRef, {
@@ -246,8 +256,8 @@ async function handler(context: AuthContext) {
             meetingToken: providerToken.token,
         });
 
-        // SEC-SPRINT11: Patient token created in DB only — never assigned to a local
-        // or included in any response. accept-invite looks it up by appointment ID.
+        // SEC-SPRINT11: Patient session token created in DB only — never assigned to a local
+        // or included in any response. accept-invite resolves it via the invite token lookup.
         await createTelehealthJoinSession({
             appointmentId,
             organizationId: appointment.organization_id,
@@ -256,10 +266,19 @@ async function handler(context: AuthContext) {
             meetingToken: patientToken.token,
         });
 
+        // SEC-AUDIT-2026-04-10: Issue an opaque invite token. The plaintext token
+        // is included in the invite URL and then discarded — only its SHA-256
+        // hash is stored server-side.
+        const patientInviteToken = await createTelehealthInviteToken({
+            appointmentId,
+            organizationId: appointment.organization_id,
+            participantRole: 'patient',
+        });
+
         // SEC-PT4-F2: Provider token delivered via HTTP-only cookie, not response body
         const response = NextResponse.json({
             appointmentId,
-            patientInvitePath: `/api/telehealth/accept-invite?appointment=${encodeURIComponent(appointmentId)}`,
+            patientInvitePath: `/api/telehealth/accept-invite?token=${encodeURIComponent(patientInviteToken)}`,
         });
         response.cookies.set('telehealth_provider_session', providerSessionTokenRef, {
             httpOnly: true,

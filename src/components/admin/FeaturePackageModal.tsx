@@ -164,8 +164,21 @@ export function FeaturePackageModal({ isOpen, onClose, users }: FeaturePackageMo
         // Simulate saving - in production this would call the API
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Update local storage for demo mode
-        const savedPackages = JSON.parse(localStorage.getItem("cs_user_packages") || "{}");
+        // SEC-AUDIT-2026-04-10: Guard localStorage parsing. If another tab (or
+        // an extension) has written garbage into this key, silently reset it
+        // rather than throwing an uncaught SyntaxError from the save handler.
+        let savedPackages: Record<string, string[]> = {};
+        try {
+            const raw = localStorage.getItem("cs_user_packages");
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                    savedPackages = parsed as Record<string, string[]>;
+                }
+            }
+        } catch {
+            savedPackages = {};
+        }
         savedPackages[selectedUserId] = selectedPackages;
         localStorage.setItem("cs_user_packages", JSON.stringify(savedPackages));
 

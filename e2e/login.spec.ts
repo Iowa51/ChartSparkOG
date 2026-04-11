@@ -1,5 +1,20 @@
 import { test, expect } from '@playwright/test';
 
+// SEC-AUDIT-2026-04-10: Test credentials MUST come from the environment so we
+// never commit real or stable demo secrets to the repo. Missing values fail
+// the affected tests loudly rather than falling back to hardcoded defaults.
+const E2E_TEST_EMAIL = process.env.E2E_TEST_EMAIL;
+const E2E_TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
+
+function requireTestCredentials(): { email: string; password: string } {
+    if (!E2E_TEST_EMAIL || !E2E_TEST_PASSWORD) {
+        throw new Error(
+            'E2E_TEST_EMAIL and E2E_TEST_PASSWORD must be set in the environment to run credential-based e2e tests.'
+        );
+    }
+    return { email: E2E_TEST_EMAIL, password: E2E_TEST_PASSWORD };
+}
+
 /**
  * E2E: Login Flow
  * Tests the clinician login with demo credentials
@@ -25,11 +40,12 @@ test.describe('Login Flow', () => {
     });
 
     test('should login with demo clinician credentials', async ({ page }) => {
+        const { email, password } = requireTestCredentials();
         await page.goto('/login');
 
-        // Fill demo credentials
-        await page.fill('input[type="email"], input[name="email"]', 'clinician@chartspark.com');
-        await page.fill('input[type="password"], input[name="password"]', 'Demo123!!');
+        // Fill credentials sourced from environment variables
+        await page.fill('input[type="email"], input[name="email"]', email);
+        await page.fill('input[type="password"], input[name="password"]', password);
         await page.click('button[type="submit"]');
 
         // Should redirect to dashboard
@@ -41,10 +57,11 @@ test.describe('Login Flow', () => {
     });
 
     test('should logout successfully', async ({ page }) => {
+        const { email, password } = requireTestCredentials();
         // Login first
         await page.goto('/login');
-        await page.fill('input[type="email"], input[name="email"]', 'clinician@chartspark.com');
-        await page.fill('input[type="password"], input[name="password"]', 'Demo123!!');
+        await page.fill('input[type="email"], input[name="email"]', email);
+        await page.fill('input[type="password"], input[name="password"]', password);
         await page.click('button[type="submit"]');
         await page.waitForURL('**/dashboard', { timeout: 15000 });
 

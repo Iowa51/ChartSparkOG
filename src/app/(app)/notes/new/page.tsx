@@ -214,11 +214,29 @@ export default function NewNotePage() {
         setScribeTranscription("");
     }, [templateId]);
     const [customPhrases, setCustomPhrases] = useState<Record<string, string[]>>(() => {
-        if (typeof window !== 'undefined') {
+        const defaults: Record<string, string[]> = { Subjective: [], Objective: [], Assessment: [], Plan: [] };
+        if (typeof window === 'undefined') return defaults;
+
+        // SEC-AUDIT-2026-04-10: Guard localStorage parse — invalid JSON or an
+        // unexpected shape should reset to defaults rather than throw during
+        // initial render.
+        try {
             const saved = localStorage.getItem('customPhrases');
-            return saved ? JSON.parse(saved) : { Subjective: [], Objective: [], Assessment: [], Plan: [] };
+            if (!saved) return defaults;
+            const parsed = JSON.parse(saved);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return defaults;
+
+            const result: Record<string, string[]> = { ...defaults };
+            for (const key of Object.keys(defaults)) {
+                const value = (parsed as Record<string, unknown>)[key];
+                if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
+                    result[key] = value as string[];
+                }
+            }
+            return result;
+        } catch {
+            return defaults;
         }
-        return { Subjective: [], Objective: [], Assessment: [], Plan: [] };
     });
     const [newPhrase, setNewPhrase] = useState("");
     const [showPhraseModal, setShowPhraseModal] = useState(false);

@@ -96,6 +96,10 @@ async function handlePost(context: AuthContext) {
     }
 }
 
+// SEC-AUDIT-2026-04-10: Unlocking accounts is a high-privilege action that
+// restores access on behalf of another user. Require MFA on the caller so a
+// stolen admin session alone cannot be used to reinstate disabled accounts.
 export const POST = withAuth(handlePost, {
     requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

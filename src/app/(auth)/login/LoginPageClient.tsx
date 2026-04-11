@@ -15,8 +15,21 @@ import {
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { sanitizeRedirectPath } from "@/lib/security/redirects";
 
+// SEC-AUDIT-2026-04-10: Demo credentials are sourced server-side from
+// DEMO_LOGIN_CREDENTIALS (see src/app/(auth)/login/page.tsx) and passed in as
+// a prop. Keeping them out of application code means no credential literals
+// live in git history or production bundles.
+export interface DemoCredential {
+    label: string;
+    email: string;
+    password: string;
+    role?: string;
+    accentClassName?: string;
+}
+
 interface LoginPageClientProps {
     demoModeEnabled: boolean;
+    demoCredentials?: DemoCredential[];
 }
 
 // Role-based redirect map
@@ -27,7 +40,7 @@ const roleRoutes: Record<string, string> = {
     'USER': '/dashboard'
 };
 
-export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProps) {
+export default function LoginPageClient({ demoModeEnabled, demoCredentials = [] }: LoginPageClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const defaultRedirect = "/dashboard";
@@ -64,19 +77,15 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
         }
 
         try {
-            // SEC-SPRINT11: Demo role map only exists in non-production builds.
-            // In production, this entire block is dead-code-eliminated by the bundler.
-            if (process.env.NODE_ENV !== 'production' && demoModeEnabled) {
-                const demoRoleMap: Record<string, string> = {
-                    'super@chartspark.com': 'SUPER_ADMIN',
-                    'admin@chartspark.com': 'ADMIN',
-                    'auditor@chartspark.com': 'AUDITOR',
-                    'clinician@chartspark.com': 'USER',
-                };
-                const detectedDemoRole = demoRoleMap[email.toLowerCase()];
-
-                if (detectedDemoRole) {
-                    const redirectPath = roleRoutes[detectedDemoRole] || defaultRedirect;
+            // SEC-SPRINT11 + SEC-AUDIT-2026-04-10: Demo role map is derived
+            // from the DEMO_LOGIN_CREDENTIALS env (passed in as a prop) so no
+            // demo email literals live in application code. NODE_ENV check is
+            // DCE'd in production builds.
+            if (process.env.NODE_ENV !== 'production' && demoModeEnabled && demoCredentials.length > 0) {
+                const normalizedEmail = email.toLowerCase();
+                const match = demoCredentials.find(c => c.email.toLowerCase() === normalizedEmail && c.role);
+                if (match?.role) {
+                    const redirectPath = roleRoutes[match.role] || defaultRedirect;
                     router.push(redirectPath);
                     return;
                 }
@@ -145,23 +154,20 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
             if (!finalUserData) {
                 console.error("Error fetching user profile from both tables:", userError);
 
-                // SEC-SPRINT11: Demo fallback only in non-production builds
-                if (process.env.NODE_ENV !== 'production' && demoModeEnabled) {
-                    const demoRoles: Record<string, string> = {
-                        'super@chartspark.com': 'SUPER_ADMIN',
-                        'admin@chartspark.com': 'ADMIN',
-                        'auditor@chartspark.com': 'AUDITOR',
-                        'clinician@chartspark.com': 'USER',
-                    };
-                    const detectedRole = demoRoles[email.toLowerCase()];
-                    if (detectedRole) {
+                // SEC-SPRINT11 + SEC-AUDIT-2026-04-10: Demo fallback only in
+                // non-production builds, and only for emails supplied via the
+                // DEMO_LOGIN_CREDENTIALS env.
+                if (process.env.NODE_ENV !== 'production' && demoModeEnabled && demoCredentials.length > 0) {
+                    const normalizedEmail = email.toLowerCase();
+                    const match = demoCredentials.find(c => c.email.toLowerCase() === normalizedEmail && c.role);
+                    if (match?.role) {
                         await fetch('/api/auth/record-attempt', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ email, success: true }),
                         }).catch(() => { });
 
-                        const redirectPath = roleRoutes[detectedRole] || defaultRedirect;
+                        const redirectPath = roleRoutes[match.role] || defaultRedirect;
                         router.push(redirectPath);
                         return;
                     }
@@ -327,10 +333,13 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
                     </div>
                 </div>
 
-                {/* SEC-SPRINT11: Demo credential buttons only render in non-production builds.
-                    process.env.NODE_ENV is replaced at build time, so this entire block
-                    is dead-code-eliminated from production bundles. */}
-                {process.env.NODE_ENV !== 'production' && demoModeEnabled && (
+                {/* SEC-SPRINT11 + SEC-AUDIT-2026-04-10: Demo credential buttons
+                    only render in non-production builds AND only when the
+                    server supplied entries via DEMO_LOGIN_CREDENTIALS. The
+                    NODE_ENV check is replaced at build time so production
+                    bundles eliminate this block entirely; no credential
+                    literals live in application code. */}
+                {process.env.NODE_ENV !== 'production' && demoModeEnabled && demoCredentials.length > 0 && (
                     <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-4 border-t border-slate-100 dark:border-slate-800">
                         <div className="flex items-center gap-2 mb-3">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -339,38 +348,20 @@ export default function LoginPageClient({ demoModeEnabled }: LoginPageClientProp
                             </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                            <button
-                                type="button"
-                                onClick={() => { setEmail("super@chartspark.com"); setPassword("Demo123!!"); }}
-                                className="px-3 py-2 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg font-medium hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
-                                aria-label="Use Super Admin demo credentials"
-                            >
-                                Super Admin
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => { setEmail("admin@chartspark.com"); setPassword("Demo123!!"); }}
-                                className="px-3 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-                                aria-label="Use Admin demo credentials"
-                            >
-                                Admin
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => { setEmail("auditor@chartspark.com"); setPassword("Demo123!!"); }}
-                                className="px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
-                                aria-label="Use Auditor demo credentials"
-                            >
-                                Auditor
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => { setEmail("clinician@chartspark.com"); setPassword("Demo123!!"); }}
-                                className="px-3 py-2 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg font-medium hover:bg-teal-200 dark:hover:bg-teal-900/50 transition-colors"
-                                aria-label="Use Clinician demo credentials"
-                            >
-                                Clinician
-                            </button>
+                            {demoCredentials.map((cred) => (
+                                <button
+                                    key={cred.email}
+                                    type="button"
+                                    onClick={() => { setEmail(cred.email); setPassword(cred.password); }}
+                                    className={
+                                        cred.accentClassName ||
+                                        "px-3 py-2 bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-900/50 transition-colors"
+                                    }
+                                    aria-label={`Use ${cred.label} demo credentials`}
+                                >
+                                    {cred.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 )}
