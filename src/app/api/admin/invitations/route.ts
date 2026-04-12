@@ -216,7 +216,7 @@ async function handlePost(context: AuthContext) {
       emailError = emailResult.error;
 
       if (!emailSent) {
-        logError({ action: "SEND_INVITATION_EMAIL_FAILED", error: emailError });
+        logError({ action: "SEND_INVITATION_EMAIL_FAILED", error: sanitizeError(emailError) });
       }
     }
 
