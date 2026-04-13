@@ -48,10 +48,12 @@ export async function middleware(request: NextRequest) {
           action: "SECURITY_BLOCKED_REQUEST",
           status: `ip=${ip} threat=${threats[0].threatType}`,
         });
-        return NextResponse.json(
+        const blocked = NextResponse.json(
           { error: "Request blocked for security reasons" },
           { status: 403 },
         );
+        blocked.headers.set("X-API-Version", "1");
+        return blocked;
       }
     }
 
@@ -59,11 +61,14 @@ export async function middleware(request: NextRequest) {
     const { success, response } = await checkRateLimit(request);
 
     if (!success && response) {
+      response.headers.set("X-API-Version", "1");
       return response;
     }
 
     // Continue to next middleware/handler
-    return NextResponse.next();
+    const next = NextResponse.next();
+    next.headers.set("X-API-Version", "1");
+    return next;
   }
 
   // Handle session for non-API routes
