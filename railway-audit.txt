@@ -1,0 +1,55 @@
+I need you to audit the current deployment configuration for the 
+agent-orchestrator service and its related sidecars. Read existing 
+files only. Do not modify anything.
+
+QUESTION 1 — RAILWAY CONFIGURATION:
+Check the following locations for Railway deployment config:
+- railway.toml in the current directory
+- Any .railway/ folder
+- package.json scripts for deploy/start commands
+- Any existing RAILWAY_* environment variables in .env.example
+Report: exact contents of railway.toml, start command, health check 
+path, and port configuration.
+
+QUESTION 2 — EXISTING SIDECAR CONNECTIONS:
+Check src/clients/scribe.ts and src/clients/fhir.ts.
+Report: 
+- What URLs do they connect to (env var names and default values)
+- Are there any Railway-specific URLs already configured
+- What health check endpoints do they call
+
+QUESTION 3 — ENVIRONMENT VARIABLES AUDIT:
+Read .env.example completely.
+Report: every single environment variable listed, its current 
+placeholder value, and whether it appears to be already filled 
+in anywhere.
+
+QUESTION 4 — AZURE OPENAI:
+Search the entire codebase for any reference to:
+- Azure OpenAI
+- AZURE_OPENAI
+- azure.com
+- openai.azure
+Report: exact file paths and values found, or confirm none exist.
+
+QUESTION 5 — ANTHROPIC CLIENT:
+Read src/clients/anthropic.ts completely.
+Report: 
+- Which model is hardcoded or configured
+- How the API key is read
+- Whether there is any Azure OpenAI fallback logic
+
+QUESTION 6 — DOCKERFILE:
+Read the Dockerfile completely.
+Report: base image, build stages, exposed port, start command, 
+and any potential issues for Railway deployment.
+
+QUESTION 7 — EXISTING RAILWAY PROJECTS:
+Check if there are any references to existing Railway project names,
+service names, or Railway URLs anywhere in the codebase.
+Check: README.md, any docs/ folder, .env.example, any config files.
+Report: exactly what is found or confirm nothing exists.
+
+After all questions, provide a deployment readiness summary:
+What is ready for Railway deployment right now, and what needs 
+to be configured before deploying.

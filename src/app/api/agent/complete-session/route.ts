@@ -61,6 +61,45 @@ async function handler(context: AuthContext) {
 
   const mode = getAgentMode(org.subscription_tier ?? "starter");
 
+  // FIX 3: Validate encounter ownership before invoking the agent pipeline.
+  // Prevents cross-org data access and processing of invalid/closed encounters.
+  const { data: encounter, error: encounterError } = await supabase
+    .from("encounters")
+    .select("id, organization_id, patient_id, assigned_clinician_id, status")
+    .eq("id", sessionId)
+    .single();
+
+  if (encounterError || !encounter) {
+    return NextResponse.json({ error: "Encounter not found" }, { status: 404 });
+  }
+
+  if (encounter.organization_id !== user.organizationId) {
+    logError({
+      action: "agent_complete_session_forbidden",
+      error: sanitizeError("Organization mismatch"),
+    });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const isAdminOrAbove = (["ADMIN", "SUPER_ADMIN"] as string[]).includes(
+    (user as unknown as Record<string, string>).role ?? "",
+  );
+  if (encounter.assigned_clinician_id !== user.id && !isAdminOrAbove) {
+    logError({
+      action: "agent_complete_session_forbidden",
+      error: sanitizeError("Clinician mismatch"),
+    });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!(["scheduled", "in_progress"] as string[]).includes(encounter.status as string)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!encounter.patient_id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // Forward to agent-orchestrator
   const orchestratorUrl = process.env.AGENT_ORCHESTRATOR_URL ?? "http://localhost:3300";
   let orchestratorResult: Record<string, unknown>;
@@ -76,12 +115,17 @@ async function handler(context: AuthContext) {
       sessionType: sessionType ?? "individual",
       duration: duration ?? 60,
       payerType: payerType ?? "commercial",
-      mode,
+      organizationId: user.organizationId, // FIX 4: thread through for quality_reviews
+      // mode is NOT sent — derived server-side by the orchestrator (FIX 1)
     };
 
     const resp = await fetch(`${orchestratorUrl}/sessions/${sessionId}/complete`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // FIX 1: Shared secret for service-to-service authentication
+        Authorization: `Bearer ${process.env.ORCHESTRATOR_SECRET ?? ""}`,
+      },
       body: JSON.stringify(orchestratorBody),
       signal: AbortSignal.timeout(60_000),
     });
