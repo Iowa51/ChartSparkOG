@@ -18,7 +18,8 @@ interface Props {
   disabled?: boolean;
 }
 
-type ButtonState = "idle" | "loading" | "success";
+// FIX 10: 4-state progression: idle → loading → success OR error → idle
+type ButtonState = "idle" | "loading" | "success" | "error";
 
 const SIDECAR_READY = process.env.NEXT_PUBLIC_SIDECAR_READY === "true";
 
@@ -36,6 +37,7 @@ export function EndSessionButton({
   disabled,
 }: Props) {
   const [state, setState] = useState<ButtonState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   if (!SIDECAR_READY) {
     return (
@@ -60,6 +62,7 @@ export function EndSessionButton({
     if (state === "loading" || state === "success") return;
 
     setState("loading");
+    setErrorMessage("");
 
     try {
       const resp = await fetch("/api/agent/complete-session", {
@@ -82,7 +85,13 @@ export function EndSessionButton({
       if (!resp.ok || !data.success) {
         const message = data.error ?? "Session could not be completed. Please try again.";
         onError(message);
-        setState("idle");
+        setErrorMessage(message);
+        setState("error");
+        // FIX 10: Show error for 5 seconds then reset to idle (always retryable)
+        setTimeout(() => {
+          setState("idle");
+          setErrorMessage("");
+        }, 5000);
         return;
       }
 
@@ -92,8 +101,15 @@ export function EndSessionButton({
       // Return to idle after 3 seconds so clinician can retry if needed
       setTimeout(() => setState("idle"), 3000);
     } catch {
-      onError("Network error. Please check your connection and try again.");
-      setState("idle");
+      const message = "Network error. Please check your connection and try again.";
+      onError(message);
+      setErrorMessage(message);
+      setState("error");
+      // FIX 10: Reset to idle after 5 seconds
+      setTimeout(() => {
+        setState("idle");
+        setErrorMessage("");
+      }, 5000);
     }
   };
 
@@ -118,6 +134,21 @@ export function EndSessionButton({
         <CheckCircle2 className="h-4 w-4" />
         Session Complete
       </button>
+    );
+  }
+
+  if (state === "error") {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <button
+          disabled
+          className="flex items-center gap-2 px-5 py-2 bg-red-600 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-red-600/20 cursor-not-allowed"
+        >
+          <AlertCircle className="h-4 w-4" />
+          Error
+        </button>
+        {errorMessage && <p className="text-xs text-red-600 max-w-xs text-right">{errorMessage}</p>}
+      </div>
     );
   }
 
