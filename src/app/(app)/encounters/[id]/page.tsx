@@ -228,7 +228,10 @@ export default function EncounterDetailPage() {
           {/* Vitals Sidebar */}
           <div className="space-y-6">
             {/* Superbill Widget */}
-            <SuperbillWidget />
+            <SuperbillWidget
+              initialCptCode={agentResult?.cptCode}
+              initialIcd10Codes={agentResult?.icd10Codes}
+            />
 
             {/* Dynamic Vitals Entry */}
             <div className="bg-card rounded-2xl border border-border shadow-sm">
