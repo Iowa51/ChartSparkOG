@@ -485,6 +485,7 @@ export default function AdminAuditorNotesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState<string>("ALL");
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCurrentUserOrg();
@@ -501,12 +502,13 @@ export default function AdminAuditorNotesPage() {
     if (user) {
       const { data: profile } = await supabase
         .from("users")
-        .select("organization_id")
+        .select("organization_id, role")
         .eq("id", user.id)
         .single();
 
       if (profile?.organization_id) {
         setOrganizationId(profile.organization_id);
+        setUserRole(profile.role ?? null);
         fetchFlags(profile.organization_id);
       } else {
         setLoading(false);
@@ -619,16 +621,18 @@ export default function AdminAuditorNotesPage() {
         >
           Audit Flags
         </button>
-        <button
-          onClick={() => setActiveTab("agent_queue")}
-          className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-            activeTab === "agent_queue"
-              ? "border-primary text-primary"
-              : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-          }`}
-        >
-          Agent Queue
-        </button>
+        {(userRole === "ADMIN" || userRole === "SUPER_ADMIN") && (
+          <button
+            onClick={() => setActiveTab("agent_queue")}
+            className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === "agent_queue"
+                ? "border-primary text-primary"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+            }`}
+          >
+            Agent Queue
+          </button>
+        )}
       </div>
 
       {/* Tab: Audit Flags */}
@@ -744,7 +748,9 @@ export default function AdminAuditorNotesPage() {
       )}
 
       {/* Tab: Agent Queue */}
-      {activeTab === "agent_queue" && <AgentQueueTab organizationId={organizationId} />}
+      {activeTab === "agent_queue" && (userRole === "ADMIN" || userRole === "SUPER_ADMIN") && (
+        <AgentQueueTab organizationId={organizationId} />
+      )}
     </div>
   );
 }

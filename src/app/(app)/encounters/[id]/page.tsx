@@ -400,7 +400,10 @@ export default function EncounterDetailPage() {
           </div>
 
           <div className="space-y-6">
-            <SuperbillWidget />
+            <SuperbillWidget
+              initialCptCode={agentResult?.cptCode}
+              initialIcd10Codes={agentResult?.icd10Codes}
+            />
 
             <div className="bg-card rounded-2xl border border-border shadow-sm">
               <VitalsEntryPanel patientId={encounter.patient_id} encounterId={id} />
