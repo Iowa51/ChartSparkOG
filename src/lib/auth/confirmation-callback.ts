@@ -169,10 +169,51 @@ function getOtpType(value: string | null): EmailOtpType | null {
     return null;
 }
 
+function getRawQueryParam(search: string, key: string): string | null {
+    const trimmedSearch = search.startsWith("?") ? search.slice(1) : search;
+    if (!trimmedSearch) return null;
+
+    for (const part of trimmedSearch.split("&")) {
+        if (part.startsWith(`${key}=`)) {
+            return part.slice(key.length + 1);
+        }
+        if (part === key) {
+            return "";
+        }
+    }
+
+    return null;
+}
+
+function describeSupabaseAuthError(error: unknown): string {
+    if (!error || typeof error !== "object") {
+        return sanitizeError(error);
+    }
+
+    const candidate = error as {
+        name?: unknown;
+        message?: unknown;
+        code?: unknown;
+        status?: unknown;
+        error_code?: unknown;
+    };
+
+    const parts = [
+        typeof candidate.name === "string" ? `name=${candidate.name}` : null,
+        typeof candidate.code === "string" ? `code=${candidate.code}` : null,
+        typeof candidate.error_code === "string" ? `error_code=${candidate.error_code}` : null,
+        typeof candidate.status === "number" ? `status=${candidate.status}` : null,
+        typeof candidate.message === "string" ? `message=${candidate.message}` : null,
+    ].filter(Boolean);
+
+    return parts.length > 0 ? parts.join(" | ") : sanitizeError(error);
+}
+
 export async function handleAuthCallback(request: NextRequest): Promise<NextResponse> {
-    const { searchParams, origin } = new URL(request.url);
+    const requestUrl = new URL(request.url);
+    const { searchParams, origin, search } = requestUrl;
     const code = searchParams.get("code");
-    const tokenHash = searchParams.get("token_hash");
+    const tokenHash = getRawQueryParam(search, "token_hash") ?? searchParams.get("token_hash");
     const otpType = getOtpType(searchParams.get("type"));
     const orgName = searchParams.get("org");
     const next = sanitizeRedirectPath(searchParams.get("next"));
@@ -206,9 +247,25 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
             type: otpType,
         });
         authError = error;
+
+        if (error) {
+            logWarn({
+                action: "CALLBACK_VERIFY_OTP_FAILED",
+                error: describeSupabaseAuthError(error),
+                status: `flow=${flowType} type=${otpType} hasCode=${String(Boolean(code))} tokenHashLength=${String(tokenHash.length)} destination=${destinationPath}`,
+            });
+        }
     } else if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         authError = error;
+
+        if (error) {
+            logWarn({
+                action: "CALLBACK_EXCHANGE_CODE_FAILED",
+                error: describeSupabaseAuthError(error),
+                status: `flow=${flowType} hasTokenHash=${String(Boolean(tokenHash))} codeLength=${String(code.length)} destination=${destinationPath}`,
+            });
+        }
 
         if (error && tokenHash && otpType) {
             const { error: verifyError } = await supabase.auth.verifyOtp({
@@ -216,6 +273,14 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
                 type: otpType,
             });
             authError = verifyError;
+
+            if (verifyError) {
+                logWarn({
+                    action: "CALLBACK_VERIFY_OTP_FALLBACK_FAILED",
+                    error: describeSupabaseAuthError(verifyError),
+                    status: `flow=${flowType} type=${otpType} tokenHashLength=${String(tokenHash.length)} destination=${destinationPath}`,
+                });
+            }
         }
     } else if (tokenHash && otpType) {
         const { error } = await supabase.auth.verifyOtp({
@@ -223,6 +288,14 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
             type: otpType,
         });
         authError = error;
+
+        if (error) {
+            logWarn({
+                action: "CALLBACK_VERIFY_OTP_FAILED",
+                error: describeSupabaseAuthError(error),
+                status: `flow=${flowType} type=${otpType} hasCode=${String(Boolean(code))} tokenHashLength=${String(tokenHash.length)} destination=${destinationPath}`,
+            });
+        }
     }
 
     if (authError) {
