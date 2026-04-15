@@ -28,7 +28,7 @@ export const RATE_LIMITS = {
   login: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
   // SEC-PT1-F3: Per-email rate limiting to prevent brute force via IP rotation
   loginEmail: { limit: 10, window: 15 * 60 * 1000, failClosed: true },
-  mfaVerify: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
+  mfaVerify: { limit: 5, window: 15 * 60 * 1000, failClosed: false },
   passwordReset: { limit: 3, window: 60 * 60 * 1000, failClosed: true },
   emailSend: { limit: 5, window: 60 * 60 * 1000, failClosed: true },
   telehealth: { limit: 50, window: 60 * 60 * 1000, failClosed: false },
@@ -61,10 +61,16 @@ const RATE_LIMIT_EXEMPT_PATHS = new Set([
   "/api/auth/login",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/auth/mfa",
+  "/api/auth/verify-mfa",
+  "/api/auth/setup-mfa",
+  "/settings/security",
 ]);
 
 function isRateLimitExemptPath(pathname: string): boolean {
-  return RATE_LIMIT_EXEMPT_PATHS.has(pathname);
+  return RATE_LIMIT_EXEMPT_PATHS.has(pathname)
+    || pathname.startsWith("/api/auth/mfa")
+    || pathname.startsWith("/settings/security");
 }
 
 function checkCircuitBreaker(): boolean {
