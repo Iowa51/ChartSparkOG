@@ -156,6 +156,17 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
         return buildLoginErrorRedirect(redirectBase);
     }
 
+    // Replace any pre-existing browser session before consuming the new auth callback.
+    // Without this, a previously logged-in user in the same browser can remain active
+    // and the dashboard will resolve the wrong profile after confirmation.
+    const { data: { user: previousUser } } = await supabase.auth.getUser();
+    if (previousUser) {
+        const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+        if (signOutError) {
+            logWarn({ action: "CALLBACK_PREEXISTING_SESSION_SIGNOUT_FAILED", error: sanitizeError(signOutError) });
+        }
+    }
+
     let authError: unknown = null;
 
     if (code) {
@@ -172,6 +183,15 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
     if (authError) {
         logWarn({ action: "CALLBACK_CODE_EXCHANGE_FAILED", error: sanitizeError(authError) });
         return buildLoginErrorRedirect(redirectBase);
+    }
+
+    const { data: { user: callbackUser }, error: callbackUserError } = await supabase.auth.getUser();
+    if (callbackUserError || !callbackUser) {
+        logWarn({ action: "CALLBACK_SESSION_USER_MISSING", error: sanitizeError(callbackUserError) });
+        return buildLoginErrorRedirect(
+            redirectBase,
+            "Your email was confirmed, but we could not start your session. Please sign in manually."
+        );
     }
 
     if (orgName) {
