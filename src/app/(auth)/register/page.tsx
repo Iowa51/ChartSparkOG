@@ -88,18 +88,40 @@ export default function RegisterPage() {
                         first_name: firstName,
                         last_name: lastName,
                     },
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                    emailRedirectTo: `${window.location.origin}/auth/callback?org=${encodeURIComponent(organization.trim())}`,
                 },
             });
 
             if (authError) {
-                setErrors([authError.message]);
+                const msg = authError.message.toLowerCase();
+                if (msg.includes("already registered") || msg.includes("user already registered")) {
+                    setErrors(["An account with this email already exists. Please sign in instead."]);
+                } else {
+                    setErrors([authError.message]);
+                }
                 setIsLoading(false);
                 return;
             }
 
             if (!authData.user) {
                 setErrors(["Failed to create account"]);
+                setIsLoading(false);
+                return;
+            }
+
+            // Email confirmation is enabled in Supabase: signUp returns a user but no session.
+            // The user must click the confirmation link before a session exists.
+            // complete-signup requires an active session (it calls getUser() server-side),
+            // so we must not call it here. The callback route handles it post-confirmation
+            // using the org name passed as a query param in the email redirect URL.
+            if (!authData.session) {
+                // Store org name as fallback in case the query param is lost
+                try {
+                    localStorage.setItem('pending_org_name', organization.trim());
+                } catch {
+                    // localStorage unavailable (private browsing, etc.) — query param is the primary mechanism
+                }
+                setSuccess(true);
                 setIsLoading(false);
                 return;
             }
@@ -119,7 +141,12 @@ export default function RegisterPage() {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                setErrors([errorData.error || "Failed to complete registration"]);
+                const errorMsg: string = errorData.error || "";
+                if (errorMsg.toLowerCase().includes("unauthorized") && errorMsg.toLowerCase().includes("must be logged in to complete signup")) {
+                    setErrors(["Registration failed. Please try again or contact support if the issue persists."]);
+                } else {
+                    setErrors([errorMsg || "Failed to complete registration"]);
+                }
                 // Note: Auth user was created but profile failed - user can try logging in
                 setIsLoading(false);
                 return;
