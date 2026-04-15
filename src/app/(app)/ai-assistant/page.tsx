@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Brain,
     Loader2,
@@ -17,7 +17,6 @@ import {
     Sparkles,
     CheckCircle2
 } from "lucide-react";
-import { patients } from "@/lib/demo-data/patients";
 
 // Local Component Definitions
 const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -104,16 +103,41 @@ const Progress = ({ value, className }: { value: number, className?: string }) =
     </div>
 );
 
-
+interface Patient {
+    id: string;
+    first_name: string;
+    last_name: string;
+    mrn?: string;
+}
 
 export default function AIAssistantPage() {
     const [sessionNotes, setSessionNotes] = useState("");
     const [selectedPatient, setSelectedPatient] = useState("");
+    const [patients, setPatients] = useState<Patient[]>([]);
+    const [loadingPatients, setLoadingPatients] = useState(true);
     const [analysis, setAnalysis] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [expandedDiagnosis, setExpandedDiagnosis] = useState<number | null>(null);
     const [showToast, setShowToast] = useState(false);
+
+    useEffect(() => {
+        const fetchPatients = async () => {
+            try {
+                const response = await fetch('/api/patients?limit=100');
+                if (response.ok) {
+                    const data = await response.json();
+                    setPatients(data.patients || []);
+                }
+            } catch (error) {
+                console.error('Failed to fetch patients:', error);
+            } finally {
+                setLoadingPatients(false);
+            }
+        };
+
+        fetchPatients();
+    }, []);
 
     const analyzeSymptoms = async () => {
         if (!sessionNotes.trim()) {
@@ -208,10 +232,15 @@ export default function AIAssistantPage() {
                                         value={selectedPatient}
                                         onChange={(e) => setSelectedPatient(e.target.value)}
                                         className="w-full h-12 px-4 py-3 rounded-xl border border-border bg-card text-sm font-bold focus:ring-4 focus:ring-primary/5 appearance-none transition-all hover:border-primary/30"
+                                        disabled={loadingPatients}
                                     >
-                                        <option value="" disabled>Search Patient List...</option>
+                                        <option value="" disabled>
+                                            {loadingPatients ? 'Loading patients...' : 'Search Patient List...'}
+                                        </option>
                                         {patients.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name} (MRN: {p.mrn})</option>
+                                            <option key={p.id} value={p.id}>
+                                                {p.first_name} {p.last_name}{p.mrn && ` (MRN: ${p.mrn})`}
+                                            </option>
                                         ))}
                                     </select>
                                     <ChevronDown className="absolute right-4 top-4 h-4 w-4 text-muted-foreground pointer-events-none group-hover:text-primary transition-colors" />

@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import DailyIframe, { DailyCall, DailyParticipant } from "@daily-co/daily-js";
 import {
@@ -25,9 +24,9 @@ interface ParticipantState {
 }
 
 function PatientVideoCall() {
-    const searchParams = useSearchParams();
-    const roomUrl = searchParams.get("room");
-    const token = searchParams.get("t");
+    // SEC-SPRINT9: Session access stored in a ref, not React state, to avoid
+    // persisting roomUrl/meetingToken beyond the moment of use.
+    const sessionAccessRef = useRef<{ roomUrl: string; token?: string } | null>(null);
 
     const callRef = useRef<DailyCall | null>(null);
     const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -41,8 +40,8 @@ function PatientVideoCall() {
     const [callDuration, setCallDuration] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [patientName, setPatientName] = useState("");
+    const [sessionReady, setSessionReady] = useState(false);
 
-    // Timer for call duration
     useEffect(() => {
         if (isConnected) {
             const timer = setInterval(() => {
@@ -58,32 +57,30 @@ function PatientVideoCall() {
         return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
     };
 
-    // Handle participant updates
     const updateParticipants = useCallback((call: DailyCall) => {
         try {
             const participantList = call.participants();
             const newParticipants: ParticipantState[] = [];
 
-            Object.values(participantList).forEach((p: DailyParticipant) => {
+            Object.values(participantList).forEach((participant: DailyParticipant) => {
                 newParticipants.push({
-                    id: p.session_id,
-                    userName: p.user_name || "Guest",
-                    videoTrack: p.tracks?.video?.persistentTrack || null,
-                    audioTrack: p.tracks?.audio?.persistentTrack || null,
-                    isLocal: p.local
+                    id: participant.session_id,
+                    userName: participant.user_name || "Guest",
+                    videoTrack: participant.tracks?.video?.persistentTrack || null,
+                    audioTrack: participant.tracks?.audio?.persistentTrack || null,
+                    isLocal: participant.local
                 });
             });
 
             setParticipants(newParticipants);
-        } catch (e) {
-            console.error("[Patient] Error updating participants:", e);
+        } catch {
+            setError("Failed to update participant state");
         }
     }, []);
 
-    // Attach video tracks to elements
     useEffect(() => {
-        const localParticipant = participants.find(p => p.isLocal);
-        const remoteParticipant = participants.find(p => !p.isLocal);
+        const localParticipant = participants.find(participant => participant.isLocal);
+        const remoteParticipant = participants.find(participant => !participant.isLocal);
 
         if (localParticipant?.videoTrack && localVideoRef.current) {
             const stream = new MediaStream([localParticipant.videoTrack]);
@@ -95,7 +92,6 @@ function PatientVideoCall() {
             remoteVideoRef.current.srcObject = stream;
         }
 
-        // Handle remote audio
         if (remoteParticipant?.audioTrack) {
             const audioElement = document.getElementById("remote-audio") as HTMLAudioElement;
             if (audioElement) {
@@ -113,15 +109,57 @@ function PatientVideoCall() {
                     await callRef.current.leave();
                 }
                 callRef.current.destroy();
-            } catch (e) {
-                console.error("[Patient] Cleanup error:", e);
+            } catch {
+                setError("Failed to clean up telehealth session");
             }
             callRef.current = null;
         }
     }, []);
 
+    // SEC-SPRINT9: Session token delivered via HTTP-only cookie set by accept-invite
+    // endpoint. The join-session API reads the cookie server-side — no token in URL or JS.
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadSession = async () => {
+            try {
+                // POST with no body — join-session reads the httpOnly cookie
+                const response = await fetch("/api/telehealth/join-session", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({}),
+                });
+
+                const payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload.error || "Failed to load telehealth session");
+                }
+
+                if (isMounted) {
+                    sessionAccessRef.current = {
+                        roomUrl: payload.roomUrl,
+                        token: payload.token || undefined,
+                    };
+                    setSessionReady(true);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setError(err instanceof Error ? err.message : "Failed to load telehealth session");
+                }
+            }
+        };
+
+        loadSession();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     const joinCall = async () => {
-        if (!roomUrl || !patientName.trim()) {
+        if (!sessionAccessRef.current || !patientName.trim()) {
             setError("Please enter your name to join the session.");
             return;
         }
@@ -129,14 +167,17 @@ function PatientVideoCall() {
         setIsJoining(true);
         setError(null);
 
+        // SEC-SPRINT9: Consume session access from ref and clear immediately
+        const access = sessionAccessRef.current;
+        sessionAccessRef.current = null;
+
         try {
-            // Check for existing instance
             const existingCall = DailyIframe.getCallInstance();
             if (existingCall) {
                 try {
                     existingCall.destroy();
-                } catch (e) {
-                    console.error("[Patient] Error destroying existing:", e);
+                } catch {
+                    setError("Failed to reset the previous telehealth session");
                 }
             }
 
@@ -150,7 +191,6 @@ function PatientVideoCall() {
             callRef.current = call;
 
             call.on("joined-meeting", () => {
-                console.log("[Patient] Joined meeting!");
                 setIsJoining(false);
                 setIsConnected(true);
                 updateParticipants(call);
@@ -163,7 +203,6 @@ function PatientVideoCall() {
             call.on("track-stopped", () => updateParticipants(call));
 
             call.on("error", (event) => {
-                console.error("[Patient] Error:", event);
                 setError(event?.errorMsg || "Connection error occurred");
                 setIsJoining(false);
             });
@@ -174,13 +213,11 @@ function PatientVideoCall() {
             });
 
             await call.join({
-                url: roomUrl,
-                token: token || undefined,
+                url: access.roomUrl,
+                token: access.token || undefined,
                 userName: patientName.trim(),
             });
-
         } catch (err) {
-            console.error("[Patient] Join error:", err);
             setError(err instanceof Error ? err.message : "Failed to join session");
             setIsJoining(false);
         }
@@ -211,17 +248,15 @@ function PatientVideoCall() {
         }
     };
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             cleanup();
         };
     }, [cleanup]);
 
-    const remoteParticipant = participants.find(p => !p.isLocal);
+    const remoteParticipant = participants.find(participant => !participant.isLocal);
 
-    // No room URL provided
-    if (!roomUrl) {
+    if (!sessionReady && error) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
                 <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-12 text-center max-w-md">
@@ -235,12 +270,10 @@ function PatientVideoCall() {
         );
     }
 
-    // Pre-join lobby
     if (!isConnected && !isJoining) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
                 <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-8 md:p-12 text-center max-w-lg w-full">
-                    {/* Logo/Branding */}
                     <div className="flex items-center justify-center gap-3 mb-8">
                         <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-xl shadow-primary/30">
                             <Heart className="h-6 w-6 text-white" />
@@ -275,14 +308,13 @@ function PatientVideoCall() {
 
                     <button
                         onClick={joinCall}
-                        disabled={!patientName.trim()}
+                        disabled={!patientName.trim() || !sessionReady}
                         className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-blue-600 text-white font-black uppercase tracking-widest text-sm shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
                     >
                         <Video className="h-5 w-5" />
                         Join Video Session
                     </button>
 
-                    {/* Security badge */}
                     <div className="flex items-center justify-center gap-2 mt-8 text-emerald-400">
                         <Shield className="h-4 w-4" />
                         <span className="text-xs font-bold">HIPAA Compliant • End-to-End Encrypted</span>
@@ -292,7 +324,6 @@ function PatientVideoCall() {
         );
     }
 
-    // Connecting state
     if (isJoining) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
@@ -316,14 +347,11 @@ function PatientVideoCall() {
         );
     }
 
-    // In-call view
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col">
             <audio id="remote-audio" autoPlay playsInline />
 
-            {/* Main video area */}
             <div className="flex-1 relative">
-                {/* Remote participant (provider) - main view */}
                 {remoteParticipant?.videoTrack ? (
                     <video
                         ref={remoteVideoRef}
@@ -345,7 +373,6 @@ function PatientVideoCall() {
                     </div>
                 )}
 
-                {/* Call status */}
                 <div className="absolute top-4 left-4 flex items-center gap-3">
                     <div className="px-3 py-1.5 bg-emerald-500/90 backdrop-blur-md rounded-full flex items-center gap-2 text-white">
                         <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
@@ -355,7 +382,6 @@ function PatientVideoCall() {
                     </div>
                 </div>
 
-                {/* Local video (self view) */}
                 <div className="absolute bottom-24 right-4 w-32 md:w-40 aspect-video bg-slate-800 rounded-xl border-2 border-white/20 overflow-hidden shadow-2xl">
                     <video
                         ref={localVideoRef}
@@ -374,7 +400,6 @@ function PatientVideoCall() {
                     </div>
                 </div>
 
-                {/* Call controls */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
                     <button
                         onClick={toggleAudio}

@@ -1,37 +1,34 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextRequest, NextResponse } from "next/server";
+// src/app/api/admin/profile-approvals/route.ts
+// SEC-HIGH-01: Migrated to withAuth wrapper for centralized auth + CSRF + role enforcement
 
-export async function POST(request: NextRequest) {
+import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { ProfileApprovalSchema, validateRequest } from '@/lib/validation/schemas';
+
+const ALLOWED_PROFILE_FIELDS = ['first_name', 'last_name', 'specialty', 'phone', 'license_number'];
+
+async function handlePost(context: AuthContext) {
     try {
         const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
 
-        if (!user) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+        const body = await context.request.json();
+        const validation = validateRequest(ProfileApprovalSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Validation failed', details: validation.errors }, { status: 400 });
         }
-
-        // Check if user is admin or super_admin
-        const { data: adminUser } = await supabase
-            .from('users')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (!adminUser || !['admin', 'super_admin'].includes(adminUser.role)) {
-            return NextResponse.json({ message: "Forbidden - Admin access required" }, { status: 403 });
-        }
-
-        const body = await request.json();
-        const { changeId, userId, fieldName, newValue, action } = body;
-
-        if (!changeId || !action) {
-            return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
-        }
+        const { changeId, userId, fieldName, newValue, action } = validation.data;
 
         if (action === 'approve') {
+            // SEC-CRITICAL-04: Validate fieldName against whitelist to prevent arbitrary column updates
+            if (!userId || !fieldName || !ALLOWED_PROFILE_FIELDS.includes(fieldName)) {
+                return NextResponse.json({ message: "Invalid or disallowed field name" }, { status: 400 });
+            }
+
             // Update the user's profile with the new value
-            const updateData: Record<string, string> = {};
-            updateData[fieldName] = newValue;
+            const updateData: Record<string, string | null> = {};
+            updateData[fieldName] = newValue ?? null;
 
             const { error: updateError } = await supabase
                 .from('users')
@@ -39,7 +36,7 @@ export async function POST(request: NextRequest) {
                 .eq('id', userId);
 
             if (updateError) {
-                console.error('Error updating user:', updateError);
+                logError({ action: 'ERROR_UPDATING_USER', error: sanitizeError(updateError) });
                 return NextResponse.json({ message: "Failed to update user profile" }, { status: 500 });
             }
 
@@ -48,13 +45,13 @@ export async function POST(request: NextRequest) {
                 .from('pending_profile_changes')
                 .update({
                     status: 'approved',
-                    reviewed_by: user.id,
+                    reviewed_by: context.user.id,
                     reviewed_at: new Date().toISOString(),
                 })
                 .eq('id', changeId);
 
             if (approveError) {
-                console.error('Error approving change:', approveError);
+                logError({ action: 'ERROR_APPROVING_CHANGE', error: sanitizeError(approveError) });
                 return NextResponse.json({ message: "Failed to update change status" }, { status: 500 });
             }
 
@@ -66,13 +63,13 @@ export async function POST(request: NextRequest) {
                 .from('pending_profile_changes')
                 .update({
                     status: 'rejected',
-                    reviewed_by: user.id,
+                    reviewed_by: context.user.id,
                     reviewed_at: new Date().toISOString(),
                 })
                 .eq('id', changeId);
 
             if (rejectError) {
-                console.error('Error rejecting change:', rejectError);
+                logError({ action: 'ERROR_REJECTING_CHANGE', error: sanitizeError(rejectError) });
                 return NextResponse.json({ message: "Failed to reject change" }, { status: 500 });
             }
 
@@ -82,8 +79,13 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: "Invalid action" }, { status: 400 });
         }
 
-    } catch (error: any) {
-        console.error('Profile approval error:', error);
-        return NextResponse.json({ message: error.message || "Server error" }, { status: 500 });
+    } catch (error: unknown) {
+        logError({ action: 'PROFILE_APPROVAL_ERROR', error: sanitizeError(error) });
+        return NextResponse.json({ message: "Server error" }, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePost, {
+    requiredRole: ['ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
+});

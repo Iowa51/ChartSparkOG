@@ -1,64 +1,90 @@
 /**
  * Upload ERA/835 File API
- * POST /api/managed-billing/era/upload
- * Super Admin only
+ * SEC-HIGH-01: Migrated to withAuth wrapper
+ * POST /api/managed-billing/era/upload - Super Admin only
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from 'next/server';
 import { processERAFile } from '@/lib/managed-billing/era-service';
+import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { ERAUploadMetadataSchema, validateRequest } from '@/lib/validation/schemas';
 
-export async function POST(request: NextRequest) {
+const ERA_CONTENT_PREFIX = 'ISA*';
+const ERA_TRANSACTION_MARKER = 'ST*835*';
+
+async function handlePost(context: AuthContext) {
     try {
-        const supabase = await createClient();
+        const formData = await context.request.formData();
+        const file = formData.get('file');
+        // SEC-PT5-F3: Always use server-side org ID — never trust client form data
+        const organizationId = context.user.organizationId;
 
-        if (!supabase) {
-            return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-        }
-
-        // Auth check - Super Admin only
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-
-        if (profile?.role !== 'SUPER_ADMIN') {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        // Get form data
-        const formData = await request.formData();
-        const file = formData.get('file') as File;
-        const organizationId = formData.get('organizationId') as string;
-
-        if (!file || !organizationId) {
+        if (!(file instanceof File) || !organizationId) {
             return NextResponse.json(
-                { error: 'File and organizationId required' },
+                { error: 'File required and user must belong to an organization' },
+                { status: 400 }
+            );
+        }
+
+        const metadataValidation = validateRequest(ERAUploadMetadataSchema, {
+            organizationId,
+            fileName: file.name,
+            fileType: file.type || 'application/octet-stream',
+            fileSize: file.size,
+        });
+
+        if (!metadataValidation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: metadataValidation.errors },
                 { status: 400 }
             );
         }
 
         const content = await file.text();
+        const normalizedContent = content.trim();
+        if (!normalizedContent.startsWith(ERA_CONTENT_PREFIX) || !normalizedContent.includes(ERA_TRANSACTION_MARKER)) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: ['Uploaded file is not a valid ERA/835 payload'] },
+                { status: 400 }
+            );
+        }
+
         const result = await processERAFile(organizationId, file.name, content);
 
         if (!result.success) {
             return NextResponse.json({ error: result.error }, { status: 500 });
         }
 
+        const { ipAddress, userAgent } = getRequestMetadata(context.request);
+        logAuditEventAsync({
+            eventType: 'BILLING_RECORD_CREATE',
+            userId: context.user.id,
+            userEmail: context.user.email,
+            userRole: context.user.role,
+            organizationId: organizationId,
+            ipAddress,
+            userAgent,
+            resourceType: 'era_file',
+            details: { action: 'ERA_UPLOAD', fileName: file.name, matched: result.matched, unmatched: result.unmatched },
+            phiAccessed: true,
+            riskLevel: 'HIGH',
+        });
+
         return NextResponse.json({
             success: true,
             matched: result.matched,
             unmatched: result.unmatched,
         });
-
     } catch (error) {
-        console.error('[ERA Upload] Error:', error);
+        logError({ action: 'ERA_UPLOAD_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to process ERA file' }, { status: 500 });
     }
 }
+
+export const POST = withAuth(handlePost, {
+    requiredRole: ['SUPER_ADMIN'],
+    requireMFA: true,
+});

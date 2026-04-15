@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 
 interface DailyVideoCallProps {
-    roomUrl: string;
-    token?: string;
+    // SEC-PT4-F2: sessionTokenRef removed — provider token is now delivered via HTTP-only cookie
+    // and read server-side by join-session. The component just calls join-session with no body.
     userName?: string;
     patientLink?: string;
     onLeave?: () => void;
@@ -31,9 +31,14 @@ interface ParticipantState {
     isLocal: boolean;
 }
 
+// SEC-SPRINT9: Session access kept in ref, not state, to avoid persisting
+// roomUrl/meetingToken in React state beyond the moment of use.
+interface SessionAccessData {
+    roomUrl: string;
+    token?: string;
+}
+
 export default function DailyVideoCall({
-    roomUrl,
-    token,
     userName = "Provider",
     patientLink,
     onLeave,
@@ -50,8 +55,9 @@ export default function DailyVideoCall({
     const [linkCopied, setLinkCopied] = useState(false);
     const [callDuration, setCallDuration] = useState(0);
     const [connectionQuality] = useState<"excellent" | "good" | "poor">("excellent");
+    const sessionAccessRef = useRef<SessionAccessData | null>(null);
+    const [sessionReady, setSessionReady] = useState(false);
 
-    // Timer for call duration
     useEffect(() => {
         if (!isJoining) {
             const timer = setInterval(() => {
@@ -67,32 +73,30 @@ export default function DailyVideoCall({
         return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
     };
 
-    // Handle participant updates
     const updateParticipants = useCallback((call: DailyCall) => {
         try {
             const participantList = call.participants();
             const newParticipants: ParticipantState[] = [];
 
-            Object.values(participantList).forEach((p: DailyParticipant) => {
+            Object.values(participantList).forEach((participant: DailyParticipant) => {
                 newParticipants.push({
-                    id: p.session_id,
-                    userName: p.user_name || "Guest",
-                    videoTrack: p.tracks?.video?.persistentTrack || null,
-                    audioTrack: p.tracks?.audio?.persistentTrack || null,
-                    isLocal: p.local
+                    id: participant.session_id,
+                    userName: participant.user_name || "Guest",
+                    videoTrack: participant.tracks?.video?.persistentTrack || null,
+                    audioTrack: participant.tracks?.audio?.persistentTrack || null,
+                    isLocal: participant.local
                 });
             });
 
             setParticipants(newParticipants);
-        } catch (e) {
-            console.error("[Telehealth] Error updating participants:", e);
+        } catch {
+            onError?.("Failed to update participant state");
         }
-    }, []);
+    }, [onError]);
 
-    // Attach video tracks to elements
     useEffect(() => {
-        const localParticipant = participants.find(p => p.isLocal);
-        const remoteParticipant = participants.find(p => !p.isLocal);
+        const localParticipant = participants.find(participant => participant.isLocal);
+        const remoteParticipant = participants.find(participant => !participant.isLocal);
 
         if (localParticipant?.videoTrack && localVideoRef.current) {
             const stream = new MediaStream([localParticipant.videoTrack]);
@@ -104,7 +108,6 @@ export default function DailyVideoCall({
             remoteVideoRef.current.srcObject = stream;
         }
 
-        // Handle remote audio
         if (remoteParticipant?.audioTrack) {
             const audioElement = document.getElementById("remote-audio") as HTMLAudioElement;
             if (audioElement) {
@@ -114,10 +117,7 @@ export default function DailyVideoCall({
         }
     }, [participants]);
 
-    // Cleanup function - destroys Call object properly
     const cleanup = useCallback(async () => {
-        console.log("[Telehealth] Cleaning up...");
-
         if (callRef.current) {
             try {
                 const state = callRef.current.meetingState();
@@ -125,50 +125,87 @@ export default function DailyVideoCall({
                     await callRef.current.leave();
                 }
                 callRef.current.destroy();
-                console.log("[Telehealth] Call destroyed successfully");
-            } catch (e) {
-                console.error("[Telehealth] Cleanup error:", e);
+            } catch {
+                onError?.("Failed to clean up telehealth session");
             }
             callRef.current = null;
         }
-    }, []);
+    }, [onError]);
 
-    // Cancel/stop while connecting
     const handleCancel = useCallback(async () => {
         await cleanup();
         onLeave?.();
     }, [cleanup, onLeave]);
 
-    // Initialize Daily call - with proper instance management
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadSession = async () => {
+            try {
+                // SEC-PT4-F2: No token in body — provider token delivered via HTTP-only cookie
+                const response = await fetch("/api/telehealth/join-session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({}),
+                });
+
+                const payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload.error || "Failed to load telehealth session");
+                }
+
+                if (isMounted) {
+                    sessionAccessRef.current = {
+                        roomUrl: payload.roomUrl,
+                        token: payload.token || undefined,
+                    };
+                    setSessionReady(true);
+                }
+            } catch (error) {
+                if (isMounted) {
+                    onError?.(error instanceof Error ? error.message : "Failed to load telehealth session");
+                }
+            }
+        };
+
+        loadSession();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [onError]);
+
     useEffect(() => {
         let isMounted = true;
         let call: DailyCall | null = null;
 
         const initCall = async () => {
-            try {
-                console.log("[Telehealth] Initializing Daily.co call...");
+            if (!sessionReady || !sessionAccessRef.current) {
+                return;
+            }
 
-                // Check if there's an existing call instance and destroy it
+            // SEC-SPRINT9: Consume session access from ref and clear immediately
+            const access = sessionAccessRef.current;
+            sessionAccessRef.current = null;
+
+            try {
                 const existingCall = DailyIframe.getCallInstance();
                 if (existingCall) {
-                    console.log("[Telehealth] Found existing call instance, destroying it...");
                     try {
                         const state = existingCall.meetingState();
                         if (state === "joined-meeting" || state === "joining-meeting") {
                             await existingCall.leave();
                         }
                         existingCall.destroy();
-                    } catch (e) {
-                        console.error("[Telehealth] Error destroying existing instance:", e);
+                    } catch {
+                        onError?.("Failed to reset previous telehealth session");
                     }
                 }
 
-                // Small delay to ensure cleanup is complete
                 await new Promise(resolve => setTimeout(resolve, 100));
 
                 if (!isMounted) return;
 
-                // Create new call object
                 call = DailyIframe.createCallObject({
                     audioSource: true,
                     videoSource: true,
@@ -181,22 +218,18 @@ export default function DailyVideoCall({
 
                 callRef.current = call;
 
-                // Set up event handlers
                 call.on("joined-meeting", () => {
-                    console.log("[Telehealth] Joined meeting successfully!");
                     if (isMounted) {
                         setIsJoining(false);
                         updateParticipants(call!);
                     }
                 });
 
-                call.on("participant-joined", (event) => {
-                    console.log("[Telehealth] Participant joined:", event?.participant?.user_name);
+                call.on("participant-joined", () => {
                     if (isMounted && call) updateParticipants(call);
                 });
 
-                call.on("participant-left", (event) => {
-                    console.log("[Telehealth] Participant left:", event?.participant?.user_name);
+                call.on("participant-left", () => {
                     if (isMounted && call) updateParticipants(call);
                 });
 
@@ -213,29 +246,23 @@ export default function DailyVideoCall({
                 });
 
                 call.on("error", (event) => {
-                    console.error("[Telehealth] Daily.co error:", event);
                     if (isMounted) {
                         onError?.(event?.errorMsg || "Unknown error occurred");
                     }
                 });
 
                 call.on("left-meeting", () => {
-                    console.log("[Telehealth] Left meeting");
                     if (isMounted) {
                         onLeave?.();
                     }
                 });
 
-                // Join the call
-                console.log("[Telehealth] Joining room:", roomUrl);
                 await call.join({
-                    url: roomUrl,
-                    token: token,
+                    url: access.roomUrl,
+                    token: access.token,
                     userName: userName,
                 });
-
             } catch (error) {
-                console.error("[Telehealth] Failed to join call:", error);
                 if (isMounted) {
                     onError?.(error instanceof Error ? error.message : "Failed to join call");
                 }
@@ -248,7 +275,7 @@ export default function DailyVideoCall({
             isMounted = false;
             cleanup();
         };
-    }, [roomUrl, token, userName, onError, onLeave, updateParticipants, cleanup]);
+    }, [sessionReady, userName, onError, onLeave, updateParticipants, cleanup]);
 
     const toggleAudio = async () => {
         if (callRef.current) {
@@ -277,9 +304,8 @@ export default function DailyVideoCall({
         }
     };
 
-    const remoteParticipant = participants.find(p => !p.isLocal);
+    const remoteParticipant = participants.find(participant => !participant.isLocal);
 
-    // Loading/connecting state with CANCEL button
     if (isJoining) {
         return (
             <div className="h-full min-h-[400px] bg-slate-950 rounded-3xl flex flex-col items-center justify-center p-8 border border-white/10">
@@ -303,12 +329,9 @@ export default function DailyVideoCall({
 
     return (
         <div className="h-full min-h-[400px] flex flex-col">
-            {/* Hidden audio element for remote participant */}
             <audio id="remote-audio" autoPlay playsInline />
 
-            {/* Main video area */}
             <div className="relative flex-1 bg-slate-950 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-                {/* Remote participant video (main view) */}
                 {remoteParticipant ? (
                     <video
                         ref={remoteVideoRef}
@@ -330,7 +353,6 @@ export default function DailyVideoCall({
                     </div>
                 )}
 
-                {/* Call status bar */}
                 <div className="absolute top-4 left-4 flex items-center gap-3">
                     <div className="px-3 py-1.5 bg-red-500/90 backdrop-blur-md rounded-full flex items-center gap-2 text-white">
                         <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
@@ -348,13 +370,11 @@ export default function DailyVideoCall({
                     </div>
                 </div>
 
-                {/* Participant count */}
                 <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-full flex items-center gap-2 text-white">
                     <Users className="h-3 w-3" />
                     <span className="text-xs font-bold">{participants.length}</span>
                 </div>
 
-                {/* Local video (self view) */}
                 <div className="absolute bottom-20 right-4 w-40 aspect-video bg-slate-800 rounded-xl border-2 border-white/20 overflow-hidden shadow-2xl">
                     <video
                         ref={localVideoRef}
@@ -373,7 +393,6 @@ export default function DailyVideoCall({
                     </div>
                 </div>
 
-                {/* Call controls */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 p-2 bg-black/70 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl">
                     <button
                         onClick={toggleAudio}
@@ -405,7 +424,6 @@ export default function DailyVideoCall({
                 </div>
             </div>
 
-            {/* Patient link section */}
             {patientLink && !remoteParticipant && (
                 <div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">

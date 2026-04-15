@@ -57,13 +57,15 @@ const EVENT_TYPES = [
     { id: 'security.login_failed', label: 'Login Failed', category: 'Security' },
 ];
 
-// Demo webhooks
+// UI display placeholders only — these are NOT real secrets and must never be used as such.
+const DEMO_WEBHOOK_SECRET_PLACEHOLDER = 'whsec_' + 'x'.repeat(24);
+
 const DEMO_WEBHOOKS: WebhookEndpoint[] = [
     {
         id: '1',
         name: 'EHR Sync',
         url: 'https://api.example-ehr.com/webhook/chartspark',
-        secret: 'whsec_demo123456789',
+        secret: DEMO_WEBHOOK_SECRET_PLACEHOLDER,
         events: ['note.created', 'note.updated', 'patient.created'],
         is_active: true,
         last_triggered: new Date(Date.now() - 3600000).toISOString(),
@@ -75,7 +77,7 @@ const DEMO_WEBHOOKS: WebhookEndpoint[] = [
         id: '2',
         name: 'Billing System',
         url: 'https://billing.example.com/api/webhooks',
-        secret: 'whsec_billing987654321',
+        secret: DEMO_WEBHOOK_SECRET_PLACEHOLDER,
         events: ['submission.created', 'submission.approved', 'submission.rejected'],
         is_active: true,
         last_triggered: new Date(Date.now() - 7200000).toISOString(),

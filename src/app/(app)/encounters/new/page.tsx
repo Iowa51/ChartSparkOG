@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout";
-import { patients } from "@/lib/demo-data/patients";
 import {
     Search,
     User,
@@ -12,6 +11,7 @@ import {
     ArrowRight,
     Sparkles,
     Check,
+    Loader2,
 } from "lucide-react";
 
 const visitTypes = [
@@ -21,22 +21,70 @@ const visitTypes = [
     { id: "crisis", name: "Crisis Intervention", duration: "45 min", template: "tpl-progress-note" },
 ];
 
+interface Patient {
+    id: string;
+    first_name: string;
+    last_name: string;
+    mrn?: string;
+    date_of_birth?: string;
+    avatar_color?: string;
+}
+
 export default function NewEncounterPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const preselectedPatientId = searchParams.get("patientId");
 
-    const [selectedPatient, setSelectedPatient] = useState(
-        preselectedPatientId ? patients.find(p => p.id === preselectedPatientId) : null
-    );
+    const [patients, setPatients] = useState<Patient[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [selectedType, setSelectedType] = useState(visitTypes[1]); // Default to follow-up
     const [searchQuery, setSearchQuery] = useState("");
-    const [step, setStep] = useState(selectedPatient ? 2 : 1);
+    const [step, setStep] = useState(preselectedPatientId ? 2 : 1);
+
+    useEffect(() => {
+        const fetchPatients = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch('/api/patients?limit=100');
+                if (response.ok) {
+                    const data = await response.json();
+                    setPatients(data.patients || []);
+
+                    // If there's a preselected patient, find and set it
+                    if (preselectedPatientId) {
+                        const preselected = (data.patients || []).find(
+                            (p: Patient) => p.id === preselectedPatientId
+                        );
+                        if (preselected) {
+                            setSelectedPatient(preselected);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch patients:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPatients();
+    }, [preselectedPatientId]);
 
     const filteredPatients = patients.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.mrn.includes(searchQuery)
+        `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.mrn && p.mrn.includes(searchQuery))
     );
+
+    const getPatientInitials = (patient: Patient) => {
+        const first = patient.first_name?.[0] || '?';
+        const last = patient.last_name?.[0] || '?';
+        return `${first}${last}`.toUpperCase();
+    };
+
+    const getAvatarColor = (patient: Patient) => {
+        return patient.avatar_color || 'bg-primary/10 text-primary';
+    };
 
     const handleStartEncounter = () => {
         if (selectedPatient && selectedType) {
@@ -99,7 +147,12 @@ export default function NewEncounterPage() {
                         </div>
 
                         <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden divide-y divide-border">
-                            {filteredPatients.length > 0 ? (
+                            {loading ? (
+                                <div className="p-12 text-center">
+                                    <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+                                    <p className="text-sm text-muted-foreground">Loading patients...</p>
+                                </div>
+                            ) : filteredPatients.length > 0 ? (
                                 filteredPatients.map((patient) => (
                                     <button
                                         key={patient.id}
@@ -110,12 +163,18 @@ export default function NewEncounterPage() {
                                         className="w-full flex items-center justify-between p-5 hover:bg-muted/30 transition-colors group text-left"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg ${patient.avatarColor}`}>
-                                                {patient.initials}
+                                            <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg ${getAvatarColor(patient)}`}>
+                                                {getPatientInitials(patient)}
                                             </div>
                                             <div>
-                                                <p className="font-bold text-foreground group-hover:text-primary transition-colors">{patient.name}</p>
-                                                <p className="text-xs text-muted-foreground">MRN: {patient.mrn} • DOB: {patient.dob}</p>
+                                                <p className="font-bold text-foreground group-hover:text-primary transition-colors">
+                                                    {patient.first_name} {patient.last_name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {patient.mrn && `MRN: ${patient.mrn}`}
+                                                    {patient.mrn && patient.date_of_birth && ' • '}
+                                                    {patient.date_of_birth && `DOB: ${new Date(patient.date_of_birth).toLocaleDateString()}`}
+                                                </p>
                                             </div>
                                         </div>
                                         <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
@@ -135,12 +194,14 @@ export default function NewEncounterPage() {
                         {/* Selected Patient Mini Card */}
                         <div className="bg-primary/5 rounded-2xl p-6 border border-primary/20 flex items-center justify-between animate-in zoom-in-95 duration-300">
                             <div className="flex items-center gap-4">
-                                <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg ${selectedPatient.avatarColor}`}>
-                                    {selectedPatient.initials}
+                                <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg ${getAvatarColor(selectedPatient)}`}>
+                                    {getPatientInitials(selectedPatient)}
                                 </div>
                                 <div>
                                     <p className="text-xs text-primary font-bold uppercase tracking-wider mb-1">Session for:</p>
-                                    <p className="text-xl font-bold text-foreground leading-none">{selectedPatient.name}</p>
+                                    <p className="text-xl font-bold text-foreground leading-none">
+                                        {selectedPatient.first_name} {selectedPatient.last_name}
+                                    </p>
                                 </div>
                             </div>
                             <button
@@ -157,8 +218,8 @@ export default function NewEncounterPage() {
                                     key={type.id}
                                     onClick={() => setSelectedType(type)}
                                     className={`relative p-5 rounded-2xl border text-left transition-all ${selectedType.id === type.id
-                                            ? "bg-card border-primary ring-1 ring-primary shadow-md"
-                                            : "bg-card border-border hover:border-primary/50 hover:bg-muted/30"
+                                        ? "bg-card border-primary ring-1 ring-primary shadow-md"
+                                        : "bg-card border-border hover:border-primary/50 hover:bg-muted/30"
                                         }`}
                                 >
                                     <div className="flex items-start justify-between">

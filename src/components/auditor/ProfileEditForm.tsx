@@ -112,9 +112,10 @@ export function ProfileEditForm({ initialData, pendingChanges }: Props) {
                 window.location.reload();
             }, 1500);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to submit changes.';
             console.error("Error saving profile:", error);
-            setMessage({ type: 'error', text: error.message || 'Failed to submit changes.' });
+            setMessage({ type: 'error', text: message });
         } finally {
             setIsSaving(false);
         }
@@ -171,8 +172,8 @@ export function ProfileEditForm({ initialData, pendingChanges }: Props) {
                     onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
                     disabled={hasPendingChange('first_name')}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${hasPendingChange('first_name')
-                            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 cursor-not-allowed'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
                         }`}
                     placeholder="Enter your first name"
                 />
@@ -194,8 +195,8 @@ export function ProfileEditForm({ initialData, pendingChanges }: Props) {
                     onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
                     disabled={hasPendingChange('last_name')}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${hasPendingChange('last_name')
-                            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 cursor-not-allowed'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
                         }`}
                     placeholder="Enter your last name"
                 />
@@ -218,8 +219,8 @@ export function ProfileEditForm({ initialData, pendingChanges }: Props) {
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                     disabled={hasPendingChange('phone')}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${hasPendingChange('phone')
-                            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 cursor-not-allowed'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 cursor-not-allowed'
+                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
                         }`}
                     placeholder="Enter your phone number"
                 />
@@ -233,8 +234,8 @@ export function ProfileEditForm({ initialData, pendingChanges }: Props) {
             {/* Message */}
             {message && (
                 <div className={`p-3 rounded-lg text-sm ${message.type === 'success'
-                        ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
                     }`}>
                     {message.text}
                 </div>

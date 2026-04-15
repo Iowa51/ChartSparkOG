@@ -134,4 +134,6 @@ export const patients: Patient[] = [
     }
 ];
 
-export const getPatientById = (id: string) => patients.find(p => p.id === id);
+export const getPatientById = (id: string) => {
+    return patients.find(p => p.id === id);
+};

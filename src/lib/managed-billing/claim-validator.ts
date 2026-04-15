@@ -33,7 +33,8 @@ export interface ValidationWarning {
  * Validate a claim before submission
  */
 export async function validateClaimForSubmission(
-    claimId: string
+    claimId: string,
+    organizationId?: string
 ): Promise<ValidationResult> {
     const supabase = await createClient();
 
@@ -46,8 +47,8 @@ export async function validateClaimForSubmission(
         };
     }
 
-    // Get claim with all related data
-    const { data: claim, error } = await supabase
+    // SEC-PT2-F7: Get claim with org filter as defense-in-depth (RLS also enforces)
+    let query = supabase
         .from('billing_claims')
         .select(`
             *,
@@ -67,8 +68,13 @@ export async function validateClaimForSubmission(
                 notes (id, status, signed_at)
             )
         `)
-        .eq('id', claimId)
-        .single();
+        .eq('id', claimId);
+
+    if (organizationId) {
+        query = query.eq('organization_id', organizationId);
+    }
+
+    const { data: claim, error } = await query.single();
 
     if (error || !claim) {
         return {
@@ -323,12 +329,13 @@ export async function validateClaimForSubmission(
  * Batch validate multiple claims
  */
 export async function batchValidateClaims(
-    claimIds: string[]
+    claimIds: string[],
+    organizationId?: string
 ): Promise<Map<string, ValidationResult>> {
     const results = new Map<string, ValidationResult>();
 
     for (const claimId of claimIds) {
-        const result = await validateClaimForSubmission(claimId);
+        const result = await validateClaimForSubmission(claimId, organizationId);
         results.set(claimId, result);
     }
 

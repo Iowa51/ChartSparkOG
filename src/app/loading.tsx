@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 export default function Loading() {
     return (
         <div className="fixed inset-0 bg-white dark:bg-slate-950 z-[100] flex flex-col items-center justify-center p-4">

@@ -10,31 +10,17 @@ export function DemoAuthGuard({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
 
     useEffect(() => {
-        // SEC-REMEDIATION: Removed cookie/localStorage-based auth bypass
-        // Demo mode is determined by environment variables ONLY, not client-side storage
-        // This prevents users from granting themselves access via browser cookies
-
-        // Check if we're in environment-based demo mode
-        const isDemoEnv = process.env.NODE_ENV !== 'production' &&
-            process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-
-        if (isDemoEnv) {
-            // In demo environment, allow access but still verify session if supabase available
-            setIsAuthorized(true);
-            return;
-        }
-
         const checkAuth = async () => {
-            // Priority 2: Check Real Supabase Session
+            // C6: Use getUser() for server-side verification (getSession() is client-only and spoofable)
             if (supabase) {
                 try {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (session) {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
                         setIsAuthorized(true);
                         return;
                     }
-                } catch (e) {
-                    console.error("Auth check failed", e);
+                } catch {
+                    // Auth check failed — fall through to redirect
                 }
             }
 

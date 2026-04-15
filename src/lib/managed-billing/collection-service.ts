@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export interface CollectionPeriod {
     id: string;
@@ -79,7 +80,7 @@ export async function getCurrentCollectionPeriod(
         .single();
 
     if (error) {
-        console.error('[CollectionService] Failed to create period:', error);
+        logError({ action: 'COLLECTION_SERVICE_CREATE_PERIOD_FAILED', error: sanitizeError(error), organizationId });
         return null;
     }
 

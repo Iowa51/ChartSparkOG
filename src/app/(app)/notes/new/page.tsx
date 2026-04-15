@@ -9,7 +9,9 @@ import {
     CheckCircle,
     RefreshCw,
     Copy,
+    Check,
     Download,
+    Send,
     Mic,
     MicOff,
     FileText,
@@ -20,9 +22,19 @@ import {
     Plus,
     AlertCircle,
     Trash2,
+    Phone,
+    Mail,
+    MapPin,
+    AlertTriangle,
+    Pill,
+    ShieldCheck,
 } from "lucide-react";
 import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/templates";
 import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
+import { getCodeInfo } from "@/lib/billing/code-library";
+import { quickSuggestCodes } from "@/lib/billing/code-analyzer";
+import { useToast } from "@/components/ui/toast";
+
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
     Subjective: [
@@ -60,52 +72,124 @@ const PREBUILT_PHRASES: Record<string, string[]> = {
 };
 
 export default function NewNotePage() {
+    const toast = useToast();
     const searchParams = useSearchParams();
     const router = useRouter();
     const templateId = searchParams.get("template") || "tpl-progress-note";
     const editId = searchParams.get("edit"); // Get the note ID being edited
+    const patientId = searchParams.get("patientId"); // Get patient ID from URL
+    const encounterId = searchParams.get("encounterId"); // Get encounter ID from URL
     const template = getTemplateById(templateId) || getDefaultTemplate();
 
-    // Notes data for looking up patient info when editing
-    const allNotes: Record<string, {
-        patientName: string;
-        patientInitials: string;
-        date: string;
-        diagnosis: string;
-        diagnosisCode: string;
-    }> = {
-        "1": { patientName: "John Doe", patientInitials: "JD", date: "Oct 29, 2023", diagnosis: "Acute Pharyngitis", diagnosisCode: "J02.9" },
-        "2": { patientName: "Maria Rodriguez", patientInitials: "MR", date: "Oct 28, 2023", diagnosis: "Hypertension F/U", diagnosisCode: "I10" },
-        "3": { patientName: "Arthur Smith", patientInitials: "AS", date: "Oct 24, 2023", diagnosis: "T2DM Management", diagnosisCode: "E11.9" },
-        "4": { patientName: "Sarah Williams", patientInitials: "SW", date: "Oct 22, 2023", diagnosis: "Anxiety Screening", diagnosisCode: "F41.1" },
-        "5": { patientName: "David Miller", patientInitials: "DM", date: "Oct 20, 2023", diagnosis: "Lower Back Pain", diagnosisCode: "M54.5" },
-    };
+    // Fetch patient data based on patientId from URL
+    const [currentPatient, setCurrentPatient] = useState<any | null>(null);
+    const [currentEncounter, setCurrentEncounter] = useState<any | null>(null);
+    const [loadingPatient, setLoadingPatient] = useState(false);
+    const [showPatientInfo, setShowPatientInfo] = useState(true);
 
-    // Get patient info - use edit ID if available, otherwise default
-    const currentPatient = editId && allNotes[editId]
-        ? allNotes[editId]
-        : { patientName: "New Patient", patientInitials: "NP", date: new Date().toLocaleDateString(), diagnosis: "", diagnosisCode: "" };
+    useEffect(() => {
+        const fetchPatientAndEncounter = async () => {
+            if (patientId) {
+                try {
+                    setLoadingPatient(true);
+                    const response = await fetch(`/api/patients/${patientId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        // Transform raw API data to formatted patient object
+                        const formattedPatient = {
+                            id: data.id,
+                            name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || 'Unknown Patient',
+                            initials: `${(data.first_name || '')[0] || ''}${(data.last_name || '')[0] || ''}`.toUpperCase() || '??',
+                            dob: data.date_of_birth ? new Date(data.date_of_birth).toLocaleDateString() : 'N/A',
+                            gender: data.gender || 'Not specified',
+                            mrn: data.mrn || 'N/A',
+                            phone: data.phone || 'N/A',
+                            email: data.email || 'N/A',
+                            status: data.status === 'active' ? 'Active' : (data.status || 'Unknown'),
+                            avatarColor: data.avatar_color || 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                            lastVisit: '--',
+                            allergies: data.allergies || [],
+                            medications: data.medications || [],
+                            problems: data.problems || [],
+                        };
+                        setCurrentPatient(formattedPatient);
+                    }
+                } catch (error) {
+                    console.error('Error fetching patient:', error);
+                } finally {
+                    setLoadingPatient(false);
+                }
+            }
+
+            if (encounterId) {
+                try {
+                    const response = await fetch(`/api/encounters/${encounterId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        setCurrentEncounter(data);
+                        // If encounterId is provided but no patientId, fetch patient from encounter
+                        if (!patientId && data.patient_id) {
+                            const patientResponse = await fetch(`/api/patients/${data.patient_id}`);
+                            if (patientResponse.ok) {
+                                const patientData = await patientResponse.json();
+                                // Transform raw API data to formatted patient object
+                                const formattedPatient = {
+                                    id: patientData.id,
+                                    name: `${patientData.first_name || ''} ${patientData.last_name || ''}`.trim() || 'Unknown Patient',
+                                    initials: `${(patientData.first_name || '')[0] || ''}${(patientData.last_name || '')[0] || ''}`.toUpperCase() || '??',
+                                    dob: patientData.date_of_birth ? new Date(patientData.date_of_birth).toLocaleDateString() : 'N/A',
+                                    gender: patientData.gender || 'Not specified',
+                                    mrn: patientData.mrn || 'N/A',
+                                    phone: patientData.phone || 'N/A',
+                                    email: patientData.email || 'N/A',
+                                    status: patientData.status === 'active' ? 'Active' : (patientData.status || 'Unknown'),
+                                    avatarColor: patientData.avatar_color || 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                                    lastVisit: '--',
+                                    allergies: patientData.allergies || [],
+                                    medications: patientData.medications || [],
+                                    problems: patientData.problems || [],
+                                };
+                                setCurrentPatient(formattedPatient);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching encounter:', error);
+                }
+            }
+        };
+
+        fetchPatientAndEncounter();
+    }, [patientId, encounterId, editId]);
 
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [isRecordingVisible, setIsRecordingVisible] = useState(true);
     const [showTranscript, setShowTranscript] = useState(true);
     const [autoSaved, setAutoSaved] = useState<string | null>(null);
+    const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
+
+    // Smart Triage medication summary state
+    const [includeTriageSummary, setIncludeTriageSummary] = useState(true);
+    const [triageSummary, setTriageSummary] = useState<string | null>(null);
+    const [loadingTriage, setLoadingTriage] = useState(false);
+    const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
 
     // Scribe state
     const [scribeTranscription, setScribeTranscription] = useState("");
     const [recordingTime, setRecordingTime] = useState(0);
     const [hasRecording, setHasRecording] = useState(false);
-    const [speechSupported, setSpeechSupported] = useState(true);
-    const recognitionRef = React.useRef<any>(null);
 
-    // Check for Web Speech API support
-    React.useEffect(() => {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            setSpeechSupported(false);
-        }
-    }, []);
+    // MediaRecorder-based recording state
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+    const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+    const audioChunksRef = React.useRef<Blob[]>([]);
+    const audioBlobRef = React.useRef<Blob | null>(null);
+    const durationIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+    const mediaStreamRef = React.useRef<MediaStream | null>(null);
+    const mimeTypeRef = React.useRef<string>("audio/webm");
 
     // State for clinician's manual notes/input
     const [clinicianInput, setClinicianInput] = useState("");
@@ -130,11 +214,29 @@ export default function NewNotePage() {
         setScribeTranscription("");
     }, [templateId]);
     const [customPhrases, setCustomPhrases] = useState<Record<string, string[]>>(() => {
-        if (typeof window !== 'undefined') {
+        const defaults: Record<string, string[]> = { Subjective: [], Objective: [], Assessment: [], Plan: [] };
+        if (typeof window === 'undefined') return defaults;
+
+        // SEC-AUDIT-2026-04-10: Guard localStorage parse — invalid JSON or an
+        // unexpected shape should reset to defaults rather than throw during
+        // initial render.
+        try {
             const saved = localStorage.getItem('customPhrases');
-            return saved ? JSON.parse(saved) : { Subjective: [], Objective: [], Assessment: [], Plan: [] };
+            if (!saved) return defaults;
+            const parsed = JSON.parse(saved);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return defaults;
+
+            const result: Record<string, string[]> = { ...defaults };
+            for (const key of Object.keys(defaults)) {
+                const value = (parsed as Record<string, unknown>)[key];
+                if (Array.isArray(value) && value.every(v => typeof v === 'string')) {
+                    result[key] = value as string[];
+                }
+            }
+            return result;
+        } catch {
+            return defaults;
         }
-        return { Subjective: [], Objective: [], Assessment: [], Plan: [] };
     });
     const [newPhrase, setNewPhrase] = useState("");
     const [showPhraseModal, setShowPhraseModal] = useState(false);
@@ -315,7 +417,11 @@ export default function NewNotePage() {
 
     // Handle clicking on a code - show explanation modal
     const handleCodeClick = (code: string, type: 'cpt' | 'icd10') => {
-        const explanation = codeExplanations[code];
+        // Check local explanations first, then fall back to comprehensive library
+        const explanation = codeExplanations[code] || (() => {
+            const libInfo = getCodeInfo(code);
+            return libInfo ? { title: libInfo.title, description: libInfo.description, details: libInfo.details } : null;
+        })();
         if (explanation) {
             setSelectedCodeInfo({
                 code,
@@ -367,11 +473,123 @@ export default function NewNotePage() {
     }, [template]);
 
 
+    // Format Smart Triage results as a clinical addendum string
+    const formatTriageSummary = (result: any): string => {
+        if (!result || (result.result === null && !result.overall_safety_score)) {
+            return '';
+        }
+        const lines: string[] = ['', '── Smart Triage: Medication Safety ──'];
+
+        // Safety score
+        const score = result.overall_safety_score ?? result.safety_score ?? 'N/A';
+        const level = result.safety_level || (score >= 80 ? 'Green' : score >= 60 ? 'Yellow' : 'Red');
+        lines.push(`Safety Score: ${score}/100 (${typeof level === 'string' ? level.charAt(0).toUpperCase() + level.slice(1) : level})`);
+
+        // Drug-drug interactions
+        if (result.drug_drug_interactions?.length) {
+            lines.push('');
+            lines.push('Drug Interactions:');
+            result.drug_drug_interactions.forEach((ddi: any) => {
+                lines.push(`  • ${ddi.med_a} + ${ddi.med_b} (${ddi.severity}) — ${ddi.clinical_significance || ddi.mechanism}`);
+                if (ddi.recommended_action) lines.push(`    Action: ${ddi.recommended_action}`);
+            });
+        }
+
+        // Black box warnings
+        if (result.black_box_warnings?.length) {
+            lines.push('');
+            lines.push('Black Box Warnings:');
+            result.black_box_warnings.forEach((bbw: any) => {
+                lines.push(`  ⚠ ${bbw.medication} — ${bbw.warning_text}`);
+                if (bbw.patient_relevance) lines.push(`    Relevance: ${bbw.patient_relevance}`);
+            });
+        }
+
+        // Lab monitoring
+        if (result.lab_monitoring?.length) {
+            lines.push('');
+            lines.push('Lab Monitoring:');
+            result.lab_monitoring.forEach((lab: any) => {
+                const status = lab.status === 'overdue' ? '⚠ OVERDUE' : lab.status === 'due' ? '📋 Due' : '✓ Current';
+                lines.push(`  ${status}: ${lab.medication} — ${lab.required_lab}${lab.due_date ? ` (due ${lab.due_date})` : ''}`);
+            });
+        }
+
+        // Clinical pearls
+        if (result.clinical_pearls?.length) {
+            lines.push('');
+            lines.push('Clinical Pearls:');
+            result.clinical_pearls.forEach((pearl: string) => {
+                lines.push(`  💡 ${pearl}`);
+            });
+        }
+
+        // Summary
+        if (result.summary) {
+            lines.push('');
+            lines.push(`Summary: ${result.summary}`);
+        }
+
+        lines.push('── End Smart Triage ──');
+        return lines.join('\n');
+    };
+
+    // Fetch medication triage data for the current patient
+    const fetchMedicationTriage = async (): Promise<string | null> => {
+        if (!currentPatient?.id || !includeTriageSummary) return null;
+
+        setLoadingTriage(true);
+        try {
+            const response = await fetch('/api/ai/smart-triage/medication-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id: currentPatient.id }),
+            });
+
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            if (data.result === null) {
+                setTriageSummary(null);
+                return null;
+            }
+            const triageResult = data.result || data;
+            const summary = formatTriageSummary({ ...triageResult, safety_score: data.safety_score, safety_level: data.safety_level });
+            setTriageSummary(summary);
+            return summary;
+        } catch (error) {
+            console.error('Error fetching medication triage:', error);
+            return null;
+        } finally {
+            setLoadingTriage(false);
+        }
+    };
+
+    // Append triage summary to the assessment section of generated sections
+    const appendTriageToSections = (sections: Record<string, string>, triageText: string): Record<string, string> => {
+        const updated = { ...sections };
+        if (template.format === 'soap') {
+            // Find the assessment section and append
+            template.sections.forEach(s => {
+                if (s.label.toLowerCase().includes('assessment')) {
+                    updated[s.id] = (updated[s.id] || '') + '\n' + triageText;
+                }
+            });
+        } else {
+            // For non-SOAP, append to the first section
+            const firstId = template.sections[0]?.id;
+            if (firstId) {
+                updated[firstId] = (updated[firstId] || '') + '\n' + triageText;
+            }
+        }
+        return updated;
+    };
+
     // Generate note using AI service
     const handleGenerateNote = async () => {
         const hasPhrases = Object.values(selectedPhrases).some(p => p.length > 0);
         if (!clinicianInput && !isRecording && demoTranscript.length === 0 && !hasPhrases) {
-            alert("Please provide some input (voice, typing, or phrases) before generating a note.");
+            toast.warning("No input provided", "Please add voice, typed notes, or phrases before generating a note.");
             return;
         }
 
@@ -379,6 +597,9 @@ export default function NewNotePage() {
 
         // SEC-007: Log metadata only, not PHI content
         console.log("Generating note:", { hasPhrases, inputLength: clinicianInput.length });
+
+        // Fetch triage data in parallel with note generation
+        const triagePromise = fetchMedicationTriage();
 
         try {
             // Call the AI endpoint with user's selections
@@ -389,15 +610,19 @@ export default function NewNotePage() {
                     clinicianInput,
                     selectedPhrases,
                     templateId,
-                    templateFormat: template.format
+                    templateFormat: "soap"
                 })
             });
 
+            const triageText = await triagePromise;
+
             if (!response.ok) {
-                // Fallback to demo note if API fails
-                console.warn('AI API failed, using fallback');
-                const phraseNote = generateNoteFromPhrases();
-                applyNoteToSections(phraseNote);
+                let errMsg = `Request failed (${response.status})`;
+                try {
+                    const errData = await response.json();
+                    errMsg = errData.error || errData.message || errMsg;
+                } catch {}
+                toast.error('Note generation failed', errMsg);
                 return;
             }
 
@@ -405,7 +630,7 @@ export default function NewNotePage() {
 
             if (data.success && data.sections) {
                 // Apply AI-generated sections to template
-                const updatedSections: Record<string, string> = { ...noteSections };
+                let updatedSections: Record<string, string> = { ...noteSections };
                 if (template.format === "soap") {
                     template.sections.forEach(s => {
                         const label = s.label.toLowerCase();
@@ -418,18 +643,21 @@ export default function NewNotePage() {
                     updatedSections[template.sections[0].id] = data.sections.content ||
                         `${data.sections.subjective}\n\n${data.sections.objective}\n\n${data.sections.assessment}\n\n${data.sections.plan}`;
                 }
+
+                // Append triage summary if available
+                if (triageText) {
+                    updatedSections = appendTriageToSections(updatedSections, triageText);
+                }
+
                 setNoteSections(updatedSections);
                 if (data.suggestedCodes) setSuggestedCodes(data.suggestedCodes);
+                setClinicianInput("");
             } else {
-                // Fallback
-                const phraseNote = generateNoteFromPhrases();
-                applyNoteToSections(phraseNote);
+                toast.error('Note generation failed', data.error || 'AI returned no content.');
             }
         } catch (error) {
             console.error('Error calling AI:', error);
-            // Fallback to demo on error
-            const phraseNote = generateNoteFromPhrases();
-            applyNoteToSections(phraseNote);
+            toast.error('Note generation failed', error instanceof Error ? error.message : 'Network error');
         } finally {
             setIsGenerating(false);
             setAutoSaved(new Date().toLocaleTimeString());
@@ -536,13 +764,13 @@ Prognosis: Favorable with continued treatment adherence.`;
             objective,
             assessment,
             plan,
-            suggestedCodes: { cpt: ['90834', '90837', '99214'], icd10: ['F32.1', 'F41.1'] }
+            suggestedCodes: quickSuggestCodes(`${subjective} ${objective} ${assessment} ${plan}`)
         };
     };
 
     // Helper to apply demo note to sections
-    const applyNoteToSections = (demoNote: { subjective: string; objective: string; assessment: string; plan: string; suggestedCodes: any }) => {
-        const updatedSections: Record<string, string> = { ...noteSections };
+    const applyNoteToSections = (demoNote: { subjective: string; objective: string; assessment: string; plan: string; suggestedCodes: any }, triageText?: string | null) => {
+        let updatedSections: Record<string, string> = { ...noteSections };
         if (template.format === "soap") {
             template.sections.forEach(s => {
                 const label = s.label.toLowerCase();
@@ -555,6 +783,12 @@ Prognosis: Favorable with continued treatment adherence.`;
         } else {
             updatedSections[template.sections[0].id] = `${demoNote.subjective}\n\n${demoNote.objective}\n\n${demoNote.assessment}\n\n${demoNote.plan}`;
         }
+
+        // Append triage summary if available
+        if (triageText) {
+            updatedSections = appendTriageToSections(updatedSections, triageText);
+        }
+
         setNoteSections(updatedSections);
         setSuggestedCodes(demoNote.suggestedCodes);
     };
@@ -607,7 +841,7 @@ Prognosis: Favorable with continued treatment adherence.`;
             .join('\n\n');
 
         if (!fullNote.trim()) {
-            alert('Please generate a note first before copying.');
+            toast.warning("Nothing to copy", "Please generate or write a note first.");
             return;
         }
 
@@ -627,6 +861,88 @@ Prognosis: Favorable with continued treatment adherence.`;
             document.body.removeChild(textArea);
             setNoteCopied(true);
             setTimeout(() => setNoteCopied(false), 3000);
+        }
+    };
+
+    // Save note to database
+    const handleSaveNote = async (markComplete: boolean = false) => {
+        // Validate we have a patient
+        if (!currentPatient?.id) {
+            toast.warning("No patient selected", "Please select a patient before saving.");
+            return;
+        }
+
+        // Check if note has content
+        const hasContent = Object.values(noteSections).some(v => v && v.trim().length > 0);
+        if (!hasContent) {
+            toast.warning("Note is empty", "Please generate or write some note content before saving.");
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            // Build full content from all sections
+            const fullContent = template.sections
+                .map(section => {
+                    const sectionContent = noteSections[section.id] || '';
+                    return sectionContent ? `${section.label.toUpperCase()}:\n${sectionContent}` : '';
+                })
+                .filter(Boolean)
+                .join('\n\n');
+
+            // Map template format to valid note type enum
+            const noteTypeMap: Record<string, string> = {
+                'soap': 'soap',
+                'progress': 'progress',
+                'intake': 'intake',
+                'discharge': 'discharge',
+            };
+            const noteType = noteTypeMap[template.format] || 'progress';
+
+            // Prepare note data matching NoteCreateSchema
+            const noteData = {
+                patient_id: currentPatient.id,
+                encounter_id: encounterId || currentEncounter?.id || undefined,
+                type: noteType,
+                content: fullContent || clinicianInput || 'No content provided',
+                template_id: undefined, // Optional
+                is_signed: markComplete,
+            };
+
+            const url = editId ? `/api/notes/${editId}` : '/api/notes';
+            const method = editId ? 'PATCH' : 'POST';
+
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(noteData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                const errorDetails = errorData.details ? `: ${errorData.details}` : '';
+                throw new Error((errorData.error || 'Failed to save note') + errorDetails);
+            }
+
+            const savedNote = await response.json();
+            const noteId = savedNote?.note?.id || savedNote?.id;
+
+            if (markComplete && noteId) {
+                // "Save & Finish" — show the insurance submission modal
+                setSavedNoteId(noteId);
+                setShowSaveSuccessModal(true);
+            } else if (noteId) {
+                // "Save Draft" — just redirect to the note
+                router.push(`/notes/${noteId}`);
+            } else {
+                router.push('/notes');
+            }
+        } catch (error) {
+            console.error('Error saving note:', error);
+            toast.error("Failed to save note", error instanceof Error ? error.message : 'Please try again.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -657,111 +973,184 @@ Prognosis: Favorable with continued treatment adherence.`;
                             Auto-saved {autoSaved}
                         </span>
                     )}
-                    <button className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-colors">
+                    <button
+                        onClick={() => handleSaveNote(false)}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                         <Save className="h-4 w-4" />
-                        Save Draft
+                        {isSaving ? 'Saving...' : 'Save Draft'}
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95">
+                    <button
+                        onClick={() => handleSaveNote(true)}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    >
                         <CheckCircle className="h-4 w-4" />
-                        Mark Complete
+                        {isSaving ? 'Saving...' : 'Save & Finish'}
                     </button>
                 </div>
             </header>
 
             {/* Sub-header / Patient Info */}
-            <div className="flex-none bg-card border-b border-border px-6 py-4">
-                <div className="max-w-[1700px] mx-auto flex flex-wrap justify-between items-center gap-4">
-                    <div className="flex items-center gap-5">
-                        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-                            {currentPatient.patientInitials}
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                                    {currentPatient.patientName}
-                                </h1>
-                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
-                                    {editId ? "Editing Note" : "New Note"}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                                <span className="flex items-center gap-1.5">
-                                    <Calendar className="h-3.5 w-3.5" />
-                                    {currentPatient.date}
-                                </span>
-                                {currentPatient.diagnosis && (
-                                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-muted/50">
-                                        {currentPatient.diagnosis} ({currentPatient.diagnosisCode})
-                                    </span>
-                                )}
-                                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-muted text-foreground">
-                                    <select
-                                        value={template.id}
-                                        onChange={(e) => {
-                                            const editParam = editId ? `&edit=${editId}` : '';
-                                            const newPath = `/notes/new?template=${e.target.value}${editParam}`;
-                                            router.push(newPath);
-                                        }}
-                                        className="bg-transparent border-none text-xs font-bold outline-none cursor-pointer"
-                                    >
-                                        {templates.map(t => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                        ))}
-                                    </select>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+            {currentPatient ? (
+                <div className="flex-none bg-card border-b border-border">
+                    <div className="max-w-[1700px] mx-auto px-6 py-4">
+                        <div className="flex justify-between items-start gap-4">
+                            {/* Left: Patient Identity */}
+                            <div className="flex items-start gap-5 flex-1">
+                                <div className={`h-16 w-16 rounded-2xl ${currentPatient.avatarColor} flex items-center justify-center font-bold text-2xl shrink-0`}>
+                                    {currentPatient.initials}
+                                </div>
+                                <div className="flex flex-col gap-2 flex-1">
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <h1 className="text-2xl font-bold text-foreground tracking-tight">
+                                            {currentPatient.name}
+                                        </h1>
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
+                                            {editId ? "Editing Note" : "New Note"}
+                                        </span>
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${currentPatient.status === "Active"
+                                            ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                            }`}>
+                                            {currentPatient.status}
+                                        </span>
+                                    </div>
 
-                    <div className="flex items-center gap-3">
-                        {!showTranscript && (
-                            <button
-                                onClick={() => setShowTranscript(true)}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-primary/10 text-primary border border-primary/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-all shadow-sm group"
-                            >
-                                <Sparkles className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-                                <span>Reveal Input Hub</span>
-                            </button>
-                        )}
-                        <button
-                            onClick={handleGenerateNote}
-                            disabled={isGenerating}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground rounded-xl text-sm font-black shadow-lg shadow-primary/30 transition-all disabled:opacity-50 active:scale-95"
-                        >
-                            {isGenerating ? (
-                                <>
-                                    <RefreshCw className="h-5 w-5 animate-spin" />
-                                    Generating Clinical Note...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="h-5 w-5" />
-                                    Generate AI Note
-                                </>
-                            )}
-                        </button>
-                        <button
-                            onClick={copyFullNote}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all active:scale-95 ${noteCopied
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-muted hover:bg-muted/80 text-foreground border border-border'
-                                }`}
-                        >
-                            {noteCopied ? (
-                                <>
-                                    <CheckCircle className="h-4 w-4" />
-                                    Note Copied!
-                                </>
-                            ) : (
-                                <>
-                                    <Copy className="h-4 w-4" />
-                                    Copy Note
-                                </>
-                            )}
-                        </button>
+                                    {/* Demographics Row */}
+                                    <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground flex-wrap">
+                                        <span className="flex items-center gap-1.5">
+                                            <Calendar className="h-3.5 w-3.5" />
+                                            DOB: {currentPatient.dob}
+                                        </span>
+                                        <span>•</span>
+                                        <span>{currentPatient.gender}</span>
+                                        <span>•</span>
+                                        <span className="font-semibold">{currentPatient.mrn}</span>
+                                        {currentPatient.lastVisit !== "--" && (
+                                            <>
+                                                <span>•</span>
+                                                <span>Last visit: {currentPatient.lastVisit}</span>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Contact Info Row */}
+                                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                                        <span className="flex items-center gap-1.5">
+                                            <Phone className="h-3.5 w-3.5" />
+                                            {currentPatient.phone}
+                                        </span>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1.5">
+                                            <Mail className="h-3.5 w-3.5" />
+                                            {currentPatient.email}
+                                        </span>
+                                    </div>
+
+                                    {/* Collapsible Details */}
+                                    {showPatientInfo && (
+                                        <div className="mt-2 pt-2 border-t border-border grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {/* Allergies */}
+                                            <div>
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Allergies</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {currentPatient.allergies?.map((allergy: any, idx: number) => (
+                                                        <span key={idx} className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs rounded-md border border-amber-200 dark:border-amber-800">
+                                                            {allergy.allergen || allergy}
+                                                        </span>
+                                                    )) || <span className="text-xs text-muted-foreground italic">None</span>}
+                                                </div>
+                                            </div>
+
+                                            {/* Medications */}
+                                            <div>
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <Pill className="h-3.5 w-3.5 text-blue-600" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Medications</span>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    {currentPatient.medications?.length > 0 ? (
+                                                        currentPatient.medications.map((med: any, idx: number) => (
+                                                            <div key={idx} className="text-xs text-foreground">• {med.medication_name || med}</div>
+                                                        ))
+                                                    ) : (
+                                                        <div className="text-xs text-muted-foreground italic">None</div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Active Problems */}
+                                            <div>
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <FileText className="h-3.5 w-3.5 text-primary" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Problems</span>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    {currentPatient.problems?.map((problem: any, idx: number) => (
+                                                        <div key={idx} className="text-xs text-foreground">• {problem.diagnosis_code || problem}</div>
+                                                    )) || <div className="text-xs text-muted-foreground italic">None</div>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Toggle Button */}
+                                    <button
+                                        onClick={() => setShowPatientInfo(!showPatientInfo)}
+                                        className="text-xs text-primary hover:text-primary/80 font-semibold mt-1 self-start transition-colors"
+                                    >
+                                        {showPatientInfo ? "▼ Show Less" : "▶ Show More Details"}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Right: Template Selector */}
+                            <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-xs font-medium text-muted-foreground">Template:</span>
+                                <select
+                                    value={template.id}
+                                    onChange={(e) => {
+                                        const patientParam = patientId ? `&patientId=${patientId}` : '';
+                                        const editParam = editId ? `&edit=${editId}` : '';
+                                        const newPath = `/notes/new?template=${e.target.value}${patientParam}${editParam}`;
+                                        router.push(newPath);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-muted text-foreground text-xs font-bold outline-none cursor-pointer border border-border hover:border-primary transition-colors"
+                                >
+                                    {templates.map(t => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            ) : (
+                <div className="flex-none bg-card border-b border-border px-6 py-4">
+                    <div className="max-w-[1700px] mx-auto">
+                        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">No Patient Selected</p>
+                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                                    Patient information will be added when you select a patient or complete the encounter.
+                                </p>
+                            </div>
+                            <Link
+                                href="/dashboard"
+                                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors shrink-0"
+                            >
+                                Select Patient
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Main Workspace */}
             <main className="flex-1 overflow-hidden flex bg-slate-50/30 dark:bg-slate-950/30">
@@ -898,210 +1287,90 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                         AI Voice Scribe
                                                     </label>
                                                     {isRecording && (
-                                                        <span className="text-xs font-mono text-red-500 flex items-center gap-1">
+                                                        <span className="text-xs font-mono text-red-500 flex items-center gap-1.5">
                                                             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                                                            Recording...
+                                                            {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, '0')}
                                                         </span>
                                                     )}
                                                 </div>
-
-                                                {/* Browser Support Warning */}
-                                                {!speechSupported && (
-                                                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                                                        <div className="flex items-start gap-3">
-                                                            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                                                            <div className="space-y-1">
-                                                                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
-                                                                    Speech Recognition Not Available
-                                                                </p>
-                                                                <p className="text-xs text-amber-700 dark:text-amber-300">
-                                                                    Your browser doesn&apos;t support the Web Speech API. For live voice transcription, please use:
-                                                                </p>
-                                                                <ul className="text-xs text-amber-700 dark:text-amber-300 list-disc list-inside mt-1">
-                                                                    <li><strong>Google Chrome</strong> (recommended)</li>
-                                                                    <li><strong>Microsoft Edge</strong></li>
-                                                                    <li><strong>Safari</strong> on macOS/iOS</li>
-                                                                </ul>
-                                                                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 italic">
-                                                                    Demo mode is available below for testing purposes.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
 
                                                 {/* Recording Control Button */}
                                                 <button
                                                     onClick={() => {
                                                         if (isRecording) {
                                                             // Stop recording
+                                                            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                                                                mediaRecorderRef.current.stop();
+                                                            }
+                                                            // Stop all tracks to release microphone
+                                                            if (mediaStreamRef.current) {
+                                                                mediaStreamRef.current.getTracks().forEach(track => track.stop());
+                                                                mediaStreamRef.current = null;
+                                                            }
+                                                            // Clear duration interval
+                                                            if (durationIntervalRef.current) {
+                                                                clearInterval(durationIntervalRef.current);
+                                                                durationIntervalRef.current = null;
+                                                            }
                                                             setIsRecording(false);
-                                                            setHasRecording(true);
-                                                            if (recognitionRef.current) {
-                                                                recognitionRef.current.stop();
-                                                            }
                                                         } else {
-                                                            // Start recording with Web Speech API
-                                                            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                                                            console.log('[Scribe] SpeechRecognition available:', !!SpeechRecognition);
+                                                            // Start recording with MediaRecorder
+                                                            navigator.mediaDevices.getUserMedia({ audio: true })
+                                                                .then((stream) => {
+                                                                    mediaStreamRef.current = stream;
 
-                                                            if (SpeechRecognition) {
-                                                                // First, explicitly request microphone permission via getUserMedia
-                                                                // This triggers Chrome's native permission dialog
-                                                                console.log('[Scribe] Requesting microphone permission...');
-
-                                                                navigator.mediaDevices.getUserMedia({ audio: true })
-                                                                    .then((stream) => {
-                                                                        console.log('[Scribe] Microphone permission granted!');
-                                                                        // Stop the stream immediately - we just needed the permission
-                                                                        stream.getTracks().forEach(track => track.stop());
-
-                                                                        // Now start speech recognition
-                                                                        try {
-                                                                            const recognition = new SpeechRecognition();
-                                                                            recognition.continuous = true;
-                                                                            recognition.interimResults = true;
-                                                                            recognition.lang = 'en-US';
-
-                                                                            recognition.onstart = () => {
-                                                                                console.log('[Scribe] Speech recognition started successfully!');
-                                                                            };
-
-                                                                            recognition.onresult = (event: any) => {
-                                                                                let transcript = '';
-                                                                                for (let i = 0; i < event.results.length; i++) {
-                                                                                    transcript += event.results[i][0].transcript;
-                                                                                }
-                                                                                console.log('[Scribe] Transcript:', transcript);
-                                                                                setScribeTranscription(transcript);
-                                                                            };
-
-                                                                            recognition.onerror = (event: any) => {
-                                                                                console.error('[Scribe] Speech recognition error:', event.error);
-                                                                                setIsRecording(false);
-
-                                                                                // Provide clear, actionable error messages instead of demo fallback
-                                                                                if (event.error === 'not-allowed') {
-                                                                                    alert(
-                                                                                        '🎤 Microphone Access Required\n\n' +
-                                                                                        'To use AI Scribe, please enable microphone access:\n\n' +
-                                                                                        '1. Click the lock/tune icon (🔒) in the address bar\n' +
-                                                                                        '2. Find "Microphone" and set it to "Allow"\n' +
-                                                                                        '3. Refresh this page (Ctrl+R)\n' +
-                                                                                        '4. Click "Start AI Scribe" again\n\n' +
-                                                                                        'If still not working, check:\n' +
-                                                                                        '• Windows Settings → Privacy → Microphone\n' +
-                                                                                        '• Ensure Chrome has microphone access enabled\n\n' +
-                                                                                        'Recommended Browser: Google Chrome or Microsoft Edge'
-                                                                                    );
-                                                                                } else if (event.error === 'no-speech') {
-                                                                                    // This is normal - just means no speech detected yet
-                                                                                    console.log('[Scribe] No speech detected');
-                                                                                } else if (event.error === 'network') {
-                                                                                    alert(
-                                                                                        '🌐 Network Error\n\n' +
-                                                                                        'Speech recognition requires an internet connection.\n' +
-                                                                                        'Please check your network and try again.\n\n' +
-                                                                                        'Note: Some browsers (like Vivaldi) block speech recognition.\n' +
-                                                                                        'Recommended: Use Google Chrome or Microsoft Edge.'
-                                                                                    );
-                                                                                } else if (event.error === 'service-not-allowed') {
-                                                                                    alert(
-                                                                                        '⚠️ Browser Not Compatible\n\n' +
-                                                                                        'Your browser blocks speech recognition services.\n\n' +
-                                                                                        'Please use one of these browsers:\n' +
-                                                                                        '• Google Chrome (Recommended)\n' +
-                                                                                        '• Microsoft Edge\n' +
-                                                                                        '• Safari (Mac/iOS only)\n\n' +
-                                                                                        'Note: Firefox and Vivaldi do NOT support this feature.'
-                                                                                    );
-                                                                                } else if (event.error === 'aborted') {
-                                                                                    // User stopped recording, this is fine
-                                                                                    console.log('[Scribe] Recognition aborted');
-                                                                                } else {
-                                                                                    alert('Speech recognition error: ' + event.error + '\n\nPlease try refreshing the page or use Google Chrome.');
-                                                                                }
-                                                                            };
-
-                                                                            recognition.onend = () => {
-                                                                                console.log('[Scribe] Speech recognition ended');
-                                                                                setIsRecording(false);
-                                                                                if (scribeTranscription) {
-                                                                                    setHasRecording(true);
-                                                                                }
-                                                                            };
-
-                                                                            // Additional event handlers for debugging
-                                                                            recognition.onaudiostart = () => {
-                                                                                console.log('[Scribe] Audio capture started - microphone is listening');
-                                                                                setScribeTranscription("🎤 Listening... Speak now!");
-                                                                            };
-
-                                                                            recognition.onaudioend = () => {
-                                                                                console.log('[Scribe] Audio capture ended');
-                                                                            };
-
-                                                                            recognition.onspeechstart = () => {
-                                                                                console.log('[Scribe] Speech detected!');
-                                                                            };
-
-                                                                            recognition.onspeechend = () => {
-                                                                                console.log('[Scribe] Speech ended');
-                                                                            };
-
-                                                                            // Set state before starting
-                                                                            setIsRecording(true);
-                                                                            setRecordingTime(0);
-                                                                            setScribeTranscription("Initializing speech recognition...");
-
-                                                                            recognitionRef.current = recognition;
-                                                                            recognition.start();
-                                                                            console.log('[Scribe] Called recognition.start() - waiting for audio...');
-
-                                                                        } catch (err) {
-                                                                            console.error('[Scribe] Failed to start speech recognition:', err);
-                                                                            setIsRecording(false);
-                                                                            alert('Failed to start speech recognition. Please try again or use a different browser.');
+                                                                    // Pick best supported mimeType
+                                                                    const mimeTypes = ['audio/webm', 'audio/ogg', 'audio/mp4'];
+                                                                    let selectedMime = '';
+                                                                    for (const mime of mimeTypes) {
+                                                                        if (MediaRecorder.isTypeSupported(mime)) {
+                                                                            selectedMime = mime;
+                                                                            break;
                                                                         }
-                                                                    })
-                                                                    .catch((err) => {
-                                                                        console.error('[Scribe] Microphone access denied:', err);
-                                                                        alert(
-                                                                            '🎤 Microphone Access Required\n\n' +
-                                                                            'Please grant microphone permission to use AI Scribe:\n\n' +
-                                                                            '1. Click the lock icon (🔒) in the address bar\n' +
-                                                                            '2. Set "Microphone" to "Allow"\n' +
-                                                                            '3. Refresh the page and try again\n\n' +
-                                                                            'If still not working:\n' +
-                                                                            '• Windows: Settings → Privacy → Microphone → Allow apps to access\n' +
-                                                                            '• Make sure Chrome has microphone permission\n\n' +
-                                                                            'Error: ' + (err.message || err.name || 'Access denied')
-                                                                        );
-                                                                    });
-                                                            } else {
-                                                                // Fallback demo mode for unsupported browsers - no alert, just start demo
-                                                                console.log('[Scribe] Using demo mode - SpeechRecognition not available');
-                                                                setIsRecording(true);
-                                                                setRecordingTime(0);
-                                                                setScribeTranscription("");
-                                                                setTimeout(() => {
-                                                                    setIsRecording(false);
-                                                                    setHasRecording(true);
-                                                                    setScribeTranscription(
-                                                                        "Patient reports feeling much better since last visit. Sleep has improved significantly, now getting 7-8 hours per night. " +
-                                                                        "No side effects reported from current medication. Mood is stable, describes it as 'pretty good most days'. " +
-                                                                        "Appetite is normal. Energy levels have improved. Denies any suicidal or homicidal ideation. " +
-                                                                        "Patient is compliant with medication regimen. Wants to continue current treatment plan."
+                                                                    }
+                                                                    mimeTypeRef.current = selectedMime || 'audio/webm';
+
+                                                                    const recorder = new MediaRecorder(stream, selectedMime ? { mimeType: selectedMime } : undefined);
+                                                                    audioChunksRef.current = [];
+                                                                    audioBlobRef.current = null;
+
+                                                                    recorder.ondataavailable = (event) => {
+                                                                        if (event.data.size > 0) {
+                                                                            audioChunksRef.current.push(event.data);
+                                                                        }
+                                                                    };
+
+                                                                    recorder.onstop = () => {
+                                                                        // Assemble chunks into a single Blob
+                                                                        const blob = new Blob(audioChunksRef.current, { type: mimeTypeRef.current });
+                                                                        audioBlobRef.current = blob;
+                                                                        setHasRecording(true);
+                                                                    };
+
+                                                                    mediaRecorderRef.current = recorder;
+                                                                    recorder.start(1000); // 1-second chunks
+
+                                                                    // Start duration counter
+                                                                    setRecordingDuration(0);
+                                                                    durationIntervalRef.current = setInterval(() => {
+                                                                        setRecordingDuration(prev => prev + 1);
+                                                                    }, 1000);
+
+                                                                    setIsRecording(true);
+                                                                    setScribeTranscription("");
+                                                                })
+                                                                .catch((err) => {
+                                                                    if (process.env.NODE_ENV === 'development') console.error('[Scribe] Microphone access denied:', err);
+                                                                    toast.error(
+                                                                        'Microphone access denied',
+                                                                        'Allow microphone access in browser settings or use the Manual tab.'
                                                                     );
-                                                                }, 3000);
-                                                            }
+                                                                });
                                                         }
                                                     }}
                                                     className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${isRecording
                                                         ? "bg-red-500 text-white shadow-red-500/30 ring-4 ring-red-500/20"
-                                                        : speechSupported
-                                                            ? "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
-                                                            : "bg-amber-600 text-white hover:bg-amber-700 shadow-amber-600/20"
+                                                        : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
                                                         }`}
                                                 >
                                                     {isRecording ? (
@@ -1109,18 +1378,23 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                             <MicOff className="h-4 w-4" />
                                                             Stop Recording
                                                         </>
-                                                    ) : speechSupported ? (
+                                                    ) : (
                                                         <>
                                                             <Mic className="h-4 w-4" />
                                                             Start AI Scribe
                                                         </>
-                                                    ) : (
-                                                        <>
-                                                            <Mic className="h-4 w-4" />
-                                                            Start Demo Mode
-                                                        </>
                                                     )}
                                                 </button>
+
+                                                {/* Audio ready indicator */}
+                                                {!isRecording && audioBlobRef.current && !scribeTranscription && (
+                                                    <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                                                        <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                        <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                                            Audio ready — tap Generate to transcribe and create note
+                                                        </span>
+                                                    </div>
+                                                )}
 
                                                 {/* Transcription Area */}
                                                 {(hasRecording || scribeTranscription) && (
@@ -1133,6 +1407,8 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                                 onClick={() => {
                                                                     setScribeTranscription("");
                                                                     setHasRecording(false);
+                                                                    audioBlobRef.current = null;
+                                                                    audioChunksRef.current = [];
                                                                 }}
                                                                 className="text-[9px] text-muted-foreground hover:text-red-500 font-bold uppercase"
                                                             >
@@ -1142,19 +1418,114 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                         <textarea
                                                             value={scribeTranscription}
                                                             onChange={(e) => setScribeTranscription(e.target.value)}
-                                                            placeholder="Transcription will appear here after recording..."
+                                                            placeholder="Transcription will appear here after processing..."
                                                             className="w-full h-32 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
                                                         />
                                                         <button
-                                                            onClick={() => {
-                                                                // Use transcription as clinician input and generate
-                                                                setClinicianInput(scribeTranscription);
-                                                                handleGenerateNote();
+                                                            onClick={async () => {
+                                                                if (audioBlobRef.current) {
+                                                                    // Send audio to server for transcription + note generation
+                                                                    setIsTranscribing(true);
+                                                                    try {
+                                                                        const formData = new FormData();
+                                                                        const ext = mimeTypeRef.current.includes('ogg') ? 'ogg' : mimeTypeRef.current.includes('mp4') ? 'mp4' : 'webm';
+                                                                        formData.append('audio', audioBlobRef.current, `recording.${ext}`);
+                                                                        formData.append('templateFormat', 'soap');
+                                                                        if (Object.values(selectedPhrases).some(p => p.length > 0)) {
+                                                                            formData.append('selectedPhrases', JSON.stringify(selectedPhrases));
+                                                                        }
+                                                                        if (patientId) {
+                                                                            formData.append('patientId', patientId);
+                                                                        }
+
+                                                                        const response = await fetch('/api/ai/transcribe-and-generate', {
+                                                                            method: 'POST',
+                                                                            body: formData,
+                                                                        });
+
+                                                                        if (!response.ok) {
+                                                                            throw new Error('Transcription request failed');
+                                                                        }
+
+                                                                        const data = await response.json();
+
+                                                                        // Show transcription
+                                                                        if (data.transcript) {
+                                                                            setScribeTranscription(data.transcript);
+                                                                        }
+
+                                                                        // Populate note sections
+                                                                        if (data.sections) {
+                                                                            let updatedSections: Record<string, string> = { ...noteSections };
+                                                                            if (template.format === "soap") {
+                                                                                template.sections.forEach(s => {
+                                                                                    const label = s.label.toLowerCase();
+                                                                                    if (label.includes("subjective")) updatedSections[s.id] = data.sections.subjective || '';
+                                                                                    else if (label.includes("objective")) updatedSections[s.id] = data.sections.objective || '';
+                                                                                    else if (label.includes("assessment")) updatedSections[s.id] = data.sections.assessment || '';
+                                                                                    else if (label.includes("plan")) updatedSections[s.id] = data.sections.plan || '';
+                                                                                });
+                                                                            } else {
+                                                                                updatedSections[template.sections[0].id] = data.sections.content ||
+                                                                                    `${data.sections.subjective}\n\n${data.sections.objective}\n\n${data.sections.assessment}\n\n${data.sections.plan}`;
+                                                                            }
+                                                                            setNoteSections(updatedSections);
+                                                                        }
+
+                                                                        // Populate suggested codes
+                                                                        if (data.suggestedCodes) {
+                                                                            setSuggestedCodes(data.suggestedCodes);
+                                                                        }
+
+                                                                        // Free memory
+                                                                        audioBlobRef.current = null;
+                                                                        audioChunksRef.current = [];
+                                                                    } catch (error) {
+                                                                        console.error('Transcription error:', error);
+                                                                        // Demo mode fallback: use demo transcript + generate demo note
+                                                                        const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+                                                                        if (isDemoMode) {
+                                                                            // Convert demo transcript array to readable text
+                                                                            const demoText = demoTranscript.map(t => `[${t.speaker}] ${t.text}`).join('\n');
+                                                                            setScribeTranscription(demoText);
+                                                                            const demoNote = generateDemoNote(templateId);
+                                                                            if (demoNote) {
+                                                                                let updatedSections: Record<string, string> = { ...noteSections };
+                                                                                if (template.format === "soap") {
+                                                                                    template.sections.forEach(s => {
+                                                                                        const label = s.label.toLowerCase();
+                                                                                        if (label.includes("subjective")) updatedSections[s.id] = demoNote.subjective || '';
+                                                                                        else if (label.includes("objective")) updatedSections[s.id] = demoNote.objective || '';
+                                                                                        else if (label.includes("assessment")) updatedSections[s.id] = demoNote.assessment || '';
+                                                                                        else if (label.includes("plan")) updatedSections[s.id] = demoNote.plan || '';
+                                                                                    });
+                                                                                }
+                                                                                setNoteSections(updatedSections);
+                                                                            }
+                                                                            if (demoNote?.suggestedCodes) setSuggestedCodes(demoNote.suggestedCodes);
+                                                                            audioBlobRef.current = null;
+                                                                            audioChunksRef.current = [];
+                                                                        } else {
+                                                                            toast.error('Transcription failed', 'Please try again or switch to the Manual tab.');
+                                                                        }
+                                                                    } finally {
+                                                                        setIsTranscribing(false);
+                                                                    }
+                                                                } else if (scribeTranscription.trim()) {
+                                                                    // Text-only: use existing generate flow
+                                                                    setClinicianInput(scribeTranscription);
+                                                                    handleGenerateNote();
+                                                                }
                                                             }}
-                                                            disabled={isGenerating || !scribeTranscription.trim()}
+                                                            disabled={isGenerating || isTranscribing || (!hasRecording && !scribeTranscription.trim())}
                                                             className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
-                                                            {isGenerating ? (
+                                                            {isTranscribing ? (
+                                                                <>
+                                                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                                                    Processing audio...
+                                                                </>
+                                                            ) : isGenerating ? (
                                                                 <>
                                                                     <RefreshCw className="h-4 w-4 animate-spin" />
                                                                     Generating...
@@ -1162,7 +1533,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                                             ) : (
                                                                 <>
                                                                     <Sparkles className="h-4 w-4" />
-                                                                    Generate Note from Transcription
+                                                                    {hasRecording ? 'Transcribe & Generate Note' : 'Generate Note from Transcription'}
                                                                 </>
                                                             )}
                                                         </button>
@@ -1256,6 +1627,45 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                 )}
                             </div>
 
+                            {/* Smart Triage Toggle */}
+                            {currentPatient && (
+                                <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0">
+                                    <div className="px-5 py-3 flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                                                <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-foreground leading-tight">Medication Safety</p>
+                                                <p className="text-[10px] text-muted-foreground">Include Smart Triage summary in note</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setIncludeTriageSummary(!includeTriageSummary)}
+                                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${includeTriageSummary ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                        >
+                                            <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform ${includeTriageSummary ? 'translate-x-4' : 'translate-x-1'}`} />
+                                        </button>
+                                    </div>
+                                    {loadingTriage && (
+                                        <div className="px-5 pb-3">
+                                            <div className="flex items-center gap-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                                Fetching medication triage...
+                                            </div>
+                                        </div>
+                                    )}
+                                    {triageSummary && !loadingTriage && (
+                                        <div className="px-5 pb-3">
+                                            <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                                                <CheckCircle className="h-3 w-3" />
+                                                Triage data loaded — will be added to Assessment
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
 
                             {/* Transcript Content */}
                             <div className="flex-1 flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
@@ -1329,32 +1739,43 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                             <RefreshCw className={`h-3.5 w-3.5 ${isGenerating ? "animate-spin" : ""}`} />
                                             Re-Sync AI
                                         </button>
-                                        <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-4 py-2 hover:bg-muted border border-border rounded-xl transition-all">
-                                            <Copy className="h-3.5 w-3.5" />
-                                            Copy
+                                        <button onClick={copyFullNote} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-4 py-2 hover:bg-muted border border-border rounded-xl transition-all">
+                                            {noteCopied ? (
+                                                <>
+                                                    <Check className="h-3.5 w-3.5" />
+                                                    Copied!
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Copy className="h-3.5 w-3.5" />
+                                                    Copy
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* Editor Sections */}
-                                <div className="divide-y divide-border/50">
-                                    {template.sections.map((section) => (
-                                        <div
-                                            key={section.id}
-                                            className="p-8 hover:bg-muted/10 transition-colors group relative"
-                                        >
-                                            <div className="flex justify-between items-center mb-4">
-                                                <label className="text-xs font-black text-foreground uppercase tracking-[0.2em] flex items-center gap-3">
-                                                    <div className="w-1.5 h-6 bg-primary/40 rounded-full" />
+                                {/* Editor Sections — continuous flowing document */}
+                                <div className="px-8 py-6 max-h-[75vh] overflow-y-auto">
+                                    {template.sections.map((section, idx) => (
+                                        <div key={section.id} className={`group relative ${idx > 0 ? 'mt-6' : ''}`}>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="text-xs font-black text-foreground uppercase tracking-[0.2em]">
                                                     {section.label}
                                                 </label>
                                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                                    {section.required && !noteSections[section.id] && (
+                                                        <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md border border-amber-100 dark:border-amber-800">
+                                                            <AlertCircle className="h-3 w-3" />
+                                                            Required
+                                                        </span>
+                                                    )}
                                                     <button
                                                         onClick={() => handleRegenerateSection(section.id)}
-                                                        className="p-2 text-muted-foreground hover:text-primary rounded-lg bg-card border border-border shadow-sm"
+                                                        className="p-1.5 text-muted-foreground hover:text-primary rounded-lg"
                                                         title="Regenerate this section"
                                                     >
-                                                        <RefreshCw className="h-4 w-4" />
+                                                        <RefreshCw className="h-3.5 w-3.5" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -1362,14 +1783,20 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                                 value={noteSections[section.id] || ""}
                                                 onChange={(e) => handleSectionChange(section.id, e.target.value)}
                                                 placeholder={section.placeholder}
-                                                className="w-full min-h-[160px] text-base md:text-lg text-foreground bg-transparent leading-relaxed outline-none resize-none placeholder:text-muted-foreground/30 font-medium"
+                                                rows={1}
+                                                ref={(el) => {
+                                                    if (el) {
+                                                        el.style.height = 'auto';
+                                                        el.style.height = el.scrollHeight + 'px';
+                                                    }
+                                                }}
+                                                onInput={(e) => {
+                                                    const el = e.currentTarget;
+                                                    el.style.height = 'auto';
+                                                    el.style.height = el.scrollHeight + 'px';
+                                                }}
+                                                className="w-full text-base md:text-lg text-foreground bg-transparent leading-relaxed outline-none resize-none placeholder:text-muted-foreground/30 font-medium border-0 p-0 overflow-hidden block"
                                             />
-                                            {section.required && !noteSections[section.id] && (
-                                                <div className="absolute top-8 right-8 flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md border border-amber-100 dark:border-amber-800">
-                                                    <AlertCircle className="h-3 w-3" />
-                                                    Required
-                                                </div>
-                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -1413,12 +1840,7 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                                         </span>
                                                         <div className="w-px h-6 bg-border mx-1" />
                                                         <span className={`text-xs font-bold ${selectedCodes.has(code) ? 'text-white/80' : 'text-muted-foreground'}`}>
-                                                            {code === "99214" && "Evaluation & Management - Level 4"}
-                                                            {code === "99213" && "Evaluation & Management - Level 3"}
-                                                            {code === "90834" && "Psychotherapy, 45 min"}
-                                                            {code === "90837" && "Psychotherapy, 60 min"}
-                                                            {code === "90833" && "Psychotherapy Adjunct"}
-                                                            {code === "90792" && "Psych Diagnostic Eval"}
+                                                            {getCodeInfo(code)?.title || code}
                                                         </span>
                                                         {!selectedCodes.has(code) && (
                                                             <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1462,12 +1884,7 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                                         </span>
                                                         <span className={`text-xs font-bold ${selectedCodes.has(code) ? 'text-white' : 'text-foreground/80'}`}>
                                                             {selectedCodes.has(code) && 'Copied! - '}
-                                                            {code === "G44.209" && "Tension-type headache, not intractable"}
-                                                            {code === "I10" && "Essential (primary) hypertension"}
-                                                            {code === "E11.9" && "Type 2 diabetes mellitus without complications"}
-                                                            {code === "F32.1" && "Major depressive disorder, moderate"}
-                                                            {code === "F41.1" && "Generalized anxiety disorder"}
-                                                            {code === "F33.1" && "Major depressive disorder, recurrent, moderate"}
+                                                            {getCodeInfo(code)?.title || code}
                                                         </span>
                                                         {!selectedCodes.has(code) && (
                                                             <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
@@ -1487,143 +1904,204 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                         </div>
                     </section>
                 </div>
-            </main>
+            </main >
 
             {/* Add Custom Phrase Modal */}
-            {showPhraseModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
-                        <div className="p-5 border-b border-border">
-                            <h3 className="text-lg font-bold">Add Custom Phrase</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Add to: <span className="font-bold text-primary">{phraseCategory}</span>
-                            </p>
-                        </div>
-                        <div className="p-5 space-y-4">
-                            <textarea
-                                value={newPhrase}
-                                onChange={(e) => setNewPhrase(e.target.value)}
-                                placeholder="Enter your custom phrase..."
-                                className="w-full h-24 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
-                                autoFocus
-                            />
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowPhraseModal(false)}
-                                    className="flex-1 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (newPhrase.trim()) {
-                                            const updated = {
-                                                ...customPhrases,
-                                                [phraseCategory]: [...(customPhrases[phraseCategory] || []), newPhrase.trim()]
-                                            };
-                                            setCustomPhrases(updated);
-                                            localStorage.setItem('customPhrases', JSON.stringify(updated));
-                                            setNewPhrase("");
-                                            setShowPhraseModal(false);
-                                        }
-                                    }}
-                                    disabled={!newPhrase.trim()}
-                                    className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
-                                >
-                                    Add Phrase
-                                </button>
+            {
+                showPhraseModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+                            <div className="p-5 border-b border-border">
+                                <h3 className="text-lg font-bold">Add Custom Phrase</h3>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Add to: <span className="font-bold text-primary">{phraseCategory}</span>
+                                </p>
+                            </div>
+                            <div className="p-5 space-y-4">
+                                <textarea
+                                    value={newPhrase}
+                                    onChange={(e) => setNewPhrase(e.target.value)}
+                                    placeholder="Enter your custom phrase..."
+                                    className="w-full h-24 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
+                                    autoFocus
+                                />
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowPhraseModal(false)}
+                                        className="flex-1 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (newPhrase.trim()) {
+                                                const updated = {
+                                                    ...customPhrases,
+                                                    [phraseCategory]: [...(customPhrases[phraseCategory] || []), newPhrase.trim()]
+                                                };
+                                                setCustomPhrases(updated);
+                                                localStorage.setItem('customPhrases', JSON.stringify(updated));
+                                                setNewPhrase("");
+                                                setShowPhraseModal(false);
+                                            }
+                                        }}
+                                        disabled={!newPhrase.trim()}
+                                        className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+                                    >
+                                        Add Phrase
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Code Explanation Modal */}
-            {codeModalOpen && selectedCodeInfo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-                        <div className="sticky top-0 bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b border-border">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className={`text-lg font-black px-3 py-1.5 rounded-lg ${selectedCodeInfo.type === 'cpt'
-                                            ? 'bg-blue-500 text-white'
-                                            : 'bg-primary text-white'
-                                            }`}>
-                                            {selectedCodeInfo.code}
-                                        </span>
-                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${selectedCodeInfo.type === 'cpt'
-                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                            : 'bg-primary/10 text-primary'
-                                            }`}>
-                                            {selectedCodeInfo.type === 'cpt' ? 'CPT Code' : 'ICD-10 Code'}
-                                        </span>
+            {
+                codeModalOpen && selectedCodeInfo && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+                            <div className="sticky top-0 bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b border-border">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className={`text-lg font-black px-3 py-1.5 rounded-lg ${selectedCodeInfo.type === 'cpt'
+                                                ? 'bg-blue-500 text-white'
+                                                : 'bg-primary text-white'
+                                                }`}>
+                                                {selectedCodeInfo.code}
+                                            </span>
+                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${selectedCodeInfo.type === 'cpt'
+                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                                : 'bg-primary/10 text-primary'
+                                                }`}>
+                                                {selectedCodeInfo.type === 'cpt' ? 'CPT Code' : 'ICD-10 Code'}
+                                            </span>
+                                        </div>
+                                        <h2 className="text-xl font-bold text-foreground">{selectedCodeInfo.title}</h2>
                                     </div>
-                                    <h2 className="text-xl font-bold text-foreground">{selectedCodeInfo.title}</h2>
+                                    <button
+                                        onClick={() => setCodeModalOpen(false)}
+                                        className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-all"
+                                    >
+                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setCodeModalOpen(false)}
-                                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-all"
-                                >
-                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div>
+                                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Description</h3>
+                                    <p className="text-foreground leading-relaxed">{selectedCodeInfo.description}</p>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Key Details</h3>
+                                    <ul className="space-y-2">
+                                        {selectedCodeInfo.details.map((detail, i) => (
+                                            <li key={i} className="flex items-start gap-3 text-sm">
+                                                <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                                <span className="text-foreground/80">{detail}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <div className="pt-4 border-t border-border flex gap-3">
+                                    <button
+                                        onClick={() => {
+                                            copyCodeToClipboard(selectedCodeInfo.code);
+                                        }}
+                                        className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedCodes.has(selectedCodeInfo.code)
+                                            ? 'bg-emerald-500 text-white'
+                                            : 'bg-muted hover:bg-muted/80 text-foreground'
+                                            }`}
+                                    >
+                                        {selectedCodes.has(selectedCodeInfo.code) ? (
+                                            <>
+                                                <CheckCircle className="h-4 w-4" />
+                                                Copied to Clipboard!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy className="h-4 w-4" />
+                                                Copy Code
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => setCodeModalOpen(false)}
+                                        className="px-6 py-3 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-all"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                )
+            }
 
-                        <div className="p-6 space-y-6">
-                            <div>
-                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Description</h3>
-                                <p className="text-foreground leading-relaxed">{selectedCodeInfo.description}</p>
+            {/* Post-Save Success Modal — Submit to Insurance */}
+            {showSaveSuccessModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card rounded-3xl shadow-2xl border border-border w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95 duration-300">
+                        {/* Success Header */}
+                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-6 text-center">
+                            <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <CheckCircle className="h-9 w-9 text-white" />
                             </div>
+                            <h3 className="text-xl font-black text-white tracking-tight">Note Saved Successfully!</h3>
+                            <p className="text-sm text-white/80 mt-1">Your clinical note has been saved.</p>
+                        </div>
 
-                            <div>
-                                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Key Details</h3>
-                                <ul className="space-y-2">
-                                    {selectedCodeInfo.details.map((detail, i) => (
-                                        <li key={i} className="flex items-start gap-3 text-sm">
-                                            <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                                            <span className="text-foreground/80">{detail}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                        {/* Action Options */}
+                        <div className="p-8 space-y-4">
+                            <p className="text-sm text-muted-foreground text-center font-medium">
+                                Would you like to submit this note for insurance review?
+                            </p>
 
-                            <div className="pt-4 border-t border-border flex gap-3">
-                                <button
-                                    onClick={() => {
-                                        copyCodeToClipboard(selectedCodeInfo.code);
-                                    }}
-                                    className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${selectedCodes.has(selectedCodeInfo.code)
-                                        ? 'bg-emerald-500 text-white'
-                                        : 'bg-muted hover:bg-muted/80 text-foreground'
-                                        }`}
-                                >
-                                    {selectedCodes.has(selectedCodeInfo.code) ? (
-                                        <>
-                                            <CheckCircle className="h-4 w-4" />
-                                            Copied to Clipboard!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy className="h-4 w-4" />
-                                            Copy Code
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => setCodeModalOpen(false)}
-                                    className="px-6 py-3 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-all"
-                                >
-                                    Close
-                                </button>
-                            </div>
+                            {/* Submit to Insurance — Primary CTA */}
+                            <button
+                                onClick={() => {
+                                    setShowSaveSuccessModal(false);
+                                    if (savedNoteId) {
+                                        router.push(`/notes/${savedNoteId}?action=submit`);
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-2xl text-base font-black uppercase tracking-widest shadow-xl shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all"
+                            >
+                                <Send className="h-5 w-5" />
+                                Submit to Insurance
+                            </button>
+
+                            {/* Keep as Draft — Secondary */}
+                            <button
+                                onClick={() => {
+                                    setShowSaveSuccessModal(false);
+                                    if (savedNoteId) {
+                                        router.push(`/notes/${savedNoteId}`);
+                                    } else {
+                                        router.push('/notes');
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-card border-2 border-border hover:border-primary/30 text-foreground rounded-2xl text-sm font-bold transition-all hover:bg-muted/50"
+                            >
+                                <Save className="h-4 w-4" />
+                                Keep as Draft — Review Later
+                            </button>
+
+                            <p className="text-xs text-muted-foreground text-center">
+                                You can always submit later from the note detail page.
+                            </p>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
+        </div >
     );
 }
 

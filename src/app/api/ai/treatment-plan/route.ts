@@ -1,41 +1,38 @@
-// src/app/api/ai/treatment-plan/route.ts
-// SEC-004: Secured AI treatment plan endpoint with authentication
-// SEC-009: HIPAA-compliant audit logging for AI PHI processing
-
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { getSafeAuditErrorDetails } from '@/lib/security/audit-error-codes';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { AITreatmentPlanSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const body = await context.request.json();
+
+        // F-025: Validate input with Zod schema
         // Support both patientData (from frontend) and patientProfile (legacy)
-        const patientProfile = body.patientData || body.patientProfile;
-        const { diagnoses } = body;
+        const normalizedBody = {
+            patientProfile: body.patientData || body.patientProfile,
+            diagnoses: body.diagnoses,
+        };
 
-        // Validation
-        if (!patientProfile || !diagnoses) {
-            console.log('[Treatment Plan] Missing data:', { hasPatientProfile: !!patientProfile, hasDiagnoses: !!diagnoses, bodyKeys: Object.keys(body) });
+        const validation = validateRequest(AITreatmentPlanSchema, normalizedBody);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Patient profile and diagnoses are required' },
+                { error: 'Validation failed', details: validation.errors },
                 { status: 400 }
             );
         }
 
-        if (typeof patientProfile === 'string' && patientProfile.length > 5000) {
-            return NextResponse.json(
-                { error: 'Patient profile too long' },
-                { status: 400 }
-            );
-        }
+        const { patientProfile, diagnoses } = validation.data;
 
-        // Log AI PHI processing - patient clinical data sent to AI
+        // F-025: Audit event without PHI (patientName removed from details)
         await logAuditEvent({
-            eventType: 'NOTE_CREATE', // Creating treatment plan
+            eventType: 'AI_TREATMENT_PLAN_REQUEST',
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -45,24 +42,19 @@ async function handler(context: AuthContext) {
             resourceType: 'ai_treatment_plan',
             details: {
                 action: 'AI_TREATMENT_PLAN_GENERATION',
-                patientName: patientProfile.name || 'Unknown',
                 diagnosisCount: Array.isArray(diagnoses) ? diagnoses.length : 1,
             },
-            phiAccessed: true, // Patient profile contains PHI
+            phiAccessed: true,
             riskLevel: 'MEDIUM',
         });
 
-        // SEC-REMEDIATION: Removed PHI from logs - patient name was being logged
-        // Audit logs capture the access for HIPAA compliance without console logging PHI
-        console.log('[Treatment Plan] Generating plan (see audit_logs for details)');
-
-        // Use safe Azure OpenAI wrapper (falls back to demo if not configured)
         const result = await safeAzureOpenAI.generateTreatmentPlan(patientProfile, diagnoses);
 
         return NextResponse.json(result);
 
     } catch (error: unknown) {
-        console.error('Error in treatment plan API:', error);
+        logError({ action: 'AI_TREATMENT_PLAN_ERROR', error: sanitizeError(error) });
+        const { errorCode, errorStatus } = getSafeAuditErrorDetails(error);
 
         await logAuditEvent({
             eventType: 'API_ERROR',
@@ -72,7 +64,7 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'ai_treatment_plan',
-            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            details: { errorCode, errorStatus },
             phiAccessed: false,
             riskLevel: 'LOW',
         });
@@ -84,7 +76,7 @@ async function handler(context: AuthContext) {
     }
 }
 
-// SEC-004: Export with authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

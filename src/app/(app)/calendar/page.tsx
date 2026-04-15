@@ -1,87 +1,54 @@
 "use client";
 
 import { Header } from "@/components/layout";
-import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List } from "lucide-react";
-import { useState } from "react";
+import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
-const mockAppointments = [
-    {
-        id: 1,
-        patientName: "Sarah Johnson",
-        time: "09:00 AM",
-        duration: "50 min",
-        type: "Initial Assessment",
-        status: "confirmed",
-        date: new Date().toISOString().split('T')[0],
-        notes: "First session. Patient reports anxiety and sleep issues."
-    },
-    {
-        id: 2,
-        patientName: "Michael Chen",
-        time: "10:00 AM",
-        duration: "30 min",
-        type: "Follow-up",
-        status: "confirmed",
-        date: new Date().toISOString().split('T')[0],
-        notes: "Medication check - Sertraline 50mg, week 4."
-    },
-    {
-        id: 3,
-        patientName: "Emily Rodriguez",
-        time: "11:30 AM",
-        duration: "50 min",
-        type: "Therapy Session",
-        status: "pending",
-        date: new Date().toISOString().split('T')[0],
-        notes: "CBT session - focus on cognitive restructuring."
-    },
-    {
-        id: 4,
-        patientName: "James Wilson",
-        time: "02:00 PM",
-        duration: "30 min",
-        type: "Medication Review",
-        status: "confirmed",
-        date: new Date(Date.now() + 86400000).toISOString().split('T')[0], // Tomorrow
-        notes: "Review efficacy of current treatment plan."
-    },
-    {
-        id: 5,
-        patientName: "Lisa Anderson",
-        time: "03:00 PM",
-        duration: "50 min",
-        type: "Initial Assessment",
-        status: "confirmed",
-        date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0], // Day after tomorrow
-        notes: "New patient referral from Dr. Martinez."
-    },
-    {
-        id: 6,
-        patientName: "Robert Taylor",
-        time: "10:00 AM",
-        duration: "50 min",
-        type: "Therapy Session",
-        status: "confirmed",
-        date: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
-        notes: "Ongoing DBT treatment."
-    },
-    {
-        id: 7,
-        patientName: "Maria Garcia",
-        time: "02:30 PM",
-        duration: "30 min",
-        type: "Follow-up",
-        status: "pending",
-        date: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0],
-        notes: "Check-in on anxiety symptoms."
-    },
-];
+interface Patient {
+    id: string;
+    first_name: string;
+    last_name: string;
+}
+
+interface Appointment {
+    id: number;
+    patientName: string;
+    patientId?: string;
+    time: string;
+    duration: string;
+    type: string;
+    status: string;
+    date: string;
+    notes: string;
+}
 
 export default function CalendarPage() {
     const [showNewAppt, setShowNewAppt] = useState(false);
-    const [selectedAppt, setSelectedAppt] = useState<typeof mockAppointments[0] | null>(null);
+    const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
     const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [patients, setPatients] = useState<Patient[]>([]);
+    const [loadingPatients, setLoadingPatients] = useState(true);
+
+    // Fetch patients from database
+    useEffect(() => {
+        const fetchPatients = async () => {
+            try {
+                setLoadingPatients(true);
+                const response = await fetch('/api/patients');
+                if (response.ok) {
+                    const data = await response.json();
+                    setPatients(data.patients || []);
+                }
+            } catch (error) {
+                console.error('Failed to fetch patients:', error);
+            } finally {
+                setLoadingPatients(false);
+            }
+        };
+        fetchPatients();
+    }, []);
 
     const today = new Date();
     const todayStr = today.toLocaleDateString('en-US', {
@@ -110,7 +77,7 @@ export default function CalendarPage() {
 
     const getAppointmentsForDate = (day: number) => {
         const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toISOString().split('T')[0];
-        return mockAppointments.filter(apt => apt.date === dateStr);
+        return appointments.filter(apt => apt.date === dateStr);
     };
 
     const isToday = (day: number) => {
@@ -119,7 +86,7 @@ export default function CalendarPage() {
     };
 
     // Filter appointments for today's list view
-    const todayAppointments = mockAppointments.filter(apt =>
+    const todayAppointments = appointments.filter(apt =>
         apt.date === today.toISOString().split('T')[0]
     );
 
@@ -229,8 +196,8 @@ export default function CalendarPage() {
                                         className={`min-h-[100px] border-b border-r border-border p-2 transition-colors hover:bg-muted/30 ${dayIsToday ? 'bg-primary/5' : ''}`}
                                     >
                                         <div className={`flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold mb-1 ${dayIsToday
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'text-foreground'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'text-foreground'
                                             }`}>
                                             {day}
                                         </div>
@@ -240,8 +207,8 @@ export default function CalendarPage() {
                                                     key={apt.id}
                                                     onClick={() => setSelectedAppt(apt)}
                                                     className={`w-full text-left px-2 py-1 rounded text-xs truncate ${apt.status === 'confirmed'
-                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                                                         }`}
                                                 >
                                                     {apt.time.split(' ')[0]} {apt.patientName.split(' ')[0]}
@@ -334,13 +301,19 @@ export default function CalendarPage() {
                         <form onSubmit={(e) => { e.preventDefault(); alert("Appointment scheduled successfully!"); setShowNewAppt(false); }} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Patient</label>
-                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
+                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700" required>
                                     <option value="">Select patient...</option>
-                                    <option value="1">Sarah Johnson</option>
-                                    <option value="2">Michael Chen</option>
-                                    <option value="3">Emily Rodriguez</option>
-                                    <option value="4">James Wilson</option>
-                                    <option value="5">Lisa Anderson</option>
+                                    {loadingPatients ? (
+                                        <option value="" disabled>Loading patients...</option>
+                                    ) : patients.length === 0 ? (
+                                        <option value="" disabled>No patients found - add a patient first</option>
+                                    ) : (
+                                        patients.map(patient => (
+                                            <option key={patient.id} value={patient.id}>
+                                                {patient.first_name} {patient.last_name}
+                                            </option>
+                                        ))
+                                    )}
                                 </select>
                             </div>
                             <div>

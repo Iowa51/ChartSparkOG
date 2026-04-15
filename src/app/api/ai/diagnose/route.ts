@@ -1,38 +1,32 @@
-// src/app/api/ai/diagnose/route.ts
-// SEC-004: Secured AI diagnose endpoint with authentication
-// SEC-009: HIPAA-compliant audit logging for AI PHI processing
-
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { getErrorStatusCode } from '@/lib/security/audit-error-codes';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { AIDiagnoseSchema, validateRequest } from '@/lib/validation/schemas';
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
     try {
         const body = await context.request.json();
-        const { sessionNotes, specialty = 'mental_health' } = body;
 
-        // Validation
-        if (!sessionNotes || typeof sessionNotes !== 'string') {
+        // Validate input with Zod schema
+        const validation = validateRequest(AIDiagnoseSchema, body);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Session notes are required' },
+                { error: 'Validation failed', details: validation.errors },
                 { status: 400 }
             );
         }
 
-        if (sessionNotes.length > 10000) {
-            return NextResponse.json(
-                { error: 'Session notes too long (max 10000 characters)' },
-                { status: 400 }
-            );
-        }
+        const { sessionNotes, specialty } = validation.data;
 
         // Log AI PHI processing - patient clinical data sent to AI
         await logAuditEvent({
-            eventType: 'NOTE_VIEW', // AI is processing clinical notes
+            eventType: 'AI_DIAGNOSE_REQUEST', // F-024: Use correct AI-specific audit type
             userId: context.user.id,
             userEmail: context.user.email,
             userRole: context.user.role,
@@ -55,9 +49,9 @@ async function handler(context: AuthContext) {
         return NextResponse.json(result);
 
     } catch (error: unknown) {
-        console.error('Error in diagnose API:', error);
+        const errorStatus = getErrorStatusCode(error);
+        logError({ action: 'AI_DIAGNOSE_ERROR', error: sanitizeError(error) });
 
-        // Log the error
         await logAuditEvent({
             eventType: 'API_ERROR',
             userId: context.user.id,
@@ -66,29 +60,27 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'ai_diagnose',
-            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            details: { errorType: error instanceof Error ? error.constructor.name : 'Unknown' },
             phiAccessed: false,
             riskLevel: 'LOW',
         });
 
-        // Provide more specific error messages
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-        if (errorMessage.includes('not configured')) {
+        // Map known error patterns to user-friendly messages without exposing internals
+        if (!safeAzureOpenAI.isAvailable()) {
             return NextResponse.json(
                 { error: 'Azure OpenAI is not configured. Please set up your API credentials.' },
                 { status: 503 }
             );
         }
 
-        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        if (errorStatus === 401) {
             return NextResponse.json(
                 { error: 'Azure OpenAI authentication failed. Please check your API key.' },
                 { status: 401 }
             );
         }
 
-        if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+        if (errorStatus === 429) {
             return NextResponse.json(
                 { error: 'Rate limit exceeded. Please wait a moment and try again.' },
                 { status: 429 }
@@ -96,13 +88,13 @@ async function handler(context: AuthContext) {
         }
 
         return NextResponse.json(
-            { error: `AI analysis failed: ${errorMessage}` },
+            { error: 'AI analysis failed. Please try again.' },
             { status: 500 }
         );
     }
 }
 
-// SEC-004: Export with authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

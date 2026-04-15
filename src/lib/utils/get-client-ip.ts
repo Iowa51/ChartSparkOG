@@ -1,44 +1,30 @@
 // src/lib/utils/get-client-ip.ts
-// Helper function to extract client IP address from request headers
-// Handles proxies, load balancers, and direct connections
+// SEC-PT7-F1: Single source of truth for client IP extraction.
+// In production (Vercel), only x-real-ip is trusted (platform-set, unspoofable).
+// x-forwarded-for is NEVER used in production — it is client-controllable.
 
 /**
  * Extract the client's IP address from the request.
- * Handles:
- * - x-forwarded-for header (when behind proxy/load balancer)
- * - x-real-ip header (nginx configuration)
- * - Direct connection fallback
- * 
- * @param request - The incoming request object
- * @returns The client's IP address or 'unknown'
+ * Production: uses only x-real-ip (set by Vercel from actual TCP connection).
+ * Non-production: falls back to x-forwarded-for for local dev convenience.
  */
 export function getClientIP(request: Request): string {
-    // x-forwarded-for can contain multiple IPs: client, proxy1, proxy2...
-    // The first one is the original client IP
-    const forwardedFor = request.headers.get('x-forwarded-for');
-    if (forwardedFor) {
-        return forwardedFor.split(',')[0].trim();
-    }
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    // Some proxies use x-real-ip instead
+    // x-real-ip is set by Vercel from the actual client socket — trusted
     const realIP = request.headers.get('x-real-ip');
-    if (realIP) {
-        return realIP.trim();
-    }
+    if (realIP) return realIP.trim();
 
-    // Cloudflare uses cf-connecting-ip
-    const cfIP = request.headers.get('cf-connecting-ip');
-    if (cfIP) {
-        return cfIP.trim();
-    }
+    // In production, never fall back to spoofable x-forwarded-for
+    if (isProduction) return 'unknown';
 
-    return 'unknown';
+    // Non-production: allow x-forwarded-for for local dev behind proxies
+    const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0].trim();
+    return forwarded || 'unknown';
 }
 
 /**
  * Get the user agent from the request
- * @param request - The incoming request object
- * @returns The user agent string or 'unknown'
  */
 export function getUserAgent(request: Request): string {
     return request.headers.get('user-agent') || 'unknown';
@@ -46,8 +32,6 @@ export function getUserAgent(request: Request): string {
 
 /**
  * Get both IP and User Agent in one call (common pattern)
- * @param request - The incoming request object
- * @returns Object with ipAddress and userAgent
  */
 export function getRequestMetadata(request: Request): {
     ipAddress: string;

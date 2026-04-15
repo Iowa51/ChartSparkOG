@@ -1,0 +1,2 @@
+-- Migration skipped: tables and data already exist in production database
+-- Original migration preserved in git history

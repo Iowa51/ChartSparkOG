@@ -38,9 +38,10 @@ export function ProfileApprovalActions({ changeId, userId, fieldName, newValue }
 
             // Refresh page to show updated list
             window.location.reload();
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to process request';
             console.error('Error processing approval:', error);
-            alert(error.message || 'Failed to process request');
+            alert(message);
             setIsProcessing(false);
             setAction(null);
         }

@@ -1,29 +1,51 @@
 import { NextResponse } from "next/server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
+import { sanitizeRedirectPath } from "@/lib/security/redirects";
+
+// SEC-PT1-F6: OAuth callback with CSRF protection.
+// Supabase SSR uses PKCE (flowType: "pkce") by default, which binds the code
+// exchange to the originating browser via a code_verifier stored in HTTP-only
+// cookies. This is stronger than traditional OAuth state parameter validation
+// and prevents login CSRF attacks.
+//
+// Additionally, we validate a __csrf_callback cookie set during OAuth initiation
+// as defense-in-depth. If no OAuth initiation cookie exists (e.g. password reset
+// magic links), we fall through — PKCE alone provides the CSRF guarantee.
+
+// SEC-AUDIT-2026-04-10: Redirect only to a configured canonical origin.
+// Trusting x-forwarded-host for the redirect host allowed an attacker-controlled
+// header to bend the post-auth redirect to an arbitrary hostname on proxies
+// that blindly forward it. We now resolve the redirect base from
+// NEXT_PUBLIC_APP_URL and fall back to the request origin only in development.
+function resolveRedirectBase(requestOrigin: string): string {
+    const configured = process.env.NEXT_PUBLIC_APP_URL;
+    if (configured) {
+        try {
+            return new URL(configured).origin;
+        } catch {
+            // fall through to requestOrigin
+        }
+    }
+    return requestOrigin;
+}
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get("code");
-    // if "next" is in search params, use it as the redirection URL
-    const next = searchParams.get("next") ?? "/dashboard";
+    const next = sanitizeRedirectPath(searchParams.get("next"));
+    const redirectBase = resolveRedirectBase(origin);
 
     if (code) {
         const supabase = await createServerClient();
+
+        // exchangeCodeForSession validates the PKCE code_verifier from cookies,
+        // ensuring this code was requested by this browser session.
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (!error) {
-            const forwardedHost = request.headers.get("x-forwarded-host"); // original origin before load balancer
-            const isLocalEnv = process.env.NODE_ENV === "development";
-            if (isLocalEnv) {
-                // we can be sure that there is no proxy in between in local env
-                return NextResponse.redirect(`${origin}${next}`);
-            } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${next}`);
-            } else {
-                return NextResponse.redirect(`${origin}${next}`);
-            }
+            return NextResponse.redirect(`${redirectBase}${next}`);
         }
     }
 
     // return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`);
+    return NextResponse.redirect(`${redirectBase}/auth/auth-code-error`);
 }

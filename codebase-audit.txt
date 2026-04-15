@@ -1,0 +1,24 @@
+I need you to explore this codebase and answer the following questions accurately by reading the actual files. Do not guess — only report what you find in the code. Work through each question one at a time and report your findings. Do not make any changes to any files. Read only.
+
+QUESTION 1 — SUBSCRIPTION/PLANS:
+Look in the Supabase migrations folder and the database schema files. Does any table have a subscription plan, tier, or billing plan field? Check: supabase/migrations/, any schema files, and any TypeScript types that reference organizations, clinicians, or users. Report: exact table name, column name, and possible values if found.
+
+QUESTION 2 — SESSION DETAIL PAGE:
+Find the page that displays a single session or encounter in detail. Check: app/, pages/, src/app/, src/pages/ for routes like [id], sessions, encounters, appointments. Report: exact file path, route URL pattern, and what data it currently displays.
+
+QUESTION 3 — AUDITOR DASHBOARD:
+Find any dashboard, admin, or billing review page. Check: app/, pages/, src/app/, src/pages/ for routes containing audit, billing, admin, dashboard, review. Report: exact file path, route URL pattern, and what it currently shows.
+
+QUESTION 4 — NOTES/DOCUMENTATION:
+Find where clinical notes are currently created and saved. Check for: note editor components, note-related API routes, note-related Supabase queries. Report: exact file paths for the note editor component, the API route that saves notes, and the Supabase table name used.
+
+QUESTION 5 — CURRENT SESSION STATUS FIELD:
+Find what statuses a session can have. Check: TypeScript types, Supabase migrations, any status enums or constants in the codebase. Report: exact field name, table name, and all possible status values.
+
+QUESTION 6 — ENVIRONMENT AND API STRUCTURE:
+Find the main API routes structure. Check: app/api/, pages/api/, or src/app/api/. Report: the base API route pattern and list the top-level API folders.
+
+QUESTION 7 — EXISTING AGENT INTEGRATION:
+Check if there is any existing reference to the agent-orchestrator service port 3300 or any agent-related API calls already in the ChartSparkOG codebase. Check: any .env files, any fetch/axios calls, any API routes. Report: exactly what exists or confirm it does not exist yet.
+
+After answering all 7 questions, provide a one-paragraph summary of what Phase 5 integration will need to add vs what already exists.

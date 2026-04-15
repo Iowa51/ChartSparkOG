@@ -8,31 +8,24 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { isValidBearerSecret } from '@/lib/security/timing-safe';
 
 /**
  * Validate cron secret - fails CLOSED in production
  */
 function validateCronSecret(request: NextRequest): { valid: boolean; error?: string } {
     const cronSecret = process.env.CRON_SECRET;
-    const isProduction = process.env.NODE_ENV === 'production';
 
-    // SEC-REMEDIATION: In production, CRON_SECRET is REQUIRED
-    if (isProduction && !cronSecret) {
-        console.error('SECURITY: CRON_SECRET not set in production');
-        return { valid: false, error: 'Server configuration error' };
-    }
-
-    // In development without secret, allow for testing
+    // SEC-PT2-F5: CRON_SECRET required in ALL environments — fail closed
     if (!cronSecret) {
-        console.warn('[Cron] CRON_SECRET not set - allowing in development');
-        return { valid: true };
+        logError({ action: 'CRON_SECRET_NOT_SET', error: 'CRON_SECRET must be configured in all environments' });
+        return { valid: false, error: 'CRON_SECRET not configured' };
     }
 
     // Verify authorization header
     const authHeader = request.headers.get('authorization');
-    const providedSecret = authHeader?.replace('Bearer ', '');
-
-    if (providedSecret !== cronSecret) {
+    if (!isValidBearerSecret(authHeader, cronSecret)) {
         return { valid: false, error: 'Unauthorized' };
     }
 
@@ -51,9 +44,9 @@ export async function POST(request: NextRequest) {
         const { generateAllMonthlyInvoices } = await import('@/lib/managed-billing/invoice-service');
         const result = await generateAllMonthlyInvoices();
 
-        console.log(`[Cron] Generated ${result.generated} invoices`);
+        logInfo({ action: 'CRON_INVOICES_GENERATED', count: result.generated });
         if (result.errors.length > 0) {
-            console.error('[Cron] Invoice errors:', result.errors);
+            logError({ action: 'CRON_INVOICE_ERRORS', error: sanitizeError(result.errors) });
         }
 
         return NextResponse.json({
@@ -62,7 +55,7 @@ export async function POST(request: NextRequest) {
             errors: result.errors.length,
         });
     } catch (error) {
-        console.error('[Cron] Generate invoices error:', error);
+        logError({ action: 'CRON_GENERATE_INVOICES_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }

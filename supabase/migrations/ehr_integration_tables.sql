@@ -1,146 +1,146 @@
--- =============================================
--- EHR Integration Hub Tables
--- Run this in Supabase SQL Editor
--- =============================================
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              -- EHR Integration Hub Tables
+                                                                                                                                                                                                                                                                                                                              -- Run this in Supabase SQL Editor
+                                                                                                                                                                                                                                                                                                                              -- =============================================
 
--- EHR Configurations: Store connected EHR systems per organization
-CREATE TABLE IF NOT EXISTS ehr_configurations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  ehr_system TEXT NOT NULL, -- 'chartpath', 'epic', 'cerner', etc.
-  display_name TEXT NOT NULL,
-  api_endpoint TEXT,
-  client_id TEXT, -- Encrypted in production
-  status TEXT DEFAULT 'not_connected' CHECK (status IN ('connected', 'pending', 'not_connected', 'error')),
-  last_sync_at TIMESTAMPTZ,
-  patients_synced INTEGER DEFAULT 0,
-  error_message TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES users(id),
-  UNIQUE(organization_id, ehr_system)
-);
+                                                                                                                                                                                                                                                                                                                              -- EHR Configurations: Store connected EHR systems per organization
+                                                                                                                                                                                                                                                                                                                              CREATE TABLE IF NOT EXISTS ehr_configurations (
+                                                                                                                                                                                                                                                                                                                                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                                                                                                                                                                                                                                                                                                                organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                                                                                                                                                                                                                                                                                                                                ehr_system TEXT NOT NULL, -- 'chartpath', 'epic', 'cerner', etc.
+                                                                                                                                                                                                                                                                                                                                display_name TEXT NOT NULL,
+                                                                                                                                                                                                                                                                                                                                api_endpoint TEXT,
+                                                                                                                                                                                                                                                                                                                                client_id TEXT, -- Encrypted in production
+                                                                                                                                                                                                                                                                                                                                status TEXT DEFAULT 'not_connected' CHECK (status IN ('connected', 'pending', 'not_connected', 'error')),
+                                                                                                                                                                                                                                                                                                                                last_sync_at TIMESTAMPTZ,
+                                                                                                                                                                                                                                                                                                                                patients_synced INTEGER DEFAULT 0,
+                                                                                                                                                                                                                                                                                                                                error_message TEXT,
+                                                                                                                                                                                                                                                                                                                                created_at TIMESTAMPTZ DEFAULT NOW(),
+                                                                                                                                                                                                                                                                                                                                updated_at TIMESTAMPTZ DEFAULT NOW(),
+                                                                                                                                                                                                                                                                                                                                created_by UUID REFERENCES users(id),
+                                                                                                                                                                                                                                                                                                                                UNIQUE(organization_id, ehr_system)
+                                                                                                                                                                                                                                                                                                                              );
 
--- Patient Consent Settings: Per-organization sharing preferences
-CREATE TABLE IF NOT EXISTS ehr_consent_settings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  organization_id UUID UNIQUE NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  share_diagnoses BOOLEAN DEFAULT TRUE,
-  share_medications BOOLEAN DEFAULT TRUE,
-  share_notes BOOLEAN DEFAULT FALSE,
-  share_labs BOOLEAN DEFAULT TRUE,
-  share_appointments BOOLEAN DEFAULT TRUE,
-  share_assessments BOOLEAN DEFAULT FALSE,
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_by UUID REFERENCES users(id)
-);
+                                                                                                                                                                                                                                                                                                                              -- Patient Consent Settings: Per-organization sharing preferences
+                                                                                                                                                                                                                                                                                                                              CREATE TABLE IF NOT EXISTS ehr_consent_settings (
+                                                                                                                                                                                                                                                                                                                                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                                                                                                                                                                                                                                                                                                                organization_id UUID UNIQUE NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+                                                                                                                                                                                                                                                                                                                                share_diagnoses BOOLEAN DEFAULT TRUE,
+                                                                                                                                                                                                                                                                                                                                share_medications BOOLEAN DEFAULT TRUE,
+                                                                                                                                                                                                                                                                                                                                share_notes BOOLEAN DEFAULT FALSE,
+                                                                                                                                                                                                                                                                                                                                share_labs BOOLEAN DEFAULT TRUE,
+                                                                                                                                                                                                                                                                                                                                share_appointments BOOLEAN DEFAULT TRUE,
+                                                                                                                                                                                                                                                                                                                                share_assessments BOOLEAN DEFAULT FALSE,
+                                                                                                                                                                                                                                                                                                                                updated_at TIMESTAMPTZ DEFAULT NOW(),
+                                                                                                                                                                                                                                                                                                                                updated_by UUID REFERENCES users(id)
+                                                                                                                                                                                                                                                                                                                              );
 
--- =============================================
--- INDEXES
--- =============================================
-CREATE INDEX IF NOT EXISTS idx_ehr_config_org ON ehr_configurations(organization_id);
-CREATE INDEX IF NOT EXISTS idx_ehr_config_status ON ehr_configurations(status);
-CREATE INDEX IF NOT EXISTS idx_ehr_consent_org ON ehr_consent_settings(organization_id);
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              -- INDEXES
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              CREATE INDEX IF NOT EXISTS idx_ehr_config_org ON ehr_configurations(organization_id);
+                                                                                                                                                                                                                                                                                                                              CREATE INDEX IF NOT EXISTS idx_ehr_config_status ON ehr_configurations(status);
+                                                                                                                                                                                                                                                                                                                              CREATE INDEX IF NOT EXISTS idx_ehr_consent_org ON ehr_consent_settings(organization_id);
 
--- =============================================
--- ENABLE ROW LEVEL SECURITY
--- =============================================
-ALTER TABLE ehr_configurations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ehr_consent_settings ENABLE ROW LEVEL SECURITY;
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              -- ENABLE ROW LEVEL SECURITY
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              ALTER TABLE ehr_configurations ENABLE ROW LEVEL SECURITY;
+                                                                                                                                                                                                                                                                                                                              ALTER TABLE ehr_consent_settings ENABLE ROW LEVEL SECURITY;
 
--- =============================================
--- RLS POLICIES: ehr_configurations
--- =============================================
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              -- RLS POLICIES: ehr_configurations
+                                                                                                                                                                                                                                                                                                                              -- =============================================
 
--- Users can view their organization's EHR configurations
-CREATE POLICY "Users can view org EHR configs"
-  ON ehr_configurations FOR SELECT
-  TO authenticated
-  USING (organization_id = get_user_organization_id());
+                                                                                                                                                                                                                                                                                                                              -- Users can view their organization's EHR configurations
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Users can view org EHR configs"
+                                                                                                                                                                                                                                                                                                                                ON ehr_configurations FOR SELECT
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                USING (organization_id = get_user_organization_id());
 
--- Admins can insert EHR configurations for their organization
-CREATE POLICY "Admins can create EHR configs"
-  ON ehr_configurations FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
-    AND organization_id = get_user_organization_id()
-  );
+                                                                                                                                                                                                                                                                                                                              -- Admins can insert EHR configurations for their organization
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Admins can create EHR configs"
+                                                                                                                                                                                                                                                                                                                                ON ehr_configurations FOR INSERT
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                WITH CHECK (
+                                                                                                                                                                                                                                                                                                                                  get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+                                                                                                                                                                                                                                                                                                                                  AND organization_id = get_user_organization_id()
+                                                                                                                                                                                                                                                                                                                                );
 
--- Admins can update EHR configurations for their organization
-CREATE POLICY "Admins can update EHR configs"
-  ON ehr_configurations FOR UPDATE
-  TO authenticated
-  USING (
-    get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
-    AND organization_id = get_user_organization_id()
-  );
+                                                                                                                                                                                                                                                                                                                              -- Admins can update EHR configurations for their organization
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Admins can update EHR configs"
+                                                                                                                                                                                                                                                                                                                                ON ehr_configurations FOR UPDATE
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                USING (
+                                                                                                                                                                                                                                                                                                                                  get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+                                                                                                                                                                                                                                                                                                                                  AND organization_id = get_user_organization_id()
+                                                                                                                                                                                                                                                                                                                                );
 
--- Admins can delete EHR configurations for their organization
-CREATE POLICY "Admins can delete EHR configs"
-  ON ehr_configurations FOR DELETE
-  TO authenticated
-  USING (
-    get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
-    AND organization_id = get_user_organization_id()
-  );
+                                                                                                                                                                                                                                                                                                                              -- Admins can delete EHR configurations for their organization
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Admins can delete EHR configs"
+                                                                                                                                                                                                                                                                                                                                ON ehr_configurations FOR DELETE
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                USING (
+                                                                                                                                                                                                                                                                                                                                  get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+                                                                                                                                                                                                                                                                                                                                  AND organization_id = get_user_organization_id()
+                                                                                                                                                                                                                                                                                                                                );
 
--- Super admins can view all EHR configurations
-CREATE POLICY "Super admins can view all EHR configs"
-  ON ehr_configurations FOR SELECT
-  TO authenticated
-  USING (get_user_role() = 'SUPER_ADMIN');
+                                                                                                                                                                                                                                                                                                                              -- Super admins can view all EHR configurations
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Super admins can view all EHR configs"
+                                                                                                                                                                                                                                                                                                                                ON ehr_configurations FOR SELECT
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                USING (get_user_role() = 'SUPER_ADMIN');
 
--- =============================================
--- RLS POLICIES: ehr_consent_settings
--- =============================================
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              -- RLS POLICIES: ehr_consent_settings
+                                                                                                                                                                                                                                                                                                                              -- =============================================
 
--- Users can view their organization's consent settings
-CREATE POLICY "Users can view org consent settings"
-  ON ehr_consent_settings FOR SELECT
-  TO authenticated
-  USING (organization_id = get_user_organization_id());
+                                                                                                                                                                                                                                                                                                                              -- Users can view their organization's consent settings
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Users can view org consent settings"
+                                                                                                                                                                                                                                                                                                                                ON ehr_consent_settings FOR SELECT
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                USING (organization_id = get_user_organization_id());
 
--- Admins can insert consent settings for their organization
-CREATE POLICY "Admins can create consent settings"
-  ON ehr_consent_settings FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
-    AND organization_id = get_user_organization_id()
-  );
+                                                                                                                                                                                                                                                                                                                              -- Admins can insert consent settings for their organization
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Admins can create consent settings"
+                                                                                                                                                                                                                                                                                                                                ON ehr_consent_settings FOR INSERT
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                WITH CHECK (
+                                                                                                                                                                                                                                                                                                                                  get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+                                                                                                                                                                                                                                                                                                                                  AND organization_id = get_user_organization_id()
+                                                                                                                                                                                                                                                                                                                                );
 
--- Admins can update consent settings for their organization
-CREATE POLICY "Admins can update consent settings"
-  ON ehr_consent_settings FOR UPDATE
-  TO authenticated
-  USING (
-    get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
-    AND organization_id = get_user_organization_id()
-  );
+                                                                                                                                                                                                                                                                                                                              -- Admins can update consent settings for their organization
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Admins can update consent settings"
+                                                                                                                                                                                                                                                                                                                                ON ehr_consent_settings FOR UPDATE
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                USING (
+                                                                                                                                                                                                                                                                                                                                  get_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+                                                                                                                                                                                                                                                                                                                                  AND organization_id = get_user_organization_id()
+                                                                                                                                                                                                                                                                                                                                );
 
--- Super admins can view all consent settings
-CREATE POLICY "Super admins can view all consent settings"
-  ON ehr_consent_settings FOR SELECT
-  TO authenticated
-  USING (get_user_role() = 'SUPER_ADMIN');
+                                                                                                                                                                                                                                                                                                                              -- Super admins can view all consent settings
+                                                                                                                                                                                                                                                                                                                              CREATE POLICY "Super admins can view all consent settings"
+                                                                                                                                                                                                                                                                                                                                ON ehr_consent_settings FOR SELECT
+                                                                                                                                                                                                                                                                                                                                TO authenticated
+                                                                                                                                                                                                                                                                                                                                USING (get_user_role() = 'SUPER_ADMIN');
 
--- =============================================
--- TRIGGERS FOR UPDATED_AT
--- =============================================
-CREATE TRIGGER update_ehr_configurations_updated_at
-  BEFORE UPDATE ON ehr_configurations
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              -- TRIGGERS FOR UPDATED_AT
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              CREATE TRIGGER update_ehr_configurations_updated_at
+                                                                                                                                                                                                                                                                                                                                BEFORE UPDATE ON ehr_configurations
+                                                                                                                                                                                                                                                                                                                                FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_ehr_consent_settings_updated_at
-  BEFORE UPDATE ON ehr_consent_settings
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+                                                                                                                                                                                                                                                                                                                              CREATE TRIGGER update_ehr_consent_settings_updated_at
+                                                                                                                                                                                                                                                                                                                                BEFORE UPDATE ON ehr_consent_settings
+                                                                                                                                                                                                                                                                                                                                FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- =============================================
--- SEED DATA: Default EHR Systems (Optional)
--- =============================================
--- This will create default EHR system entries when an organization is created
--- You can run this for existing organizations:
--- INSERT INTO ehr_configurations (organization_id, ehr_system, display_name, status)
--- SELECT id, 'chartpath', 'ChartPath', 'not_connected' FROM organizations
--- ON CONFLICT (organization_id, ehr_system) DO NOTHING;
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              -- SEED DATA: Default EHR Systems (Optional)
+                                                                                                                                                                                                                                                                                                                              -- =============================================
+                                                                                                                                                                                                                                                                                                                              -- This will create default EHR system entries when an organization is created
+                                                                                                                                                                                                                                                                                                                              -- You can run this for existing organizations:
+                                                                                                                                                                                                                                                                                                                              -- INSERT INTO ehr_configurations (organization_id, ehr_system, display_name, status)
+                                                                                                                                                                                                                                                                                                                              -- SELECT id, 'chartpath', 'ChartPath', 'not_connected' FROM organizations
+                                                                                                                                                                                                                                                                                                                              -- ON CONFLICT (organization_id, ehr_system) DO NOTHING;

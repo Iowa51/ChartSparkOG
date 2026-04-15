@@ -1,131 +1,220 @@
 /**
  * Claims List API Route
+ * SEC-HIGH-01: Migrated to withAuth wrapper
  * GET /api/managed-billing/claims - List claims for organization
  * POST /api/managed-billing/claims - Create new claim
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { withAuth, AuthContext } from "@/lib/auth/api-auth";
+import { logError, sanitizeError } from "@/lib/logging/safe-logger";
+import { logAuditEventAsync } from "@/lib/security/audit-log";
+import { getRequestMetadata } from "@/lib/utils/get-client-ip";
+import { z } from "zod";
+import { ManagedBillingClaimCreateSchema, validateRequest } from "@/lib/validation/schemas";
 
-export async function GET(request: NextRequest) {
-    try {
-        const supabase = await createClient();
+const ClaimsListQuerySchema = z
+  .object({
+    status: z.string().max(50).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
 
-        if (!supabase) {
-            return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-        }
+async function handleGet(context: AuthContext) {
+  try {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
+    const supabase = await createClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database not available" }, { status: 503 });
+    }
 
-        const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status');
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '20');
-        const offset = (page - 1) * limit;
+    const { searchParams } = new URL(context.request.url);
+    const queryParsed = ClaimsListQuerySchema.safeParse(Object.fromEntries(searchParams));
+    if (!queryParsed.success) {
+      return NextResponse.json(
+        { error: "Invalid query parameters", details: queryParsed.error.issues },
+        { status: 400 },
+      );
+    }
+    const { status, page, limit } = queryParsed.data;
+    const offset = (page - 1) * limit;
 
-        // Get user's organization
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('users')
-            .select('organization_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id) {
-            return NextResponse.json({ error: 'No organization' }, { status: 403 });
-        }
-
-        let query = supabase
-            .from('billing_claims')
-            .select(`
+    let query = supabase
+      .from("billing_claims")
+      .select(
+        `
                 *,
                 patients (id, first_name, last_name),
                 users!billing_claims_provider_id_fkey (id, first_name, last_name)
-            `, { count: 'exact' })
-            .eq('organization_id', profile.organization_id)
-            .order('created_at', { ascending: false })
-            .range(offset, offset + limit - 1);
+            `,
+        { count: "exact" },
+      )
+      .eq("organization_id", context.user.organizationId!)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-        if (status) {
-            query = query.eq('status', status);
-        }
-
-        const { data: claims, count, error } = await query;
-
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json({
-            claims,
-            pagination: {
-                page,
-                limit,
-                total: count || 0,
-                totalPages: Math.ceil((count || 0) / limit),
-            },
-        });
-    } catch (error) {
-        console.error('[API] Claims list error:', error);
-        return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    if (status) {
+      query = query.eq("status", status);
     }
+
+    const { data: claims, count, error } = await query;
+
+    if (error) {
+      return NextResponse.json({ error: "Failed to fetch claims" }, { status: 500 });
+    }
+
+    logAuditEventAsync({
+      eventType: "BILLING_RECORD_VIEW",
+      userId: context.user.id,
+      userEmail: context.user.email,
+      userRole: context.user.role,
+      organizationId: context.user.organizationId || undefined,
+      ipAddress,
+      userAgent,
+      resourceType: "billing_claim",
+      details: { action: "CLAIMS_LIST_VIEW", recordCount: claims?.length || 0 },
+      phiAccessed: true,
+      riskLevel: "LOW",
+    });
+
+    return NextResponse.json({
+      claims,
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+      },
+    });
+  } catch (error) {
+    logError({ action: "CLAIMS_LIST_ERROR", error: sanitizeError(error) });
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 }
 
-export async function POST(request: NextRequest) {
-    try {
-        const supabase = await createClient();
-
-        if (!supabase) {
-            return NextResponse.json({ error: 'Database not available' }, { status: 503 });
-        }
-
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('users')
-            .select('organization_id, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile?.organization_id || !['ADMIN', 'SUPER_ADMIN'].includes(profile.role)) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        const body = await request.json();
-
-        // Generate claim number
-        const claimNumber = `CLM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-
-        const { data: claim, error } = await supabase
-            .from('billing_claims')
-            .insert({
-                organization_id: profile.organization_id,
-                patient_id: body.patientId,
-                provider_id: body.providerId,
-                encounter_id: body.encounterId,
-                claim_number: claimNumber,
-                service_date: body.serviceDate,
-                diagnosis_codes: body.diagnosisCodes || [],
-                procedure_codes: body.procedureCodes || [],
-                billed_amount: body.billedAmount || 0,
-                payer_name: body.payerName,
-                status: 'draft',
-            })
-            .select()
-            .single();
-
-        if (error) {
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ claim }, { status: 201 });
-    } catch (error) {
-        console.error('[API] Create claim error:', error);
-        return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+async function handlePost(context: AuthContext) {
+  try {
+    const { ipAddress, userAgent } = getRequestMetadata(context.request);
+    const supabase = await createClient();
+    if (!supabase) {
+      return NextResponse.json({ error: "Database not available" }, { status: 503 });
     }
+
+    const body = await context.request.json();
+    const validation = validateRequest(ManagedBillingClaimCreateSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.errors },
+        { status: 400 },
+      );
+    }
+    const validatedBody = validation.data;
+    const claimNumber = `CLM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    const [{ data: patient }, { data: provider }, encounterResult] = await Promise.all([
+      supabase
+        .from("patients")
+        .select("id")
+        .eq("id", validatedBody.patientId)
+        .eq("organization_id", context.user.organizationId!)
+        .maybeSingle(),
+      supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", validatedBody.providerId)
+        .eq("organization_id", context.user.organizationId!)
+        .maybeSingle(),
+      validatedBody.encounterId
+        ? supabase
+            .from("encounters")
+            .select("id, patient_id, organization_id")
+            .eq("id", validatedBody.encounterId)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+
+    if (!patient || !provider) {
+      return NextResponse.json(
+        { error: "Forbidden - invalid organization association" },
+        { status: 403 },
+      );
+    }
+
+    if (validatedBody.encounterId) {
+      const encounter = encounterResult?.data;
+
+      if (!encounter) {
+        return NextResponse.json({ error: "Forbidden - encounter not found" }, { status: 403 });
+      }
+
+      if (encounter.organization_id !== context.user.organizationId) {
+        return NextResponse.json(
+          { error: "Forbidden - encounter belongs to a different organization" },
+          { status: 403 },
+        );
+      }
+
+      if (encounter.patient_id !== validatedBody.patientId) {
+        return NextResponse.json(
+          { error: "Forbidden - encounter does not belong to the selected patient" },
+          { status: 403 },
+        );
+      }
+    }
+
+    const { data: claim, error } = await supabase
+      .from("billing_claims")
+      .insert({
+        organization_id: context.user.organizationId,
+        patient_id: validatedBody.patientId,
+        provider_id: validatedBody.providerId,
+        encounter_id: validatedBody.encounterId,
+        claim_number: claimNumber,
+        service_date: validatedBody.serviceDate,
+        diagnosis_codes: validatedBody.diagnosisCodes,
+        procedure_codes: validatedBody.procedureCodes,
+        billed_amount: validatedBody.billedAmount,
+        payer_name: validatedBody.payerName,
+        status: "draft",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: "Failed to create claim" }, { status: 500 });
+    }
+
+    logAuditEventAsync({
+      eventType: "BILLING_RECORD_CREATE",
+      userId: context.user.id,
+      userEmail: context.user.email,
+      userRole: context.user.role,
+      organizationId: context.user.organizationId || undefined,
+      ipAddress,
+      userAgent,
+      resourceType: "billing_claim",
+      resourceId: claim.id,
+      details: {
+        action: "CLAIM_CREATE",
+        claimNumber: claim.claim_number,
+        hasEncounterReference: Boolean(validatedBody.encounterId),
+      },
+      phiAccessed: true,
+      riskLevel: "MEDIUM",
+    });
+
+    return NextResponse.json({ claim }, { status: 201 });
+  } catch (error) {
+    logError({ action: "CREATE_CLAIM_ERROR", error: sanitizeError(error) });
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 }
+
+export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
+export const POST = withAuth(handlePost, {
+  requiredRole: ["ADMIN", "SUPER_ADMIN"],
+  requireOrganization: true,
+  requireMFA: true,
+});

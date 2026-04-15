@@ -1,21 +1,22 @@
+// F-052: All monetary values are in CENTS (integers) to avoid floating-point errors
 // CPT Code billing rates (approximate Medicare rates for demo)
 export const cptRates: Record<string, { description: string; rate: number }> = {
-    "99211": { description: "Office visit, minimal", rate: 25.00 },
-    "99212": { description: "Office visit, straightforward", rate: 50.00 },
-    "99213": { description: "Office visit, low complexity", rate: 95.00 },
-    "99214": { description: "Office visit, moderate complexity", rate: 145.00 },
-    "99215": { description: "Office visit, high complexity", rate: 210.00 },
-    "99204": { description: "New patient, moderate complexity", rate: 185.00 },
-    "99205": { description: "New patient, high complexity", rate: 245.00 },
-    "90791": { description: "Psychiatric diagnostic evaluation", rate: 225.00 },
-    "90792": { description: "Psych diagnostic eval with medical services", rate: 280.00 },
-    "90833": { description: "Psychotherapy add-on, 16 min", rate: 65.00 },
-    "90834": { description: "Individual psychotherapy, 45 min", rate: 140.00 },
-    "90837": { description: "Individual psychotherapy, 60 min", rate: 185.00 },
-    "90847": { description: "Family psychotherapy with patient", rate: 150.00 },
+    "99211": { description: "Office visit, minimal", rate: 2500 },
+    "99212": { description: "Office visit, straightforward", rate: 5000 },
+    "99213": { description: "Office visit, low complexity", rate: 9500 },
+    "99214": { description: "Office visit, moderate complexity", rate: 14500 },
+    "99215": { description: "Office visit, high complexity", rate: 21000 },
+    "99204": { description: "New patient, moderate complexity", rate: 18500 },
+    "99205": { description: "New patient, high complexity", rate: 24500 },
+    "90791": { description: "Psychiatric diagnostic evaluation", rate: 22500 },
+    "90792": { description: "Psych diagnostic eval with medical services", rate: 28000 },
+    "90833": { description: "Psychotherapy add-on, 16 min", rate: 6500 },
+    "90834": { description: "Individual psychotherapy, 45 min", rate: 14000 },
+    "90837": { description: "Individual psychotherapy, 60 min", rate: 18500 },
+    "90847": { description: "Family psychotherapy with patient", rate: 15000 },
 };
 
-// Calculate billing amount from CPT codes
+// Calculate billing amount from CPT codes (returns cents)
 export function calculateBillingAmount(cptCodes: string[]): number {
     return cptCodes.reduce((total, code) => {
         const rate = cptRates[code];
@@ -23,31 +24,31 @@ export function calculateBillingAmount(cptCodes: string[]): number {
     }, 0);
 }
 
-// Calculate platform fee
+// Calculate platform fee (returns cents, integer math)
 export function calculatePlatformFee(
-    billingAmount: number,
+    billingAmountCents: number,
     feePercentage: number = 1.0
 ): number {
-    return Math.round(billingAmount * (feePercentage / 100) * 100) / 100;
+    return Math.round(billingAmountCents * (feePercentage / 100));
 }
 
-// Get net amount after fee
+// Get net amount after fee (returns cents)
 export function calculateNetAmount(
-    billingAmount: number,
-    feeAmount: number
+    billingAmountCents: number,
+    feeAmountCents: number
 ): number {
-    return Math.round((billingAmount - feeAmount) * 100) / 100;
+    return billingAmountCents - feeAmountCents;
 }
 
-// Format currency
-export function formatCurrency(amount: number): string {
+// Format currency (takes cents, displays as dollars)
+export function formatCurrency(amountCents: number): string {
     return new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
-    }).format(amount);
+    }).format(amountCents / 100);
 }
 
-// Fee breakdown type
+// Fee breakdown type (all amounts in cents)
 export interface FeeBreakdown {
     billingAmount: number;
     feePercentage: number;
@@ -56,7 +57,7 @@ export interface FeeBreakdown {
     codes: { code: string; description: string; rate: number }[];
 }
 
-// Generate fee breakdown
+// Generate fee breakdown (all amounts in cents)
 export function generateFeeBreakdown(
     cptCodes: string[],
     feePercentage: number = 1.0

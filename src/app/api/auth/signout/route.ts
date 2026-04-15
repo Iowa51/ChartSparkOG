@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { logAuditEvent } from "@/lib/security/audit-log";
 import { getRequestMetadata } from "@/lib/utils/get-client-ip";
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export async function POST(request: NextRequest) {
     const { ipAddress, userAgent } = getRequestMetadata(request);
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
             { status: 302 }
         );
     } catch (error) {
-        console.error('Signout error:', error);
+        logError({ action: 'SIGNOUT_ERROR', error: sanitizeError(error) });
         return NextResponse.redirect(
             new URL('/login', process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
             { status: 302 }

@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { decryptPHI } from '@/lib/security/encryption';
+import { logInfo, logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 /**
  * Office Ally SFTP Adapter
@@ -30,7 +32,7 @@ export class OfficeAllySFTPAdapter {
      * Filename for test mode MUST include 'OATEST'
      */
     async uploadClaim(fileName: string, content: string): Promise<{ success: boolean; message: string }> {
-        console.log(`[SFTP] Preparation: Uploading ${fileName} to ${this.config.host}`);
+        logInfo({ action: 'SFTP_UPLOAD_PREPARATION', resourceId: fileName });
 
         if (this.isMock) {
             // Simulate network delay
@@ -49,9 +51,10 @@ export class OfficeAllySFTPAdapter {
             // await sftp.end();
 
             throw new Error('SFTP Client dependency not yet installed. Use isMock=true for now.');
-        } catch (error: any) {
-            console.error(`[SFTP] Upload Error: ${error.message}`);
-            return { success: false, message: error.message };
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : 'SFTP upload failed';
+            logError({ action: 'SFTP_UPLOAD_ERROR', error: msg });
+            return { success: false, message: msg };
         }
     }
 
@@ -103,7 +106,23 @@ export async function getOfficeAllyAdapter(organizationId: string, supabase: any
         .single();
 
     if (error || !config) {
-        // Return a mock adapter if no config exists (for demo/testing)
+        // SEC-AUDIT-2026-04-10: Fail closed outside explicit test mode.
+        // Previously this silently returned a mock adapter whenever no
+        // clearinghouse config was present — which meant production could fall
+        // through to the mock path if credentials were ever lost or not yet
+        // seeded, causing "successful" uploads that never left the server.
+        const allowMock =
+            process.env.NODE_ENV !== 'production' &&
+            process.env.OFFICE_ALLY_ALLOW_MOCK === 'true';
+
+        if (!allowMock) {
+            throw new Error(
+                'Office Ally clearinghouse configuration is missing for this organization. ' +
+                'Refusing to fall back to a mock adapter. Set OFFICE_ALLY_ALLOW_MOCK=true in ' +
+                'a non-production environment to opt in to the mock adapter for local testing.'
+            );
+        }
+
         return new OfficeAllySFTPAdapter({
             host: 'ftp10officeally.com',
             port: 22,
@@ -116,19 +135,9 @@ export async function getOfficeAllyAdapter(organizationId: string, supabase: any
         host: config.sftp_host || 'ftp10officeally.com',
         port: 22,
         username: config.sftp_username,
-        password: decrypt(config.sftp_password), // Decrypt stored credential
+        password: await decryptPHI(config.sftp_password), // F-035: Real AES-256-GCM decryption
         path: config.sftp_path || '/inbound'
     }, false);
 }
 
-/**
- * Decryption Placeholder
- * In a real production environment, this would use a HSM or 
- * environment-stored KMS key to decrypt clearinghouse passwords.
- */
-function decrypt(encryptedValue: string): string {
-    if (!encryptedValue) return '';
-    // Mock decryption logic for POC
-    console.log('[Security] Decrypting clearinghouse credential...');
-    return Buffer.from(encryptedValue, 'base64').toString('ascii');
-}
+// F-035: Removed fake base64 decrypt() — now uses decryptPHI with real AES-256-GCM

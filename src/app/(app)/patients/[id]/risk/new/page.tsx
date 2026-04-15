@@ -2,7 +2,6 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { Header } from "@/components/layout";
-import { getPatientById } from "@/lib/demo-data/patients";
 import { useState, useEffect } from "react";
 import {
     Shield,
@@ -26,12 +25,19 @@ import {
     interpretGDS15
 } from "@/lib/geriatric-tools";
 
+interface Patient {
+    id: string;
+    first_name: string;
+    last_name: string;
+}
+
 export default function NewRiskAssessmentPage() {
     const params = useParams();
     const router = useRouter();
     const patientId = params.id as string;
-    const patient = getPatientById(patientId);
 
+    const [patient, setPatient] = useState<Patient | null>(null);
+    const [loading, setLoading] = useState(true);
     const [activeSection, setActiveSection] = useState<"fall" | "cognitive" | "depression">("fall");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -44,7 +50,45 @@ export default function NewRiskAssessmentPage() {
     // GDS-15 State
     const [gdsAnswers, setGdsAnswers] = useState<Record<number, string>>({});
 
+    useEffect(() => {
+        const fetchPatient = async () => {
+            try {
+                const response = await fetch(`/api/patients/${patientId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setPatient(data.patient);
+                }
+            } catch (error) {
+                console.error('Failed to fetch patient:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPatient();
+    }, [patientId]);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col min-h-screen bg-slate-50/50 dark:bg-slate-950/50">
+                <Header
+                    title="Loading..."
+                    description="Please wait"
+                    breadcrumbs={[
+                        { label: "Patients", href: "/patients" },
+                        { label: "Risk Assessment" },
+                    ]}
+                />
+                <div className="flex-1 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            </div>
+        );
+    }
+
     if (!patient) return null;
+
+    const patientName = `${patient.first_name} ${patient.last_name}`;
 
     const sections = [
         { id: "fall", label: "Fall Risk", icon: Activity },
@@ -102,10 +146,10 @@ export default function NewRiskAssessmentPage() {
         <div className="flex flex-col min-h-screen bg-slate-50/50 dark:bg-slate-950/50">
             <Header
                 title="New Risk Assessment"
-                description={`Conducting comprehensive clinical screening for ${patient.name}`}
+                description={`Conducting comprehensive clinical screening for ${patientName}`}
                 breadcrumbs={[
                     { label: "Patients", href: "/patients" },
-                    { label: patient.name, href: `/patients/${patient.id}` },
+                    { label: patientName, href: `/patients/${patient.id}` },
                     { label: "New Risk Assessment" },
                 ]}
             />
@@ -126,8 +170,8 @@ export default function NewRiskAssessmentPage() {
                                     key={section.id}
                                     onClick={() => setActiveSection(section.id as any)}
                                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all border ${activeSection === section.id
-                                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                                            : "bg-card text-muted-foreground border-border hover:border-primary/50"
+                                        ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                                        : "bg-card text-muted-foreground border-border hover:border-primary/50"
                                         }`}
                                 >
                                     <Icon className="h-4 w-4" />
@@ -169,8 +213,8 @@ export default function NewRiskAssessmentPage() {
                                                 }
                                             }}
                                             className={`text-left p-3 rounded-xl border text-xs font-medium transition-all ${selectedFallFactors.includes(factor.factor)
-                                                    ? "bg-primary/10 border-primary/50 text-primary font-bold"
-                                                    : "bg-muted/30 border-border text-foreground/70 hover:border-primary/30"
+                                                ? "bg-primary/10 border-primary/50 text-primary font-bold"
+                                                : "bg-muted/30 border-border text-foreground/70 hover:border-primary/30"
                                                 }`}
                                         >
                                             <div className="flex items-center justify-between">

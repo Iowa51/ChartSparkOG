@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+
+// Force dynamic rendering - auditor pages need authentication at runtime
+export const dynamic = 'force-dynamic';
 import {
     LayoutDashboard,
     FileText,

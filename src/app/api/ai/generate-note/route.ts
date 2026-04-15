@@ -1,29 +1,37 @@
-// src/app/api/ai/generate-note/route.ts
-// SEC-004: AI-powered clinical note generation from clinician input
-// SEC-009: HIPAA-compliant audit logging for AI PHI processing
+// AI-powered clinical note generation from clinician input
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import safeAzureOpenAI from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { getSafeAuditErrorDetails } from '@/lib/security/audit-error-codes';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { analyzeNoteForCodes } from '@/lib/billing/code-analyzer';
+import { AIGenerateNoteSchema, validateRequest } from '@/lib/validation/schemas';
 
-interface GenerateNoteRequest {
-    clinicianInput: string;
-    selectedPhrases: Record<string, string[]>;
-    templateId: string;
-    templateFormat: 'soap' | 'paragraph';
-}
+
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
-    try {
-        const body: GenerateNoteRequest = await context.request.json();
-        const { clinicianInput, selectedPhrases, templateId, templateFormat } = body;
+    // Parse body once (request.json() can only be called once)
+    const body = await context.request.json();
 
-        // Validate input
-        if (!clinicianInput && Object.keys(selectedPhrases || {}).length === 0) {
+    try {
+        // Validate input with Zod schema (enforces 50K char limit)
+        const validation = validateRequest(AIGenerateNoteSchema, body);
+        if (!validation.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validation.errors },
+                { status: 400 }
+            );
+        }
+
+        const { clinicianInput, selectedPhrases, templateId, templateFormat } = validation.data;
+
+        // Require at least some input
+        if (!clinicianInput && Object.keys(selectedPhrases).length === 0) {
             return NextResponse.json(
                 { error: 'Please provide input text or select preset phrases' },
                 { status: 400 }
@@ -99,10 +107,26 @@ async function handler(context: AuthContext) {
             }
         }
 
-        // Add suggested codes based on assessment - format matches frontend expectation
+        // Dynamically analyze generated note content for relevant billing codes
+        const noteForAnalysis = {
+            subjective: sections.subjective || '',
+            objective: sections.objective || '',
+            assessment: sections.assessment || '',
+            plan: sections.plan || '',
+            fullContent: Object.values(sections).join(' ')
+        };
+        const codeAnalysis = analyzeNoteForCodes(noteForAnalysis, {
+            templateType: templateFormat,
+            maxCPT: 4,
+            maxICD10: 5
+        });
+
         const suggestedCodes = {
-            cpt: ['90834', '90837', '99214'],
-            icd10: ['F32.1', 'F41.1']
+            cpt: codeAnalysis.cpt,
+            icd10: codeAnalysis.icd10,
+            // Include full details so frontend can display descriptions
+            cptDetails: codeAnalysis.cptDetails,
+            icd10Details: codeAnalysis.icd10Details
         };
 
         return NextResponse.json({
@@ -117,7 +141,13 @@ async function handler(context: AuthContext) {
         });
 
     } catch (error: unknown) {
-        console.error('Error generating note:', error);
+        logError({
+            action: 'ai_generate_note_error',
+            error: sanitizeError(error),
+            resourceType: 'ai_generate_note',
+            userId: context.user.id,
+        });
+        const { errorCode, errorStatus } = getSafeAuditErrorDetails(error);
 
         await logAuditEvent({
             eventType: 'API_ERROR',
@@ -127,7 +157,7 @@ async function handler(context: AuthContext) {
             ipAddress,
             userAgent,
             resourceType: 'ai_generate_note',
-            details: { error: error instanceof Error ? error.message : 'Unknown' },
+            details: { errorCode, errorStatus },
             phiAccessed: false,
             riskLevel: 'LOW',
         });
@@ -139,7 +169,7 @@ async function handler(context: AuthContext) {
     }
 }
 
-// Requires authentication
 export const POST = withAuth(handler, {
     requiredRole: ['USER', 'ADMIN', 'SUPER_ADMIN'],
+    requireMFA: true,
 });

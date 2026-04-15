@@ -82,7 +82,7 @@ export function validateFileUpload(
     }
 
     // Check file type
-    if (!ALLOWED_FILE_TYPES.includes(file.type as any)) {
+    if (!(ALLOWED_FILE_TYPES as readonly string[]).includes(file.type)) {
         return {
             valid: false,
             error: `File type not allowed. Allowed types: PDF, images, Word, Excel, text files`

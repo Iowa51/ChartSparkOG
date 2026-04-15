@@ -1,11 +1,56 @@
 /**
  * Subscription Service
  * Handles all subscription-related business logic
- * 
+ *
  * NOTE: This is a NEW service. It does not replace any existing code.
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { devWarn, devError } from '@/lib/logging/safe-logger';
+import { Redis } from '@upstash/redis';
+
+// OPTIMIZATION: Redis cache for subscription status (serverless-safe)
+const CACHE_PREFIX = 'sub_cache:';
+const CACHE_TTL_SECONDS = 300; // 5 minutes
+
+function getRedisClient(): Redis | null {
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!url || !token) return null;
+    return new Redis({ url, token });
+}
+
+async function getCachedSubscription(organizationId: string): Promise<SubscriptionInfo | null> {
+    try {
+        const redis = getRedisClient();
+        if (!redis) return null;
+        const cached = await redis.get<SubscriptionInfo>(`${CACHE_PREFIX}${organizationId}`);
+        return cached ?? null;
+    } catch {
+        return null;
+    }
+}
+
+async function setCachedSubscription(organizationId: string, data: SubscriptionInfo): Promise<void> {
+    try {
+        const redis = getRedisClient();
+        if (!redis) return;
+        await redis.set(`${CACHE_PREFIX}${organizationId}`, data, { ex: CACHE_TTL_SECONDS });
+    } catch {
+        // Non-fatal: cache write failure should not break the flow
+    }
+}
+
+// Export for cache invalidation when subscription changes
+export async function invalidateSubscriptionCache(organizationId: string): Promise<void> {
+    try {
+        const redis = getRedisClient();
+        if (!redis) return;
+        await redis.del(`${CACHE_PREFIX}${organizationId}`);
+    } catch {
+        // Non-fatal
+    }
+}
 
 export type SubscriptionStatus =
     | 'trialing'
@@ -29,18 +74,27 @@ export interface SubscriptionInfo {
 /**
  * Get subscription status for an organization
  * Called from middleware and components
+ * OPTIMIZATION: Results are cached for 5 minutes to reduce DB load
  */
 export async function getSubscriptionStatus(organizationId: string): Promise<SubscriptionInfo> {
+    // Check cache first
+    const cached = await getCachedSubscription(organizationId);
+    if (cached) {
+        return cached;
+    }
+
     const supabase = await createClient();
 
     if (!supabase) {
         // Demo mode - full access
-        return {
+        const demoResult: SubscriptionInfo = {
             status: 'active',
             tierCode: 'ELITE',
             canAccess: true,
             canEdit: true,
         };
+        await setCachedSubscription(organizationId, demoResult);
+        return demoResult;
     }
 
     const { data: subscription, error } = await supabase
@@ -54,12 +108,14 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
 
     // No subscription record exists
     if (error || !subscription) {
-        return {
+        const result: SubscriptionInfo = {
             status: 'none',
             tierCode: null,
             canAccess: false,
             canEdit: false,
         };
+        await setCachedSubscription(organizationId, result);
+        return result;
     }
 
     const now = new Date();
@@ -79,17 +135,19 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
                 })
                 .eq('id', subscription.id);
 
-            return {
+            const result: SubscriptionInfo = {
                 status: 'expired',
                 tierCode: null,
                 canAccess: true,
                 canEdit: false,
             };
+            await setCachedSubscription(organizationId, result);
+            return result;
         }
 
         const daysRemaining = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-        return {
+        const result: SubscriptionInfo = {
             status: 'trialing',
             tierCode: 'ELITE', // Full access during trial
             canAccess: true,
@@ -97,6 +155,8 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
             trialEndsAt: subscription.trial_ends_at,
             daysRemaining,
         };
+        await setCachedSubscription(organizationId, result);
+        return result;
     }
 
     // Handle read-only status
@@ -107,43 +167,51 @@ export async function getSubscriptionStatus(organizationId: string): Promise<Sub
 
         if (deletionDate && deletionDate < now) {
             // Should trigger deletion
-            return {
+            const result: SubscriptionInfo = {
                 status: 'none',
                 tierCode: null,
                 canAccess: false,
                 canEdit: false,
             };
+            await setCachedSubscription(organizationId, result);
+            return result;
         }
 
-        return {
+        const result: SubscriptionInfo = {
             status: 'read_only',
             tierCode: null,
             canAccess: true,
             canEdit: false,
             deletionScheduledAt: subscription.deletion_scheduled_at,
         };
+        await setCachedSubscription(organizationId, result);
+        return result;
     }
 
     // Handle active subscription
     if (subscription.status === 'active') {
         // Type assertion for joined query
         const tierData = subscription.subscription_tiers as { code: string; name: string } | null;
-        return {
+        const result: SubscriptionInfo = {
             status: 'active',
             tierCode: (tierData?.code as 'STARTER' | 'ELITE') || 'STARTER',
             canAccess: true,
             canEdit: true,
         };
+        await setCachedSubscription(organizationId, result);
+        return result;
     }
 
     // Handle other statuses (past_due, canceled)
     const tierData = subscription.subscription_tiers as { code: string; name: string } | null;
-    return {
+    const result: SubscriptionInfo = {
         status: subscription.status as SubscriptionStatus,
         tierCode: (tierData?.code as 'STARTER' | 'ELITE') || null,
         canAccess: subscription.status === 'past_due', // Allow access during grace period
         canEdit: subscription.status === 'past_due',
     };
+    setCachedSubscription(organizationId, result);
+    return result;
 }
 
 /**
@@ -157,7 +225,7 @@ export async function createTrialSubscription(
     const supabase = await createClient();
 
     if (!supabase) {
-        console.warn('[Subscription] Demo mode - skipping trial creation');
+        devWarn('Subscription', 'Demo mode - skipping trial creation');
         return;
     }
 
@@ -183,6 +251,9 @@ export async function createTrialSubscription(
         trial_ends_at: trialEndsAt.toISOString(),
         stripe_customer_id: stripeCustomerId,
     });
+
+    // OPTIMIZATION: Invalidate cache after subscription creation
+    await invalidateSubscriptionCache(organizationId);
 }
 
 /**
@@ -197,7 +268,7 @@ export async function activateSubscription(
     const supabase = await createClient();
 
     if (!supabase) {
-        console.warn('[Subscription] Demo mode - skipping activation');
+        devWarn('Subscription', 'Demo mode - skipping activation');
         return;
     }
 
@@ -227,6 +298,9 @@ export async function activateSubscription(
             deletion_scheduled_at: null,
         })
         .eq('organization_id', organizationId);
+
+    // OPTIMIZATION: Invalidate cache after subscription change
+    await invalidateSubscriptionCache(organizationId);
 }
 
 /**
@@ -259,7 +333,7 @@ export async function checkFeatureAccess(
     if (error || !data) {
         // SEC-REMEDIATION: FAIL CLOSED - deny access on error
         // This prevents attackers from exploiting database errors to bypass feature gates
-        console.error('Feature access check failed - DENYING ACCESS:', error);
+        devError('Subscription', 'Feature access check failed - DENYING ACCESS:', error);
         return false;
     }
 

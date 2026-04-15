@@ -2,6 +2,8 @@
 // SEC-REMEDIATION: Centralized environment configuration
 // Provides consistent demo mode checks and environment info
 
+import { logError, logInfo, logWarn } from '@/lib/logging/safe-logger';
+
 export type AppEnvironment = 'development' | 'staging' | 'production';
 
 export interface EnvironmentConfig {
@@ -34,10 +36,7 @@ export function isDemoMode(): boolean {
 
     // Phase 2: Enforce demo mode disabled in production
     if (process.env.NODE_ENV === 'production' && isExplicitlyEnabled) {
-        console.error(
-            '[SECURITY BLOCK] Demo mode cannot be enabled in production. ' +
-            'Ignoring NEXT_PUBLIC_DEMO_MODE=true setting.'
-        );
+        logError({ action: 'SECURITY_BLOCK_DEMO_MODE_IN_PRODUCTION', error: 'Demo mode cannot be enabled in production. Ignoring NEXT_PUBLIC_DEMO_MODE=true setting.' });
         return false; // Force demo mode off in production
     }
 
@@ -115,13 +114,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
 export function logEnvironmentConfig(): void {
     const config = getEnvironmentConfig();
 
-    console.info('[ENV] Environment Configuration:', {
-        appEnv: config.appEnv,
-        nodeEnv: process.env.NODE_ENV,
-        isDemoMode: config.isDemoMode,
-        isProduction: config.isProduction,
-        features: config.features,
-    });
+    logInfo({ action: 'ENV_CONFIG_LOADED', status: `appEnv=${config.appEnv} nodeEnv=${process.env.NODE_ENV} demo=${config.isDemoMode} prod=${config.isProduction}` });
 }
 
 /**
@@ -132,6 +125,7 @@ export function validateRequiredEnvVars(): string[] {
     const required = [
         'NEXT_PUBLIC_SUPABASE_URL',
         'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+        'ENCRYPTION_SALT',
     ];
 
     // Additional requirements for production
@@ -163,10 +157,10 @@ export function ensureRequiredEnvVars(): void {
     if (missing.length > 0) {
         const message = `Missing required environment variables: ${missing.join(', ')}`;
 
-        if (isProduction()) {
+        if (isProduction() || missing.includes('ENCRYPTION_SALT')) {
             throw new Error(`[CRITICAL] ${message}`);
         } else {
-            console.warn(`[WARNING] ${message}`);
+            logWarn({ action: 'ENV_MISSING_VARS', error: message });
         }
     }
 }

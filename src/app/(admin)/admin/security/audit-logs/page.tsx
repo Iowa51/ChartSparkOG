@@ -137,7 +137,7 @@ export default function AdminAuditLogsPage() {
             const transformedLogs: AuditLogEntry[] = (data || []).map((row: any) => ({
                 id: row.id,
                 timestamp: new Date(row.created_at),
-                eventType: row.event_type || row.action || 'UNKNOWN',
+                eventType: row.event_type || 'UNKNOWN',
                 userId: row.user_id,
                 userEmail: row.user_email,
                 userRole: row.user_role,
@@ -153,17 +153,17 @@ export default function AdminAuditLogsPage() {
             setLogs(transformedLogs);
             setTotalCount(count || 0);
 
-            // Log this view action (meta-audit)
-            await supabase.from('audit_logs').insert({
-                event_type: 'AUDIT_LOG_VIEW',
-                user_id: user.id,
-                user_email: user.email,
-                organization_id: profile.organization_id,
-                resource_type: 'audit_logs',
-                details: { page, resultCount: transformedLogs.length },
-                phi_accessed: false,
-                risk_level: 'LOW',
-            });
+            // SEC-SPRINT9: Meta-audit routed through server-side API instead of
+            // direct client-side insert (which bypasses canonical helper sanitization).
+            try {
+                await fetch('/api/audit/log-view', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ page, resultCount: transformedLogs.length }),
+                });
+            } catch {
+                // Non-critical — meta-audit failure should not block UI
+            }
 
         } catch (err: any) {
             console.error('Error loading audit logs:', err);

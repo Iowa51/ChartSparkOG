@@ -3,15 +3,50 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { logAuditEvent } from '@/lib/security/audit-log';
+import { LoginAttemptSchema, validateRequest } from '@/lib/validation/schemas';
+import { validateOrigin } from '@/lib/security/csrf';
+import { getClientIP } from '@/lib/utils/get-client-ip';
+
+// F-020: In-memory IP-based rate limiting for record-attempt endpoint
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 20; // max 20 requests per IP per minute
+
+function isRateLimited(ip: string): boolean {
+    const now = Date.now();
+    const entry = rateLimitMap.get(ip);
+    if (!entry || now > entry.resetAt) {
+        rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+        return false;
+    }
+    entry.count++;
+    return entry.count > RATE_LIMIT_MAX;
+}
 
 export async function POST(request: NextRequest) {
-    try {
-        const body = await request.json();
-        const { email, success } = body;
+    // SEC-PT6-F4: CSRF origin validation for pre-auth state-changing route
+    if (!validateOrigin(request)) {
+        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
 
-        if (!email || typeof success !== 'boolean') {
-            return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
+    try {
+        const ipAddress = getClientIP(request);
+
+        // F-020: Rate limit by IP to prevent lockout flooding
+        if (isRateLimited(ipAddress)) {
+            return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
         }
+
+        const body = await request.json();
+
+        // F-020: Validate email format with Zod
+        const validation = validateRequest(LoginAttemptSchema, body);
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Invalid data', details: validation.errors }, { status: 400 });
+        }
+        const { email, success } = validation.data;
 
         // SEC-REMEDIATION: Use service role client for recording attempts
         // This bypasses RLS since we need to record before user is authenticated
@@ -25,13 +60,10 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ recorded: true, demo: true });
             }
             // In production without service client, log error but don't block
-            console.error('SECURITY: Cannot record login attempt - service role not configured');
+            logError({ action: 'RECORD_ATTEMPT_NO_SERVICE_ROLE', error: 'Service role not configured' });
             return NextResponse.json({ recorded: false, error: 'Service unavailable' });
         }
 
-        const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-            request.headers.get('x-real-ip') ||
-            'unknown';
         const userAgent = request.headers.get('user-agent') || 'unknown';
 
         // Record the attempt in login_attempts table
@@ -55,18 +87,17 @@ export async function POST(request: NextRequest) {
             }
         } catch (dbError) {
             // Log but don't fail - recording is important but not blocking
-            console.error('Failed to record login attempt:', dbError);
+            logError({ action: 'RECORD_ATTEMPT_DB_ERROR', error: sanitizeError(dbError) });
         }
 
-        // Also log to audit_logs for HIPAA compliance
+        // SEC-SPRINT8: Route audit writes through canonical helper
         try {
-            await supabase.from('audit_logs').insert({
-                event_type: success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILURE',
-                user_email: email,
-                ip_address: ipAddress,
-                user_agent: userAgent,
-                risk_level: success ? 'LOW' : 'MEDIUM',
-                created_at: new Date().toISOString(),
+            await logAuditEvent({
+                eventType: success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILURE',
+                userEmail: email,
+                ipAddress,
+                userAgent,
+                riskLevel: success ? 'LOW' : 'MEDIUM',
             });
         } catch {
             // Audit log failure is not blocking
@@ -75,7 +106,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ recorded: true });
 
     } catch (error) {
-        console.error('Record attempt error:', error);
+        logError({ action: 'RECORD_ATTEMPT_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Failed to record' }, { status: 500 });
     }
 }

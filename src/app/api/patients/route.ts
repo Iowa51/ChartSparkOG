@@ -1,166 +1,159 @@
-// src/app/api/patients/route.ts
-// SEC-009: HIPAA-compliant patient API with full audit logging
-// SEC-REMEDIATION: Using safe logger to prevent PHI in error logs
+// HIPAA-compliant patient API with audit logging
 
-import { createClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
-import { logAuditEvent, logPHIAccess } from '@/lib/security/audit-log';
-import { getRequestMetadata } from '@/lib/utils/get-client-ip';
-import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { withAuth, AuthContext } from "@/lib/auth/api-auth";
+import { logAuditEventAsync } from "@/lib/security/audit-log";
+import { getRequestMetadata } from "@/lib/utils/get-client-ip";
+import { logError, sanitizeError } from "@/lib/logging/safe-logger";
+import { PatientCreateSchema, validateRequest } from "@/lib/validation/schemas";
 
-export async function GET(request: NextRequest) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+const PatientsListQuerySchema = z
+  .object({
+    status: z.string().max(50).optional(),
+    search: z.string().max(200).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+  })
+  .strict();
+import { getPatients, searchPatients, createPatient } from "@/lib/data";
 
-    try {
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+async function handleGet(context: AuthContext) {
+  const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: '/api/patients', method: 'GET' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+  try {
+    const { user } = context;
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-        }
-
-        const searchParams = request.nextUrl.searchParams;
-        const status = searchParams.get('status');
-        const search = searchParams.get('search');
-
-        let query = supabase
-            .from('patients')
-            .select('*')
-            .eq('organization_id', profile.organization_id)
-            .order('last_name', { ascending: true });
-
-        // Apply status filter
-        if (status && status !== 'all') {
-            query = query.eq('status', status);
-        }
-
-        // SEC-REMEDIATION: Sanitize search to prevent filter injection
-        if (search) {
-            // Remove dangerous characters that could be used for injection
-            const sanitized = search
-                .replace(/[<>'"`;\\]/g, '')  // Remove dangerous chars
-                .replace(/%/g, '\\%')        // Escape wildcards
-                .replace(/,/g, '')           // Remove commas (filter separator)
-                .trim()
-                .substring(0, 100);          // Limit length
-
-            if (sanitized) {
-                query = query.or(`first_name.ilike.%${sanitized}%,last_name.ilike.%${sanitized}%`);
-            }
-        }
-
-        const { data: patients, error } = await query;
-
-        if (error) throw error;
-
-        // Log PHI access - viewing patient list
-        await logAuditEvent({
-            eventType: 'PATIENT_SEARCH',
-            userId: user.id,
-            userEmail: user.email,
-            userRole: profile.role,
-            organizationId: profile.organization_id,
-            ipAddress,
-            userAgent,
-            details: {
-                search: search || null,
-                statusFilter: status || 'all',
-                resultCount: patients?.length || 0,
-            },
-            phiAccessed: true,
-            riskLevel: 'MEDIUM',
-        });
-
-        return NextResponse.json({ patients });
-    } catch (error) {
-        logError({
-            action: 'FETCH_PATIENTS_ERROR',
-            error: sanitizeError(error),
-        });
-        return NextResponse.json({ error: 'Failed to fetch patients' }, { status: 500 });
+    if (!user.organizationId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
+
+    const searchParams = context.request.nextUrl.searchParams;
+    const queryParsed = PatientsListQuerySchema.safeParse(Object.fromEntries(searchParams));
+    if (!queryParsed.success) {
+      return NextResponse.json(
+        { error: "Invalid query parameters", details: queryParsed.error.issues },
+        { status: 400 },
+      );
+    }
+    const { status, search: searchTerm, page, limit: pageSize } = queryParsed.data;
+
+    let result;
+
+    if (searchTerm) {
+      result = await searchPatients(user.organizationId, searchTerm, {
+        page,
+        pageSize,
+        status: status || "active",
+      });
+    } else {
+      result = await getPatients(user.organizationId, {
+        page,
+        pageSize,
+        status: status || "active",
+      });
+    }
+
+    logAuditEventAsync({
+      eventType: "PATIENT_SEARCH",
+      userId: user.id,
+      userEmail: user.email,
+      userRole: user.role,
+      organizationId: user.organizationId,
+      ipAddress,
+      userAgent,
+      details: {
+        search: searchTerm || null,
+        statusFilter: status || "all",
+        resultCount: result.data.length,
+      },
+      phiAccessed: true,
+      riskLevel: "MEDIUM",
+    });
+
+    return NextResponse.json({
+      patients: result.data,
+      pagination: {
+        page: result.page,
+        limit: result.pageSize,
+        total: result.count,
+        totalPages: result.totalPages,
+      },
+    });
+  } catch (error: unknown) {
+    logError({
+      action: "FETCH_PATIENTS_ERROR",
+      error: sanitizeError(error),
+    });
+    return NextResponse.json({ error: "Failed to fetch patients" }, { status: 500 });
+  }
 }
 
-export async function POST(request: NextRequest) {
-    const { ipAddress, userAgent } = getRequestMetadata(request);
+async function handlePost(context: AuthContext) {
+  const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
-    try {
-        const supabase = await createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+  try {
+    const { user } = context;
 
-        if (!user) {
-            await logAuditEvent({
-                eventType: 'UNAUTHORIZED_ACCESS',
-                ipAddress,
-                userAgent,
-                details: { path: '/api/patients', method: 'POST' },
-                phiAccessed: false,
-                riskLevel: 'HIGH',
-            });
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('organization_id, email, role')
-            .eq('id', user.id)
-            .single();
-
-        if (!profile) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-        }
-
-        const patientData = await request.json();
-
-        const { data: patient, error } = await supabase
-            .from('patients')
-            .insert([{
-                ...patientData,
-                organization_id: profile.organization_id,
-                created_by: user.id
-            }])
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        // Log PHI creation with full HIPAA fields
-        await logPHIAccess(
-            user.id,
-            user.email || '',
-            profile.role || 'USER',
-            profile.organization_id,
-            'PATIENT',
-            patient.id,
-            'CREATE',
-            ipAddress,
-            userAgent
-        );
-
-        return NextResponse.json({ patient }, { status: 201 });
-    } catch (error) {
-        logError({
-            action: 'CREATE_PATIENT_ERROR',
-            error: sanitizeError(error),
-        });
-        return NextResponse.json({ error: 'Failed to create patient' }, { status: 500 });
+    if (!user.organizationId) {
+      return NextResponse.json(
+        {
+          error: "No organization assigned to your account. Please contact your administrator.",
+        },
+        { status: 400 },
+      );
     }
+
+    const rawData = await context.request.json();
+
+    const validation = validateRequest(PatientCreateSchema, rawData);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.errors },
+        { status: 400 },
+      );
+    }
+
+    const data = validation.data;
+
+    const patient = await createPatient(user.organizationId, user.id, {
+      first_name: data.first_name,
+      last_name: data.last_name,
+      preferred_name: data.preferred_name ?? undefined,
+      date_of_birth: data.date_of_birth,
+      gender: data.gender ?? undefined,
+      email: data.email ?? undefined,
+      phone: data.phone ?? undefined,
+      address: data.address ?? undefined,
+      allergies: data.allergies ?? undefined,
+      medications: data.medications?.map((m: string) => ({ medication: m })) ?? undefined,
+      problems: data.problems?.map((p: string) => ({ problem: p })) ?? undefined,
+      insurance: data.insurance?.provider
+        ? {
+            provider: data.insurance.provider,
+            policy_number: data.insurance.policy_number,
+            group_number: data.insurance.group_number,
+          }
+        : undefined,
+    });
+
+    return NextResponse.json(patient, { status: 201 });
+  } catch (error: unknown) {
+    logError({
+      action: "CREATE_PATIENT_ERROR",
+      error: sanitizeError(error),
+    });
+
+    return NextResponse.json({ error: "Failed to create patient" }, { status: 500 });
+  }
 }
+
+export const GET = withAuth(handleGet, {
+  requiredRole: ["USER", "ADMIN", "SUPER_ADMIN"],
+  requireMFA: true,
+});
+
+export const POST = withAuth(handlePost, {
+  requiredRole: ["USER", "ADMIN", "SUPER_ADMIN"],
+  requireMFA: true,
+});

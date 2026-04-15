@@ -8,31 +8,24 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
+import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { isValidBearerSecret } from '@/lib/security/timing-safe';
 
 /**
  * Validate cron secret - fails CLOSED in production
  */
 function validateCronSecret(request: NextRequest): { valid: boolean; error?: string } {
     const cronSecret = process.env.CRON_SECRET;
-    const isProduction = process.env.NODE_ENV === 'production';
 
-    // SEC-REMEDIATION: In production, CRON_SECRET is REQUIRED
-    if (isProduction && !cronSecret) {
-        console.error('SECURITY: CRON_SECRET not set in production');
-        return { valid: false, error: 'Server configuration error' };
-    }
-
-    // In development without secret, allow for testing
+    // SEC-PT2-F5: CRON_SECRET required in ALL environments — fail closed
     if (!cronSecret) {
-        console.warn('[Cron] CRON_SECRET not set - allowing in development');
-        return { valid: true };
+        logError({ action: 'CRON_SECRET_NOT_SET', error: 'CRON_SECRET must be configured in all environments' });
+        return { valid: false, error: 'CRON_SECRET not configured' };
     }
 
     // Verify authorization header
     const authHeader = request.headers.get('authorization');
-    const providedSecret = authHeader?.replace('Bearer ', '');
-
-    if (providedSecret !== cronSecret) {
+    if (!isValidBearerSecret(authHeader, cronSecret)) {
         return { valid: false, error: 'Unauthorized' };
     }
 
@@ -51,7 +44,7 @@ export async function POST(request: NextRequest) {
         const supabase = createServiceRoleClient();
 
         if (!supabase) {
-            console.warn('[Cron] No database - running in demo mode');
+            logWarn({ action: 'CRON_TRIAL_NO_DATABASE', status: 'demo_mode' });
             return NextResponse.json({ success: true, expired: 0, demo: true });
         }
 
@@ -65,7 +58,7 @@ export async function POST(request: NextRequest) {
             .lt('trial_ends_at', now);
 
         if (queryError) {
-            console.error('[Cron] Query error:', queryError);
+            logError({ action: 'CRON_QUERY_ERROR', error: sanitizeError(queryError) });
             return NextResponse.json({ error: 'Database error' }, { status: 500 });
         }
 
@@ -93,14 +86,14 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        console.log(`[Cron] Expired ${updatedCount} trial subscriptions`);
+        logInfo({ action: 'CRON_TRIAL_EXPIRATIONS_PROCESSED', count: updatedCount });
 
         return NextResponse.json({
             success: true,
             expired: updatedCount,
         });
     } catch (error) {
-        console.error('[Cron] Check trials error:', error);
+        logError({ action: 'CRON_CHECK_TRIALS_ERROR', error: sanitizeError(error) });
         return NextResponse.json({ error: 'Internal error' }, { status: 500 });
     }
 }

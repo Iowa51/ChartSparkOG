@@ -2,6 +2,7 @@
 // Multi-Factor Authentication utilities using Supabase MFA
 
 import { createClient } from '@/lib/supabase/client';
+import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 
 export interface MFAEnrollmentResult {
     qrCode: string;
@@ -32,7 +33,7 @@ export async function enrollMFA(): Promise<MFAEnrollmentResult> {
     });
 
     if (error) {
-        console.error('MFA enrollment error:', error);
+        logError({ action: 'MFA_ENROLLMENT_ERROR', error: sanitizeError(error) });
         throw new Error(error.message);
     }
 
@@ -47,31 +48,16 @@ export async function enrollMFA(): Promise<MFAEnrollmentResult> {
  * Verify MFA code during enrollment or login
  */
 export async function verifyMFA(factorId: string, code: string): Promise<boolean> {
-    const supabase = createClient();
-    if (!supabase) {
-        throw new Error('Supabase client not available');
-    }
-
-    // Create a challenge
-    const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
-        factorId,
+    const response = await fetch('/api/auth/verify-mfa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ factorId, code }),
     });
 
-    if (challengeError) {
-        console.error('MFA challenge error:', challengeError);
-        throw new Error(challengeError.message);
-    }
-
-    // Verify the code
-    const { data, error } = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId: challengeData.id,
-        code,
-    });
-
-    if (error) {
-        console.error('MFA verification error:', error);
-        throw new Error(error.message);
+    if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: 'MFA verification failed' }));
+        logError({ action: 'MFA_VERIFICATION_ERROR', error: payload.error || 'MFA verification failed' });
+        throw new Error(payload.error || 'MFA verification failed');
     }
 
     return true;
@@ -89,7 +75,7 @@ export async function getMFAFactors(): Promise<MFAFactor[]> {
     const { data, error } = await supabase.auth.mfa.listFactors();
 
     if (error) {
-        console.error('Error listing MFA factors:', error);
+        logError({ action: 'MFA_LIST_FACTORS_ERROR', error: sanitizeError(error) });
         return [];
     }
 
@@ -116,7 +102,7 @@ export async function unenrollMFA(factorId: string): Promise<boolean> {
     });
 
     if (error) {
-        console.error('MFA unenroll error:', error);
+        logError({ action: 'MFA_UNENROLL_ERROR', error: sanitizeError(error) });
         throw new Error(error.message);
     }
 
@@ -151,7 +137,7 @@ export async function getMFAAssuranceLevel(): Promise<'aal1' | 'aal2' | null> {
     const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
     if (error) {
-        console.error('Error getting MFA assurance level:', error);
+        logError({ action: 'MFA_ASSURANCE_LEVEL_ERROR', error: sanitizeError(error) });
         return null;
     }
 

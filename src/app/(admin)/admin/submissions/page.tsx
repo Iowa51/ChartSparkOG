@@ -26,69 +26,7 @@ interface Submission {
     users: { first_name: string; last_name: string } | null;
 }
 
-// Demo submissions for fallback when database unavailable
-const demoSubmissions: Submission[] = [
-    {
-        id: "demo-sub-1",
-        cpt_code: "99214",
-        icd10_codes: ["F41.1", "F32.1"],
-        billing_amount: 165.00,
-        status: "pending_approval",
-        created_at: new Date().toISOString(),
-        audited_at: new Date().toISOString(),
-        auditor_comments: "Documentation reviewed - ready for approval",
-        patients: { first_name: "Sarah", last_name: "Johnson" },
-        users: { first_name: "Dr. Sarah", last_name: "K." }
-    },
-    {
-        id: "demo-sub-2",
-        cpt_code: "99205",
-        icd10_codes: ["F41.9"],
-        billing_amount: 285.00,
-        status: "pending_audit",
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        audited_at: null,
-        auditor_comments: null,
-        patients: { first_name: "Michael", last_name: "Chen" },
-        users: { first_name: "Dr. Sarah", last_name: "K." }
-    },
-    {
-        id: "demo-sub-3",
-        cpt_code: "90837",
-        icd10_codes: ["F33.1"],
-        billing_amount: 165.00,
-        status: "flagged",
-        created_at: new Date(Date.now() - 172800000).toISOString(),
-        audited_at: new Date(Date.now() - 86400000).toISOString(),
-        auditor_comments: "Missing documentation for medical necessity",
-        patients: { first_name: "Emily", last_name: "Rodriguez" },
-        users: { first_name: "Dr. Michael", last_name: "R." }
-    },
-    {
-        id: "demo-sub-4",
-        cpt_code: "99213",
-        icd10_codes: ["F31.9"],
-        billing_amount: 110.00,
-        status: "approved",
-        created_at: new Date(Date.now() - 259200000).toISOString(),
-        audited_at: new Date(Date.now() - 172800000).toISOString(),
-        auditor_comments: null,
-        patients: { first_name: "James", last_name: "Wilson" },
-        users: { first_name: "Dr. Sarah", last_name: "K." }
-    },
-    {
-        id: "demo-sub-5",
-        cpt_code: "99214",
-        icd10_codes: ["F41.1", "F42.2"],
-        billing_amount: 165.00,
-        status: "rejected",
-        created_at: new Date(Date.now() - 345600000).toISOString(),
-        audited_at: new Date(Date.now() - 259200000).toISOString(),
-        auditor_comments: "CPT code does not match documentation level",
-        patients: { first_name: "Lisa", last_name: "Anderson" },
-        users: { first_name: "Dr. Lisa", last_name: "T." }
-    },
-];
+
 
 export default function AdminSubmissionsPage() {
     const supabase = createClient();
@@ -98,7 +36,6 @@ export default function AdminSubmissionsPage() {
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
     const [organizationId, setOrganizationId] = useState<string | null>(null);
-    const [isDemo, setIsDemo] = useState(false);
 
     useEffect(() => {
         fetchCurrentUserOrg();
@@ -120,21 +57,15 @@ export default function AdminSubmissionsPage() {
                     setOrganizationId(profile.organization_id);
                     fetchSubmissions(profile.organization_id);
                 } else {
-                    console.log("[Admin Submissions] No organization found, using demo data");
-                    setIsDemo(true);
-                    setSubmissions(demoSubmissions);
+                    console.warn("[Admin Submissions] No organization found");
                     setLoading(false);
                 }
             } else {
-                console.log("[Admin Submissions] No user session, using demo data");
-                setIsDemo(true);
-                setSubmissions(demoSubmissions);
+                console.warn("[Admin Submissions] No user session");
                 setLoading(false);
             }
         } catch (error) {
-            console.error("[Admin Submissions] Error fetching org, using demo data:", error);
-            setIsDemo(true);
-            setSubmissions(demoSubmissions);
+            console.error("[Admin Submissions] Error fetching org:", error);
             setLoading(false);
         }
     };
@@ -154,17 +85,9 @@ export default function AdminSubmissionsPage() {
 
             if (error) throw error;
 
-            if (data && data.length > 0) {
-                setSubmissions(data);
-            } else {
-                console.log("[Admin Submissions] No submissions in database, using demo data");
-                setIsDemo(true);
-                setSubmissions(demoSubmissions);
-            }
+            setSubmissions(data || []);
         } catch (error) {
-            console.error("[Admin Submissions] Error fetching submissions, using demo data:", error);
-            setIsDemo(true);
-            setSubmissions(demoSubmissions);
+            console.error("[Admin Submissions] Error fetching submissions:", error);
         } finally {
             setLoading(false);
         }

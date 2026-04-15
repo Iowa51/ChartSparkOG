@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+
+// Force dynamic rendering - admin pages need authentication at runtime
+export const dynamic = 'force-dynamic';
 import {
     LayoutDashboard,
     Users,
