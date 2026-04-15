@@ -41,6 +41,8 @@ export default function NewEncounterPage() {
     const [selectedType, setSelectedType] = useState(visitTypes[1]); // Default to follow-up
     const [searchQuery, setSearchQuery] = useState("");
     const [step, setStep] = useState(preselectedPatientId ? 2 : 1);
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchPatients = async () => {
@@ -87,9 +89,41 @@ export default function NewEncounterPage() {
     };
 
     const handleStartEncounter = () => {
-        if (selectedPatient && selectedType) {
-            router.push(`/notes/new?template=${selectedType.template}&patientId=${selectedPatient.id}`);
-        }
+        if (!selectedPatient || !selectedType || submitting) return;
+
+        setSubmitting(true);
+        setError(null);
+
+        void (async () => {
+            try {
+                const response = await fetch('/api/encounters', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_id: selectedPatient.id,
+                        encounter_type: selectedType.name,
+                        encounter_date: new Date().toISOString(),
+                    }),
+                });
+
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({ error: 'Failed to create encounter' }));
+                    throw new Error(data.error || 'Failed to create encounter');
+                }
+
+                const data = await response.json();
+                const encounterId = data?.encounter?.id;
+
+                if (!encounterId) {
+                    throw new Error('Encounter was created without an ID');
+                }
+
+                router.push(`/notes/new?template=${selectedType.template}&patientId=${selectedPatient.id}&encounterId=${encounterId}`);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to create encounter');
+                setSubmitting(false);
+            }
+        })();
     };
 
     return (
@@ -243,14 +277,30 @@ export default function NewEncounterPage() {
                             ))}
                         </div>
 
+                        {error && (
+                            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300">
+                                {error}
+                            </div>
+                        )}
+
                         <div className="pt-6">
                             <button
                                 onClick={handleStartEncounter}
-                                className="w-full flex items-center justify-center gap-3 py-5 bg-primary hover:bg-primary/90 text-white rounded-2xl text-lg font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] group"
+                                disabled={submitting}
+                                className="w-full flex items-center justify-center gap-3 py-5 bg-primary hover:bg-primary/90 text-white rounded-2xl text-lg font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99] group disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100"
                             >
-                                <Sparkles className="h-6 w-6 group-hover:rotate-12 transition-transform" />
-                                Start Clinical Session
-                                <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                                {submitting ? (
+                                    <>
+                                        <Loader2 className="h-6 w-6 animate-spin" />
+                                        Creating Encounter...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+                                        Start Clinical Session
+                                        <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
                             </button>
                             <p className="text-center text-xs text-muted-foreground mt-4 leading-relaxed">
                                 This will launch the clinical workspace and initialize the AI transcription service.

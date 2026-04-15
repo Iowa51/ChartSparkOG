@@ -54,7 +54,7 @@ export async function getEncounters(
                 `
                 *,
                 patient:patients(id, first_name, last_name, mrn, avatar_color),
-                provider:users(id, email, full_name)
+                provider:users(id, email, first_name, last_name)
             `,
                 { count: 'exact' }
             )
@@ -126,7 +126,7 @@ export async function getEncountersByPatientId(
         *,
         patient:patients(*),
         provider:users(*),
-        notes(*)
+        notes:clinical_notes(*)
       `)
             .eq('patient_id', patientId)
             .order('encounter_date', { ascending: false });
@@ -188,7 +188,7 @@ export async function getEncounterById(
         *,
         patient:patients(*),
         provider:users(*),
-        notes(*)
+        notes:clinical_notes(*)
       `)
             .eq('id', encounterId)
             .single();

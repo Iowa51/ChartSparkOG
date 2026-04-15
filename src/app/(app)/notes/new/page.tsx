@@ -126,10 +126,11 @@ export default function NewNotePage() {
                     const response = await fetch(`/api/encounters/${encounterId}`);
                     if (response.ok) {
                         const data = await response.json();
-                        setCurrentEncounter(data);
+                        const encounter = data.encounter || data;
+                        setCurrentEncounter(encounter);
                         // If encounterId is provided but no patientId, fetch patient from encounter
-                        if (!patientId && data.patient_id) {
-                            const patientResponse = await fetch(`/api/patients/${data.patient_id}`);
+                        if (!patientId && encounter.patient_id) {
+                            const patientResponse = await fetch(`/api/patients/${encounter.patient_id}`);
                             if (patientResponse.ok) {
                                 const patientData = await patientResponse.json();
                                 // Transform raw API data to formatted patient object
