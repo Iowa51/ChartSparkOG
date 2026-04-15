@@ -127,6 +127,14 @@ function buildAuthErrorRedirect(redirectBase: string, message: string): NextResp
     return NextResponse.redirect(errorUrl);
 }
 
+function resolvePostAuthPath(next: string, otpType: EmailOtpType | null, orgName: string | null): string {
+    if (!orgName && (otpType === "recovery" || next === "/reset-password")) {
+        return "/reset-password";
+    }
+
+    return next;
+}
+
 function getOtpType(value: string | null): EmailOtpType | null {
     if (
         value === "signup" ||
@@ -149,6 +157,7 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
     const otpType = getOtpType(searchParams.get("type"));
     const orgName = searchParams.get("org");
     const next = sanitizeRedirectPath(searchParams.get("next"));
+    const destinationPath = resolvePostAuthPath(next, otpType, orgName);
     const redirectBase = resolveRedirectBase(origin);
     const { supabase, applyCookies } = createRouteHandlerClient(request);
 
@@ -207,5 +216,5 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
         return applyCookies(NextResponse.redirect(new URL("/dashboard", redirectBase)));
     }
 
-    return applyCookies(NextResponse.redirect(new URL(next, redirectBase)));
+    return applyCookies(NextResponse.redirect(new URL(destinationPath, redirectBase)));
 }
