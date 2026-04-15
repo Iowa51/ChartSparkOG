@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useCurrentUserProfile } from "@/components/layout/use-current-user-profile";
 import {
   LayoutDashboard,
   Users,
@@ -75,6 +76,7 @@ export function Sidebar() {
   const router = useRouter();
   const [hasMounted, setHasMounted] = useState(false);
   const supabase = createClient();
+  const profile = useCurrentUserProfile();
 
   useEffect(() => {
     setHasMounted(true);
@@ -182,15 +184,15 @@ export function Sidebar() {
         {/* User Profile Card */}
         <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/60 dark:border-slate-800 shadow-sm">
           <div className="flex items-center gap-3 mb-4">
-            <div className="relative">
+              <div className="relative">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border border-primary/10">
-                SK
+                {profile.initials}
               </div>
               <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-lg shadow-sm" aria-label="Online" role="status" />
             </div>
             <div className="flex flex-col min-w-0">
-              <p className="text-slate-900 dark:text-white text-xs font-black truncate">Dr. Sarah K.</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-tight">Active Session</p>
+              <p className="text-slate-900 dark:text-white text-xs font-black truncate">{profile.fullName}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-tight truncate">{profile.subtitle}</p>
             </div>
           </div>
           <button

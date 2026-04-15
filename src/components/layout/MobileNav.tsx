@@ -19,6 +19,7 @@ import {
     Pill,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrentUserProfile } from "@/components/layout/use-current-user-profile";
 
 interface NavItem {
     label: string;
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
 export function MobileNav() {
     const [isOpen, setIsOpen] = useState(false);
     const pathname = usePathname();
+    const profile = useCurrentUserProfile();
 
     return (
         <>
@@ -126,11 +128,11 @@ export function MobileNav() {
                 <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
                     <div className="flex items-center gap-3 px-4 py-2">
                         <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-                            SK
+                            {profile.initials}
                         </div>
                         <div className="flex flex-col">
-                            <p className="text-foreground text-sm font-semibold">Dr. Sarah K.</p>
-                            <p className="text-muted-foreground text-xs">View Profile</p>
+                            <p className="text-foreground text-sm font-semibold">{profile.fullName}</p>
+                            <p className="text-muted-foreground text-xs truncate">{profile.subtitle}</p>
                         </div>
                     </div>
                 </div>
