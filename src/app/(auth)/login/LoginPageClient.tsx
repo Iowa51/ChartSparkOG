@@ -12,13 +12,8 @@ import {
     Eye,
     EyeOff,
 } from "lucide-react";
-import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { sanitizeRedirectPath } from "@/lib/security/redirects";
 
-// SEC-AUDIT-2026-04-10: Demo credentials are sourced server-side from
-// DEMO_LOGIN_CREDENTIALS (see src/app/(auth)/login/page.tsx) and passed in as
-// a prop. Keeping them out of application code means no credential literals
-// live in git history or production bundles.
 export interface DemoCredential {
     label: string;
     email: string;
@@ -32,31 +27,44 @@ interface LoginPageClientProps {
     demoCredentials?: DemoCredential[];
 }
 
-// Role-based redirect map
 const roleRoutes: Record<string, string> = {
-    'SUPER_ADMIN': '/super-admin',
-    'ADMIN': '/admin',
-    'AUDITOR': '/auditor',
-    'USER': '/dashboard'
+    SUPER_ADMIN: "/super-admin",
+    ADMIN: "/admin",
+    AUDITOR: "/auditor",
+    USER: "/dashboard",
 };
+
+function getInitialError(searchParams: ReturnType<typeof useSearchParams>): string | null {
+    const explicitMessage = searchParams.get("message");
+    if (explicitMessage) return explicitMessage;
+
+    const errorCode = searchParams.get("error");
+    if (errorCode === "email_link_expired") {
+        return "Email link expired or already used. Please register again.";
+    }
+    if (errorCode === "account_deactivated") {
+        return "Your account has been deactivated. Contact support for help.";
+    }
+    if (errorCode === "profile_not_found") {
+        return "Your account exists, but setup is incomplete. Please contact support.";
+    }
+    if (errorCode === "session_invalid") {
+        return "Your session could not be completed. Please sign in again.";
+    }
+
+    return null;
+}
 
 export default function LoginPageClient({ demoModeEnabled, demoCredentials = [] }: LoginPageClientProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const defaultRedirect = "/dashboard";
-    const initialError =
-        searchParams.get("message") ||
-        (searchParams.get("error") === "email_link_expired"
-            ? "Email link expired or already used. Please register again."
-            : null);
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(initialError);
+    const [error, setError] = useState<string | null>(getInitialError(searchParams));
     const [showPassword, setShowPassword] = useState(false);
-
-    const supabase = createBrowserClient();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,15 +72,16 @@ export default function LoginPageClient({ demoModeEnabled, demoCredentials = [] 
         setError(null);
 
         try {
-            const lockoutCheck = await fetch('/api/auth/check-lockout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const lockoutCheck = await fetch("/api/auth/check-lockout", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
             });
+
             if (lockoutCheck.ok) {
                 const lockoutData = await lockoutCheck.json();
                 if (lockoutData.locked) {
-                    setError('Too many attempts. Please try again later.');
+                    setError("Too many attempts. Please try again later.");
                     setIsLoading(false);
                     return;
                 }
@@ -82,140 +91,66 @@ export default function LoginPageClient({ demoModeEnabled, demoCredentials = [] 
         }
 
         try {
-            // SEC-SPRINT11 + SEC-AUDIT-2026-04-10: Demo role map is derived
-            // from the DEMO_LOGIN_CREDENTIALS env (passed in as a prop) so no
-            // demo email literals live in application code. NODE_ENV check is
-            // DCE'd in production builds.
-            if (process.env.NODE_ENV !== 'production' && demoModeEnabled && demoCredentials.length > 0) {
+            if (process.env.NODE_ENV !== "production" && demoModeEnabled && demoCredentials.length > 0) {
                 const normalizedEmail = email.toLowerCase();
-                const match = demoCredentials.find(c => c.email.toLowerCase() === normalizedEmail && c.role);
+                const match = demoCredentials.find((credential) => credential.email.toLowerCase() === normalizedEmail && credential.role);
                 if (match?.role) {
-                    const redirectPath = roleRoutes[match.role] || defaultRedirect;
-                    router.push(redirectPath);
+                    router.push(roleRoutes[match.role] || defaultRedirect);
                     return;
                 }
             }
 
-            if (!supabase) {
-                // SEC-PT8-F2: Normalized error — no distinct messages for service state
-                setError('Authentication service unavailable. Please try again later.');
-                setIsLoading(false);
-                return;
-            }
-
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    redirect: searchParams.get("redirect"),
+                }),
             });
 
-            if (authError) {
-                await fetch('/api/auth/record-attempt', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({
+                    error: "Invalid email or password. Please try again.",
+                }));
+
+                await fetch("/api/auth/record-attempt", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ email, success: false }),
                 }).catch(() => { });
 
-                // SEC-PT1-F2: Generic error message to prevent account enumeration.
-                // Supabase returns different messages for "invalid credentials" vs
-                // "email not confirmed" which leaks account existence.
-                const isRateLimited = authError.message?.toLowerCase().includes('rate')
-                    || authError.status === 429;
-                setError(
-                    isRateLimited
-                        ? 'Too many attempts. Please try again later.'
-                        : 'Invalid email or password. Please try again.'
-                );
+                setError(typeof errorData.error === "string"
+                    ? errorData.error
+                    : "Invalid email or password. Please try again.");
                 setIsLoading(false);
                 return;
             }
 
-            if (!authData.session?.user) {
-                setError('Invalid email or password. Please try again.');
-                setIsLoading(false);
-                return;
-            }
+            const data = await response.json();
 
-            const userId = authData.session.user.id;
-
-            const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('role, organization_id, first_name, last_name, is_active')
-                .eq('id', userId)
-                .single();
-
-            let finalUserData = userData;
-            if (userError || !userData) {
-                console.warn('[LOGIN] Users table lookup failed, trying profiles table fallback');
-                const { data: profileData } = await supabase
-                    .from('profiles')
-                    .select('role, organization_id, first_name, last_name, is_active')
-                    .eq('id', userId)
-                    .single();
-                if (profileData) {
-                    finalUserData = profileData;
-                }
-            }
-
-            if (!finalUserData) {
-                console.error("Error fetching user profile from both tables:", userError);
-
-                // SEC-SPRINT11 + SEC-AUDIT-2026-04-10: Demo fallback only in
-                // non-production builds, and only for emails supplied via the
-                // DEMO_LOGIN_CREDENTIALS env.
-                if (process.env.NODE_ENV !== 'production' && demoModeEnabled && demoCredentials.length > 0) {
-                    const normalizedEmail = email.toLowerCase();
-                    const match = demoCredentials.find(c => c.email.toLowerCase() === normalizedEmail && c.role);
-                    if (match?.role) {
-                        await fetch('/api/auth/record-attempt', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email, success: true }),
-                        }).catch(() => { });
-
-                        const redirectPath = roleRoutes[match.role] || defaultRedirect;
-                        router.push(redirectPath);
-                        return;
-                    }
-                }
-
-                await supabase.auth.signOut();
-                setError('Invalid email or password. Please try again.');
-                setIsLoading(false);
-                return;
-            }
-
-            if (finalUserData.is_active === false) {
-                await supabase.auth.signOut();
-                setError('Invalid email or password. Please try again.');
-                setIsLoading(false);
-                return;
-            }
-
-            await fetch('/api/auth/record-attempt', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            await fetch("/api/auth/record-attempt", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, success: true }),
             }).catch(() => { });
 
-            await supabase
-                .from('users')
-                .update({ last_login: new Date().toISOString() })
-                .eq('id', userId);
+            const redirectPath = sanitizeRedirectPath(
+                typeof data.redirectPath === "string" ? data.redirectPath : searchParams.get("redirect"),
+                defaultRedirect
+            );
 
-            const userRole = finalUserData?.role || 'USER';
-            const redirectPath = roleRoutes[userRole] || defaultRedirect;
-            const explicitRedirect = sanitizeRedirectPath(searchParams.get("redirect"), redirectPath);
-            if (explicitRedirect && userRole === 'USER') {
-                router.push(explicitRedirect);
-            } else {
-                router.push(redirectPath);
-            }
-
+            router.push(redirectPath);
+            router.refresh();
         } catch (err) {
             console.error("Login error:", err);
-            setError('Invalid email or password. Please try again.');
+            setError("Authentication service unavailable. Please try again later.");
             setIsLoading(false);
+            return;
         }
+
+        setIsLoading(false);
     };
 
     return (
@@ -338,13 +273,7 @@ export default function LoginPageClient({ demoModeEnabled, demoCredentials = [] 
                     </div>
                 </div>
 
-                {/* SEC-SPRINT11 + SEC-AUDIT-2026-04-10: Demo credential buttons
-                    only render in non-production builds AND only when the
-                    server supplied entries via DEMO_LOGIN_CREDENTIALS. The
-                    NODE_ENV check is replaced at build time so production
-                    bundles eliminate this block entirely; no credential
-                    literals live in application code. */}
-                {process.env.NODE_ENV !== 'production' && demoModeEnabled && demoCredentials.length > 0 && (
+                {process.env.NODE_ENV !== "production" && demoModeEnabled && demoCredentials.length > 0 && (
                     <div className="bg-slate-50 dark:bg-slate-800/50 px-8 py-4 border-t border-slate-100 dark:border-slate-800">
                         <div className="flex items-center gap-2 mb-3">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -353,18 +282,21 @@ export default function LoginPageClient({ demoModeEnabled, demoCredentials = [] 
                             </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs">
-                            {demoCredentials.map((cred) => (
+                            {demoCredentials.map((credential) => (
                                 <button
-                                    key={cred.email}
+                                    key={credential.email}
                                     type="button"
-                                    onClick={() => { setEmail(cred.email); setPassword(cred.password); }}
+                                    onClick={() => {
+                                        setEmail(credential.email);
+                                        setPassword(credential.password);
+                                    }}
                                     className={
-                                        cred.accentClassName ||
+                                        credential.accentClassName ||
                                         "px-3 py-2 bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-200 dark:hover:bg-slate-900/50 transition-colors"
                                     }
-                                    aria-label={`Use ${cred.label} demo credentials`}
+                                    aria-label={`Use ${credential.label} demo credentials`}
                                 >
-                                    {cred.label}
+                                    {credential.label}
                                 </button>
                             ))}
                         </div>

@@ -11,9 +11,13 @@ import { logWarn } from "@/lib/logging/safe-logger";
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const publicRoutes = ["/auth/callback", "/api/auth/callback"];
 
-  if (publicRoutes.includes(pathname)) {
+  if (
+    pathname === "/auth" ||
+    pathname.startsWith("/auth/") ||
+    pathname === "/api/auth" ||
+    pathname.startsWith("/api/auth/")
+  ) {
     return NextResponse.next();
   }
 

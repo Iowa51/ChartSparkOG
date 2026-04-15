@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     // Rate limit by IP to prevent enumeration
     const rateLimit = await checkRateLimitByKey(
       ipAddress,
-      "emailSend",
+      "forgotPassword",
       "/api/auth/forgot-password",
     );
     if (!rateLimit.success && rateLimit.response) {
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       type: "recovery",
       email: email.toLowerCase(),
       options: {
-        redirectTo: `${appUrl}/api/auth/callback?next=/reset-password`,
+        redirectTo: `${appUrl}/auth/callback?next=/reset-password`,
       },
     });
 

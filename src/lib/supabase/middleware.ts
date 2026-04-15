@@ -49,8 +49,8 @@ const publicRoutes = [
     '/register',
     '/forgot-password',
     '/reset-password',
-    '/auth/callback',
-    '/api/auth/callback',
+    '/auth',
+    '/api/auth',
     '/auth/auth-code-error',
 ];
 

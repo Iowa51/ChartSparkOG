@@ -22,6 +22,7 @@ export const RATE_LIMITS = {
   registration: { limit: 10, window: 60 * 60 * 1000, failClosed: false },
   // Email confirmation callbacks must never be blocked by Redis issues
   authCallback: { limit: 20, window: 60 * 60 * 1000, failClosed: false },
+  forgotPassword: { limit: 5, window: 60 * 60 * 1000, failClosed: false },
   ai: { limit: 20, window: 60 * 1000, failClosed: false },
   export: { limit: 5, window: 60 * 1000, failClosed: false },
   login: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
@@ -51,6 +52,20 @@ const circuitBreaker: CircuitBreakerState = {
 
 const CIRCUIT_BREAKER_THRESHOLD = 5;
 const CIRCUIT_BREAKER_RESET_MS = 30000;
+
+const RATE_LIMIT_EXEMPT_PATHS = new Set([
+  "/auth/callback",
+  "/api/auth/callback",
+  "/api/auth/complete-signup",
+  "/api/auth/register",
+  "/api/auth/login",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+]);
+
+function isRateLimitExemptPath(pathname: string): boolean {
+  return RATE_LIMIT_EXEMPT_PATHS.has(pathname);
+}
 
 function checkCircuitBreaker(): boolean {
   const now = Date.now();
@@ -82,6 +97,9 @@ function recordSuccess(): void {
 }
 
 function resolveRateLimitKey(pathname: string): RateLimitKey {
+  if (pathname === "/api/auth/forgot-password") {
+    return "forgotPassword";
+  }
   if (pathname === "/api/auth/verify-mfa") {
     return "mfaVerify";
   }
@@ -130,6 +148,8 @@ function getRateLimitPrefix(rateLimitKey: RateLimitKey): string {
       return "ratelimit:registration";
     case "authCallback":
       return "ratelimit:auth-callback";
+    case "forgotPassword":
+      return "ratelimit:forgot-password";
     case "ai":
       return "ratelimit:ai";
     case "telehealth":
@@ -325,6 +345,9 @@ export async function checkRateLimit(
   const ip = getClientIP(request);
 
   const pathname = request.nextUrl.pathname;
+  if (isRateLimitExemptPath(pathname)) {
+    return { success: true };
+  }
   const config = getRateLimitConfig(pathname);
 
   let result: RateLimitResult;
@@ -386,6 +409,10 @@ export async function checkRateLimitByKey(
   rateLimitKey: RateLimitKey,
   scope: string = rateLimitKey,
 ): Promise<{ success: boolean; response?: NextResponse }> {
+  if (scope.startsWith("/") && isRateLimitExemptPath(scope)) {
+    return { success: true };
+  }
+
   const config = getRateLimitConfigByKey(rateLimitKey);
 
   try {

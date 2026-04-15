@@ -1,5 +1,6 @@
+import type { NextRequest } from "next/server";
 import { handleAuthCallback } from "@/lib/auth/confirmation-callback";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     return handleAuthCallback(request);
 }

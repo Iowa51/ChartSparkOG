@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
-import { createClient as createServerClient } from "@/lib/supabase/server";
+import type { EmailOtpType } from "@supabase/supabase-js";
+import { type NextRequest, NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role-client";
 import { sanitizeRedirectPath } from "@/lib/security/redirects";
 import { logError, logWarn, sanitizeError } from "@/lib/logging/safe-logger";
+import { createRouteHandlerClient } from "@/lib/supabase/route-handler-client";
 
 function resolveRedirectBase(requestOrigin: string): string {
     const configured = process.env.NEXT_PUBLIC_APP_URL;
@@ -21,23 +22,23 @@ async function completeSignupAfterConfirmation(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     supabase: any,
     organizationName: string
-): Promise<void> {
+): Promise<boolean> {
     try {
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
             logWarn({ action: "CALLBACK_SIGNUP_NO_USER", error: sanitizeError(authError) });
-            return;
+            return false;
         }
 
         const serviceSupabase = createServiceRoleClient();
-        if (!serviceSupabase) return;
+        if (!serviceSupabase) return false;
 
         const { data: existing } = await serviceSupabase
             .from("users")
             .select("id")
             .eq("id", user.id)
             .maybeSingle();
-        if (existing) return;
+        if (existing) return true;
 
         const firstName: string = (user.user_metadata?.first_name as string | undefined) ?? "";
         const lastName: string = (user.user_metadata?.last_name as string | undefined) ?? "";
@@ -62,7 +63,7 @@ async function completeSignupAfterConfirmation(
 
         if (orgError) {
             logError({ action: "CALLBACK_ORG_CREATION_ERROR", error: sanitizeError(orgError) });
-            return;
+            return false;
         }
 
         const { error: userError } = await serviceSupabase
@@ -80,7 +81,7 @@ async function completeSignupAfterConfirmation(
         if (userError) {
             logError({ action: "CALLBACK_USER_CREATION_ERROR", error: sanitizeError(userError) });
             await serviceSupabase.from("organizations").delete().eq("id", org.id);
-            return;
+            return false;
         }
 
         try {
@@ -102,41 +103,89 @@ async function completeSignupAfterConfirmation(
         } catch (featureError) {
             logWarn({ action: "CALLBACK_FEATURE_ASSIGNMENT_WARNING", error: sanitizeError(featureError) });
         }
+
+        return true;
     } catch (err) {
         logError({ action: "CALLBACK_COMPLETE_SIGNUP_ERROR", error: sanitizeError(err) });
+        return false;
     }
 }
 
-function buildLoginErrorRedirect(redirectBase: string): NextResponse {
+function buildLoginErrorRedirect(
+    redirectBase: string,
+    message = "Email link expired or already used. Please register again."
+): NextResponse {
     const loginUrl = new URL("/login", redirectBase);
     loginUrl.searchParams.set("error", "email_link_expired");
-    loginUrl.searchParams.set("message", "Email link expired or already used. Please register again.");
+    loginUrl.searchParams.set("message", message);
     return NextResponse.redirect(loginUrl);
 }
 
-export async function handleAuthCallback(request: Request): Promise<NextResponse> {
+function buildAuthErrorRedirect(redirectBase: string, message: string): NextResponse {
+    const errorUrl = new URL("/auth/auth-code-error", redirectBase);
+    errorUrl.searchParams.set("message", message);
+    return NextResponse.redirect(errorUrl);
+}
+
+function getOtpType(value: string | null): EmailOtpType | null {
+    if (
+        value === "signup" ||
+        value === "invite" ||
+        value === "magiclink" ||
+        value === "recovery" ||
+        value === "email" ||
+        value === "email_change"
+    ) {
+        return value;
+    }
+
+    return null;
+}
+
+export async function handleAuthCallback(request: NextRequest): Promise<NextResponse> {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get("code");
+    const tokenHash = searchParams.get("token_hash");
+    const otpType = getOtpType(searchParams.get("type"));
     const orgName = searchParams.get("org");
     const next = sanitizeRedirectPath(searchParams.get("next"));
     const redirectBase = resolveRedirectBase(origin);
+    const { supabase, applyCookies } = createRouteHandlerClient(request);
 
-    if (!code) {
+    if (!code && !(tokenHash && otpType)) {
         return buildLoginErrorRedirect(redirectBase);
     }
 
-    const supabase = await createServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    let authError: unknown = null;
 
-    if (error) {
-        logWarn({ action: "CALLBACK_CODE_EXCHANGE_FAILED", error: sanitizeError(error) });
+    if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        authError = error;
+    } else if (tokenHash && otpType) {
+        const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: otpType,
+        });
+        authError = error;
+    }
+
+    if (authError) {
+        logWarn({ action: "CALLBACK_CODE_EXCHANGE_FAILED", error: sanitizeError(authError) });
         return buildLoginErrorRedirect(redirectBase);
     }
 
     if (orgName) {
-        await completeSignupAfterConfirmation(supabase, decodeURIComponent(orgName));
-        return NextResponse.redirect(new URL("/dashboard", redirectBase));
+        const signupCompleted = await completeSignupAfterConfirmation(supabase, decodeURIComponent(orgName));
+        if (!signupCompleted) {
+            return applyCookies(
+                buildAuthErrorRedirect(
+                    redirectBase,
+                    "Your email was confirmed, but account setup could not be completed. Please contact support or try signing in again."
+                )
+            );
+        }
+        return applyCookies(NextResponse.redirect(new URL("/dashboard", redirectBase)));
     }
 
-    return NextResponse.redirect(new URL(next, redirectBase));
+    return applyCookies(NextResponse.redirect(new URL(next, redirectBase)));
 }
