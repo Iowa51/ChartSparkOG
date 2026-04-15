@@ -1,0 +1,17 @@
+Read src/lib/security/rate-limit.ts carefully and find the registration rate limiting logic.
+
+The problem: When Upstash Redis has any issue, the circuit breaker opens and returns "Service temporarily unavailable" blocking ALL registrations. This is too aggressive for a new app.
+
+Fix:
+1. For the registration endpoint specifically (/api/auth/complete-signup and the auth signUp flow), change failClosed to false so that if Redis is unavailable, registration still works using the in-memory fallback instead of returning 503.
+
+2. In middleware.ts, find where rate limiting is applied to auth routes. Make sure /api/auth/register and /api/auth/complete-signup use failOpen behavior (failClosed: false) so Redis failures never block new user registration.
+
+3. Also check if there is a specific rate limit config for registration routes and make sure it uses failOpen.
+
+4. Run a quick check - is there anything else that could cause "Service temporarily unavailable" on registration specifically?
+
+After fixing, verify the build compiles with no TypeScript errors by running:
+npm run build
+
+Report exactly what was changed and confirm the build passes.
