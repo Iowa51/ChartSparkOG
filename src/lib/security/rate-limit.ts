@@ -20,6 +20,8 @@ export const RATE_LIMITS = {
   auth: { limit: 10, window: 60 * 1000, failClosed: true },
   // Registration uses failClosed: false so Redis failures never block new user sign-ups
   registration: { limit: 10, window: 60 * 60 * 1000, failClosed: false },
+  // Email confirmation callbacks must never be blocked by Redis issues
+  authCallback: { limit: 20, window: 60 * 60 * 1000, failClosed: false },
   ai: { limit: 20, window: 60 * 1000, failClosed: false },
   export: { limit: 5, window: 60 * 1000, failClosed: false },
   login: { limit: 5, window: 15 * 60 * 1000, failClosed: true },
@@ -93,6 +95,10 @@ function resolveRateLimitKey(pathname: string): RateLimitKey {
   if (pathname === "/api/auth/complete-signup" || pathname === "/api/auth/register") {
     return "registration";
   }
+  // Email confirmation callbacks: fail open so Redis issues never block email confirmation
+  if (pathname === "/auth/callback" || pathname === "/api/auth/callback") {
+    return "authCallback";
+  }
   if (pathname.startsWith("/api/auth") || pathname.includes("/login")) {
     return "auth";
   }
@@ -122,6 +128,8 @@ function getRateLimitPrefix(rateLimitKey: RateLimitKey): string {
       return "ratelimit:auth";
     case "registration":
       return "ratelimit:registration";
+    case "authCallback":
+      return "ratelimit:auth-callback";
     case "ai":
       return "ratelimit:ai";
     case "telehealth":
