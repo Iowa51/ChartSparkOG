@@ -113,7 +113,7 @@ async function completeSignupAfterConfirmation(
 
 function buildLoginErrorRedirect(
     redirectBase: string,
-    message = "Email link expired or already used. Please register again."
+    message = "Email confirmation link expired or already used. Please register again."
 ): NextResponse {
     const loginUrl = new URL("/login", redirectBase);
     loginUrl.searchParams.set("error", "email_link_expired");
@@ -121,9 +121,14 @@ function buildLoginErrorRedirect(
     return NextResponse.redirect(loginUrl);
 }
 
-function buildAuthErrorRedirect(redirectBase: string, message: string): NextResponse {
+function buildAuthErrorRedirect(
+    redirectBase: string,
+    message: string,
+    flowType: "recovery" | "signup" = "signup"
+): NextResponse {
     const errorUrl = new URL("/auth/auth-code-error", redirectBase);
     errorUrl.searchParams.set("message", message);
+    errorUrl.searchParams.set("type", flowType === "recovery" ? "recovery" : "signup");
     return NextResponse.redirect(errorUrl);
 }
 
@@ -133,6 +138,20 @@ function resolvePostAuthPath(next: string, otpType: EmailOtpType | null, orgName
     }
 
     return next;
+}
+
+function getFlowType(otpType: EmailOtpType | null, next: string, orgName: string | null): "recovery" | "signup" {
+    if (!orgName && (otpType === "recovery" || next === "/reset-password")) {
+        return "recovery";
+    }
+
+    return "signup";
+}
+
+function getExpiredMessage(flowType: "recovery" | "signup"): string {
+    return flowType === "recovery"
+        ? "Password reset link expired or already used. Please request a new reset link."
+        : "Email confirmation link expired or already used. Please register again.";
 }
 
 function getOtpType(value: string | null): EmailOtpType | null {
@@ -158,11 +177,14 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
     const orgName = searchParams.get("org");
     const next = sanitizeRedirectPath(searchParams.get("next"));
     const destinationPath = resolvePostAuthPath(next, otpType, orgName);
+    const flowType = getFlowType(otpType, next, orgName);
     const redirectBase = resolveRedirectBase(origin);
     const { supabase, applyCookies } = createRouteHandlerClient(request);
 
     if (!code && !(tokenHash && otpType)) {
-        return buildLoginErrorRedirect(redirectBase);
+        return flowType === "recovery"
+            ? buildAuthErrorRedirect(redirectBase, getExpiredMessage(flowType), flowType)
+            : buildLoginErrorRedirect(redirectBase, getExpiredMessage(flowType));
     }
 
     // Replace any pre-existing browser session before consuming the new auth callback.
@@ -178,9 +200,23 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
 
     let authError: unknown = null;
 
-    if (code) {
+    if (tokenHash && otpType && flowType === "recovery") {
+        const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: otpType,
+        });
+        authError = error;
+    } else if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         authError = error;
+
+        if (error && tokenHash && otpType) {
+            const { error: verifyError } = await supabase.auth.verifyOtp({
+                token_hash: tokenHash,
+                type: otpType,
+            });
+            authError = verifyError;
+        }
     } else if (tokenHash && otpType) {
         const { error } = await supabase.auth.verifyOtp({
             token_hash: tokenHash,
@@ -191,16 +227,24 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
 
     if (authError) {
         logWarn({ action: "CALLBACK_CODE_EXCHANGE_FAILED", error: sanitizeError(authError) });
-        return buildLoginErrorRedirect(redirectBase);
+        return flowType === "recovery"
+            ? buildAuthErrorRedirect(redirectBase, getExpiredMessage(flowType), flowType)
+            : buildLoginErrorRedirect(redirectBase, getExpiredMessage(flowType));
     }
 
     const { data: { user: callbackUser }, error: callbackUserError } = await supabase.auth.getUser();
     if (callbackUserError || !callbackUser) {
         logWarn({ action: "CALLBACK_SESSION_USER_MISSING", error: sanitizeError(callbackUserError) });
-        return buildLoginErrorRedirect(
-            redirectBase,
-            "Your email was confirmed, but we could not start your session. Please sign in manually."
-        );
+        return flowType === "recovery"
+            ? buildAuthErrorRedirect(
+                redirectBase,
+                "Password reset link could not start a recovery session. Please request a new reset link.",
+                flowType
+            )
+            : buildLoginErrorRedirect(
+                redirectBase,
+                "Your email was confirmed, but we could not start your session. Please sign in manually."
+            );
     }
 
     if (orgName) {
@@ -209,7 +253,8 @@ export async function handleAuthCallback(request: NextRequest): Promise<NextResp
             return applyCookies(
                 buildAuthErrorRedirect(
                     redirectBase,
-                    "Your email was confirmed, but account setup could not be completed. Please contact support or try signing in again."
+                    "Your email was confirmed, but account setup could not be completed. Please contact support or try signing in again.",
+                    flowType
                 )
             );
         }

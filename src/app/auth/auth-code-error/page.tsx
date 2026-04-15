@@ -4,10 +4,15 @@ import Link from "next/link";
 export default async function AuthCodeErrorPage({
     searchParams,
 }: {
-    searchParams: Promise<{ message?: string }>;
+    searchParams: Promise<{ message?: string; type?: string }>;
 }) {
     const params = await searchParams;
-    const message = params.message || "Email link expired or already used. Please register again.";
+    const isRecovery = params.type === "recovery";
+    const message = params.message || (
+        isRecovery
+            ? "Password reset link expired or already used. Please request a new reset link."
+            : "Email confirmation link expired or already used. Please register again."
+    );
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4">
@@ -23,10 +28,10 @@ export default async function AuthCodeErrorPage({
                 <p className="text-slate-600 dark:text-slate-400 mb-6">{message}</p>
                 <div className="flex justify-center gap-3">
                     <Link
-                        href="/register"
+                        href={isRecovery ? "/forgot-password" : "/register"}
                         className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 font-semibold text-white hover:bg-primary/90 transition-colors"
                     >
-                        Back to Register
+                        {isRecovery ? "Request Reset Link" : "Back to Register"}
                     </Link>
                     <Link
                         href="/login"
