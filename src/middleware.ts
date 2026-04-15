@@ -11,6 +11,12 @@ import { logWarn } from "@/lib/logging/safe-logger";
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const publicRoutes = ["/auth/callback", "/api/auth/callback"];
+
+  if (publicRoutes.includes(pathname)) {
+    return NextResponse.next();
+  }
+
   // SEC-PT8-F1: Use centralized IP extraction with production guard
   const ip = getClientIP(request);
 

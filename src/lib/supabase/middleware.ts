@@ -44,6 +44,16 @@ const mfaExemptPaths = [
     '/logout',
 ];
 
+const publicRoutes = [
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/auth/callback',
+    '/api/auth/callback',
+    '/auth/auth-code-error',
+];
+
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
@@ -107,6 +117,10 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     const path = request.nextUrl.pathname;
+
+    if (publicRoutes.some((publicRoute) => path === publicRoute || path.startsWith(`${publicRoute}/`))) {
+        return supabaseResponse;
+    }
 
     // Find matching protected route
     const matchedRoute = Object.keys(protectedRoutes).find((route) =>

@@ -44,11 +44,16 @@ export default function LoginPageClient({ demoModeEnabled, demoCredentials = [] 
     const router = useRouter();
     const searchParams = useSearchParams();
     const defaultRedirect = "/dashboard";
+    const initialError =
+        searchParams.get("message") ||
+        (searchParams.get("error") === "email_link_expired"
+            ? "Email link expired or already used. Please register again."
+            : null);
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(initialError);
     const [showPassword, setShowPassword] = useState(false);
 
     const supabase = createBrowserClient();
