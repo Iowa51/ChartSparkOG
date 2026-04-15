@@ -900,18 +900,24 @@ Prognosis: Favorable with continued treatment adherence.`;
             };
             const noteType = noteTypeMap[template.format] || 'progress';
 
-            // Prepare note data matching NoteCreateSchema
-            const noteData = {
-                patient_id: currentPatient.id,
-                encounter_id: encounterId || currentEncounter?.id || undefined,
-                type: noteType,
-                content: fullContent || clinicianInput || 'No content provided',
-                template_id: undefined, // Optional
-                is_signed: markComplete,
-            };
-
             const url = editId ? `/api/notes/${editId}` : '/api/notes';
             const method = editId ? 'PATCH' : 'POST';
+            const content = fullContent || clinicianInput || 'No content provided';
+            const noteData = editId
+                ? {
+                    encounter_id: encounterId || currentEncounter?.id || undefined,
+                    content,
+                    status: markComplete ? 'completed' : 'draft',
+                    template_id: undefined,
+                }
+                : {
+                    patient_id: currentPatient.id,
+                    encounter_id: encounterId || currentEncounter?.id || undefined,
+                    type: noteType,
+                    content,
+                    template_id: undefined,
+                    is_signed: markComplete,
+                };
 
             const response = await fetch(url, {
                 method,

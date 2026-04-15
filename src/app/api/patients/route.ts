@@ -120,7 +120,7 @@ async function handlePost(context: AuthContext) {
       first_name: data.first_name,
       last_name: data.last_name,
       preferred_name: data.preferred_name ?? undefined,
-      date_of_birth: data.date_of_birth,
+      date_of_birth: data.date_of_birth ?? undefined,
       gender: data.gender ?? undefined,
       email: data.email ?? undefined,
       phone: data.phone ?? undefined,

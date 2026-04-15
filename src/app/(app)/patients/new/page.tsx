@@ -63,18 +63,12 @@ export default function NewPatientPage() {
 
             // Parse medications from comma-separated string
             const medications = formData.medications
-                ? formData.medications.split(',').map(m => {
-                    const med = m.trim();
-                    return { medication: med };
-                }).filter(m => m.medication)
+                ? formData.medications.split(',').map(m => m.trim()).filter(m => m)
                 : [];
 
             // Parse medical history into problems
             const problems = formData.medicalHistory
-                ? formData.medicalHistory.split(',').map(p => {
-                    const problem = p.trim();
-                    return { problem };
-                }).filter(p => p.problem)
+                ? formData.medicalHistory.split(',').map(p => p.trim()).filter(p => p)
                 : [];
 
             // Combine address fields
@@ -213,11 +207,11 @@ export default function NewPatientPage() {
                                         className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow text-foreground"
                                     >
                                         <option value="">Select...</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Non-binary">Non-binary</option>
-                                        <option value="Other">Other</option>
-                                        <option value="Prefer not to say">Prefer not to say</option>
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                        <option value="non-binary">Non-binary</option>
+                                        <option value="other">Other</option>
+                                        <option value="prefer_not_to_say">Prefer not to say</option>
                                     </select>
                                 </div>
                             </div>

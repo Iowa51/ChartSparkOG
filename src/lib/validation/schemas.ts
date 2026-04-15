@@ -137,7 +137,7 @@ export const PatientCreateSchema = z.object({
     first_name: z.string().min(1, 'First name required').max(50),
     last_name: z.string().min(1, 'Last name required').max(50),
     preferred_name: z.string().max(50).optional().nullable(),
-    date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+    date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional().nullable(),
     gender: z.enum(['male', 'female', 'non-binary', 'other', 'prefer_not_to_say']).optional().nullable(),
     email: z.string().email('Invalid email').optional().nullable(),
     phone: z.string().max(20).optional().nullable(),
