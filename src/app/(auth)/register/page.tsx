@@ -88,7 +88,7 @@ export default function RegisterPage() {
                         first_name: firstName,
                         last_name: lastName,
                     },
-                    emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "https://chart-spark-og.vercel.app"}/auth/callback?org=${encodeURIComponent(organization.trim())}`,
+                    emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "https://chart-spark-og.vercel.app"}/api/auth/callback?org=${encodeURIComponent(organization.trim())}`,
                 },
             });
 
