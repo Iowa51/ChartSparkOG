@@ -5,6 +5,8 @@ import { validateOrigin } from "@/lib/security/csrf";
 import { createRouteHandlerClient } from "@/lib/supabase/route-handler-client";
 import { createServiceRoleClient } from "@/lib/supabase/service-role-client";
 import { logError, sanitizeError } from "@/lib/logging/safe-logger";
+import { checkRateLimitByKey } from "@/lib/security/rate-limit";
+import { getClientIP } from "@/lib/utils/get-client-ip";
 
 const LoginSchema = z.object({
     email: z.string().email().max(255),
@@ -24,6 +26,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
     }
 
+    const ip = getClientIP(request);
+
     try {
         const body = await request.json();
         const parsed = LoginSchema.safeParse(body);
@@ -32,6 +36,16 @@ export async function POST(request: NextRequest) {
         }
 
         const { email, password, redirect } = parsed.data;
+
+        const ipLimit = await checkRateLimitByKey(ip, "login");
+        if (!ipLimit.success) {
+            return ipLimit.response!;
+        }
+
+        const emailLimit = await checkRateLimitByKey(email.toLowerCase(), "loginEmail");
+        if (!emailLimit.success) {
+            return emailLimit.response!;
+        }
         const { supabase, applyCookies } = createRouteHandlerClient(request);
 
         const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
