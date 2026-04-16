@@ -171,6 +171,65 @@ async function updateEncounterHandler(context: AuthContext) {
   }
 }
 
+async function handleDelete(context: AuthContext) {
+  const { ipAddress, userAgent } = getRequestMetadata(context.request);
+
+  try {
+    const idValidation = UUIDSchema.safeParse(context.params?.id);
+    if (!idValidation.success) {
+      return NextResponse.json({ error: "Invalid encounter id" }, { status: 400 });
+    }
+
+    const id = idValidation.data;
+    const organizationId = context.user.organizationId;
+    if (!organizationId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+    }
+
+    const supabase = await createClient();
+    const { data: existing } = await supabase
+      .from("encounters")
+      .select("id, organization_id")
+      .eq("id", id)
+      .single();
+
+    if (!existing || !canAccessOrganization(context.user, existing.organization_id)) {
+      return NextResponse.json({ error: "Encounter not found" }, { status: 404 });
+    }
+
+    const { error } = await supabase
+      .from("encounters")
+      .delete()
+      .eq("id", id)
+      .eq("organization_id", organizationId);
+
+    if (error) {
+      throw error;
+    }
+
+    await logAuditEvent({
+      eventType: "ENCOUNTER_DELETE",
+      userId: context.user.id,
+      userEmail: context.user.email,
+      userRole: context.user.role,
+      organizationId,
+      ipAddress,
+      userAgent,
+      resourceType: "encounter",
+      resourceId: id,
+      details: {},
+      phiAccessed: true,
+      riskLevel: "HIGH",
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logError({ action: "DELETE_ENCOUNTER_ERROR", error: sanitizeError(error) });
+    return NextResponse.json({ error: "Failed to delete encounter" }, { status: 500 });
+  }
+}
+
 export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
 export const PATCH = withAuth(updateEncounterHandler, { requireOrganization: true, requireMFA: true });
 export const PUT = PATCH;
+export const DELETE = withAuth(handleDelete, { requireOrganization: true, requireMFA: true });
