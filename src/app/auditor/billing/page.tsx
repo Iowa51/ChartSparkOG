@@ -29,7 +29,7 @@ const billingStats = {
 };
 
 const auditWorklist = [
-    { id: "CLM-912A", patient: "Sarah Connor", org: "Wellness Center", amount: 21500, status: "Paid", flagging: "low" },
+    { id: "CLM-912A", patient: "Demo Patient A", org: "Wellness Center", amount: 21500, status: "Paid", flagging: "low" },
     { id: "CLM-883B", patient: "John McClane", org: "Main Street Clinic", amount: 18500, status: "Denied", flagging: "high" },
     { id: "CLM-442C", patient: "Ellen Ripley", org: "Wellness Center", amount: 32000, status: "Submitted", flagging: "medium" },
 ];

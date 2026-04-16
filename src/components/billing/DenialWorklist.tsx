@@ -17,7 +17,7 @@ export interface DenialItem {
 const mockDenials: DenialItem[] = [
     { id: "DN-1", claimId: "CLM-00126", patientName: "John Smith", payer: "Cigna", errorCode: "M76", errorMessage: "Missing/incomplete/invalid diagnosis code.", category: "Coding", priority: "High" },
     { id: "DN-2", claimId: "CLM-00128", patientName: "James Cameron", payer: "United", errorCode: "197", errorMessage: "Precertification/authorization/notification absent.", category: "Eligibility", priority: "Medium" },
-    { id: "DN-3", claimId: "CLM-00130", patientName: "Sarah Connor", payer: "Aetna", errorCode: "N1", errorMessage: "Missing/incomplete/invalid service location NPI.", category: "Technical", priority: "High" },
+    { id: "DN-3", claimId: "CLM-00130", patientName: "Demo Patient C", payer: "Aetna", errorCode: "N1", errorMessage: "Missing/incomplete/invalid service location NPI.", category: "Technical", priority: "High" },
 ];
 
 export function DenialWorklist() {

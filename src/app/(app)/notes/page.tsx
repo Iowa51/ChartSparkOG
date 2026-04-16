@@ -110,7 +110,7 @@ export default function NotesHistoryPage() {
                 status: 'completed',
                 created_at: new Date(now.getTime() - 3 * 86400000).toISOString(),
                 updated_at: new Date(now.getTime() - 3 * 86400000).toISOString(),
-                patient: { id: 'demo-p3', first_name: 'Sarah', last_name: 'Chen' },
+                patient: { id: 'demo-p3', first_name: 'Demo', last_name: 'Patient C' },
             },
             {
                 id: 'demo-note-4',

@@ -69,7 +69,7 @@ const DEMO_POTENTIAL_MATCHES: PotentialMatch[] = [
     {
         id: '1',
         claim_number: 'CLM-2026-001189',
-        patient_name: 'Sarah Johnson',
+        patient_name: 'Demo Patient A',
         service_date: '2026-01-17',
         amount: 8500,
         status: 'submitted',

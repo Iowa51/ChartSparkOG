@@ -111,7 +111,7 @@ const PACKAGES = {
 
 // Demo users for testing
 const demoUsers: User[] = [
-    { id: "demo-1", email: "sarah.k@clinic.com", first_name: "Sarah", last_name: "Kowalski", role: "USER", packages: ["normal"] },
+    { id: "demo-1", email: "demo.user1@clinic.example", first_name: "Demo", last_name: "User 1", role: "USER", packages: ["normal"] },
     { id: "demo-2", email: "mike.j@clinic.com", first_name: "Mike", last_name: "Johnson", role: "USER", packages: ["normal", "elite"] },
     { id: "demo-3", email: "emily.r@clinic.com", first_name: "Emily", last_name: "Rodriguez", role: "USER", packages: ["normal", "pro"] },
     { id: "demo-4", email: "james.w@clinic.com", first_name: "James", last_name: "Wilson", role: "USER", packages: ["normal", "elite", "pro"] },

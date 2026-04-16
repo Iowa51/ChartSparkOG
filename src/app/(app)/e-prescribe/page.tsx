@@ -22,7 +22,7 @@ const recentPrescriptions = [
     {
         id: 1,
         medication: "Sertraline 50mg",
-        patient: "Sarah Johnson",
+        patient: "Demo Patient A",
         dosage: "50mg",
         frequency: "Once daily",
         duration: "30 days",
@@ -77,7 +77,7 @@ const recentPrescriptions = [
     {
         id: 6,
         medication: "Lorazepam 1mg",
-        patient: "Sarah Johnson",
+        patient: "Demo Patient A",
         dosage: "1mg",
         frequency: "As needed",
         duration: "10 days",
@@ -200,7 +200,7 @@ export default function EPrescribePage() {
                                                 className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-bold outline-none focus:ring-2 focus:ring-primary/20 transition-all appearance-none"
                                             >
                                                 <option value="">Select Target Patient</option>
-                                                <option value="1">Sarah Johnson (DOB: 05/12/1988)</option>
+                                                <option value="1">Demo Patient A (DOB: --/--/----)</option>
                                                 <option value="2">Michael Chen (DOB: 11/24/1992)</option>
                                                 <option value="3">Emily Rodriguez (DOB: 03/15/1975)</option>
                                                 <option value="4">James Wilson (DOB: 09/02/1960)</option>
@@ -299,7 +299,7 @@ export default function EPrescribePage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl">
                                             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2">Drug-Drug interactions</p>
-                                            <p className="text-sm text-white/70 font-medium leading-relaxed italic">{'"No severe contradictions detected for patient Sarah Johnson\'s known allergy profile."'}</p>
+                                            <p className="text-sm text-white/70 font-medium leading-relaxed italic">{'"No severe contradictions detected for selected patient\'s known allergy profile."'}</p>
                                         </div>
                                         <div className="p-6 bg-white/5 border border-white/10 rounded-3xl backdrop-blur-xl">
                                             <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">Formulary Status</p>

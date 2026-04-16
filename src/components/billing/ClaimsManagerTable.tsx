@@ -38,11 +38,11 @@ const statusConfig = {
 };
 
 const mockClaims: Claim[] = [
-    { id: "CLM-00124", patientName: "Sarah Connor", provider: "Dr. Sarah K.", payer: "Aetna", date: "Oct 28, 2023", amount: 15000, status: "Accepted" },
-    { id: "CLM-00125", patientName: "Michael Reese", provider: "Dr. Sarah K.", payer: "BCBS", date: "Oct 27, 2023", amount: 22500, status: "Sent" },
-    { id: "CLM-00126", patientName: "John Smith", provider: "Dr. Robert S.", payer: "Cigna", date: "Oct 26, 2023", amount: 18500, status: "Rejected" },
-    { id: "CLM-00127", patientName: "Linda Hamilton", provider: "Dr. Sarah K.", payer: "Medicare", date: "Oct 25, 2023", amount: 9500, status: "Paid" },
-    { id: "CLM-00128", patientName: "James Cameron", provider: "Dr. Robert S.", payer: "United", date: "Oct 24, 2023", amount: 31000, status: "Denied" },
+    { id: "CLM-00124", patientName: "Demo Patient A", provider: "Demo Provider", payer: "Aetna", date: "Oct 28, 2023", amount: 15000, status: "Accepted" },
+    { id: "CLM-00125", patientName: "Demo Patient B", provider: "Demo Provider", payer: "BCBS", date: "Oct 27, 2023", amount: 22500, status: "Sent" },
+    { id: "CLM-00126", patientName: "Demo Patient C", provider: "Demo Provider 2", payer: "Cigna", date: "Oct 26, 2023", amount: 18500, status: "Rejected" },
+    { id: "CLM-00127", patientName: "Demo Patient D", provider: "Demo Provider", payer: "Medicare", date: "Oct 25, 2023", amount: 9500, status: "Paid" },
+    { id: "CLM-00128", patientName: "Demo Patient E", provider: "Demo Provider 2", payer: "United", date: "Oct 24, 2023", amount: 31000, status: "Denied" },
 ];
 
 export function ClaimsManagerTable() {

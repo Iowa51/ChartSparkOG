@@ -34,6 +34,7 @@ import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
 import { getCodeInfo } from "@/lib/billing/code-library";
 import { quickSuggestCodes } from "@/lib/billing/code-analyzer";
 import { useToast } from "@/components/ui/toast";
+import { createClient } from "@/lib/supabase/client";
 
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
@@ -86,6 +87,25 @@ export default function NewNotePage() {
     const [currentEncounter, setCurrentEncounter] = useState<any | null>(null);
     const [loadingPatient, setLoadingPatient] = useState(false);
     const [showPatientInfo, setShowPatientInfo] = useState(true);
+    const [providerLabel, setProviderLabel] = useState<string>("Provider");
+
+    useEffect(() => {
+        const supabase = createClient();
+        if (!supabase) return;
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return;
+            supabase
+                .from('users')
+                .select('first_name, last_name')
+                .eq('id', user.id)
+                .single()
+                .then(({ data }) => {
+                    if (data?.first_name || data?.last_name) {
+                        setProviderLabel(`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim());
+                    }
+                });
+        });
+    }, []);
 
     useEffect(() => {
         const fetchPatientAndEncounter = async () => {
@@ -1699,7 +1719,7 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                                                             : "text-muted-foreground bg-muted"
                                                             }`}
                                                     >
-                                                        {entry.speaker === "NP" ? "Sarah K. (NP)" : "John Doe (Patient)"}
+                                                        {entry.speaker === "NP" ? providerLabel : (currentPatient?.name ?? "Patient")}
                                                     </span>
                                                     <span className="text-[10px] text-muted-foreground/60 font-mono">
                                                         {entry.time}

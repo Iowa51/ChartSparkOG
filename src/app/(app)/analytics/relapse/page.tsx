@@ -206,7 +206,7 @@ export default function RelapsePreventionPage() {
     const patientsRiskData = [
         {
             id: 1,
-            name: "Sarah Johnson",
+            name: "Demo Patient A",
             age: 34,
             diagnosis: "MDD",
             risk7day: 82,

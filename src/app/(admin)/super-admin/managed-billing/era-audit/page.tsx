@@ -29,7 +29,7 @@ const matchedTransactions = [
         eraId: "ERA-9921",
         claimId: "CLM-88F1",
         amount: 14500,
-        matchedBy: "Admin Sarah",
+        matchedBy: "Admin (System)",
         method: "Manual Match",
         confidence: "High",
         date: "2026-01-29"
@@ -39,7 +39,7 @@ const matchedTransactions = [
         eraId: "ERA-9922",
         claimId: "CLM-992G",
         amount: 8500,
-        matchedBy: "Admin Sarah",
+        matchedBy: "Admin (System)",
         method: "Manual Write-off",
         confidence: "Audit Required",
         date: "2026-01-29"
@@ -160,11 +160,11 @@ export default function MatchingOversightPage() {
                 <div className="space-y-3">
                     <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                         <p className="text-xs font-bold text-slate-400 uppercase">Created</p>
-                        <p className="text-sm mt-1">Jan 29, 2026 at 2:30 PM by Admin Sarah</p>
+                        <p className="text-sm mt-1">Jan 29, 2026 at 2:30 PM by Admin (System)</p>
                     </div>
                     <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                         <p className="text-xs font-bold text-slate-400 uppercase">Modified</p>
-                        <p className="text-sm mt-1">Jan 29, 2026 at 3:15 PM by Admin Sarah</p>
+                        <p className="text-sm mt-1">Jan 29, 2026 at 3:15 PM by Admin (System)</p>
                     </div>
                     <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
                         <p className="text-xs font-bold text-slate-400 uppercase">Status</p>

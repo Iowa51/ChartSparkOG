@@ -32,11 +32,13 @@ import {
 } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { BillingSetup } from "@/components/billing/BillingSetup";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [activeTab, setActiveTab] = useState('profile');
+    const [profileName, setProfileName] = useState("");
 
     // Profile settings
     const [autoSignNotes, setAutoSignNotes] = useState(false);
@@ -85,10 +87,28 @@ export default function SettingsPage() {
     ]);
 
     const syncLogs = [
-        { id: '1', patient: 'Sarah Johnson', status: 'Success', timestamp: 'Today, 10:45 AM', reference: 'EPIC-99214' },
+        { id: '1', patient: 'Demo Patient', status: 'Success', timestamp: 'Today, 10:45 AM', reference: 'EPIC-99214' },
         { id: '2', patient: 'Michael Chen', status: 'Success', timestamp: 'Today, 09:12 AM', reference: 'EPIC-99213' },
         { id: '3', patient: 'Emily Rodriguez', status: 'Failed', timestamp: 'Yesterday, 04:30 PM', reference: 'Timeout' },
     ];
+
+    useEffect(() => {
+        const supabase = createClient();
+        if (!supabase) return;
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            if (!user) return;
+            supabase
+                .from('users')
+                .select('first_name, last_name')
+                .eq('id', user.id)
+                .single()
+                .then(({ data }) => {
+                    if (data?.first_name || data?.last_name) {
+                        setProfileName(`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim());
+                    }
+                });
+        });
+    }, []);
 
     // Load from localStorage on mount
     useEffect(() => {
@@ -242,7 +262,7 @@ export default function SettingsPage() {
                                         <div className="grid md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
-                                                <input defaultValue="Sarah K. (Nurse Practitioner)" className="w-full px-4 py-2.5 bg-muted/20 border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-sm" />
+                                                <input value={profileName} onChange={e => setProfileName(e.target.value)} className="w-full px-4 py-2.5 bg-muted/20 border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-sm" />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">NPI Number</label>

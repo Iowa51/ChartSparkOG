@@ -34,7 +34,7 @@ const upcomingAppointments = [
     },
     {
         id: "22222222-2222-4222-8222-222222222222",
-        patientName: "Sarah Johnson",
+        patientName: "Demo Patient B",
         time: "2:00 PM",
         date: "Today",
         duration: "50 min",
@@ -71,7 +71,7 @@ const sessionHistory = [
     },
     {
         id: 2,
-        patientName: "Sarah Johnson",
+        patientName: "Demo Patient B",
         date: "Jan 8, 2024",
         duration: "50 min",
         type: "Initial Assessment"

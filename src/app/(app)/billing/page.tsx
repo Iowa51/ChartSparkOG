@@ -53,7 +53,7 @@ function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
     const [searchQuery, setSearchQuery] = useState("");
 
     const allClaims = [
-        { id: "C-1004", patient: "Sarah Connor", patientId: "p1", service: "Hypertension F/U", code: "99214", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
+        { id: "C-1004", patient: "Demo Patient A", patientId: "p1", service: "Hypertension F/U", code: "99214", date: "Oct 24, 2023", amount: 185.00, status: "Ready to Submit", type: "Pending" },
         { id: "C-1005", patient: "Michael Reese", patientId: "p2", service: "Seasonal Allergies", code: "90834", date: "Today", amount: 165.00, status: "Missing ICD-10", type: "Pending" },
         { id: "C-1001", patient: "Elena Fisher", patientId: "p3", service: "Anxiety F/U", code: "99213", date: "Oct 20, 2023", amount: 150.00, status: "Paid", type: "Paid" },
         { id: "C-1002", patient: "Nathan Drake", patientId: "p4", service: "Back Pain Eval", code: "99214", date: "Oct 15, 2023", amount: 200.00, status: "Overdue", type: "Overdue" },

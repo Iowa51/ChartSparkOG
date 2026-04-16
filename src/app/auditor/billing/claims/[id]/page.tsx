@@ -33,7 +33,7 @@ export default function ClaimLifecyclePage({ params }: { params: { id: string } 
             icon: FileText,
             status: "Complete",
             date: "2026-01-20 09:15 AM",
-            details: "SOAP Note finalized and signed by Dr. Sarah Smith. CPT 99214 attached."
+            details: "SOAP Note finalized and signed by provider. CPT 99214 attached."
         },
         {
             id: 2,

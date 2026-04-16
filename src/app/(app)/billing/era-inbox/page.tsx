@@ -57,10 +57,10 @@ const demoUnmatched: UnmatchedERA[] = [
         checkNumber: "CHK-881223",
         checkDate: "2026-01-24",
         amount: 22000,
-        patientName: "Sarah K.",
+        patientName: "Demo Patient",
         reason: "Payer ID not recognized (808 vs AET01)",
         suggestedMatches: [
-            { patientId: "P-303", name: "Sarah Kline", dob: "1992-03-15", score: 0.88 }
+            { patientId: "P-303", name: "Demo Patient Match", dob: "1992-03-15", score: 0.88 }
         ]
     },
     {

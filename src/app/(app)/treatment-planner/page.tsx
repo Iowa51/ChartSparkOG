@@ -132,7 +132,7 @@ const AlertDescription = ({ children, className }: { children: React.ReactNode; 
 
 const mockPatients = {
     'sarah-johnson': {
-        name: 'Sarah Johnson',
+        name: 'Demo Patient A',
         age: 34,
         gender: 'Female',
         diagnoses: ['Major Depressive Disorder', 'Generalized Anxiety Disorder'],
@@ -244,7 +244,7 @@ export default function TreatmentPlannerPage() {
                             className="w-full h-10 px-3 py-2 rounded-md border border-slate-200 bg-white dark:bg-slate-950 dark:border-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600/20 appearance-none"
                         >
                             <option value="" disabled>Select patient</option>
-                            <option value="sarah-johnson">Sarah Johnson - MDD, GAD</option>
+                            <option value="sarah-johnson">Demo Patient A - MDD, GAD</option>
                             <option value="michael-chen">Michael Chen - Persistent Depressive Disorder</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-slate-400 pointer-events-none" />

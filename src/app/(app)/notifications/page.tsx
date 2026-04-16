@@ -37,7 +37,7 @@ const allNotifications: Notification[] = [
     id: 1,
     title: "New Patient Registered",
     description:
-      "Sarah Johnson has been added to your patient roster. Complete their intake assessment when ready.",
+      "A new patient has been added to your roster. Complete their intake assessment when ready.",
     time: "5 min ago",
     date: "Today",
     type: "patient",

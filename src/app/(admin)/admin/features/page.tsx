@@ -30,7 +30,7 @@ interface UserWithFeatures {
 
 // Demo data for when database is unavailable
 const demoUsers: UserWithFeatures[] = [
-    { id: 'demo-1', email: 'sarah.k@clinic.com', first_name: 'Sarah', last_name: 'Kowalski', role: 'USER', featureCount: 18, totalFeatures: 21 },
+    { id: 'demo-1', email: 'demo.user1@clinic.example', first_name: 'Demo', last_name: 'User 1', role: 'USER', featureCount: 18, totalFeatures: 21 },
     { id: 'demo-2', email: 'mike.j@clinic.com', first_name: 'Mike', last_name: 'Johnson', role: 'USER', featureCount: 11, totalFeatures: 11 },
     { id: 'demo-3', email: 'admin@clinic.com', first_name: 'Admin', last_name: 'User', role: 'ADMIN', featureCount: 27, totalFeatures: 27 },
 ];

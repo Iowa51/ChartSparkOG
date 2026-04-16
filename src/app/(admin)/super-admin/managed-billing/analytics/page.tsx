@@ -32,7 +32,7 @@ const analyticsData = {
         { month: "Jan", yield: 84, billed: 155000, collected: 130200 },
     ],
     providerPerformance: [
-        { name: "Dr. Sarah Smith", specialty: "Psychiatry", yield: 92, status: "Optimal" },
+        { name: "Demo Provider A", specialty: "Psychiatry", yield: 92, status: "Optimal" },
         { name: "Dr. Michael Chen", specialty: "Internal Med", yield: 78, status: "At Risk" },
         { name: "Nurse Practitioner Jane Doe", specialty: "Geriatrics", yield: 85, status: "Stable" },
         { name: "Dr. Robert Wilson", specialty: "Psychiatry", yield: 74, status: "Review Needed" },

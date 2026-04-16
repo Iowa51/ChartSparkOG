@@ -26,7 +26,7 @@ const denialQueue = [
         code: "CO-16",
         description: "Lacks information",
         claimId: "CLM-912A",
-        patient: "Sarah Connor",
+        patient: "Demo Patient A",
         org: "Wellness Center",
         amount: 21500,
         date: "2026-01-27",
