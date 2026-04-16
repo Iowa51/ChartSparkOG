@@ -119,16 +119,10 @@ async function handlePost(context: AuthContext) {
       );
     }
 
-    // Generate secure token
-    let token: string;
-    const { data: tokenData, error: tokenError } = await supabase.rpc("generate_invitation_token");
-
-    if (tokenError || !tokenData) {
-      const crypto = await import("crypto");
-      token = crypto.randomBytes(32).toString("base64url");
-    } else {
-      token = tokenData;
-    }
+    // RPC path removed: generate_invitation_token is a trigger function (error 0A000)
+    // and cannot be called directly. TODO: fix via proper migration — see OBSERVABILITY_ROADMAP.md
+    const crypto = await import("crypto");
+    const token = crypto.randomBytes(32).toString("hex");
 
     // Create invitation
     const { data: invitation, error: createError } = await supabase
