@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SuperbillWidget } from "@/components/billing/SuperbillWidget";
 import VitalsEntryPanel from "@/components/vitals/VitalsEntryPanel";
 import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
+import { EndSessionButton } from "@/components/agent/EndSessionButton";
 
 interface EncounterDetail {
     id: string;
@@ -199,11 +200,15 @@ export default function EncounterDetailPage() {
                         <button
                             onClick={() => void handleStatusUpdate(encounter.status === "completed" ? "in_progress" : "completed")}
                             disabled={saving}
-                            className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 transition-all disabled:cursor-not-allowed disabled:opacity-70"
+                            className="flex items-center gap-2 px-5 py-2 bg-card border border-border text-foreground rounded-xl text-sm font-black uppercase tracking-widest transition-all disabled:cursor-not-allowed disabled:opacity-70"
                         >
                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                             {encounter.status === "completed" ? "Mark In Progress" : "Complete Encounter"}
                         </button>
+                        <EndSessionButton
+                            encounterId={encounter.id}
+                            patientId={encounter.patient_id}
+                        />
                     </div>
                 </div>
 

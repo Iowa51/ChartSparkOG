@@ -52,6 +52,13 @@ function buildDraft(body: z.infer<typeof CompleteSessionSchema>) {
 }
 
 async function handlePost(context: AuthContext) {
+  if (process.env.SIDECAR_READY !== 'true') {
+    return NextResponse.json(
+      { error: "AI scribe unavailable in this environment.", code: "SIDECAR_NOT_READY" },
+      { status: 503 },
+    );
+  }
+
   const { ipAddress, userAgent } = getRequestMetadata(context.request);
 
   try {
