@@ -35,6 +35,7 @@ import { getCodeInfo } from "@/lib/billing/code-library";
 import { quickSuggestCodes } from "@/lib/billing/code-analyzer";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
@@ -92,14 +93,15 @@ export default function NewNotePage() {
     useEffect(() => {
         const supabase = createClient();
         if (!supabase) return;
-        supabase.auth.getUser().then(({ data: { user } }) => {
+        supabase.auth.getUser().then(({ data }: { data: { user: SupabaseUser | null } }) => {
+            const user = data.user;
             if (!user) return;
             supabase
                 .from('users')
                 .select('first_name, last_name')
                 .eq('id', user.id)
                 .single()
-                .then(({ data }) => {
+                .then(({ data }: { data: { first_name: string | null; last_name: string | null } | null }) => {
                     if (data?.first_name || data?.last_name) {
                         setProviderLabel(`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim());
                     }

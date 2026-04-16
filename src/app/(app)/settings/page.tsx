@@ -33,6 +33,7 @@ import {
 import { useEffect, useRef } from "react";
 import { BillingSetup } from "@/components/billing/BillingSetup";
 import { createClient } from "@/lib/supabase/client";
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export default function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
@@ -95,16 +96,17 @@ export default function SettingsPage() {
     useEffect(() => {
         const supabase = createClient();
         if (!supabase) return;
-        supabase.auth.getUser().then(({ data: { user } }) => {
+        supabase.auth.getUser().then(({ data }: { data: { user: SupabaseUser | null } }) => {
+            const user = data.user;
             if (!user) return;
             supabase
                 .from('users')
                 .select('first_name, last_name')
                 .eq('id', user.id)
                 .single()
-                .then(({ data }) => {
-                    if (data?.first_name || data?.last_name) {
-                        setProfileName(`${data.first_name ?? ''} ${data.last_name ?? ''}`.trim());
+                .then(({ data: profile }: { data: { first_name: string | null; last_name: string | null } | null }) => {
+                    if (profile?.first_name || profile?.last_name) {
+                        setProfileName(`${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim());
                     }
                 });
         });
