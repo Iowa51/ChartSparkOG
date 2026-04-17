@@ -135,6 +135,17 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'recharts', '@radix-ui/react-icons'],
   },
 
+  // 308 redirect for invitation emails sent before the URL was updated to /accept-invitation
+  async redirects() {
+    return [
+      {
+        source: '/auth/accept-invite',
+        destination: '/accept-invitation',
+        permanent: true,
+      },
+    ];
+  },
+
   // Proxy /api/ai/* to external scribe service when SCRIBE_SERVICE_URL is set
   async rewrites() {
     const scribeUrl = process.env.SCRIBE_SERVICE_URL;
