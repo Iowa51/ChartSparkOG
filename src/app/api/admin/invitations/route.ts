@@ -214,7 +214,7 @@ async function handlePost(context: AuthContext) {
       }
     }
 
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://chart-spark-og.vercel.app"}/auth/accept-invite?token=${token}`;
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://chart-spark-og.vercel.app"}/accept-invitation?token=${token}`;
 
     return NextResponse.json({
       invitation: {

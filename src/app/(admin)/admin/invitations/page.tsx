@@ -116,7 +116,7 @@ export default function AdminInvitationsPage() {
     };
 
     const handleCopyLink = (invitation: Invitation) => {
-        const url = `${window.location.origin}/auth/accept-invite?token=${invitation.id}`;
+        const url = `${window.location.origin}/accept-invitation?token=${invitation.id}`;
         // Note: In real implementation, we'd need to store/retrieve the actual token
         // For now, this is a placeholder
         navigator.clipboard.writeText(url);
