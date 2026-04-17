@@ -418,6 +418,11 @@ export const InvitationCreateSchema = z.object({
     specialty: z.string().max(100).optional().nullable(),
 });
 
+export const AcceptInvitationSchema = z.object({
+    token: z.string().min(1).max(512),
+    password: z.string().optional(),
+}).strict();
+
 // Auth schemas
 export const LoginAttemptSchema = z.object({
     email: z.string().email().max(255),

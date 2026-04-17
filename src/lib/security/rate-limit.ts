@@ -31,6 +31,7 @@ export const RATE_LIMITS = {
   mfaVerify: { limit: 5, window: 15 * 60 * 1000, failClosed: false },
   passwordReset: { limit: 3, window: 60 * 60 * 1000, failClosed: true },
   emailSend: { limit: 5, window: 60 * 60 * 1000, failClosed: true },
+  invitationAccept: { limit: 10, window: 60 * 60 * 1000, failClosed: true },
   telehealth: { limit: 50, window: 60 * 60 * 1000, failClosed: false },
 } satisfies Record<string, RateLimitConfig>;
 
