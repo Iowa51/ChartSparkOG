@@ -218,7 +218,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
 
         // DB schema uses compact column names; HIPAA metadata goes into details JSONB.
         // A full-schema migration lives at supabase/migrations/20260407_fix_audit_logs_schema.sql
-        const { error } = await supabase.from('audit_logs').insert({
+        const row = {
             action: entry.eventType,
             user_id: entry.userId,
             organization_id: entry.organizationId,
@@ -233,9 +233,40 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
                 phi_accessed: entry.phiAccessed || false,
                 risk_level: entry.riskLevel || getRiskLevel(entry.eventType),
             },
-        });
+        };
 
-        if (error) {
+        // Retry only transient network errors (TypeError: fetch failed,
+        // connection timeouts). Do NOT retry constraint violations or other
+        // errors that indicate a data problem.
+        const backoffsMs = [200, 600];
+        let error: unknown = null;
+        let lastThrown: unknown = null;
+        for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
+            try {
+                const result = await supabase.from('audit_logs').insert(row);
+                error = result.error;
+                lastThrown = null;
+                break;
+            } catch (netErr) {
+                lastThrown = netErr;
+                const msg = (netErr instanceof Error ? netErr.message : String(netErr)).toLowerCase();
+                const isTransient = msg.includes('fetch failed')
+                    || msg.includes('timeout')
+                    || msg.includes('econnreset')
+                    || msg.includes('etimedout');
+                if (!isTransient || attempt === backoffsMs.length) {
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, backoffsMs[attempt]));
+            }
+        }
+
+        if (lastThrown) {
+            logError({
+                action: 'AUDIT_LOG_DB_WRITE_FAILED',
+                error: sanitizeError(lastThrown),
+            });
+        } else if (error) {
             const errMsg = (error as { message?: string; code?: string; details?: string })?.message
                 || (error as { code?: string })?.code
                 || sanitizeError(error);
