@@ -36,7 +36,7 @@ import { quickSuggestCodes } from "@/lib/billing/code-analyzer";
 import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import type { PatientAllergy } from "@/lib/types/database";
+import type { PatientAllergy, PatientMedication, PatientProblem } from "@/lib/types/database";
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
   Subjective: [
@@ -1231,11 +1231,15 @@ Prognosis: Favorable with continued treatment adherence.`;
                         </div>
                         <div className="space-y-0.5">
                           {currentPatient.medications?.length > 0 ? (
-                            currentPatient.medications.map((med: any, idx: number) => (
-                              <div key={idx} className="text-xs text-foreground">
-                                • {med.medication_name || med}
-                              </div>
-                            ))
+                            currentPatient.medications.map(
+                              (med: PatientMedication, idx: number) => (
+                                <div key={idx} className="text-xs text-foreground">
+                                  • {med.medication}
+                                  {med.dosage ? ` ${med.dosage}` : ""}
+                                  {med.frequency ? ` — ${med.frequency}` : ""}
+                                </div>
+                              ),
+                            )
                           ) : (
                             <div className="text-xs text-muted-foreground italic">None</div>
                           )}
@@ -1251,9 +1255,10 @@ Prognosis: Favorable with continued treatment adherence.`;
                           </span>
                         </div>
                         <div className="space-y-0.5">
-                          {currentPatient.problems?.map((problem: any, idx: number) => (
+                          {currentPatient.problems?.map((problem: PatientProblem, idx: number) => (
                             <div key={idx} className="text-xs text-foreground">
-                              • {problem.diagnosis_code || problem}
+                              • {problem.problem}
+                              {problem.icd10_code ? ` (${problem.icd10_code})` : ""}
                             </div>
                           )) || <div className="text-xs text-muted-foreground italic">None</div>}
                         </div>
