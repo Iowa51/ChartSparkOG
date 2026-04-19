@@ -322,6 +322,8 @@ export const AIGenerateNoteSchema = z.object({
     selectedPhrases: z.record(z.string(), z.array(z.string().max(500))).optional().default({}),
     templateId: z.string().max(100).optional().default(''),
     templateFormat: z.enum(['soap', 'paragraph']).optional().default('soap'),
+    patientId: UUIDSchema.optional(),
+    encounterId: UUIDSchema.optional(),
 });
 
 // Smart Triage schemas

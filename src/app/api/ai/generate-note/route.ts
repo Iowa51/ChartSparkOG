@@ -9,8 +9,40 @@ import { getRequestMetadata } from '@/lib/utils/get-client-ip';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { analyzeNoteForCodes } from '@/lib/billing/code-analyzer';
 import { AIGenerateNoteSchema, validateRequest } from '@/lib/validation/schemas';
+import { getPatientLatestVitals, type LatestVitals } from '@/lib/data/vitals';
 
 
+
+function buildVitalsContext(vitals: LatestVitals | null): string {
+    if (!vitals) {
+        return 'Vitals recorded: [Not recorded at this encounter]';
+    }
+    const bp =
+        vitals.bp_systolic != null && vitals.bp_diastolic != null
+            ? `${vitals.bp_systolic}/${vitals.bp_diastolic} mmHg`
+            : '[Not recorded]';
+    const hr = vitals.heart_rate != null ? `${vitals.heart_rate} bpm` : '[Not recorded]';
+    const temp =
+        vitals.temperature != null
+            ? `${vitals.temperature}°${vitals.temperature_unit || 'F'}`
+            : '[Not recorded]';
+    const rr =
+        vitals.respiratory_rate != null
+            ? `${vitals.respiratory_rate} breaths/min`
+            : '[Not recorded]';
+    const bmi = vitals.bmi != null ? `${vitals.bmi} kg/m²` : '[Not recorded]';
+    const recordedAt = vitals.recorded_at || '[Not applicable]';
+
+    return [
+        'Vitals recorded:',
+        `- Blood pressure: ${bp}`,
+        `- Heart rate: ${hr}`,
+        `- Temperature: ${temp}`,
+        `- Respiratory rate: ${rr}`,
+        `- BMI: ${bmi}`,
+        `- Recorded at: ${recordedAt}`,
+    ].join('\n');
+}
 
 async function handler(context: AuthContext) {
     const { ipAddress, userAgent } = getRequestMetadata(context.request);
@@ -28,7 +60,7 @@ async function handler(context: AuthContext) {
             );
         }
 
-        const { clinicianInput, selectedPhrases, templateId, templateFormat } = validation.data;
+        const { clinicianInput, selectedPhrases, templateId, templateFormat, patientId, encounterId } = validation.data;
 
         // Require at least some input
         if (!clinicianInput && Object.keys(selectedPhrases).length === 0) {
@@ -71,6 +103,15 @@ async function handler(context: AuthContext) {
             riskLevel: 'MEDIUM',
         });
 
+        // Fetch real vitals if we have a patient context so the AI doesn't
+        // have to invent them. If no patientId or no vitals exist, the AI
+        // is explicitly instructed to write "[Not recorded at this encounter]".
+        let vitalsContext: string | undefined;
+        if (patientId) {
+            const vitals = await getPatientLatestVitals(patientId, encounterId);
+            vitalsContext = buildVitalsContext(vitals);
+        }
+
         // Prepare session data for AI
         const sessionData = {
             subjective: selectedPhrases?.['Subjective']?.join('. ') || clinicianInput || '',
@@ -79,7 +120,8 @@ async function handler(context: AuthContext) {
                 ...(selectedPhrases?.['Subjective'] || []),
                 ...(selectedPhrases?.['Objective'] || [])
             ],
-            assessment: selectedPhrases?.['Assessment']?.join('. ') || ''
+            assessment: selectedPhrases?.['Assessment']?.join('. ') || '',
+            vitalsContext,
         };
 
         // Generate with AI (will use Azure OpenAI or demo fallback)

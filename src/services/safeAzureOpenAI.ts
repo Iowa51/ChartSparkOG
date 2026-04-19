@@ -470,6 +470,7 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
     objective: string;
     symptoms: string[];
     assessment: string;
+    vitalsContext?: string;
   }): AsyncGenerator<string, void, unknown> {
     if (!this.isAvailable()) {
       yield this.getDemoSOAPNote(sessionData);
@@ -477,6 +478,10 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
     }
 
     const client = this._getClient();
+
+    const vitalsBlock =
+      sessionData.vitalsContext ||
+      "Vitals recorded: [Not recorded at this encounter]";
 
     const prompt = `You are a clinical documentation specialist. Generate a professional SOAP note for a mental health or primary care visit.
 
@@ -488,13 +493,15 @@ Based on the following observations provided by the clinician:
 - Key symptoms noted: ${sessionData.symptoms.join(", ") || "None specified"}
 - Initial clinical impression: ${sessionData.assessment || "Stable condition"}
 
+${vitalsBlock}
+
 **CRITICAL GROUNDING RULES:**
 - You are expanding the clinician's shorthand into formal SOAP prose.
 - Expansion means: converting brief dictation into professional medical language.
 - Expansion does NOT mean: adding facts not stated by the clinician.
 - If a section has no clinician input, write exactly: "[Not documented at this encounter — clinician to complete]"
 - Do NOT fill in plausible-sounding details to make the note feel complete.
-- If vital signs were recorded, they will be provided to you explicitly. If not provided, do not include specific values in Objective.
+- Vitals rule: if "Vitals recorded" above shows "[Not recorded at this encounter]", write exactly that phrase into the Objective section — do NOT invent vital sign values. If individual vital signs are marked "[Not recorded]", include only the ones that ARE recorded. Do NOT fill in missing values.
 
 **Instructions:**
 1. EXPAND on each observation with appropriate clinical detail and professional language.
@@ -547,12 +554,17 @@ PLAN`;
     objective: string;
     symptoms: string[];
     assessment: string;
+    vitalsContext?: string;
   }): Promise<string> {
     if (!this.isAvailable()) {
       return this.getDemoSOAPNote(sessionData);
     }
 
     const client = this._getClient();
+
+    const vitalsBlock =
+      sessionData.vitalsContext ||
+      "Vitals recorded: [Not recorded at this encounter]";
 
     const prompt = `You are a clinical documentation specialist. Generate a professional SOAP note for a mental health or primary care visit.
 
@@ -564,13 +576,15 @@ Based on the following observations provided by the clinician:
 - Key symptoms noted: ${sessionData.symptoms.join(", ") || "None specified"}
 - Initial clinical impression: ${sessionData.assessment || "Stable condition"}
 
+${vitalsBlock}
+
 **CRITICAL GROUNDING RULES:**
 - You are expanding the clinician's shorthand into formal SOAP prose.
 - Expansion means: converting brief dictation into professional medical language.
 - Expansion does NOT mean: adding facts not stated by the clinician.
 - If a section has no clinician input, write exactly: "[Not documented at this encounter — clinician to complete]"
 - Do NOT fill in plausible-sounding details to make the note feel complete.
-- If vital signs were recorded, they will be provided to you explicitly. If not provided, do not include specific values in Objective.
+- Vitals rule: if "Vitals recorded" above shows "[Not recorded at this encounter]", write exactly that phrase into the Objective section — do NOT invent vital sign values. If individual vital signs are marked "[Not recorded]", include only the ones that ARE recorded. Do NOT fill in missing values.
 
 **Instructions:**
 1. EXPAND on each observation with appropriate clinical detail and professional language.

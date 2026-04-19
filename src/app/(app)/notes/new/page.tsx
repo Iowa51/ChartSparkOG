@@ -674,6 +674,8 @@ export default function NewNotePage() {
           selectedPhrases,
           templateId,
           templateFormat: "soap",
+          patientId: currentPatient?.id,
+          encounterId: encounterId || currentEncounter?.id || undefined,
         }),
       });
 
