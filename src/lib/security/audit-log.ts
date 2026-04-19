@@ -183,6 +183,20 @@ export function logAuditEventAsync(entry: AuditLogEntry): void {
  * Log an audit event
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
+    // Defensive guard: production audit_logs.entity_type is NOT NULL.
+    // Surface the offending call site immediately instead of a cryptic DB
+    // constraint violation later.
+    if (!entry.resourceType) {
+        const callSite = new Error().stack?.split('\n')[2]?.trim() || 'unknown';
+        logError({
+            action: 'AUDIT_LOG_MISSING_ENTITY_TYPE',
+            error: `eventType=${entry.eventType} callSite=${callSite}`,
+        });
+        throw new Error(
+            `Audit log missing required resourceType for eventType=${entry.eventType}`,
+        );
+    }
+
     try {
         // F-028: Use service role client to bypass RLS (audit logs must always be written)
         let supabase;

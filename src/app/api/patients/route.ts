@@ -62,6 +62,7 @@ async function handleGet(context: AuthContext) {
       organizationId: user.organizationId,
       ipAddress,
       userAgent,
+      resourceType: "patient",
       details: {
         search: searchTerm || null,
         statusFilter: status || "all",
