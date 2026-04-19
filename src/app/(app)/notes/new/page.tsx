@@ -644,29 +644,6 @@ export default function NewNotePage() {
     }
   };
 
-  // Append triage summary to the assessment section of generated sections
-  const appendTriageToSections = (
-    sections: Record<string, string>,
-    triageText: string,
-  ): Record<string, string> => {
-    const updated = { ...sections };
-    if (template.format === "soap") {
-      // Find the assessment section and append
-      template.sections.forEach((s) => {
-        if (s.label.toLowerCase().includes("assessment")) {
-          updated[s.id] = (updated[s.id] || "") + "\n" + triageText;
-        }
-      });
-    } else {
-      // For non-SOAP, append to the first section
-      const firstId = template.sections[0]?.id;
-      if (firstId) {
-        updated[firstId] = (updated[firstId] || "") + "\n" + triageText;
-      }
-    }
-    return updated;
-  };
-
   // Generate note using AI service
   const handleGenerateNote = async () => {
     const hasPhrases = Object.values(selectedPhrases).some((p) => p.length > 0);
@@ -683,7 +660,8 @@ export default function NewNotePage() {
     // SEC-007: Log metadata only, not PHI content
     console.log("Generating note:", { hasPhrases, inputLength: clinicianInput.length });
 
-    // Fetch triage data in parallel with note generation
+    // Fetch triage data in parallel with note generation (renders in its
+    // own panel below the note; no longer spliced into Assessment).
     const triagePromise = fetchMedicationTriage();
 
     try {
@@ -699,7 +677,7 @@ export default function NewNotePage() {
         }),
       });
 
-      const triageText = await triagePromise;
+      await triagePromise;
 
       if (!response.ok) {
         let errMsg = `Request failed (${response.status})`;
@@ -731,11 +709,6 @@ export default function NewNotePage() {
           updatedSections[template.sections[0].id] =
             data.sections.content ||
             `${data.sections.subjective}\n\n${data.sections.objective}\n\n${data.sections.assessment}\n\n${data.sections.plan}`;
-        }
-
-        // Append triage summary if available
-        if (triageText) {
-          updatedSections = appendTriageToSections(updatedSections, triageText);
         }
 
         setNoteSections(updatedSections);
@@ -894,17 +867,14 @@ Prognosis: Favorable with continued treatment adherence.`;
   };
 
   // Helper to apply demo note to sections
-  const applyNoteToSections = (
-    demoNote: {
-      subjective: string;
-      objective: string;
-      assessment: string;
-      plan: string;
-      suggestedCodes: any;
-    },
-    triageText?: string | null,
-  ) => {
-    let updatedSections: Record<string, string> = { ...noteSections };
+  const applyNoteToSections = (demoNote: {
+    subjective: string;
+    objective: string;
+    assessment: string;
+    plan: string;
+    suggestedCodes: any;
+  }) => {
+    const updatedSections: Record<string, string> = { ...noteSections };
     if (template.format === "soap") {
       template.sections.forEach((s) => {
         const label = s.label.toLowerCase();
@@ -917,11 +887,6 @@ Prognosis: Favorable with continued treatment adherence.`;
     } else {
       updatedSections[template.sections[0].id] =
         `${demoNote.subjective}\n\n${demoNote.objective}\n\n${demoNote.assessment}\n\n${demoNote.plan}`;
-    }
-
-    // Append triage summary if available
-    if (triageText) {
-      updatedSections = appendTriageToSections(updatedSections, triageText);
     }
 
     setNoteSections(updatedSections);
@@ -2078,6 +2043,20 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                   ))}
                 </div>
               </div>
+
+              {triageSummary && (
+                <div className="bg-card rounded-2xl border border-border shadow-sm ring-1 ring-border/5 overflow-hidden">
+                  <div className="px-8 py-5 border-b border-border flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20">
+                    <ShieldCheck className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
+                    <h3 className="text-sm font-black text-foreground uppercase tracking-widest">
+                      Medication Safety — Smart Triage
+                    </h3>
+                  </div>
+                  <pre className="px-8 py-6 text-sm text-foreground font-mono whitespace-pre-wrap leading-relaxed">
+                    {triageSummary}
+                  </pre>
+                </div>
+              )}
 
               {/* Billing & Coding Hub */}
               <div className="bg-card rounded-2xl border border-border shadow-sm p-8 ring-1 ring-border/5">

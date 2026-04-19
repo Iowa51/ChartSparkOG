@@ -122,11 +122,13 @@ class SafeAzureOpenAIService {
   }
 
   private normalizeSOAPHeaders(note: string): string {
+    // Require header to be on its own line (trailing $) so prose containing
+    // "plan", "assessment", etc. is not misinterpreted as a section header.
     return note
-      .replace(/^\s*\*?\*?SUBJECTIVE\*?\*?:?\s*/im, "SUBJECTIVE\n")
-      .replace(/^\s*\*?\*?OBJECTIVE\*?\*?:?\s*/im, "\nOBJECTIVE\n")
-      .replace(/^\s*\*?\*?ASSESSMENT\*?\*?:?\s*/im, "\nASSESSMENT\n")
-      .replace(/^\s*\*?\*?PLAN\*?\*?:?\s*/im, "\nPLAN\n")
+      .replace(/^\s*\*?\*?SUBJECTIVE\*?\*?\s*:?\s*$/im, "SUBJECTIVE")
+      .replace(/^\s*\*?\*?OBJECTIVE\*?\*?\s*:?\s*$/im, "\nOBJECTIVE")
+      .replace(/^\s*\*?\*?ASSESSMENT\*?\*?\s*:?\s*$/im, "\nASSESSMENT")
+      .replace(/^\s*\*?\*?PLAN\*?\*?\s*:?\s*$/im, "\nPLAN")
       .trim();
   }
 

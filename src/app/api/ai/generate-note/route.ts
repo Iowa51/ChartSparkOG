@@ -90,11 +90,14 @@ async function handler(context: AuthContext) {
 
         if (typeof generatedNote === 'string') {
             if (templateFormat === 'soap') {
-                // Parse SOAP sections from generated text
-                const subjMatch = generatedNote.match(/\*?\*?SUBJECTIVE\*?\*?\s*([\s\S]*?)(?=\*?\*?OBJECTIVE|$)/i);
-                const objMatch = generatedNote.match(/\*?\*?OBJECTIVE\*?\*?\s*([\s\S]*?)(?=\*?\*?ASSESSMENT|$)/i);
-                const assMatch = generatedNote.match(/\*?\*?ASSESSMENT\*?\*?\s*([\s\S]*?)(?=\*?\*?PLAN|$)/i);
-                const planMatch = generatedNote.match(/\*?\*?PLAN\*?\*?\s*([\s\S]*?)$/i);
+                // Parse SOAP sections from generated text. Headers must be on
+                // their own line (`^...$` with `/m`) so prose containing
+                // "plan" or "assessment" isn't misread as a header boundary.
+                // `(?![\s\S])` = end of string (JS has no \Z).
+                const subjMatch = generatedNote.match(/^\s*\*?\*?SUBJECTIVE\*?\*?\s*:?\s*$([\s\S]*?)(?=^\s*\*?\*?OBJECTIVE\*?\*?\s*:?\s*$|(?![\s\S]))/im);
+                const objMatch = generatedNote.match(/^\s*\*?\*?OBJECTIVE\*?\*?\s*:?\s*$([\s\S]*?)(?=^\s*\*?\*?ASSESSMENT\*?\*?\s*:?\s*$|(?![\s\S]))/im);
+                const assMatch = generatedNote.match(/^\s*\*?\*?ASSESSMENT\*?\*?\s*:?\s*$([\s\S]*?)(?=^\s*\*?\*?PLAN\*?\*?\s*:?\s*$|(?![\s\S]))/im);
+                const planMatch = generatedNote.match(/^\s*\*?\*?PLAN\*?\*?\s*:?\s*$([\s\S]*?)(?![\s\S])/im);
 
                 sections = {
                     subjective: (subjMatch?.[1] || sessionData.subjective).trim(),
