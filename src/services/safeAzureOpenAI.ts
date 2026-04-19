@@ -478,7 +478,7 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
 
     const client = this._getClient();
 
-    const prompt = `You are a clinical documentation specialist. Generate a detailed, professional SOAP note for a mental health or primary care visit.
+    const prompt = `You are a clinical documentation specialist. Generate a professional SOAP note for a mental health or primary care visit.
 
 Based on the following observations provided by the clinician:
 
@@ -488,14 +488,21 @@ Based on the following observations provided by the clinician:
 - Key symptoms noted: ${sessionData.symptoms.join(", ") || "None specified"}
 - Initial clinical impression: ${sessionData.assessment || "Stable condition"}
 
+**CRITICAL GROUNDING RULES:**
+- You are expanding the clinician's shorthand into formal SOAP prose.
+- Expansion means: converting brief dictation into professional medical language.
+- Expansion does NOT mean: adding facts not stated by the clinician.
+- If a section has no clinician input, write exactly: "[Not documented at this encounter — clinician to complete]"
+- Do NOT fill in plausible-sounding details to make the note feel complete.
+- If vital signs were recorded, they will be provided to you explicitly. If not provided, do not include specific values in Objective.
+
 **Instructions:**
-1. EXPAND on each observation with appropriate clinical detail and professional language
-2. Add realistic vital signs and mental status exam findings to the Objective section
-3. Include relevant ICD-10 codes in the Assessment
-4. Create a comprehensive treatment Plan with specific interventions
-5. Make the note sound natural and varied - avoid repetitive phrasing
-6. The note should be 200-400 words total, professionally formatted
-7. Output EXACTLY these section headers on their own lines with no markdown and no colons:
+1. EXPAND on each observation with appropriate clinical detail and professional language.
+2. Use ONLY the clinician-provided observations above. Do NOT invent vital signs, medications, durations, baseline comparisons, diagnoses, historical timelines, mental status exam findings, or any other specific clinical facts not explicitly present in the input.
+3. Include relevant ICD-10 codes in the Assessment only if the input supports them; otherwise omit.
+4. Create a treatment Plan that reflects the clinician's stated direction — do not invent interventions not implied by the input.
+5. The note should be professionally formatted.
+6. Output EXACTLY these section headers on their own lines with no markdown and no colons:
 SUBJECTIVE
 OBJECTIVE
 ASSESSMENT
@@ -509,13 +516,13 @@ PLAN`;
             {
               role: "system",
               content:
-                "You are an expert clinical documentation specialist who writes detailed, professional SOAP notes. Each note should be unique with varied phrasing. Never generate identical notes.",
+                "You are an expert clinical documentation specialist who writes professional SOAP notes. You must not invent any specific clinical fact (medication name, dose, duration, vital sign value, baseline comparison, diagnosis, mental status finding) that is not present in the user-provided observations. Your role is to format and expand, not to generate clinical content. Always return the exact headers SUBJECTIVE, OBJECTIVE, ASSESSMENT, and PLAN on separate lines, without markdown or colons.",
             },
             { role: "user", content: prompt },
           ],
           max_tokens: 1500,
-          temperature: 0.7,
-          top_p: 0.95,
+          temperature: 0.3,
+          top_p: 0.8,
           stream: true,
         }),
       );
@@ -547,7 +554,7 @@ PLAN`;
 
     const client = this._getClient();
 
-    const prompt = `You are a clinical documentation specialist. Generate a detailed, professional SOAP note for a mental health or primary care visit.
+    const prompt = `You are a clinical documentation specialist. Generate a professional SOAP note for a mental health or primary care visit.
 
 Based on the following observations provided by the clinician:
 
@@ -557,14 +564,21 @@ Based on the following observations provided by the clinician:
 - Key symptoms noted: ${sessionData.symptoms.join(", ") || "None specified"}
 - Initial clinical impression: ${sessionData.assessment || "Stable condition"}
 
+**CRITICAL GROUNDING RULES:**
+- You are expanding the clinician's shorthand into formal SOAP prose.
+- Expansion means: converting brief dictation into professional medical language.
+- Expansion does NOT mean: adding facts not stated by the clinician.
+- If a section has no clinician input, write exactly: "[Not documented at this encounter — clinician to complete]"
+- Do NOT fill in plausible-sounding details to make the note feel complete.
+- If vital signs were recorded, they will be provided to you explicitly. If not provided, do not include specific values in Objective.
+
 **Instructions:**
-1. EXPAND on each observation with appropriate clinical detail and professional language
-2. Add realistic vital signs and mental status exam findings to the Objective section
-3. Include relevant ICD-10 codes in the Assessment
-4. Create a comprehensive treatment Plan with specific interventions
-5. Make the note sound natural and varied - avoid repetitive phrasing
-6. The note should be 200-400 words total, professionally formatted
-7. Output EXACTLY these section headers on their own lines with no markdown and no colons:
+1. EXPAND on each observation with appropriate clinical detail and professional language.
+2. Use ONLY the clinician-provided observations above. Do NOT invent vital signs, medications, durations, baseline comparisons, diagnoses, historical timelines, mental status exam findings, or any other specific clinical facts not explicitly present in the input.
+3. Include relevant ICD-10 codes in the Assessment only if the input supports them; otherwise omit.
+4. Create a treatment Plan that reflects the clinician's stated direction — do not invent interventions not implied by the input.
+5. The note should be professionally formatted.
+6. Output EXACTLY these section headers on their own lines with no markdown and no colons:
 SUBJECTIVE
 OBJECTIVE
 ASSESSMENT
@@ -578,13 +592,13 @@ PLAN`;
             {
               role: "system",
               content:
-                "You are an expert clinical documentation specialist who writes detailed, professional SOAP notes. Each note should be unique with varied phrasing. Never generate identical notes. Always return the exact headers SUBJECTIVE, OBJECTIVE, ASSESSMENT, and PLAN on separate lines, without markdown or colons.",
+                "You are an expert clinical documentation specialist who writes professional SOAP notes. You must not invent any specific clinical fact (medication name, dose, duration, vital sign value, baseline comparison, diagnosis, mental status finding) that is not present in the user-provided observations. Your role is to format and expand, not to generate clinical content. Always return the exact headers SUBJECTIVE, OBJECTIVE, ASSESSMENT, and PLAN on separate lines, without markdown or colons.",
             },
             { role: "user", content: prompt },
           ],
           max_tokens: 1500,
-          temperature: 0.7, // Higher temperature for more variety
-          top_p: 0.95,
+          temperature: 0.3,
+          top_p: 0.8,
         }),
       );
 
