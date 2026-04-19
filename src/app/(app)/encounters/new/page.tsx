@@ -14,10 +14,22 @@ import {
   Loader2,
 } from "lucide-react";
 
-const visitTypes = [
+import type { EncounterType } from "@/lib/utils/encounter-type";
+
+type VisitType = {
+  id: string;
+  name: string;
+  dbValue: EncounterType;
+  duration: string;
+  durationMinutes: number;
+  template: string;
+};
+
+const visitTypes: VisitType[] = [
   {
     id: "eval",
     name: "Initial Evaluation",
+    dbValue: "initial",
     duration: "60 min",
     durationMinutes: 60,
     template: "tpl-progress-note",
@@ -25,6 +37,7 @@ const visitTypes = [
   {
     id: "follow",
     name: "Follow-up Visit",
+    dbValue: "follow_up",
     duration: "30 min",
     durationMinutes: 30,
     template: "tpl-progress-note",
@@ -32,6 +45,7 @@ const visitTypes = [
   {
     id: "med",
     name: "Medication Management",
+    dbValue: "medication_management",
     duration: "15 min",
     durationMinutes: 15,
     template: "tpl-progress-note",
@@ -39,6 +53,7 @@ const visitTypes = [
   {
     id: "crisis",
     name: "Crisis Intervention",
+    dbValue: "crisis_intervention",
     duration: "45 min",
     durationMinutes: 45,
     template: "tpl-progress-note",
@@ -131,7 +146,7 @@ export default function NewEncounterPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             patient_id: selectedPatient.id,
-            encounter_type: selectedType.name,
+            encounter_type: selectedType.dbValue,
             scheduled_start: scheduledStart.toISOString(),
             scheduled_end: scheduledEnd.toISOString(),
             duration_minutes: selectedType.durationMinutes,

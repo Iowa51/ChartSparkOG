@@ -19,6 +19,7 @@ import { SuperbillWidget } from "@/components/billing/SuperbillWidget";
 import VitalsEntryPanel from "@/components/vitals/VitalsEntryPanel";
 import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
 import { EndSessionButton } from "@/components/agent/EndSessionButton";
+import { formatEncounterType } from "@/lib/utils/encounter-type";
 
 interface EncounterDetail {
   id: string;
@@ -178,7 +179,7 @@ export default function EncounterDetailPage() {
   return (
     <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
       <Header
-        title={`Encounter: ${encounter.encounter_type}`}
+        title={`Encounter: ${formatEncounterType(encounter.encounter_type)}`}
         description={`Clinical session for ${patientName}`}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },

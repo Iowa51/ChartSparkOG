@@ -188,7 +188,7 @@ const routeSpecs: RouteSpec[] = [
     actualPath: "/api/encounters",
     requiredBody: {
       patient_id: "<uuid>",
-      encounter_type: "Follow-up Visit",
+      encounter_type: "follow_up",
       encounter_date: "2026-04-15T14:30:00.000Z",
       chief_complaint: "Medication follow-up",
     },

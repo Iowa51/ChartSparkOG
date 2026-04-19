@@ -17,6 +17,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+import { formatEncounterType } from "@/lib/utils/encounter-type";
 
 const statusStyles = {
   in_progress: {
@@ -326,7 +327,7 @@ export default function EncountersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-sm text-foreground">
-                            {encounter.encounter_type}
+                            {formatEncounterType(encounter.encounter_type)}
                           </span>
                         </td>
                         <td className="px-6 py-4">

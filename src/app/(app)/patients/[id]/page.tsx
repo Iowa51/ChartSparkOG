@@ -28,6 +28,7 @@ import WeightTrendChart from "@/components/vitals/WeightTrendChart";
 import ScreeningTrendChart from "@/components/vitals/ScreeningTrendChart";
 import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
 import PatientDocuments from "@/components/patients/PatientDocuments";
+import { formatEncounterType } from "@/lib/utils/encounter-type";
 
 // Card components
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -570,7 +571,7 @@ export default function PatientDetailPage() {
                       >
                         <div className="flex-1">
                           <p className="font-medium text-foreground group-hover:text-primary transition-colors">
-                            {encounter.encounter_type}
+                            {formatEncounterType(encounter.encounter_type)}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {new Date(encounter.scheduled_start).toLocaleDateString("en-US", {

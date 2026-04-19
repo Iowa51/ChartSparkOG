@@ -6,6 +6,7 @@ import { logAuditEvent, logAuditEventAsync } from "@/lib/security/audit-log";
 import { logError, sanitizeError } from "@/lib/logging/safe-logger";
 import { createEncounter, getEncounters } from "@/lib/data";
 import { UUIDSchema, validateRequest } from "@/lib/validation/schemas";
+import { ENCOUNTER_TYPE_VALUES } from "@/lib/utils/encounter-type";
 
 const EncounterListQuerySchema = z
   .object({
@@ -20,7 +21,7 @@ const EncounterListQuerySchema = z
 const EncounterCreateSchema = z
   .object({
     patient_id: UUIDSchema,
-    encounter_type: z.string().min(1, "Encounter type is required").max(100),
+    encounter_type: z.enum(ENCOUNTER_TYPE_VALUES),
     scheduled_start: z.string().datetime(),
     scheduled_end: z.string().datetime(),
     chief_complaint: z.string().max(1000).optional().nullable(),

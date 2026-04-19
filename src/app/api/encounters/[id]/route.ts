@@ -6,10 +6,11 @@ import { getRequestMetadata } from "@/lib/utils/get-client-ip";
 import { logAuditEvent, logPHIAccess } from "@/lib/security/audit-log";
 import { logError, sanitizeError } from "@/lib/logging/safe-logger";
 import { UUIDSchema, validateRequest } from "@/lib/validation/schemas";
+import { ENCOUNTER_TYPE_VALUES } from "@/lib/utils/encounter-type";
 
 const EncounterUpdateSchema = z
   .object({
-    encounter_type: z.string().min(1).max(100).optional(),
+    encounter_type: z.enum(ENCOUNTER_TYPE_VALUES).optional(),
     scheduled_start: z.string().datetime().optional(),
     scheduled_end: z.string().datetime().optional(),
     actual_start: z.string().datetime().optional().nullable(),
