@@ -10,7 +10,10 @@ import { UUIDSchema, validateRequest } from "@/lib/validation/schemas";
 const EncounterUpdateSchema = z
   .object({
     encounter_type: z.string().min(1).max(100).optional(),
-    encounter_date: z.string().datetime().optional(),
+    scheduled_start: z.string().datetime().optional(),
+    scheduled_end: z.string().datetime().optional(),
+    actual_start: z.string().datetime().optional().nullable(),
+    actual_end: z.string().datetime().optional().nullable(),
     chief_complaint: z.string().max(1000).optional().nullable(),
     duration_minutes: z.number().int().min(1).max(480).optional().nullable(),
     status: z.enum(["scheduled", "in_progress", "completed", "cancelled"]).optional(),
@@ -230,6 +233,9 @@ async function handleDelete(context: AuthContext) {
 }
 
 export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
-export const PATCH = withAuth(updateEncounterHandler, { requireOrganization: true, requireMFA: true });
+export const PATCH = withAuth(updateEncounterHandler, {
+  requireOrganization: true,
+  requireMFA: true,
+});
 export const PUT = PATCH;
 export const DELETE = withAuth(handleDelete, { requireOrganization: true, requireMFA: true });

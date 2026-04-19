@@ -21,7 +21,8 @@ const EncounterCreateSchema = z
   .object({
     patient_id: UUIDSchema,
     encounter_type: z.string().min(1, "Encounter type is required").max(100),
-    encounter_date: z.string().datetime().optional().nullable(),
+    scheduled_start: z.string().datetime(),
+    scheduled_end: z.string().datetime(),
     chief_complaint: z.string().max(1000).optional().nullable(),
     duration_minutes: z.number().int().min(1).max(480).optional().nullable(),
   })
@@ -131,7 +132,8 @@ async function handlePost(context: AuthContext) {
     const encounter = await createEncounter(context.user.organizationId, context.user.id, {
       patient_id: body.patient_id,
       encounter_type: body.encounter_type,
-      encounter_date: body.encounter_date ?? undefined,
+      scheduled_start: body.scheduled_start,
+      scheduled_end: body.scheduled_end,
       chief_complaint: body.chief_complaint ?? undefined,
       duration_minutes: body.duration_minutes ?? undefined,
     });
