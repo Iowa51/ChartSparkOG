@@ -211,6 +211,7 @@ export default function NewNotePage() {
   // Smart Triage medication summary state
   const [includeTriageSummary, setIncludeTriageSummary] = useState(true);
   const [triageSummary, setTriageSummary] = useState<string | null>(null);
+  const [hasAIContent, setHasAIContent] = useState(false);
   const [loadingTriage, setLoadingTriage] = useState(false);
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
 
@@ -739,6 +740,7 @@ export default function NewNotePage() {
 
         setNoteSections(updatedSections);
         if (data.suggestedCodes) setSuggestedCodes(data.suggestedCodes);
+        setHasAIContent(true);
         setClinicianInput("");
       } else {
         toast.error("Note generation failed", data.error || "AI returned no content.");
@@ -1968,6 +1970,28 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
           {/* Right Pane: Note Editor */}
           <section className="flex flex-col flex-1 h-full overflow-hidden min-w-0">
             <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border pr-2 pb-24 space-y-6">
+              {hasAIContent && (
+                <div
+                  role="alert"
+                  aria-live="polite"
+                  className="flex gap-3 items-start rounded-2xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600 px-5 py-4 shadow-sm"
+                >
+                  <AlertTriangle
+                    aria-hidden="true"
+                    className="h-6 w-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+                  />
+                  <div className="flex-1 text-sm text-amber-900 dark:text-amber-100">
+                    <p className="font-bold uppercase tracking-wide">
+                      AI-generated content — Review carefully before signing
+                    </p>
+                    <p className="mt-1 leading-relaxed font-medium">
+                      This note was drafted by AI from your clinical observations. Verify all
+                      medications, vitals, diagnoses, and clinical facts reflect the patient
+                      accurately before saving. AI can make errors.
+                    </p>
+                  </div>
+                </div>
+              )}
               {/* Dynamic Note Container */}
               <div className="bg-card rounded-2xl border border-border shadow-md overflow-hidden ring-1 ring-border/5">
                 <div className="px-8 py-5 border-b border-border flex justify-between items-center bg-card sticky top-0 z-10">
