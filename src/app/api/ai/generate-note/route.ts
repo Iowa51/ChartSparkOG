@@ -10,6 +10,10 @@ import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { analyzeNoteForCodes } from '@/lib/billing/code-analyzer';
 import { AIGenerateNoteSchema, validateRequest } from '@/lib/validation/schemas';
 import { getPatientLatestVitals, type LatestVitals } from '@/lib/data/vitals';
+import {
+    getPatientContextForAI,
+    formatPatientContextForPrompt,
+} from '@/lib/data/patient-context';
 
 
 
@@ -103,13 +107,22 @@ async function handler(context: AuthContext) {
             riskLevel: 'MEDIUM',
         });
 
-        // Fetch real vitals if we have a patient context so the AI doesn't
-        // have to invent them. If no patientId or no vitals exist, the AI
-        // is explicitly instructed to write "[Not recorded at this encounter]".
+        // Fetch real vitals + patient context in parallel so the AI doesn't
+        // have to invent them. If no patientId is provided, both blocks are
+        // omitted and the prompt falls back to the pre-existing placeholder
+        // behavior for vitals.
         let vitalsContext: string | undefined;
+        let patientContext: string | undefined;
         if (patientId) {
-            const vitals = await getPatientLatestVitals(patientId, encounterId);
+            const orgId = context.user.organizationId || undefined;
+            const [vitals, patientCtx] = await Promise.all([
+                getPatientLatestVitals(patientId, encounterId),
+                orgId ? getPatientContextForAI(patientId, orgId) : Promise.resolve(null),
+            ]);
             vitalsContext = buildVitalsContext(vitals);
+            if (patientCtx) {
+                patientContext = formatPatientContextForPrompt(patientCtx);
+            }
         }
 
         // Prepare session data for AI
@@ -122,6 +135,7 @@ async function handler(context: AuthContext) {
             ],
             assessment: selectedPhrases?.['Assessment']?.join('. ') || '',
             vitalsContext,
+            patientContext,
         };
 
         // Generate with AI (will use Azure OpenAI or demo fallback)

@@ -471,6 +471,7 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
     symptoms: string[];
     assessment: string;
     vitalsContext?: string;
+    patientContext?: string;
   }): AsyncGenerator<string, void, unknown> {
     if (!this.isAvailable()) {
       yield this.getDemoSOAPNote(sessionData);
@@ -478,6 +479,11 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
     }
 
     const client = this._getClient();
+
+    const patientBlock =
+      sessionData.patientContext && sessionData.patientContext.length > 0
+        ? `${sessionData.patientContext}\n\n`
+        : "";
 
     const vitalsBlock =
       sessionData.vitalsContext ||
@@ -493,7 +499,7 @@ Based on the following observations provided by the clinician:
 - Key symptoms noted: ${sessionData.symptoms.join(", ") || "None specified"}
 - Initial clinical impression: ${sessionData.assessment || "Stable condition"}
 
-${vitalsBlock}
+${patientBlock}${vitalsBlock}
 
 **CRITICAL GROUNDING RULES:**
 - You are expanding the clinician's shorthand into formal SOAP prose.
@@ -502,6 +508,10 @@ ${vitalsBlock}
 - If a section has no clinician input, write exactly: "[Not documented at this encounter — clinician to complete]"
 - Do NOT fill in plausible-sounding details to make the note feel complete.
 - Vitals rule: if "Vitals recorded" above shows "[Not recorded at this encounter]", write exactly that phrase into the Objective section — do NOT invent vital sign values. If individual vital signs are marked "[Not recorded]", include only the ones that ARE recorded. Do NOT fill in missing values.
+- When mentioning medications, use ONLY the medications listed in "Active Medications" above. Do not substitute, invent, or infer alternatives.
+- When referencing demographics (age, sex), use ONLY the values in "Demographics". Do not invent.
+- When mentioning allergies or problems, use ONLY what is listed. Do not add plausible-sounding additions.
+- If a section of Patient Context is empty (e.g., "Active Medications: [None recorded]"), do not invent entries to fill it.
 
 **Instructions:**
 1. EXPAND on each observation with appropriate clinical detail and professional language.
@@ -555,12 +565,18 @@ PLAN`;
     symptoms: string[];
     assessment: string;
     vitalsContext?: string;
+    patientContext?: string;
   }): Promise<string> {
     if (!this.isAvailable()) {
       return this.getDemoSOAPNote(sessionData);
     }
 
     const client = this._getClient();
+
+    const patientBlock =
+      sessionData.patientContext && sessionData.patientContext.length > 0
+        ? `${sessionData.patientContext}\n\n`
+        : "";
 
     const vitalsBlock =
       sessionData.vitalsContext ||
@@ -576,7 +592,7 @@ Based on the following observations provided by the clinician:
 - Key symptoms noted: ${sessionData.symptoms.join(", ") || "None specified"}
 - Initial clinical impression: ${sessionData.assessment || "Stable condition"}
 
-${vitalsBlock}
+${patientBlock}${vitalsBlock}
 
 **CRITICAL GROUNDING RULES:**
 - You are expanding the clinician's shorthand into formal SOAP prose.
@@ -585,6 +601,10 @@ ${vitalsBlock}
 - If a section has no clinician input, write exactly: "[Not documented at this encounter — clinician to complete]"
 - Do NOT fill in plausible-sounding details to make the note feel complete.
 - Vitals rule: if "Vitals recorded" above shows "[Not recorded at this encounter]", write exactly that phrase into the Objective section — do NOT invent vital sign values. If individual vital signs are marked "[Not recorded]", include only the ones that ARE recorded. Do NOT fill in missing values.
+- When mentioning medications, use ONLY the medications listed in "Active Medications" above. Do not substitute, invent, or infer alternatives.
+- When referencing demographics (age, sex), use ONLY the values in "Demographics". Do not invent.
+- When mentioning allergies or problems, use ONLY what is listed. Do not add plausible-sounding additions.
+- If a section of Patient Context is empty (e.g., "Active Medications: [None recorded]"), do not invent entries to fill it.
 
 **Instructions:**
 1. EXPAND on each observation with appropriate clinical detail and professional language.
