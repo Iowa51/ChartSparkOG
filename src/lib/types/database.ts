@@ -161,6 +161,7 @@ export interface PatientAllergy {
   patient_id: string;
   allergy: string;
   severity?: "mild" | "moderate" | "severe";
+  reaction?: string | null;
   created_at: string;
 }
 
