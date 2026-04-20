@@ -174,15 +174,13 @@ async function handler(context: AuthContext) {
             }
         }
 
-        // Dynamically analyze generated note content for relevant billing codes
-        const noteForAnalysis = {
-            subjective: sections.subjective || '',
-            objective: sections.objective || '',
-            assessment: sections.assessment || '',
-            plan: sections.plan || '',
-            fullContent: Object.values(sections).join(' ')
-        };
-        const codeAnalysis = analyzeNoteForCodes(noteForAnalysis, {
+        // Keyword-match against clinician-authored input (raw dictation +
+        // selected preset phrases), NOT the AI-generated output. Running the
+        // matcher over AI prose lets hallucinated keywords ("major depressive
+        // disorder", "suicidal ideation") drive code suggestions — exactly
+        // the failure mode the 2026-04-18 grounding fix closed. The text the
+        // clinician OWNS is the only reliable input surface for this.
+        const codeAnalysis = analyzeNoteForCodes({ fullContent: fullInput }, {
             templateType: templateFormat,
             maxCPT: 4,
             maxICD10: 5
