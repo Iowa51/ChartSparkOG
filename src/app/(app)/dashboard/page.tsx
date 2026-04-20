@@ -94,6 +94,7 @@ export default function DashboardPage() {
             icon: Users,
             iconBg: "bg-blue-100 dark:bg-blue-900/30",
             iconColor: "text-blue-600 dark:text-blue-400",
+            href: "/patients",
         },
         {
             label: "Today's Notes",
@@ -103,6 +104,7 @@ export default function DashboardPage() {
             icon: CheckCircle,
             iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
             iconColor: "text-emerald-600 dark:text-emerald-400",
+            href: "/notes?status=completed",
         },
         {
             label: "Pending Encounters",
@@ -112,6 +114,7 @@ export default function DashboardPage() {
             icon: Receipt,
             iconBg: "bg-amber-100 dark:bg-amber-900/30",
             iconColor: "text-amber-600 dark:text-amber-400",
+            href: "/encounters",
         },
     ] : [];
     const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
@@ -189,11 +192,10 @@ export default function DashboardPage() {
                     <div className="grid grid-rows-2 gap-4">
                         {statCards.map((stat: any) => {
                             const Icon = stat.icon;
-                            const href = stat.label === "Notes Completed" ? "/notes?status=completed" : "/billing?status=pending";
                             return (
                                 <Link
                                     key={stat.label}
-                                    href={href}
+                                    href={stat.href}
                                     className="bg-card rounded-xl p-5 border border-border flex items-center justify-between hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group"
                                 >
                                     <div>
