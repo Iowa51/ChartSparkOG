@@ -123,13 +123,22 @@ async function handler(context: AuthContext) {
             vitalsContext = buildVitalsContext(vitals);
             if (patientCtx) {
                 patientContext = formatPatientContextForPrompt(patientCtx);
-                activeProblemIcd10 = patientCtx.problems
-                    .filter((p) => p.icd10_code && p.icd10_code.trim().length > 0)
-                    .map((p) => ({
-                        code: p.icd10_code as string,
+                // A patient can have multiple patient_problems rows with the
+                // same icd10_code (e.g. the same diagnosis recorded in two
+                // encounters). Keep only the first occurrence per code so a
+                // single chip surfaces, preserving its description.
+                const seenCodes = new Set<string>();
+                activeProblemIcd10 = [];
+                for (const p of patientCtx.problems) {
+                    const code = p.icd10_code?.trim();
+                    if (!code || seenCodes.has(code)) continue;
+                    seenCodes.add(code);
+                    activeProblemIcd10.push({
+                        code,
                         description: p.problem,
                         source: 'active_problem' as const,
-                    }));
+                    });
+                }
             }
         }
 
