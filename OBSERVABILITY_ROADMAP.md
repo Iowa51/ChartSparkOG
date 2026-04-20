@@ -369,6 +369,7 @@ Replace with bracketed severity labels consistent with the note-body treatment. 
 - [ ] Verify `/patients/new?returnTo=/notes/new` honors the `returnTo` param. After the B7 fix, a clinician who clicks "Add New Patient" in the picker ends up at `/patients/new` — if the page doesn't honor `returnTo`, they get stranded after adding a patient. Test and fix if broken.
 - [ ] Delete `src/lib/demo-data/patients.ts` once all consumers are migrated. After the 2026-04-20 B7 fix, `PatientQuickSelectModal` no longer imports it — grep for other consumers and remove the file if it's truly orphaned.
 - [ ] Dashboard stat cards lack visual affordance that they're clickable. UX polish — add hover state or subtle arrow icon so users know the cards navigate. Minor, non-blocking.
+- [ ] Notes page URL status filter support. `/notes` page uses tab-based state only (All Notes / Signed / Drafts) and ignores URL query params for cards-driven entry points. Dashboard "Today's Notes" card originally tried `/notes?status=completed` which broke because: (a) the tab UI only recognizes `signed` / `draft`, (b) `"completed"` isn't a valid note status enum accepted by `/api/notes`. Either add `useSearchParams` support to `/notes` with the actual valid statuses, or remove URL-filter-style entry points into `/notes`. Same architectural pattern as the "Pending Encounters" bug already on roadmap.
 
 ---
 

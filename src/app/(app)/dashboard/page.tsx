@@ -104,7 +104,7 @@ export default function DashboardPage() {
             icon: CheckCircle,
             iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
             iconColor: "text-emerald-600 dark:text-emerald-400",
-            href: "/notes?status=completed",
+            href: "/notes",
         },
         {
             label: "Pending Encounters",
