@@ -321,10 +321,66 @@ export default function NewNotePage() {
   // Updated SOAP/Note state to be dynamic
   const [noteSections, setNoteSections] = useState<Record<string, string>>({});
 
+  type CodeSource = "active_problem" | "clinician_input" | "manual";
+  type SuggestedCode = { code: string; description: string; source: CodeSource };
   const [suggestedCodes, setSuggestedCodes] = useState<{
-    cpt: string[];
-    icd10: string[];
+    cpt: SuggestedCode[];
+    icd10: SuggestedCode[];
   }>({ cpt: [], icd10: [] });
+
+  // Normalize backend/demo-mode payloads into the SuggestedCode shape. Handles
+  // the legacy string[] shape emitted by demo paths that call quickSuggestCodes
+  // directly, as well as the enriched shape from /api/ai/generate-note.
+  const normalizeSuggestedCodes = (raw: any): {
+    cpt: SuggestedCode[];
+    icd10: SuggestedCode[];
+  } => {
+    const normalizeArr = (arr: any): SuggestedCode[] => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map((item) => {
+        if (typeof item === "string") {
+          return {
+            code: item,
+            description: getCodeInfo(item)?.title || item,
+            source: "clinician_input" as const,
+          };
+        }
+        return {
+          code: item.code,
+          description:
+            item.description || getCodeInfo(item.code)?.title || item.code,
+          source: (item.source as CodeSource) || "clinician_input",
+        };
+      });
+    };
+    return {
+      cpt: normalizeArr(raw?.cpt),
+      icd10: normalizeArr(raw?.icd10),
+    };
+  };
+
+  // Badge metadata for each code source — colors + labels chosen for a11y
+  // contrast in both themes and to align with existing chip palette.
+  const codeSourceStyles: Record<
+    CodeSource,
+    { label: string; chipClasses: string }
+  > = {
+    active_problem: {
+      label: "From active problems",
+      chipClasses:
+        "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800",
+    },
+    clinician_input: {
+      label: "From your dictation",
+      chipClasses:
+        "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800",
+    },
+    manual: {
+      label: "Manually added",
+      chipClasses:
+        "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
+    },
+  };
 
   // Track which codes have been selected/copied
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
@@ -714,7 +770,7 @@ export default function NewNotePage() {
         }
 
         setNoteSections(updatedSections);
-        if (data.suggestedCodes) setSuggestedCodes(data.suggestedCodes);
+        if (data.suggestedCodes) setSuggestedCodes(normalizeSuggestedCodes(data.suggestedCodes));
         setHasAIContent(true);
         setClinicianInput("");
       } else {
@@ -892,7 +948,7 @@ Prognosis: Favorable with continued treatment adherence.`;
     }
 
     setNoteSections(updatedSections);
-    setSuggestedCodes(demoNote.suggestedCodes);
+    setSuggestedCodes(normalizeSuggestedCodes(demoNote.suggestedCodes));
   };
 
   // Auto-save simulation
@@ -1654,7 +1710,7 @@ Prognosis: Favorable with continued treatment adherence.`;
 
                                     // Populate suggested codes
                                     if (data.suggestedCodes) {
-                                      setSuggestedCodes(data.suggestedCodes);
+                                      setSuggestedCodes(normalizeSuggestedCodes(data.suggestedCodes));
                                     }
 
                                     // Free memory
@@ -1691,7 +1747,7 @@ Prognosis: Favorable with continued treatment adherence.`;
                                         setNoteSections(updatedSections);
                                       }
                                       if (demoNote?.suggestedCodes)
-                                        setSuggestedCodes(demoNote.suggestedCodes);
+                                        setSuggestedCodes(normalizeSuggestedCodes(demoNote.suggestedCodes));
                                       audioBlobRef.current = null;
                                       audioChunksRef.current = [];
                                     } else {
@@ -2083,33 +2139,41 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {(suggestedCodes?.cpt?.length ?? 0) > 0 ? (
-                        suggestedCodes.cpt.map((code) => (
+                        suggestedCodes.cpt.map((c) => {
+                          const src = codeSourceStyles[c.source];
+                          return (
                           <button
-                            key={code}
-                            onClick={() => handleCodeClick(code, "cpt")}
+                            key={c.code}
+                            onClick={() => handleCodeClick(c.code, "cpt")}
                             className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer ${
-                              selectedCodes.has(code)
+                              selectedCodes.has(c.code)
                                 ? "bg-emerald-500 text-white border-emerald-500 scale-105"
                                 : "bg-muted/50 border-border hover:border-primary/30 hover:bg-primary/5"
                             }`}
                             title="Click to copy code"
                           >
                             <span
-                              className={`text-base font-black tracking-tight ${selectedCodes.has(code) ? "text-white" : "text-foreground underline decoration-primary/30 underline-offset-4"}`}
+                              className={`text-base font-black tracking-tight ${selectedCodes.has(c.code) ? "text-white" : "text-foreground underline decoration-primary/30 underline-offset-4"}`}
                             >
-                              {selectedCodes.has(code) ? "✓ Copied!" : code}
+                              {selectedCodes.has(c.code) ? "✓ Copied!" : c.code}
                             </span>
                             <div className="w-px h-6 bg-border mx-1" />
                             <span
-                              className={`text-xs font-bold ${selectedCodes.has(code) ? "text-white/80" : "text-muted-foreground"}`}
+                              className={`text-xs font-bold ${selectedCodes.has(c.code) ? "text-white/80" : "text-muted-foreground"}`}
                             >
-                              {getCodeInfo(code)?.title || code}
+                              {c.description || getCodeInfo(c.code)?.title || c.code}
                             </span>
-                            {!selectedCodes.has(code) && (
+                            <span
+                              className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${src.chipClasses}`}
+                            >
+                              {src.label}
+                            </span>
+                            {!selectedCodes.has(c.code) && (
                               <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                             )}
                           </button>
-                        ))
+                          );
+                        })
                       ) : (
                         <div className="flex items-center gap-3 text-sm text-muted-foreground italic bg-muted/20 px-4 py-2 rounded-xl border border-dashed border-border">
                           <Sparkles className="h-4 w-4 opacity-50" />
@@ -2129,12 +2193,14 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {(suggestedCodes?.icd10?.length ?? 0) > 0 ? (
-                        suggestedCodes.icd10.map((code) => (
+                        suggestedCodes.icd10.map((c) => {
+                          const src = codeSourceStyles[c.source];
+                          return (
                           <button
-                            key={code}
-                            onClick={() => handleCodeClick(code, "icd10")}
+                            key={c.code}
+                            onClick={() => handleCodeClick(c.code, "icd10")}
                             className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer shadow-sm ${
-                              selectedCodes.has(code)
+                              selectedCodes.has(c.code)
                                 ? "bg-emerald-500 text-white border-emerald-500 scale-105"
                                 : "bg-card border-border hover:border-primary/30 hover:bg-primary/5"
                             }`}
@@ -2142,24 +2208,30 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                           >
                             <span
                               className={`text-sm font-black px-2 py-1 rounded border tracking-wider ${
-                                selectedCodes.has(code)
+                                selectedCodes.has(c.code)
                                   ? "text-white bg-white/20 border-white/30"
                                   : "text-primary bg-primary/5 border-primary/10"
                               }`}
                             >
-                              {selectedCodes.has(code) ? "✓" : code}
+                              {selectedCodes.has(c.code) ? "✓" : c.code}
                             </span>
                             <span
-                              className={`text-xs font-bold ${selectedCodes.has(code) ? "text-white" : "text-foreground/80"}`}
+                              className={`text-xs font-bold ${selectedCodes.has(c.code) ? "text-white" : "text-foreground/80"}`}
                             >
-                              {selectedCodes.has(code) && "Copied! - "}
-                              {getCodeInfo(code)?.title || code}
+                              {selectedCodes.has(c.code) && "Copied! - "}
+                              {c.description || getCodeInfo(c.code)?.title || c.code}
                             </span>
-                            {!selectedCodes.has(code) && (
+                            <span
+                              className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${src.chipClasses}`}
+                            >
+                              {src.label}
+                            </span>
+                            {!selectedCodes.has(c.code) && (
                               <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
                             )}
                           </button>
-                        ))
+                          );
+                        })
                       ) : (
                         <button className="flex items-center gap-3 text-sm text-muted-foreground italic bg-muted/20 px-4 py-2 rounded-xl border border-dashed border-border hover:border-primary group transition-all">
                           <Plus className="h-4 w-4 group-hover:rotate-90 transition-all" />

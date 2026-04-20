@@ -113,6 +113,7 @@ async function handler(context: AuthContext) {
         // behavior for vitals.
         let vitalsContext: string | undefined;
         let patientContext: string | undefined;
+        let activeProblemIcd10: Array<{ code: string; description: string; source: 'active_problem' }> = [];
         if (patientId) {
             const orgId = context.user.organizationId || undefined;
             const [vitals, patientCtx] = await Promise.all([
@@ -122,6 +123,13 @@ async function handler(context: AuthContext) {
             vitalsContext = buildVitalsContext(vitals);
             if (patientCtx) {
                 patientContext = formatPatientContextForPrompt(patientCtx);
+                activeProblemIcd10 = patientCtx.problems
+                    .filter((p) => p.icd10_code && p.icd10_code.trim().length > 0)
+                    .map((p) => ({
+                        code: p.icd10_code as string,
+                        description: p.problem,
+                        source: 'active_problem' as const,
+                    }));
             }
         }
 
@@ -180,12 +188,26 @@ async function handler(context: AuthContext) {
             maxICD10: 5
         });
 
+        // Merge active-problem ICD-10 codes with keyword-matched codes. When a
+        // code is present in both sources, active_problem wins (grounded in
+        // persistent patient record rather than a single dictation).
+        const activeProblemCodeSet = new Set(activeProblemIcd10.map((c) => c.code));
+        const inputIcd10: Array<{ code: string; description: string; source: 'clinician_input' }> =
+            codeAnalysis.icd10Details
+                .filter((c) => !activeProblemCodeSet.has(c.code))
+                .map((c) => ({
+                    code: c.code,
+                    description: c.title,
+                    source: 'clinician_input' as const,
+                }));
+
         const suggestedCodes = {
-            cpt: codeAnalysis.cpt,
-            icd10: codeAnalysis.icd10,
-            // Include full details so frontend can display descriptions
-            cptDetails: codeAnalysis.cptDetails,
-            icd10Details: codeAnalysis.icd10Details
+            cpt: codeAnalysis.cptDetails.map((c) => ({
+                code: c.code,
+                description: c.title,
+                source: 'clinician_input' as const,
+            })),
+            icd10: [...activeProblemIcd10, ...inputIcd10],
         };
 
         return NextResponse.json({
