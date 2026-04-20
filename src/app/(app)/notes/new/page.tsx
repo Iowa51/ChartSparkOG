@@ -37,6 +37,7 @@ import { useToast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import type { PatientAllergy, PatientMedication, PatientProblem } from "@/lib/types/database";
+import PatientQuickSelectModal from "@/components/notes/PatientQuickSelectModal";
 
 const PREBUILT_PHRASES: Record<string, string[]> = {
   Subjective: [
@@ -89,6 +90,7 @@ export default function NewNotePage() {
   const [loadingPatient, setLoadingPatient] = useState(false);
   const [showPatientInfo, setShowPatientInfo] = useState(true);
   const [providerLabel, setProviderLabel] = useState<string>("Provider");
+  const [isPatientPickerOpen, setIsPatientPickerOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -1134,6 +1136,7 @@ Prognosis: Favorable with continued treatment adherence.`;
   };
 
   return (
+    <>
     <div className="flex flex-col h-screen overflow-hidden bg-background">
       {/* Top Navigation */}
       <header className="flex-none flex items-center justify-between border-b border-border bg-card px-6 py-3 shadow-sm z-20">
@@ -1358,12 +1361,13 @@ Prognosis: Favorable with continued treatment adherence.`;
                   encounter.
                 </p>
               </div>
-              <Link
-                href="/dashboard"
+              <button
+                type="button"
+                onClick={() => setIsPatientPickerOpen(true)}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors shrink-0"
               >
                 Select Patient
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -2480,6 +2484,11 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
         </div>
       )}
     </div>
+    <PatientQuickSelectModal
+      isOpen={isPatientPickerOpen}
+      onClose={() => setIsPatientPickerOpen(false)}
+    />
+    </>
   );
 }
 

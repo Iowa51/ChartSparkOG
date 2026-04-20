@@ -364,6 +364,14 @@ Replace with bracketed severity labels consistent with the note-body treatment. 
 
 ---
 
+### Navigation / picker follow-ups (from 2026-04-20 navigation bug fix)
+
+- [ ] Verify `/patients/new?returnTo=/notes/new` honors the `returnTo` param. After the B7 fix, a clinician who clicks "Add New Patient" in the picker ends up at `/patients/new` — if the page doesn't honor `returnTo`, they get stranded after adding a patient. Test and fix if broken.
+- [ ] Delete `src/lib/demo-data/patients.ts` once all consumers are migrated. After the 2026-04-20 B7 fix, `PatientQuickSelectModal` no longer imports it — grep for other consumers and remove the file if it's truly orphaned.
+- [ ] Dashboard stat cards lack visual affordance that they're clickable. UX polish — add hover state or subtle arrow icon so users know the cards navigate. Minor, non-blocking.
+
+---
+
 ## How to return to this document
 
 Search for: `observability roadmap`, `pre-clinical blockers`, `OBSERVABILITY_ROADMAP.md`
