@@ -128,21 +128,23 @@ export default function NotePage() {
         if (!note) return;
         try {
             setSigning(true);
-            const response = await fetch(`/api/notes/${id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'pending_review' }),
+            const response = await fetch(`/api/notes/${id}/sign`, {
+                method: 'POST',
             });
             if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || 'Failed to submit for review');
+                throw new Error(data.error || 'Failed to sign note');
             }
             const data = await response.json();
             setNote(data.note);
-            setSuccessMessage('Note submitted for auditor review!');
-            setTimeout(() => setSuccessMessage(null), 3000);
+            setSuccessMessage(
+                data.warning
+                    ? `Note signed — ${data.warning}`
+                    : 'Note signed and sent for auditor review.',
+            );
+            setTimeout(() => setSuccessMessage(null), 4000);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to submit');
+            setError(err instanceof Error ? err.message : 'Failed to sign note');
             setTimeout(() => setError(null), 3000);
         } finally {
             setSigning(false);
@@ -412,7 +414,7 @@ export default function NotePage() {
                                 ) : (
                                     <>
                                         <Send className="h-4 w-4" />
-                                        Submit for Review
+                                        Sign & Send for Review
                                     </>
                                 )}
                             </button>
@@ -713,9 +715,9 @@ export default function NotePage() {
                 isOpen={showSubmitModal}
                 onClose={() => setShowSubmitModal(false)}
                 onConfirm={handleSubmitForReview}
-                title="Submit for Review"
-                message="This note will be sent to the auditor for review before billing. Make sure all CPT and ICD-10 codes are correct."
-                confirmText="Submit for Review"
+                title="Sign & Send for Review"
+                message="This will sign the note and send it to an auditor for review. You won't be able to edit the note until the auditor responds. Make sure all CPT and ICD-10 codes are correct before continuing."
+                confirmText="Sign & Send for Review"
                 variant="primary"
                 icon="sign"
             />

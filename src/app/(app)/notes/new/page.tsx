@@ -2443,10 +2443,10 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
             {/* Action Options */}
             <div className="p-8 space-y-4">
               <p className="text-sm text-muted-foreground text-center font-medium">
-                Would you like to submit this note for insurance review?
+                Would you like to sign this note and send it for auditor review?
               </p>
 
-              {/* Submit to Insurance — Primary CTA */}
+              {/* Sign & Send for Review — Primary CTA */}
               <button
                 onClick={() => {
                   setShowSaveSuccessModal(false);
@@ -2457,7 +2457,7 @@ Example: 45yo male, depression follow-up. Reports improved mood on current medic
                 className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-2xl text-base font-black uppercase tracking-widest shadow-xl shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all"
               >
                 <Send className="h-5 w-5" />
-                Submit to Insurance
+                Sign &amp; Send for Review
               </button>
 
               {/* Keep as Draft — Secondary */}
