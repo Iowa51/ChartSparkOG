@@ -138,7 +138,7 @@ async function handlePost(context: AuthContext) {
       .insert({
         note_id: noteId,
         patient_id: currentNote.patient_id,
-        user_id: currentNote.provider_id,
+        provider_id: currentNote.provider_id,
         organization_id: currentNote.organization_id,
         cpt_code: primaryCptCode,
         icd10_codes: icd10Codes,
