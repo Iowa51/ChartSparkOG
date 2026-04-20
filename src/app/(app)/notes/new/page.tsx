@@ -602,13 +602,22 @@ export default function NewNotePage() {
     if (!result || (result.result === null && !result.overall_safety_score)) {
       return "";
     }
-    const lines: string[] = ["", "── Smart Triage: Medication Safety ──"];
+    const lines: string[] = ["", "MEDICATION SAFETY REVIEW"];
 
     // Safety score
     const score = result.overall_safety_score ?? result.safety_score ?? "N/A";
-    const level = result.safety_level || (score >= 80 ? "Green" : score >= 60 ? "Yellow" : "Red");
+    const apiLevel = result.safety_level;
+    const levelKey = typeof apiLevel === "string" ? apiLevel.toLowerCase() : "";
+    let severityLabel = "";
+    if (levelKey === "green") severityLabel = "Low Risk";
+    else if (levelKey === "yellow") severityLabel = "Moderate Risk";
+    else if (levelKey === "red") severityLabel = "High Risk";
+    else if (levelKey === "black") severityLabel = "Critical Risk";
+    else if (typeof score === "number") {
+      severityLabel = score >= 80 ? "Low Risk" : score >= 60 ? "Moderate Risk" : "High Risk";
+    }
     lines.push(
-      `Safety Score: ${score}/100 (${typeof level === "string" ? level.charAt(0).toUpperCase() + level.slice(1) : level})`,
+      severityLabel ? `Safety Score: ${score}/100 (${severityLabel})` : `Safety Score: ${score}/100`,
     );
 
     // Drug-drug interactions
@@ -628,7 +637,7 @@ export default function NewNotePage() {
       lines.push("");
       lines.push("Black Box Warnings:");
       result.black_box_warnings.forEach((bbw: any) => {
-        lines.push(`  ⚠ ${bbw.medication} — ${bbw.warning_text}`);
+        lines.push(`  [WARNING] ${bbw.medication} — ${bbw.warning_text}`);
         if (bbw.patient_relevance) lines.push(`    Relevance: ${bbw.patient_relevance}`);
       });
     }
@@ -638,10 +647,10 @@ export default function NewNotePage() {
       lines.push("");
       lines.push("Lab Monitoring:");
       result.lab_monitoring.forEach((lab: any) => {
-        const status =
-          lab.status === "overdue" ? "⚠ OVERDUE" : lab.status === "due" ? "📋 Due" : "✓ Current";
+        const prefix =
+          lab.status === "overdue" ? "[OVERDUE] " : lab.status === "due" ? "[DUE] " : "";
         lines.push(
-          `  ${status}: ${lab.medication} — ${lab.required_lab}${lab.due_date ? ` (due ${lab.due_date})` : ""}`,
+          `  ${prefix}${lab.medication} — ${lab.required_lab}${lab.due_date ? ` (due ${lab.due_date})` : ""}`,
         );
       });
     }
@@ -651,7 +660,7 @@ export default function NewNotePage() {
       lines.push("");
       lines.push("Clinical Pearls:");
       result.clinical_pearls.forEach((pearl: string) => {
-        lines.push(`  💡 ${pearl}`);
+        lines.push(`  ${pearl}`);
       });
     }
 
@@ -661,7 +670,6 @@ export default function NewNotePage() {
       lines.push(`Summary: ${result.summary}`);
     }
 
-    lines.push("── End Smart Triage ──");
     return lines.join("\n");
   };
 
