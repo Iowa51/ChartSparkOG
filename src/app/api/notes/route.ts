@@ -144,6 +144,8 @@ async function handlePost(context: AuthContext) {
           template_id: validatedData.template_id,
           status: validatedData.is_signed ? "signed" : "draft",
           signed_at: validatedData.is_signed ? new Date().toISOString() : null,
+          cpt_codes: validatedData.cpt_codes ?? [],
+          icd10_codes: validatedData.icd10_codes ?? [],
           organization_id: user.organizationId,
           provider_id: user.id,
         },

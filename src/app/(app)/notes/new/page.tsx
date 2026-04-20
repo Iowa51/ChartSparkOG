@@ -1061,12 +1061,22 @@ Prognosis: Favorable with continued treatment adherence.`;
       const url = editId ? `/api/notes/${editId}` : "/api/notes";
       const method = editId ? "PATCH" : "POST";
       const content = fullContent || clinicianInput || "No content provided";
+
+      // Persist suggested codes so /notes/[id] and the submit/review flow
+      // can display them without the clinician having to re-add everything
+      // manually. Strip source metadata — the stored value is just the code
+      // string; source is inferable on read.
+      const cptCodesToPersist = (suggestedCodes?.cpt ?? []).map((c) => c.code);
+      const icd10CodesToPersist = (suggestedCodes?.icd10 ?? []).map((c) => c.code);
+
       const noteData = editId
         ? {
             encounter_id: encounterId || currentEncounter?.id || undefined,
             content,
             status: markComplete ? "completed" : "draft",
             template_id: undefined,
+            cpt_codes: cptCodesToPersist,
+            icd10_codes: icd10CodesToPersist,
           }
         : {
             patient_id: currentPatient.id,
@@ -1075,6 +1085,8 @@ Prognosis: Favorable with continued treatment adherence.`;
             content,
             template_id: undefined,
             is_signed: markComplete,
+            cpt_codes: cptCodesToPersist,
+            icd10_codes: icd10CodesToPersist,
           };
 
       const response = await fetch(url, {
