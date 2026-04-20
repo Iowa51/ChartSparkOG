@@ -11,14 +11,20 @@ import { getTodayStartInTimezone } from '@/lib/utils/timezone';
  * GET /api/dashboard/stats?tz=America/New_York
  *
  * activePatients — organization-scoped (no patient↔provider assignment exists yet)
- * signedToday — clinician-scoped, `signed_at` today in clinician's timezone.
- *   Filters on signed_at (not status) because the sign route at
- *   /api/notes/[id]/sign updates is_signed + signed_at but leaves `status`
- *   unchanged; relying on status would miss notes signed post-creation.
+ * signedToday — clinician-scoped, signed today in clinician's timezone.
+ *   Accepts EITHER signal:
+ *     - signed_at >= todayStart (correct path: sign route + submit-to-insurance
+ *       after 2026-04-20 fix), OR
+ *     - status = 'signed' AND updated_at >= todayStart (legacy broken path
+ *       from the pre-fix submit-to-insurance flow that wrote status='signed'
+ *       without populating signed_at — ~8 rows in prod as of 2026-04-20).
+ *   PostgREST OR is deduped by the COUNT; a row satisfying both clauses
+ *   is still counted once.
  * unfinishedNotes — clinician-scoped, status IN ('draft','completed')
- *   AND signed_at IS NULL. The signed_at guard compensates for the same
+ *   AND signed_at IS NULL. The signed_at guard compensates for the
  *   dual-tracking issue — some 'draft'/'completed' rows may already be
- *   signed with signed_at populated.
+ *   signed via the post-creation sign route, which updates signed_at
+ *   but leaves `status` alone.
  */
 async function handleGet(context: AuthContext) {
     try {
@@ -43,7 +49,9 @@ async function handleGet(context: AuthContext) {
                 .select('*', { count: 'exact', head: true })
                 .eq('organization_id', orgId)
                 .eq('provider_id', clinicianId)
-                .gte('signed_at', todayStart),
+                .or(
+                    `signed_at.gte.${todayStart},and(status.eq.signed,updated_at.gte.${todayStart})`,
+                ),
             supabase
                 .from('clinical_notes')
                 .select('*', { count: 'exact', head: true })

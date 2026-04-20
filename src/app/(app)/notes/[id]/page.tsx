@@ -200,7 +200,11 @@ export default function NotePage() {
             const response = await fetch(`/api/notes/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'signed', is_signed: true }),
+                body: JSON.stringify({
+                    status: 'signed',
+                    is_signed: true,
+                    signed_at: new Date().toISOString(),
+                }),
             });
             if (!response.ok) {
                 const data = await response.json();
