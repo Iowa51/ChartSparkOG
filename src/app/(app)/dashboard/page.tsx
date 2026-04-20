@@ -11,11 +11,12 @@ import {
     Plus,
     Calendar,
     ArrowRight,
+    Minus,
     Users,
     Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import PatientQuickSelectModal from "@/components/notes/PatientQuickSelectModal";
 import { createClient } from "@/lib/supabase/client";
 
@@ -57,31 +58,46 @@ export default function DashboardPage() {
     const [recentNotes, setRecentNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const abortControllerRef = useRef<AbortController | null>(null);
+
     const fetchDashboardData = useCallback(async (opts: { showLoading?: boolean } = {}) => {
         const { showLoading = true } = opts;
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         try {
             if (showLoading) setLoading(true);
             const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const statsResponse = await fetch(`/api/dashboard/stats?tz=${encodeURIComponent(tz)}`);
+            const statsResponse = await fetch(
+                `/api/dashboard/stats?tz=${encodeURIComponent(tz)}`,
+                { signal: controller.signal },
+            );
             if (statsResponse.ok) {
                 const statsData = await statsResponse.json();
                 setStats(statsData.stats);
             }
 
-            const notesResponse = await fetch('/api/notes?limit=3');
+            const notesResponse = await fetch('/api/notes?limit=3', {
+                signal: controller.signal,
+            });
             if (notesResponse.ok) {
                 const notesData = await notesResponse.json();
                 setRecentNotes(notesData.notes || []);
             }
         } catch (error) {
+            if ((error as Error)?.name === 'AbortError') return;
             console.error('Error fetching dashboard data:', error);
         } finally {
-            if (showLoading) setLoading(false);
+            if (showLoading && !controller.signal.aborted) setLoading(false);
         }
     }, []);
 
     useEffect(() => {
         fetchDashboardData();
+        return () => {
+            abortControllerRef.current?.abort();
+        };
     }, [fetchDashboardData]);
 
     useEffect(() => {
@@ -215,13 +231,18 @@ export default function DashboardPage() {
                                             {stat.value}
                                         </p>
                                         <p
-                                            className={`text-xs mt-1 flex items-center gap-1 ${stat.changeType === "positive"
-                                                ? "text-emerald-600"
-                                                : "text-amber-600"
+                                            className={`text-xs mt-1 flex items-center gap-1 ${
+                                                stat.changeType === "positive"
+                                                    ? "text-emerald-600"
+                                                    : stat.changeType === "neutral"
+                                                        ? "text-muted-foreground"
+                                                        : "text-amber-600"
                                                 }`}
                                         >
                                             {stat.changeType === "positive" ? (
                                                 <TrendingUp className="h-3 w-3" />
+                                            ) : stat.changeType === "neutral" ? (
+                                                <Minus className="h-3 w-3" />
                                             ) : (
                                                 <AlertTriangle className="h-3 w-3" />
                                             )}

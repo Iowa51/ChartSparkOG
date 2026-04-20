@@ -9,11 +9,16 @@ import { getTodayStartInTimezone } from '@/lib/utils/timezone';
 
 /**
  * GET /api/dashboard/stats?tz=America/New_York
- * Returns aggregate counts for the clinician dashboard.
  *
  * activePatients — organization-scoped (no patient↔provider assignment exists yet)
- * signedToday — clinician-scoped, counts notes signed since midnight in tz
- * unfinishedNotes — clinician-scoped draft notes, no time filter
+ * signedToday — clinician-scoped, `signed_at` today in clinician's timezone.
+ *   Filters on signed_at (not status) because the sign route at
+ *   /api/notes/[id]/sign updates is_signed + signed_at but leaves `status`
+ *   unchanged; relying on status would miss notes signed post-creation.
+ * unfinishedNotes — clinician-scoped, status IN ('draft','completed')
+ *   AND signed_at IS NULL. The signed_at guard compensates for the same
+ *   dual-tracking issue — some 'draft'/'completed' rows may already be
+ *   signed with signed_at populated.
  */
 async function handleGet(context: AuthContext) {
     try {
@@ -34,18 +39,18 @@ async function handleGet(context: AuthContext) {
                 .eq('organization_id', orgId)
                 .eq('status', 'active'),
             supabase
-                .from('notes')
+                .from('clinical_notes')
                 .select('*', { count: 'exact', head: true })
                 .eq('organization_id', orgId)
                 .eq('provider_id', clinicianId)
-                .eq('status', 'signed')
                 .gte('signed_at', todayStart),
             supabase
-                .from('notes')
+                .from('clinical_notes')
                 .select('*', { count: 'exact', head: true })
                 .eq('organization_id', orgId)
                 .eq('provider_id', clinicianId)
-                .eq('status', 'draft'),
+                .in('status', ['draft', 'completed'])
+                .is('signed_at', null),
         ]);
 
         return NextResponse.json({
