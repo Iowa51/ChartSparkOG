@@ -4,7 +4,6 @@ import { Header } from "@/components/layout";
 import {
     TrendingUp,
     CheckCircle,
-    Receipt,
     AlertTriangle,
     DollarSign,
     FileText,
@@ -16,7 +15,7 @@ import {
     Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import PatientQuickSelectModal from "@/components/notes/PatientQuickSelectModal";
 import { createClient } from "@/lib/supabase/client";
 
@@ -58,32 +57,42 @@ export default function DashboardPage() {
     const [recentNotes, setRecentNotes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                setLoading(true);
-                // Fetch statistics
-                const statsResponse = await fetch('/api/dashboard/stats');
-                if (statsResponse.ok) {
-                    const statsData = await statsResponse.json();
-                    setStats(statsData.stats);
-                }
+    const fetchDashboardData = useCallback(async (opts: { showLoading?: boolean } = {}) => {
+        const { showLoading = true } = opts;
+        try {
+            if (showLoading) setLoading(true);
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const statsResponse = await fetch(`/api/dashboard/stats?tz=${encodeURIComponent(tz)}`);
+            if (statsResponse.ok) {
+                const statsData = await statsResponse.json();
+                setStats(statsData.stats);
+            }
 
-                // Fetch recent notes
-                const notesResponse = await fetch('/api/notes?limit=3');
-                if (notesResponse.ok) {
-                    const notesData = await notesResponse.json();
-                    setRecentNotes(notesData.notes || []);
-                }
-            } catch (error) {
-                console.error('Error fetching dashboard data:', error);
-            } finally {
-                setLoading(false);
+            const notesResponse = await fetch('/api/notes?limit=3');
+            if (notesResponse.ok) {
+                const notesData = await notesResponse.json();
+                setRecentNotes(notesData.notes || []);
+            }
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+        } finally {
+            if (showLoading) setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
+
+    useEffect(() => {
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchDashboardData({ showLoading: false });
             }
         };
-
-        fetchDashboardData();
-    }, []);
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    }, [fetchDashboardData]);
 
     const statCards = stats ? [
         {
@@ -97,9 +106,9 @@ export default function DashboardPage() {
             href: "/patients",
         },
         {
-            label: "Today's Notes",
-            value: stats.todayNotes.toString(),
-            change: "Completed today",
+            label: "Signed Today",
+            value: stats.signedToday.toString(),
+            change: "Notes you signed today",
             changeType: "positive" as const,
             icon: CheckCircle,
             iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
@@ -107,14 +116,14 @@ export default function DashboardPage() {
             href: "/notes",
         },
         {
-            label: "Pending Encounters",
-            value: stats.pendingEncounters.toString(),
-            change: "Needs attention",
-            changeType: stats.pendingEncounters > 0 ? "warning" as const : "neutral" as const,
-            icon: Receipt,
+            label: "Unfinished Notes",
+            value: stats.unfinishedNotes.toString(),
+            change: "Drafts to complete",
+            changeType: stats.unfinishedNotes > 0 ? "warning" as const : "neutral" as const,
+            icon: FileText,
             iconBg: "bg-amber-100 dark:bg-amber-900/30",
             iconColor: "text-amber-600 dark:text-amber-400",
-            href: "/encounters",
+            href: "/notes",
         },
     ] : [];
     const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
@@ -154,7 +163,7 @@ export default function DashboardPage() {
                     loading
                         ? "Loading your activity..."
                         : stats
-                            ? `You have ${stats.pendingEncounters ?? 0} pending encounter${stats.pendingEncounters === 1 ? '' : 's'} and ${stats.todayNotes ?? 0} note${stats.todayNotes === 1 ? '' : 's'} completed today.`
+                            ? `You have ${stats.unfinishedNotes ?? 0} unfinished note${stats.unfinishedNotes === 1 ? '' : 's'} and ${stats.signedToday ?? 0} signed today.`
                             : "Welcome back — start a new note or review your schedule."
                 }
                 breadcrumbs={[{ label: "Dashboard" }]}

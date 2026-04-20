@@ -1,14 +1,19 @@
 // src/app/api/dashboard/stats/route.ts
-// Dashboard statistics endpoint — active patients, today's notes, pending encounters
+// Dashboard statistics endpoint — active patients, signed today, unfinished notes
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
 import { createClient } from '@/lib/supabase/server';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { getTodayStartInTimezone } from '@/lib/utils/timezone';
 
 /**
- * GET /api/dashboard/stats
- * Returns aggregate counts for the clinician dashboard
+ * GET /api/dashboard/stats?tz=America/New_York
+ * Returns aggregate counts for the clinician dashboard.
+ *
+ * activePatients — organization-scoped (no patient↔provider assignment exists yet)
+ * signedToday — clinician-scoped, counts notes signed since midnight in tz
+ * unfinishedNotes — clinician-scoped draft notes, no time filter
  */
 async function handleGet(context: AuthContext) {
     try {
@@ -18,11 +23,11 @@ async function handleGet(context: AuthContext) {
         }
 
         const orgId = context.user.organizationId;
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
+        const clinicianId = context.user.id;
+        const tz = context.request.nextUrl.searchParams.get('tz') || 'UTC';
+        const todayStart = getTodayStartInTimezone(tz);
 
-        // F-041: Run all three count queries in parallel
-        const [patientsResult, notesResult, encountersResult] = await Promise.all([
+        const [patientsResult, signedTodayResult, unfinishedResult] = await Promise.all([
             supabase
                 .from('patients')
                 .select('*', { count: 'exact', head: true })
@@ -32,23 +37,22 @@ async function handleGet(context: AuthContext) {
                 .from('notes')
                 .select('*', { count: 'exact', head: true })
                 .eq('organization_id', orgId)
-                .gte('created_at', todayStart.toISOString()),
+                .eq('provider_id', clinicianId)
+                .eq('status', 'signed')
+                .gte('signed_at', todayStart),
             supabase
-                .from('encounters')
+                .from('notes')
                 .select('*', { count: 'exact', head: true })
                 .eq('organization_id', orgId)
-                .in('status', ['scheduled', 'in_progress']),
+                .eq('provider_id', clinicianId)
+                .eq('status', 'draft'),
         ]);
-
-        const activePatients = patientsResult.count;
-        const todayNotes = notesResult.count;
-        const pendingEncounters = encountersResult.count;
 
         return NextResponse.json({
             stats: {
-                activePatients: activePatients ?? 0,
-                todayNotes: todayNotes ?? 0,
-                pendingEncounters: pendingEncounters ?? 0,
+                activePatients: patientsResult.count ?? 0,
+                signedToday: signedTodayResult.count ?? 0,
+                unfinishedNotes: unfinishedResult.count ?? 0,
             },
         });
     } catch (error) {

@@ -371,6 +371,17 @@ Replace with bracketed severity labels consistent with the note-body treatment. 
 - [ ] Dashboard stat cards lack visual affordance that they're clickable. UX polish — add hover state or subtle arrow icon so users know the cards navigate. Minor, non-blocking.
 - [ ] Notes page URL status filter support. `/notes` page uses tab-based state only (All Notes / Signed / Drafts) and ignores URL query params for cards-driven entry points. Dashboard "Today's Notes" card originally tried `/notes?status=completed` which broke because: (a) the tab UI only recognizes `signed` / `draft`, (b) `"completed"` isn't a valid note status enum accepted by `/api/notes`. Either add `useSearchParams` support to `/notes` with the actual valid statuses, or remove URL-filter-style entry points into `/notes`. Same architectural pattern as the "Pending Encounters" bug already on roadmap.
 
+### Dashboard stats follow-ups (from 2026-04-20 overhaul)
+
+- [ ] Patient↔clinician assignment. No `provider_id` / `primary_provider_id` column on `patients` and no join table exists. Active Patients card is therefore still organization-scoped despite the product desire to show each clinician's panel. Add either a direct column or a `patient_providers` join table, then switch the Active Patients query to clinician-scoped.
+- [ ] `count: 'exact'` on three tables per dashboard load is a latency risk at scale. Confirm indexes exist on the filter tuples used: `(organization_id, status)` on `patients`, `(organization_id, provider_id, status, signed_at)` and `(organization_id, provider_id, status)` on `notes`. Validate query plans at N=10k+ notes per clinician.
+- [ ] RLS policy audit. API-level scoping is the only visible safety boundary on the stats endpoint. Confirm Supabase RLS policies exist on `patients` and `notes` that enforce `organization_id` and `provider_id` filtering at the DB level.
+- [ ] Timezone as user profile field. Currently using browser-detected TZ, which works but drifts if a clinician travels. Add an optional profile override so clinicians can pin a clinic timezone regardless of device.
+- [ ] Admin dashboard with org-wide stats. Dashboard is now clinician-scoped for notes. Create a separate dashboard for `BUSINESS_ADMIN` / `PRACTICE_MANAGER` roles that shows org-wide numbers.
+- [ ] Reconciliation workflow for no-show encounters. Previous "Pending Encounters" card inadvertently surfaced stale scheduled encounters never marked completed or cancelled. Clinic operations still needs a way to surface and reconcile these.
+- [ ] Add a calendar/schedule widget. The old "Pending Encounters" card was trying to answer "what's coming up?" — still a real clinician question, but belongs in a schedule view, not a pending count.
+- [ ] `src/lib/data/encounters.ts:124,188` uses `notes:clinical_notes(*)` Supabase relational-embed syntax. The rest of the app writes to a table named `notes`, not `clinical_notes`. Either this path silently returns nothing, or there's a view/alias we haven't documented. Audit and fix or remove.
+
 ---
 
 ## How to return to this document
