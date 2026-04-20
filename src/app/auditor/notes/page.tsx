@@ -45,7 +45,7 @@ export default function AuditorNotesPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedNote, setSelectedNote] = useState<ReviewNote | null>(null);
     const [reviewFeedback, setReviewFeedback] = useState("");
-    const [reviewAction, setReviewAction] = useState<"approve" | "needs_revision" | null>(null);
+    const [reviewAction, setReviewAction] = useState<"approve" | "request_revision" | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>("pending_review");
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -74,9 +74,9 @@ export default function AuditorNotesPage() {
         fetchNotes();
     }, [fetchNotes]);
 
-    const handleReview = async (action: "approve" | "needs_revision") => {
+    const handleReview = async (action: "approve" | "request_revision") => {
         if (!selectedNote) return;
-        if (action === "needs_revision" && !reviewFeedback.trim()) {
+        if (action === "request_revision" && !reviewFeedback.trim()) {
             setError("Feedback is required when requesting revision");
             setTimeout(() => setError(null), 3000);
             return;
@@ -86,7 +86,7 @@ export default function AuditorNotesPage() {
             const res = await fetch(`/api/notes/${selectedNote.id}/review`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action, feedback: reviewFeedback }),
+                body: JSON.stringify({ action, comments: reviewFeedback }),
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -360,7 +360,7 @@ export default function AuditorNotesPage() {
                                                 Approve for Billing
                                             </button>
                                             <button
-                                                onClick={() => setReviewAction("needs_revision")}
+                                                onClick={() => setReviewAction("request_revision")}
                                                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-xl font-bold hover:bg-red-100 border border-red-200 transition-colors"
                                             >
                                                 <AlertTriangle className="h-4 w-4" />
@@ -370,7 +370,7 @@ export default function AuditorNotesPage() {
                                     )}
 
                                     {/* Revision Feedback Form */}
-                                    {reviewAction === "needs_revision" && (
+                                    {reviewAction === "request_revision" && (
                                         <div className="bg-red-50 rounded-xl p-4 space-y-3">
                                             <label className="block font-bold text-sm text-red-700">
                                                 What needs to be corrected?
@@ -384,7 +384,7 @@ export default function AuditorNotesPage() {
                                             />
                                             <div className="flex gap-2">
                                                 <button
-                                                    onClick={() => handleReview("needs_revision")}
+                                                    onClick={() => handleReview("request_revision")}
                                                     disabled={submitting || !reviewFeedback.trim()}
                                                     className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 disabled:opacity-50"
                                                 >
