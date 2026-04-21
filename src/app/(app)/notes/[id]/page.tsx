@@ -125,26 +125,32 @@ export default function NotePage() {
 
     const handleSubmitForReview = async () => {
         if (!note) return;
+        if (signing) return; // idempotent — ignore rapid double-clicks
+        setSigning(true);
         try {
-            setSigning(true);
             const response = await fetch(`/api/notes/${id}/sign`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
             });
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to sign note');
+                let message = 'Failed to sign note';
+                try {
+                    const data = await response.json();
+                    if (data?.error) message = data.error;
+                } catch {
+                    // leave default message
+                }
+                setError(message);
+                setTimeout(() => setError(null), 4000);
+                return; // keep the modal open on error
             }
-            const data = await response.json();
-            setNote(data.note);
-            setSuccessMessage(
-                data.warning
-                    ? `Note signed — ${data.warning}`
-                    : 'Note signed and sent for auditor review.',
-            );
-            setTimeout(() => setSuccessMessage(null), 4000);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to sign note');
-            setTimeout(() => setError(null), 3000);
+            setShowSubmitModal(false);
+            setSuccessMessage('Sent for review');
+            router.push('/notes');
+        } catch {
+            setError('Failed to sign note');
+            setTimeout(() => setError(null), 4000);
         } finally {
             setSigning(false);
         }
@@ -718,6 +724,9 @@ export default function NotePage() {
                 confirmText="Sign & Send for Review"
                 variant="primary"
                 icon="sign"
+                asyncConfirm
+                isLoading={signing}
+                loadingText="Sending…"
             />
             <ConfirmModal
                 isOpen={showClaimModal}

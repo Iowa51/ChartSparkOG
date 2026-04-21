@@ -13,6 +13,16 @@ interface ConfirmModalProps {
     cancelText?: string;
     variant?: "danger" | "warning" | "primary";
     icon?: "delete" | "sign" | "warning";
+    // When true, the modal stays open after the confirm click, the buttons are
+    // disabled, and the confirm button shows a "Sending…" label. The caller is
+    // responsible for calling onClose once the async work finishes. Used for
+    // async confirms that need to surface errors without the modal vanishing.
+    isLoading?: boolean;
+    loadingText?: string;
+    // When true, the confirm click no longer auto-closes the modal. The caller
+    // must call onClose themselves once the async work finishes (or leave the
+    // modal open on error). When undefined/false, legacy behaviour applies.
+    asyncConfirm?: boolean;
 }
 
 export default function ConfirmModal({
@@ -25,6 +35,9 @@ export default function ConfirmModal({
     cancelText = "Cancel",
     variant = "danger",
     icon = "warning",
+    isLoading = false,
+    loadingText = "Sending…",
+    asyncConfirm = false,
 }: ConfirmModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +60,7 @@ export default function ConfirmModal({
     if (!isOpen) return null;
 
     const handleBackdropClick = (e: React.MouseEvent) => {
+        if (isLoading) return;
         if (e.target === e.currentTarget) onClose();
     };
 
@@ -111,18 +125,23 @@ export default function ConfirmModal({
                 <div className="flex items-center justify-end gap-3 p-5 border-t border-border bg-muted/30 rounded-b-2xl">
                     <button
                         onClick={onClose}
-                        className="px-5 py-2.5 rounded-xl font-medium text-foreground bg-card border border-border hover:bg-muted transition-colors"
+                        disabled={isLoading}
+                        className="px-5 py-2.5 rounded-xl font-medium text-foreground bg-card border border-border hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {cancelText}
                     </button>
                     <button
                         onClick={() => {
+                            if (isLoading) return;
                             onConfirm();
-                            onClose();
+                            if (!asyncConfirm) {
+                                onClose();
+                            }
                         }}
-                        className={`px-5 py-2.5 rounded-xl font-bold shadow-lg transition-all active:scale-95 ${styles.button}`}
+                        disabled={isLoading}
+                        className={`px-5 py-2.5 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed ${styles.button}`}
                     >
-                        {confirmText}
+                        {isLoading ? loadingText : confirmText}
                     </button>
                 </div>
             </div>
