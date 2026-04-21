@@ -26,6 +26,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/ui/ConfirmModal";
 
+console.warn('[SIGN-DIAG] notes/[id]/page.tsx module loaded, version 2026-04-21-diag-1');
+
 interface Note {
     id: string;
     patient_id: string;
@@ -124,35 +126,65 @@ export default function NotePage() {
     }, [actionParam, note]);
 
     const handleSubmitForReview = async () => {
-        if (!note) return;
-        if (signing) return; // idempotent — ignore rapid double-clicks
+        // DIAGNOSTIC: remove after runtime testing confirms sign flow works
+        console.warn('[SIGN-DIAG] handleSubmitForReview called', {
+            hasNote: !!note,
+            noteId: note?.id,
+            signing,
+            timestamp: new Date().toISOString(),
+        });
+
+        if (!note) {
+            console.warn('[SIGN-DIAG] early return: no note');
+            return;
+        }
+        if (signing) {
+            console.warn('[SIGN-DIAG] early return: signing=true (stuck state)');
+            return;
+        }
+
         setSigning(true);
+        console.warn('[SIGN-DIAG] setSigning(true) called, about to fetch');
+
         try {
             const response = await fetch(`/api/notes/${id}/sign`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({}),
             });
+
+            console.warn('[SIGN-DIAG] fetch returned', {
+                status: response.status,
+                ok: response.ok,
+            });
+
             if (!response.ok) {
                 let message = 'Failed to sign note';
                 try {
                     const data = await response.json();
+                    console.warn('[SIGN-DIAG] non-ok response body', data);
                     if (data?.error) message = data.error;
-                } catch {
-                    // leave default message
+                } catch (parseErr) {
+                    console.warn('[SIGN-DIAG] failed to parse error response', parseErr);
                 }
                 setError(message);
                 setTimeout(() => setError(null), 4000);
-                return; // keep the modal open on error
+                return;
             }
+
+            const body = await response.json();
+            console.warn('[SIGN-DIAG] 200 response body', body);
+
             setShowSubmitModal(false);
             setSuccessMessage('Sent for review');
             router.push('/notes');
-        } catch {
+        } catch (err) {
+            console.warn('[SIGN-DIAG] fetch threw', err);
             setError('Failed to sign note');
             setTimeout(() => setError(null), 4000);
         } finally {
             setSigning(false);
+            console.warn('[SIGN-DIAG] setSigning(false) finally block');
         }
     };
 
