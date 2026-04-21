@@ -1094,7 +1094,7 @@ Prognosis: Favorable with continued treatment adherence.`;
             type: noteType,
             content,
             template_id: undefined,
-            is_signed: markComplete,
+            status: markComplete ? "completed" : "draft",
             cpt_codes: cptCodesToPersist,
             icd10_codes: icd10CodesToPersist,
           };

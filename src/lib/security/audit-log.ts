@@ -30,6 +30,8 @@ export type AuditEventType =
     | 'NOTE_SIGN'
     | 'NOTE_APPROVED'
     | 'NOTE_REVISION_REQUESTED'
+    | 'SUBMISSION_CREATE'
+    | 'SUBMISSION_CREATE_FAILED'
     | 'VITALS_VIEW'
     | 'VITALS_CREATE'
     | 'SCREENING_VIEW'

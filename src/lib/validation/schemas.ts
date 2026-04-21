@@ -186,8 +186,6 @@ export const NoteCreateSchema = z.object({
     type: z.enum(['progress', 'intake', 'soap', 'discharge', 'other']).optional().default('progress'),
     content: z.string().min(1, 'Note content required').max(50000),
     template_id: UUIDSchema.optional().nullable(),
-    is_signed: z.boolean().optional(),
-    is_locked: z.boolean().optional(),
     status: z.enum(['draft', 'completed', 'signed', 'amended', 'pending_review', 'approved', 'needs_revision']).optional(),
     cpt_codes: z.array(z.string().max(20)).max(20).optional(),
     icd10_codes: z.array(z.string().max(20)).max(20).optional(),
@@ -199,15 +197,12 @@ export const NoteCreateSchema = z.object({
 });
 
 // Update schema: only include fields that are actual DB columns on clinical_notes.
-// is_signed / signed_at / is_locked ARE real columns (see sign route at
-// src/app/api/notes/[id]/sign/route.ts:94-100) and are accepted here so the
-// submit-to-insurance PATCH path can write them consistently with the sign
-// button path. Fields that aren't columns (e.g. `type`) are still excluded.
+// Production clinical_notes has status, signed_at, content, SOAP fields, cpt_codes,
+// icd10_codes, template_id, encounter_id. It does NOT have is_signed, is_locked,
+// signed_by, locked_at — those columns were never migrated.
 export const NoteUpdateSchema = z.object({
     content: z.string().min(1).max(50000).optional(),
     status: z.enum(['draft', 'completed', 'signed', 'amended', 'pending_review', 'approved', 'needs_revision']).optional(),
-    is_signed: z.boolean().optional(),
-    is_locked: z.boolean().optional(),
     signed_at: z.string().datetime().optional().nullable(),
     cpt_codes: z.array(z.string().max(20)).max(20).optional(),
     icd10_codes: z.array(z.string().max(20)).max(20).optional(),

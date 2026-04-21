@@ -38,7 +38,6 @@ interface Note {
     content?: string;
     status: string;
     signed_at?: string;
-    signed_by?: string;
     created_at: string;
     updated_at: string;
     cpt_codes?: string[];
@@ -204,7 +203,6 @@ export default function NotePage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     status: 'signed',
-                    is_signed: true,
                     signed_at: new Date().toISOString(),
                 }),
             });
