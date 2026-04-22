@@ -47,6 +47,10 @@ interface CallSession {
     patientLink: string;
     patientName: string;
     providerSessionToken?: string;
+    // Direct Daily.co credentials returned from create-room — bypass join-session entirely
+    // when present to avoid cross-instance HMAC validation issues.
+    roomUrl?: string;
+    meetingToken?: string;
 }
 
 interface RawAppointment {
@@ -189,6 +193,8 @@ export default function TelehealthPage() {
                 patientLink: patientLink,
                 patientName: patientName,
                 providerSessionToken: data.providerSessionToken,
+                roomUrl: data.roomUrl,
+                meetingToken: data.meetingToken,
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to start telehealth session");
@@ -420,6 +426,8 @@ export default function TelehealthPage() {
                                     userName="Provider"
                                     patientLink={callSession.patientLink}
                                     providerSessionToken={callSession.providerSessionToken}
+                                    roomUrl={callSession.roomUrl}
+                                    meetingToken={callSession.meetingToken}
                                     onLeave={handleEndCall}
                                     onError={(err) => setError(err)}
                                 />

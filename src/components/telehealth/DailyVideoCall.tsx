@@ -21,6 +21,11 @@ interface DailyVideoCallProps {
     userName?: string;
     patientLink?: string;
     providerSessionToken?: string;
+    // When roomUrl is supplied (provider flow), we skip /api/telehealth/join-session
+    // entirely and drive the Daily call directly. Avoids HMAC validation drift across
+    // serverless instances. Patient flow still falls through to the join-session fetch.
+    roomUrl?: string;
+    meetingToken?: string;
     onLeave?: () => void;
     onError?: (error: string) => void;
 }
@@ -44,6 +49,8 @@ export default function DailyVideoCall({
     userName = "Provider",
     patientLink,
     providerSessionToken,
+    roomUrl,
+    meetingToken,
     onLeave,
     onError
 }: DailyVideoCallProps) {
@@ -144,9 +151,20 @@ export default function DailyVideoCall({
         let isMounted = true;
 
         const loadSession = async () => {
+            // Provider flow: room credentials passed directly from create-room — bypass
+            // join-session to avoid cross-instance HMAC validation drift.
+            if (roomUrl) {
+                sessionAccessRef.current = {
+                    roomUrl,
+                    token: meetingToken,
+                };
+                setSessionReady(true);
+                return;
+            }
+
             try {
-                // Provider token is delivered via HTTP-only cookie when same-site allows it.
-                // Body fallback covers cross-site contexts where the cookie may be dropped.
+                // Patient flow (or legacy): resolve credentials via join-session.
+                // Cookie is primary; body fallback covers cross-site contexts.
                 const response = await fetch("/api/telehealth/join-session", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -177,7 +195,7 @@ export default function DailyVideoCall({
         return () => {
             isMounted = false;
         };
-    }, [onError, providerSessionToken]);
+    }, [onError, providerSessionToken, roomUrl, meetingToken]);
 
     useEffect(() => {
         let isMounted = true;

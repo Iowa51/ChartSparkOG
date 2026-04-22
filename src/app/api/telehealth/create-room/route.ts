@@ -142,6 +142,8 @@ async function handler(context: AuthContext) {
         appointmentId,
         patientInvitePath: `/api/telehealth/accept-invite?token=${encodeURIComponent(demoInviteToken)}`,
         providerSessionToken: providerSessionTokenRef,
+        roomUrl,
+        meetingToken: "demo-provider-token",
         isDemo: true,
       });
       demoResponse.cookies.set("telehealth_provider_session", providerSessionTokenRef, {
@@ -291,6 +293,8 @@ async function handler(context: AuthContext) {
       appointmentId,
       patientInvitePath: `/api/telehealth/accept-invite?token=${encodeURIComponent(patientInviteToken)}`,
       providerSessionToken: providerSessionTokenRef,
+      roomUrl,
+      meetingToken: providerToken.token,
     });
     response.cookies.set("telehealth_provider_session", providerSessionTokenRef, {
       httpOnly: true,
