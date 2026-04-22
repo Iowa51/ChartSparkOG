@@ -1,0 +1,62 @@
+﻿
+> src\app\(app)\notes\[id]\page.tsx:27:import ConfirmModal from "@/components/ui/ConfirmModal";
+  src\app\(app)\notes\[id]\page.tsx:28:
+  src\app\(app)\notes\[id]\page.tsx:29:interface Note {
+  src\app\(app)\notes\[id]\page.tsx:30:    id: string;
+  src\app\(app)\notes\[id]\page.tsx:31:    patient_id: string;
+  src\app\(app)\notes\[id]\page.tsx:32:    type?: string;
+  src\app\(app)\notes\[id]\page.tsx:33:    chief_complaint?: string;
+  src\app\(app)\notes\[id]\page.tsx:34:    subjective?: string;
+  src\app\(app)\notes\[id]\page.tsx:35:    objective?: string;
+  src\app\(app)\notes\[id]\page.tsx:36:    assessment?: string;
+  src\app\(app)\notes\[id]\page.tsx:37:    plan?: string;
+  src\app\(app)\notes\[id]\page.tsx:38:    content?: string;
+  src\app\(app)\notes\[id]\page.tsx:39:    status: string;
+  src\app\(app)\notes\[id]\page.tsx:40:    signed_at?: string;
+  src\app\(app)\notes\[id]\page.tsx:41:    created_at: string;
+  src\app\(app)\notes\[id]\page.tsx:42:    updated_at: string;
+  src\app\(app)\notes\[id]\page.tsx:43:    cpt_codes?: string[];
+  src\app\(app)\notes\[id]\page.tsx:44:    icd10_codes?: string[];
+  src\app\(app)\notes\[id]\page.tsx:45:    reviewer_feedback?: string;
+> src\app\(app)\notes\[id]\page.tsx:718:            <ConfirmModal
+  src\app\(app)\notes\[id]\page.tsx:719:                isOpen={showSubmitModal}
+  src\app\(app)\notes\[id]\page.tsx:720:                onClose={() => setShowSubmitModal(false)}
+  src\app\(app)\notes\[id]\page.tsx:721:                onConfirm={handleSubmitForReview}
+  src\app\(app)\notes\[id]\page.tsx:722:                title="Sign & Send for Review"
+  src\app\(app)\notes\[id]\page.tsx:723:                message="This will sign the note and send it to an auditor for 
+review. You won't be able to edit the note until the auditor responds. Make sure all CPT and ICD-10 codes are correct 
+before continuing."
+  src\app\(app)\notes\[id]\page.tsx:724:                confirmText="Sign & Send for Review"
+  src\app\(app)\notes\[id]\page.tsx:725:                variant="primary"
+  src\app\(app)\notes\[id]\page.tsx:726:                icon="sign"
+  src\app\(app)\notes\[id]\page.tsx:727:                asyncConfirm
+  src\app\(app)\notes\[id]\page.tsx:728:                isLoading={signing}
+  src\app\(app)\notes\[id]\page.tsx:729:                loadingText="Sending…"
+  src\app\(app)\notes\[id]\page.tsx:730:            />
+> src\app\(app)\notes\[id]\page.tsx:731:            <ConfirmModal
+  src\app\(app)\notes\[id]\page.tsx:732:                isOpen={showClaimModal}
+  src\app\(app)\notes\[id]\page.tsx:733:                onClose={() => setShowClaimModal(false)}
+  src\app\(app)\notes\[id]\page.tsx:734:                onConfirm={handleSubmitClaim}
+  src\app\(app)\notes\[id]\page.tsx:735:                title="Submit Claim"
+  src\app\(app)\notes\[id]\page.tsx:736:                message="This will generate a claim and submit it for billing. 
+The note will be signed and locked permanently."
+  src\app\(app)\notes\[id]\page.tsx:737:                confirmText="Submit Claim"
+  src\app\(app)\notes\[id]\page.tsx:738:                variant="primary"
+  src\app\(app)\notes\[id]\page.tsx:739:                icon="sign"
+  src\app\(app)\notes\[id]\page.tsx:740:            />
+> src\app\(app)\notes\[id]\page.tsx:741:            <ConfirmModal
+  src\app\(app)\notes\[id]\page.tsx:742:                isOpen={showDeleteModal}
+  src\app\(app)\notes\[id]\page.tsx:743:                onClose={() => setShowDeleteModal(false)}
+  src\app\(app)\notes\[id]\page.tsx:744:                onConfirm={handleDeleteNote}
+  src\app\(app)\notes\[id]\page.tsx:745:                title="Delete Note"
+  src\app\(app)\notes\[id]\page.tsx:746:                message="Are you sure you want to delete this note? This 
+action cannot be undone."
+  src\app\(app)\notes\[id]\page.tsx:747:                confirmText="Delete"
+  src\app\(app)\notes\[id]\page.tsx:748:                variant="danger"
+  src\app\(app)\notes\[id]\page.tsx:749:                icon="delete"
+  src\app\(app)\notes\[id]\page.tsx:750:            />
+  src\app\(app)\notes\[id]\page.tsx:751:        </div>
+  src\app\(app)\notes\[id]\page.tsx:752:    );
+  src\app\(app)\notes\[id]\page.tsx:753:}
+
+

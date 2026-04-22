@@ -1,0 +1,54 @@
+﻿
+  src\app\(app)\notes\[id]\page.tsx:76:    const [note, setNote] = useState<Note | null>(null);
+  src\app\(app)\notes\[id]\page.tsx:77:    const [loading, setLoading] = useState(true);
+> src\app\(app)\notes\[id]\page.tsx:78:    const [signing, setSigning] = useState(false);
+  src\app\(app)\notes\[id]\page.tsx:79:    const [deleting, setDeleting] = useState(false);
+  src\app\(app)\notes\[id]\page.tsx:80:    const [submittingClaim, setSubmittingClaim] = useState(false);
+  src\app\(app)\notes\[id]\page.tsx:124:    }, [actionParam, note]);
+  src\app\(app)\notes\[id]\page.tsx:125:
+> src\app\(app)\notes\[id]\page.tsx:126:    const handleSubmitForReview = async () => {
+  src\app\(app)\notes\[id]\page.tsx:127:        if (!note) return;
+> src\app\(app)\notes\[id]\page.tsx:128:        if (signing) return; // idempotent — ignore rapid double-clicks
+> src\app\(app)\notes\[id]\page.tsx:129:        setSigning(true);
+  src\app\(app)\notes\[id]\page.tsx:130:        try {
+  src\app\(app)\notes\[id]\page.tsx:131:            const response = await fetch(`/api/notes/${id}/sign`, {
+  src\app\(app)\notes\[id]\page.tsx:153:            setTimeout(() => setError(null), 4000);
+  src\app\(app)\notes\[id]\page.tsx:154:        } finally {
+> src\app\(app)\notes\[id]\page.tsx:155:            setSigning(false);
+  src\app\(app)\notes\[id]\page.tsx:156:        }
+  src\app\(app)\notes\[id]\page.tsx:157:    };
+  src\app\(app)\notes\[id]\page.tsx:160:        if (!note) return;
+  src\app\(app)\notes\[id]\page.tsx:161:        try {
+> src\app\(app)\notes\[id]\page.tsx:162:            setSigning(true);
+  src\app\(app)\notes\[id]\page.tsx:163:            const response = await fetch(`/api/notes/${id}/sign`, {
+  src\app\(app)\notes\[id]\page.tsx:164:                method: 'POST',
+  src\app\(app)\notes\[id]\page.tsx:176:            setTimeout(() => setError(null), 3000);
+  src\app\(app)\notes\[id]\page.tsx:177:        } finally {
+> src\app\(app)\notes\[id]\page.tsx:178:            setSigning(false);
+  src\app\(app)\notes\[id]\page.tsx:179:        }
+  src\app\(app)\notes\[id]\page.tsx:180:    };
+  src\app\(app)\notes\[id]\page.tsx:408:                            <button
+  src\app\(app)\notes\[id]\page.tsx:409:                                onClick={() => setShowSubmitModal(true)}
+> src\app\(app)\notes\[id]\page.tsx:410:                                disabled={signing}
+  src\app\(app)\notes\[id]\page.tsx:411:                                className="flex items-center gap-2 px-5 py-2 
+bg-primary text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 
+hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+  src\app\(app)\notes\[id]\page.tsx:412:                            >
+> src\app\(app)\notes\[id]\page.tsx:413:                                {signing ? (
+  src\app\(app)\notes\[id]\page.tsx:414:                                    <>
+  src\app\(app)\notes\[id]\page.tsx:415:                                        <Loader2 className="h-4 w-4 
+animate-spin" />
+  src\app\(app)\notes\[id]\page.tsx:719:                isOpen={showSubmitModal}
+  src\app\(app)\notes\[id]\page.tsx:720:                onClose={() => setShowSubmitModal(false)}
+> src\app\(app)\notes\[id]\page.tsx:721:                onConfirm={handleSubmitForReview}
+  src\app\(app)\notes\[id]\page.tsx:722:                title="Sign & Send for Review"
+  src\app\(app)\notes\[id]\page.tsx:723:                message="This will sign the note and send it to an auditor for 
+review. You won't be able to edit the note until the auditor responds. Make sure all CPT and ICD-10 codes are correct 
+before continuing."
+  src\app\(app)\notes\[id]\page.tsx:726:                icon="sign"
+  src\app\(app)\notes\[id]\page.tsx:727:                asyncConfirm
+> src\app\(app)\notes\[id]\page.tsx:728:                isLoading={signing}
+  src\app\(app)\notes\[id]\page.tsx:729:                loadingText="Sending…"
+  src\app\(app)\notes\[id]\page.tsx:730:            />
+
+
