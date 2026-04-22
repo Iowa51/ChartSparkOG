@@ -109,7 +109,7 @@ export default function TelehealthPage() {
 
                     const timeStr = aptDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-                    if (apt.status === "completed" || apt.status === "cancelled" || aptDate < now) {
+                    if (apt.status === "completed" || apt.status === "cancelled") {
                         past.push({
                             id: apt.id,
                             patientName,
@@ -117,8 +117,9 @@ export default function TelehealthPage() {
                             duration: durationStr,
                             type: apt.appointment_type || "Session",
                         });
-                    } else {
-                        // "ready" if the appointment is within the next 15 minutes or already started today
+                    } else if (isToday(apt.appointment_datetime) || aptDate > now) {
+                        // Today (any time) or future → upcoming so clinicians can start late calls.
+                        // "ready" when time has passed or is within 15 min of start.
                         const minutesUntil = (aptDate.getTime() - now.getTime()) / 60000;
                         const aptStatus = minutesUntil <= 15 ? "ready" : "scheduled";
 
@@ -129,6 +130,14 @@ export default function TelehealthPage() {
                             date: dateLabel,
                             duration: durationStr,
                             status: aptStatus,
+                            type: apt.appointment_type || "Session",
+                        });
+                    } else {
+                        past.push({
+                            id: apt.id,
+                            patientName,
+                            date: aptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                            duration: durationStr,
                             type: apt.appointment_type || "Session",
                         });
                     }
