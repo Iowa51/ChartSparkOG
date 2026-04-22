@@ -332,16 +332,19 @@ export default function TelehealthPage() {
                     </Link>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                     {/* Upcoming Appointments List */}
-                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
-                        <div className="px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col max-h-[640px]">
+                        <div className="px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20 flex-shrink-0">
                             <div className="flex items-center gap-3">
                                 <Calendar className="h-5 w-5 text-primary" />
                                 <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Upcoming Sessions</h2>
                             </div>
+                            {upcomingAppointments.length > 0 && (
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{upcomingAppointments.length}</span>
+                            )}
                         </div>
-                        <div className="p-8 space-y-4">
+                        <div className="p-8 space-y-4 overflow-y-auto flex-1">
                             {loadingAppointments ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -392,7 +395,7 @@ export default function TelehealthPage() {
                     </div>
 
                     {/* Video Call Interface */}
-                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col min-h-[500px] max-h-[640px]">
                         <div className="px-8 py-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20">
                             <div className="flex items-center gap-3">
                                 <Video className="h-5 w-5 text-primary" />

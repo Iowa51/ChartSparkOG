@@ -1,6 +1,7 @@
 "use client";
 
 import { Header } from "@/components/layout";
+import ConfirmModal from "@/components/ui/ConfirmModal";
 import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -42,6 +43,7 @@ export default function CalendarPage() {
     const [dayModal, setDayModal] = useState<{ dateLabel: string; appts: Appointment[] } | null>(null);
     const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
     const [savingEdit, setSavingEdit] = useState(false);
+    const [deleteCandidate, setDeleteCandidate] = useState<Appointment | null>(null);
     const [editForm, setEditForm] = useState({
         appointment_datetime: "",
         duration_minutes: "30",
@@ -282,12 +284,6 @@ export default function CalendarPage() {
 
     const handleDeleteAppointment = async (appt: Appointment) => {
         if (deleting) return;
-        if (typeof window !== 'undefined') {
-            const confirmed = window.confirm(
-                `Delete this appointment for ${appt.patientName}? This action cannot be undone.`,
-            );
-            if (!confirmed) return;
-        }
         setDeleting(true);
         try {
             const response = await fetch(`/api/appointments/${appt.id}`, {
@@ -305,6 +301,7 @@ export default function CalendarPage() {
                 flashError(message);
                 return;
             }
+            setDeleteCandidate(null);
             setSelectedAppt(null);
             flashSuccess('Appointment deleted');
             await fetchAppointments();
@@ -730,10 +727,10 @@ export default function CalendarPage() {
                             </div>
                             <div className="pt-2">
                                 <button
-                                    onClick={() => selectedAppt && handleDeleteAppointment(selectedAppt)}
+                                    onClick={() => selectedAppt && setDeleteCandidate(selectedAppt)}
                                     disabled={cancelling || deleting}
                                     className="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                    title="Permanently delete this appointment (admin only)"
+                                    title="Permanently delete this appointment"
                                 >
                                     {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                     {deleting ? 'Deleting...' : 'Delete Permanently'}
@@ -875,6 +872,29 @@ export default function CalendarPage() {
                     </div>
                 </div>
             )}
+
+            {/* Delete Confirmation */}
+            <ConfirmModal
+                isOpen={!!deleteCandidate}
+                onClose={() => {
+                    if (!deleting) setDeleteCandidate(null);
+                }}
+                onConfirm={() => {
+                    if (deleteCandidate) handleDeleteAppointment(deleteCandidate);
+                }}
+                title="Delete Appointment"
+                message={
+                    deleteCandidate
+                        ? `Permanently delete the appointment for ${deleteCandidate.patientName} on ${new Date(deleteCandidate.date).toLocaleDateString()} at ${deleteCandidate.time}? This action cannot be undone.`
+                        : "This action cannot be undone."
+                }
+                confirmText="Delete Permanently"
+                variant="danger"
+                icon="delete"
+                isLoading={deleting}
+                loadingText="Deleting…"
+                asyncConfirm
+            />
 
             {/* Toast Messages */}
             {successMessage && (
