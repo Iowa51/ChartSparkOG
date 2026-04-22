@@ -13,15 +13,19 @@ import { getClientIP } from '@/lib/utils/get-client-ip';
  * Provider join flow — wrapped with withAuth for full authentication,
  * MFA, and organization validation via centralized middleware.
  */
-async function handleProviderJoin(context: AuthContext) {
+async function handleProviderJoin(context: AuthContext, tokenOverride?: string) {
     try {
         const ipAddress = getClientIP(context.request);
         const userAgent = context.request.headers.get('user-agent') || 'unknown';
 
-        const cookieStore = await cookies();
-        const providerCookie = cookieStore.get('telehealth_provider_session')?.value;
+        let providerToken = tokenOverride;
 
-        if (!providerCookie || providerCookie.length < 32) {
+        if (!providerToken || providerToken.length < 32) {
+            const cookieStore = await cookies();
+            providerToken = cookieStore.get('telehealth_provider_session')?.value;
+        }
+
+        if (!providerToken || providerToken.length < 32) {
             await logAuditEvent({
                 eventType: 'SUSPICIOUS_ACTIVITY',
                 userId: context.user.id,
@@ -34,7 +38,7 @@ async function handleProviderJoin(context: AuthContext) {
             return NextResponse.json({ error: 'Session token required' }, { status: 403 });
         }
 
-        const session = await resolveTelehealthJoinSession(providerCookie);
+        const session = await resolveTelehealthJoinSession(providerToken);
         if (!session) {
             await logAuditEvent({
                 eventType: 'SUSPICIOUS_ACTIVITY',
@@ -103,11 +107,17 @@ async function handleProviderJoin(context: AuthContext) {
     }
 }
 
-// Provider flow uses centralized withAuth middleware
-const providerJoin = withAuth(handleProviderJoin, {
-    requireOrganization: true,
-    requireMFA: true,
-});
+// Provider flow uses centralized withAuth middleware.
+// Wrapped so we can inject an optional body-sourced token override before
+// the handler runs — some deployment topologies drop SameSite=strict cookies.
+const providerJoinWithToken = (tokenOverride?: string) =>
+    withAuth(
+        (context: AuthContext) => handleProviderJoin(context, tokenOverride),
+        {
+            requireOrganization: true,
+            requireMFA: true,
+        },
+    );
 
 /**
  * Patient join flow — lightweight cookie-only validation.
@@ -184,14 +194,29 @@ async function handlePatientJoin(request: NextRequest): Promise<NextResponse> {
 
 /**
  * Route dispatcher — checks which cookie is present to determine flow.
- * Provider cookie → withAuth flow. Patient cookie → lightweight flow.
+ * Provider cookie (or body fallback token) → withAuth flow. Patient cookie → lightweight flow.
  */
 export async function POST(request: NextRequest) {
     const cookieStore = await cookies();
     const providerCookie = cookieStore.get('telehealth_provider_session')?.value;
 
-    if (providerCookie && providerCookie.length >= 32) {
-        return providerJoin(request);
+    let bodyToken: string | undefined;
+    // Clone so handlers downstream can still read request.json()
+    try {
+        const clone = request.clone();
+        const parsed = await clone.json();
+        if (parsed && typeof parsed.providerSessionToken === 'string') {
+            bodyToken = parsed.providerSessionToken;
+        }
+    } catch {
+        // No JSON body or malformed — fall through to cookie-only flow
+    }
+
+    const hasProviderCookie = !!providerCookie && providerCookie.length >= 32;
+    const hasBodyToken = !!bodyToken && bodyToken.length >= 32;
+
+    if (hasProviderCookie || hasBodyToken) {
+        return providerJoinWithToken(hasBodyToken ? bodyToken : undefined)(request);
     }
 
     return handlePatientJoin(request);

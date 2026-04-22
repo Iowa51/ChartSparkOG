@@ -1,7 +1,7 @@
 "use client";
 
 import { Header } from "@/components/layout";
-import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List, Loader2, AlertTriangle, Info } from "lucide-react";
+import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List, Loader2, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface Patient {
@@ -20,6 +20,8 @@ interface Appointment {
     status: string;
     date: string;
     notes: string;
+    datetimeIso: string;
+    durationMinutes: number;
 }
 
 export default function CalendarPage() {
@@ -33,9 +35,18 @@ export default function CalendarPage() {
 
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [infoMessage, setInfoMessage] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [cancelling, setCancelling] = useState(false);
+
+    const [dayModal, setDayModal] = useState<{ dateLabel: string; appts: Appointment[] } | null>(null);
+    const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
+    const [savingEdit, setSavingEdit] = useState(false);
+    const [editForm, setEditForm] = useState({
+        appointment_datetime: "",
+        duration_minutes: "30",
+        appointment_type: "initial",
+        notes: "",
+    });
 
     const [form, setForm] = useState({
         patient_id: "",
@@ -65,10 +76,6 @@ export default function CalendarPage() {
     const flashError = (msg: string) => {
         setErrorMessage(msg);
         setTimeout(() => setErrorMessage(null), 4000);
-    };
-    const flashInfo = (msg: string) => {
-        setInfoMessage(msg);
-        setTimeout(() => setInfoMessage(null), 4000);
     };
 
     const fetchAppointments = async () => {
@@ -103,6 +110,8 @@ export default function CalendarPage() {
                     status: apt.status || 'scheduled',
                     date: `${year}-${month}-${day}`,
                     notes: apt.notes || '',
+                    datetimeIso: apt.appointment_datetime,
+                    durationMinutes: apt.duration_minutes ?? 30,
                 };
             });
             setAppointments(mapped);
@@ -182,6 +191,61 @@ export default function CalendarPage() {
             flashError('Failed to schedule appointment');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const openEditModal = (appt: Appointment) => {
+        const dt = new Date(appt.datetimeIso);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const localValue = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+        setEditForm({
+            appointment_datetime: localValue,
+            duration_minutes: String(appt.durationMinutes),
+            appointment_type: appt.type,
+            notes: appt.notes || "",
+        });
+        setSelectedAppt(null);
+        setEditingAppt(appt);
+    };
+
+    const handleUpdateAppointment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingAppt || savingEdit) return;
+        if (!editForm.appointment_datetime) {
+            flashError('Please choose a date and time');
+            return;
+        }
+        setSavingEdit(true);
+        try {
+            const isoDatetime = new Date(editForm.appointment_datetime).toISOString();
+            const response = await fetch(`/api/appointments/${editingAppt.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    appointment_datetime: isoDatetime,
+                    duration_minutes: Number(editForm.duration_minutes),
+                    appointment_type: editForm.appointment_type,
+                    notes: editForm.notes || null,
+                }),
+            });
+            if (!response.ok) {
+                let message = 'Failed to update appointment';
+                try {
+                    const data = await response.json();
+                    if (data?.error) message = data.error;
+                } catch {
+                    // leave default
+                }
+                flashError(message);
+                return;
+            }
+            setEditingAppt(null);
+            flashSuccess('Appointment updated');
+            await fetchAppointments();
+        } catch {
+            flashError('Failed to update appointment');
+        } finally {
+            setSavingEdit(false);
         }
     };
 
@@ -354,11 +418,26 @@ export default function CalendarPage() {
                                 const day = i + 1;
                                 const appointments = getAppointmentsForDate(day);
                                 const dayIsToday = isToday(day);
+                                const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                                const cellDateLabel = cellDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+                                const openDayModal = () => {
+                                    if (appointments.length === 0) return;
+                                    setDayModal({ dateLabel: cellDateLabel, appts: appointments });
+                                };
 
                                 return (
                                     <div
                                         key={day}
-                                        className={`min-h-[100px] border-b border-r border-border p-2 transition-colors hover:bg-muted/30 ${dayIsToday ? 'bg-primary/5' : ''}`}
+                                        onClick={openDayModal}
+                                        role={appointments.length > 0 ? 'button' : undefined}
+                                        tabIndex={appointments.length > 0 ? 0 : undefined}
+                                        onKeyDown={(e) => {
+                                            if (appointments.length > 0 && (e.key === 'Enter' || e.key === ' ')) {
+                                                e.preventDefault();
+                                                openDayModal();
+                                            }
+                                        }}
+                                        className={`min-h-[100px] border-b border-r border-border p-2 transition-colors hover:bg-muted/30 ${dayIsToday ? 'bg-primary/5' : ''} ${appointments.length > 0 ? 'cursor-pointer' : ''}`}
                                     >
                                         <div className={`flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold mb-1 ${dayIsToday
                                             ? 'bg-primary text-primary-foreground'
@@ -370,7 +449,7 @@ export default function CalendarPage() {
                                             {appointments.slice(0, 2).map(apt => (
                                                 <button
                                                     key={apt.id}
-                                                    onClick={() => setSelectedAppt(apt)}
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedAppt(apt); }}
                                                     className={`w-full text-left px-2 py-1 rounded text-xs truncate ${apt.status === 'confirmed'
                                                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
                                                         : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
@@ -380,9 +459,13 @@ export default function CalendarPage() {
                                                 </button>
                                             ))}
                                             {appointments.length > 2 && (
-                                                <p className="text-xs text-muted-foreground px-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); openDayModal(); }}
+                                                    className="w-full text-left text-xs text-muted-foreground px-2 hover:text-primary hover:underline"
+                                                >
                                                     +{appointments.length - 2} more
-                                                </p>
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -595,7 +678,7 @@ export default function CalendarPage() {
                             </div>
                             <div className="flex gap-2 pt-4">
                                 <button
-                                    onClick={() => flashInfo('Edit functionality coming soon')}
+                                    onClick={() => selectedAppt && openEditModal(selectedAppt)}
                                     className="flex-1 px-4 py-2 border rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                                 >
                                     Edit
@@ -614,6 +697,138 @@ export default function CalendarPage() {
                 </div>
             )}
 
+            {/* Day Appointments Modal */}
+            {dayModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setDayModal(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-primary" />
+                                {dayModal.dateLabel}
+                            </h2>
+                            <button onClick={() => setDayModal(null)} className="text-slate-400 hover:text-slate-600">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            {dayModal.appts.length} appointment{dayModal.appts.length === 1 ? '' : 's'}
+                        </p>
+                        <div className="overflow-y-auto space-y-2 pr-1">
+                            {dayModal.appts.map(apt => (
+                                <button
+                                    key={apt.id}
+                                    onClick={() => { setDayModal(null); setSelectedAppt(apt); }}
+                                    className="w-full text-left p-4 border border-border rounded-xl hover:border-primary hover:bg-muted/30 transition-colors flex items-center gap-4"
+                                >
+                                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                                        <User className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <h3 className="font-bold text-foreground truncate">{apt.patientName}</h3>
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${apt.status === 'confirmed'
+                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                : apt.status === 'cancelled'
+                                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                }`}>
+                                                {apt.status}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {apt.time}</span>
+                                            <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> {apt.duration}</span>
+                                            <span className="italic truncate">{apt.type}</span>
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Appointment Modal */}
+            {editingAppt && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditingAppt(null)}>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <Calendar className="h-5 w-5 text-primary" />
+                                Edit Appointment
+                            </h2>
+                            <button onClick={() => setEditingAppt(null)} className="text-slate-400 hover:text-slate-600">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleUpdateAppointment} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Patient</label>
+                                <div className="w-full px-3 py-2 border rounded-lg bg-muted/30 text-muted-foreground">
+                                    {editingAppt.patientName}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">To reassign the patient, cancel this appointment and schedule a new one.</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Date & Time</label>
+                                <input
+                                    type="datetime-local"
+                                    required
+                                    value={editForm.appointment_datetime}
+                                    onChange={(e) => setEditForm(f => ({ ...f, appointment_datetime: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Duration</label>
+                                <select
+                                    value={editForm.duration_minutes}
+                                    onChange={(e) => setEditForm(f => ({ ...f, duration_minutes: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
+                                >
+                                    <option value="30">30 minutes</option>
+                                    <option value="50">50 minutes</option>
+                                    <option value="60">60 minutes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Appointment Type</label>
+                                <select
+                                    value={editForm.appointment_type}
+                                    onChange={(e) => setEditForm(f => ({ ...f, appointment_type: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
+                                >
+                                    <option value="initial">Initial Assessment</option>
+                                    <option value="followup">Follow-up</option>
+                                    <option value="therapy">Therapy Session</option>
+                                    <option value="medication">Medication Review</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Notes (optional)</label>
+                                <textarea
+                                    value={editForm.notes}
+                                    onChange={(e) => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 h-20 resize-none"
+                                    placeholder="Session notes or reminders..."
+                                />
+                            </div>
+                            <div className="flex gap-2 pt-4">
+                                <button type="button" onClick={() => setEditingAppt(null)} className="flex-1 px-4 py-2 border rounded-lg font-medium">Cancel</button>
+                                <button
+                                    type="submit"
+                                    disabled={savingEdit}
+                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    {savingEdit ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Toast Messages */}
             {successMessage && (
                 <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom duration-300">
@@ -628,14 +843,6 @@ export default function CalendarPage() {
                     <div className="flex items-center gap-3 px-5 py-3 bg-red-600 text-white rounded-xl shadow-lg">
                         <AlertTriangle className="h-5 w-5" />
                         <span className="font-medium">{errorMessage}</span>
-                    </div>
-                </div>
-            )}
-            {infoMessage && (
-                <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom duration-300">
-                    <div className="flex items-center gap-3 px-5 py-3 bg-slate-800 text-white rounded-xl shadow-lg">
-                        <Info className="h-5 w-5" />
-                        <span className="font-medium">{infoMessage}</span>
                     </div>
                 </div>
             )}

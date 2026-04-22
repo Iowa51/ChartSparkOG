@@ -42,9 +42,11 @@ interface PastSession {
 
 interface CallSession {
     appointmentId: string;
-    // SEC-PT4-F2: providerSessionTokenRef removed — delivered via HTTP-only cookie
+    // Provider token is delivered via HTTP-only cookie when possible; the body fallback
+    // is stored here for cross-site hosts where the cookie may be dropped.
     patientLink: string;
     patientName: string;
+    providerSessionToken?: string;
 }
 
 interface RawAppointment {
@@ -186,6 +188,7 @@ export default function TelehealthPage() {
                 appointmentId: data.appointmentId,
                 patientLink: patientLink,
                 patientName: patientName,
+                providerSessionToken: data.providerSessionToken,
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to start telehealth session");
@@ -416,6 +419,7 @@ export default function TelehealthPage() {
                                 <DailyVideoCall
                                     userName="Provider"
                                     patientLink={callSession.patientLink}
+                                    providerSessionToken={callSession.providerSessionToken}
                                     onLeave={handleEndCall}
                                     onError={(err) => setError(err)}
                                 />

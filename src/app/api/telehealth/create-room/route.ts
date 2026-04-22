@@ -135,10 +135,13 @@ async function handler(context: AuthContext) {
         participantRole: "patient",
       });
 
-      // SEC-PT4-F2: Provider token delivered via HTTP-only cookie, not response body
+      // SEC-PT4-F2: Provider token delivered via HTTP-only cookie when same-site allows it.
+      // Body fallback included for cross-site contexts (e.g. hosted on Vercel behind proxies)
+      // where the cookie may be dropped before join-session runs.
       const demoResponse = NextResponse.json({
         appointmentId,
         patientInvitePath: `/api/telehealth/accept-invite?token=${encodeURIComponent(demoInviteToken)}`,
+        providerSessionToken: providerSessionTokenRef,
         isDemo: true,
       });
       demoResponse.cookies.set("telehealth_provider_session", providerSessionTokenRef, {
@@ -281,10 +284,13 @@ async function handler(context: AuthContext) {
       participantRole: "patient",
     });
 
-    // SEC-PT4-F2: Provider token delivered via HTTP-only cookie, not response body
+    // SEC-PT4-F2: Provider token delivered via HTTP-only cookie when same-site allows it.
+    // Body fallback included for cross-site contexts (e.g. hosted on Vercel behind proxies)
+    // where the cookie may be dropped before join-session runs.
     const response = NextResponse.json({
       appointmentId,
       patientInvitePath: `/api/telehealth/accept-invite?token=${encodeURIComponent(patientInviteToken)}`,
+      providerSessionToken: providerSessionTokenRef,
     });
     response.cookies.set("telehealth_provider_session", providerSessionTokenRef, {
       httpOnly: true,

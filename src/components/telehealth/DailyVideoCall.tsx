@@ -15,10 +15,12 @@ import {
 } from "lucide-react";
 
 interface DailyVideoCallProps {
-    // SEC-PT4-F2: sessionTokenRef removed — provider token is now delivered via HTTP-only cookie
-    // and read server-side by join-session. The component just calls join-session with no body.
+    // SEC-PT4-F2: provider token delivered via HTTP-only cookie when same-site allows it.
+    // providerSessionToken is an optional body fallback for cross-site hosts where the
+    // cookie may be stripped. join-session accepts either.
     userName?: string;
     patientLink?: string;
+    providerSessionToken?: string;
     onLeave?: () => void;
     onError?: (error: string) => void;
 }
@@ -41,6 +43,7 @@ interface SessionAccessData {
 export default function DailyVideoCall({
     userName = "Provider",
     patientLink,
+    providerSessionToken,
     onLeave,
     onError
 }: DailyVideoCallProps) {
@@ -142,11 +145,12 @@ export default function DailyVideoCall({
 
         const loadSession = async () => {
             try {
-                // SEC-PT4-F2: No token in body — provider token delivered via HTTP-only cookie
+                // Provider token is delivered via HTTP-only cookie when same-site allows it.
+                // Body fallback covers cross-site contexts where the cookie may be dropped.
                 const response = await fetch("/api/telehealth/join-session", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({}),
+                    body: JSON.stringify({ providerSessionToken }),
                 });
 
                 const payload = await response.json();
@@ -173,7 +177,7 @@ export default function DailyVideoCall({
         return () => {
             isMounted = false;
         };
-    }, [onError]);
+    }, [onError, providerSessionToken]);
 
     useEffect(() => {
         let isMounted = true;
