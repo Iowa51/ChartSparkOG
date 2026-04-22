@@ -55,7 +55,7 @@ const telehealthCSP = {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' blob: data: https:",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://*.daily.co wss://*.daily.co https://*.wss.daily.co https://*.sentry.io https://*.ingest.sentry.io",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.openai.azure.com https://*.daily.co wss://*.daily.co https://*.wss.daily.co https://*.pluot.blue wss://*.pluot.blue https://*.sentry.io https://*.ingest.sentry.io",
     "frame-src 'self' https://*.daily.co",
     "media-src 'self' blob: https://*.daily.co",
     "worker-src 'self' blob:",

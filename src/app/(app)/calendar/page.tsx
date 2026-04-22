@@ -1,7 +1,7 @@
 "use client";
 
 import { Header } from "@/components/layout";
-import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List, Loader2, AlertTriangle } from "lucide-react";
+import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface Patient {
@@ -37,6 +37,7 @@ export default function CalendarPage() {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [cancelling, setCancelling] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const [dayModal, setDayModal] = useState<{ dateLabel: string; appts: Appointment[] } | null>(null);
     const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
@@ -276,6 +277,41 @@ export default function CalendarPage() {
             flashError('Failed to cancel appointment');
         } finally {
             setCancelling(false);
+        }
+    };
+
+    const handleDeleteAppointment = async (appt: Appointment) => {
+        if (deleting) return;
+        if (typeof window !== 'undefined') {
+            const confirmed = window.confirm(
+                `Delete this appointment for ${appt.patientName}? This action cannot be undone.`,
+            );
+            if (!confirmed) return;
+        }
+        setDeleting(true);
+        try {
+            const response = await fetch(`/api/appointments/${appt.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            if (!response.ok) {
+                let message = 'Failed to delete appointment';
+                try {
+                    const data = await response.json();
+                    if (data?.error) message = data.error;
+                } catch {
+                    // leave default
+                }
+                flashError(message);
+                return;
+            }
+            setSelectedAppt(null);
+            flashSuccess('Appointment deleted');
+            await fetchAppointments();
+        } catch {
+            flashError('Failed to delete appointment');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -685,11 +721,22 @@ export default function CalendarPage() {
                                 </button>
                                 <button
                                     onClick={() => selectedAppt && handleCancelAppointment(selectedAppt)}
-                                    disabled={cancelling}
-                                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    disabled={cancelling || deleting}
+                                    className="flex-1 px-4 py-2 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    {cancelling ? 'Cancelling...' : 'Cancel Appointment'}
+                                    {cancelling ? 'Cancelling...' : 'Cancel'}
+                                </button>
+                            </div>
+                            <div className="pt-2">
+                                <button
+                                    onClick={() => selectedAppt && handleDeleteAppointment(selectedAppt)}
+                                    disabled={cancelling || deleting}
+                                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    title="Permanently delete this appointment (admin only)"
+                                >
+                                    {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                    {deleting ? 'Deleting...' : 'Delete Permanently'}
                                 </button>
                             </div>
                         </div>
