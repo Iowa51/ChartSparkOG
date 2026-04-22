@@ -117,7 +117,7 @@ export default function CalendarPage() {
                     durationMinutes: apt.duration_minutes ?? 30,
                 };
             });
-            setAppointments(mapped);
+            setAppointments(mapped.filter(apt => apt.status !== 'cancelled'));
         } catch (error) {
             console.error('Failed to fetch appointments:', error);
         }

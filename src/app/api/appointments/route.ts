@@ -64,7 +64,13 @@ async function handleGet(context: AuthContext) {
       .eq("organization_id", context.user.organizationId)
       .order("appointment_datetime", { ascending: true });
 
-    if (status) query = query.eq("status", status);
+    if (status) {
+      query = query.eq("status", status);
+    } else {
+      // Hide cancelled rows from default list views. Callers that actually need
+      // them (e.g. an admin audit view) can opt in with ?status=cancelled.
+      query = query.neq("status", "cancelled");
+    }
     if (date) {
       const startOfDay = `${date}T00:00:00`;
       const endOfDay = `${date}T23:59:59`;

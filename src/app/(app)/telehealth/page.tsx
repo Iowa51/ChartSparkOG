@@ -83,7 +83,12 @@ export default function TelehealthPage() {
                 const response = await fetch("/api/appointments");
                 if (!response.ok) throw new Error("Failed to fetch appointments");
                 const data = await response.json();
-                const appointments = data.appointments || [];
+                // Cancelled appointments stay in the database (soft delete for HIPAA)
+                // but are hidden from every surface in this view — upcoming, history,
+                // and the dashboard stats that feed off `allAppointments`.
+                const appointments = (data.appointments || []).filter(
+                    (apt: RawAppointment) => apt.status !== 'cancelled',
+                );
                 const now = new Date();
 
                 const upcoming: Appointment[] = [];
@@ -115,7 +120,7 @@ export default function TelehealthPage() {
 
                     const timeStr = aptDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-                    if (apt.status === "completed" || apt.status === "cancelled") {
+                    if (apt.status === "completed") {
                         past.push({
                             id: apt.id,
                             patientName,
