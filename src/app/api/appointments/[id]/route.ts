@@ -160,10 +160,10 @@ async function handleDelete(context: AuthContext) {
 
     const supabase = await createClient();
 
-    // Fetch existing appointment to verify org ownership
+    // Fetch existing appointment to verify org ownership + provider assignment
     const { data: existing, error: fetchError } = await supabase
       .from("appointments")
-      .select("organization_id")
+      .select("organization_id, provider_id")
       .eq("id", id)
       .eq("organization_id", context.user.organizationId)
       .single();
@@ -187,6 +187,28 @@ async function handleDelete(context: AuthContext) {
         riskLevel: "CRITICAL",
       });
       return NextResponse.json({ error: "Appointment not found" }, { status: 404 });
+    }
+
+    // Any clinician may delete their own appointments; admins may delete any
+    // appointment in their organization.
+    const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(context.user.role);
+    const isAssignedProvider = existing.provider_id === context.user.id;
+    if (!isAdmin && !isAssignedProvider) {
+      await logAuditEvent({
+        eventType: "UNAUTHORIZED_ACCESS",
+        userId: context.user.id,
+        userEmail: context.user.email,
+        userRole: context.user.role,
+        organizationId: context.user.organizationId ?? undefined,
+        resourceType: "appointment",
+        resourceId: id,
+        details: { reason: "Non-provider non-admin appointment delete attempt" },
+        riskLevel: "HIGH",
+      });
+      return NextResponse.json(
+        { error: "Only the assigned provider or an admin can delete this appointment" },
+        { status: 403 },
+      );
     }
 
     const { error } = await supabase
@@ -224,9 +246,10 @@ async function handleDelete(context: AuthContext) {
 
 export const GET = withAuth(handleGet, { requireOrganization: true, requireMFA: true });
 export const PATCH = withAuth(handlePatch, { requireOrganization: true, requireMFA: true });
-// SEC-PT2-F9: Appointment deletion restricted to ADMIN/SUPER_ADMIN (matches patient/note DELETE pattern)
+// Any authenticated clinician may delete appointments they are assigned to; admins
+// may delete any appointment in their org. Per-row authorization is enforced in
+// handleDelete to keep the provider_id check close to the record fetch.
 export const DELETE = withAuth(handleDelete, {
-  requiredRole: ["ADMIN", "SUPER_ADMIN"],
   requireOrganization: true,
   requireMFA: true,
 });
