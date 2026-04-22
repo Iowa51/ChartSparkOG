@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Header } from "@/components/layout";
@@ -22,68 +22,23 @@ const DailyVideoCall = dynamic(
     { ssr: false, loading: () => <div className="h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> }
 );
 
-const upcomingAppointments = [
-    {
-        id: "11111111-1111-4111-8111-111111111111",
-        patientName: "Michael Chen",
-        time: "10:00 AM",
-        date: "Today",
-        duration: "30 min",
-        status: "ready",
-        type: "Follow-up"
-    },
-    {
-        id: "22222222-2222-4222-8222-222222222222",
-        patientName: "Demo Patient B",
-        time: "2:00 PM",
-        date: "Today",
-        duration: "50 min",
-        status: "scheduled",
-        type: "Initial Assessment"
-    },
-    {
-        id: "33333333-3333-4333-8333-333333333333",
-        patientName: "Emily Rodriguez",
-        time: "9:00 AM",
-        date: "Tomorrow",
-        duration: "50 min",
-        status: "scheduled",
-        type: "Therapy Session"
-    },
-    {
-        id: "44444444-4444-4444-8444-444444444444",
-        patientName: "James Wilson",
-        time: "11:30 AM",
-        date: "Tomorrow",
-        duration: "30 min",
-        status: "scheduled",
-        type: "Medication Review"
-    }
-];
+interface Appointment {
+    id: string;
+    patientName: string;
+    time: string;
+    date: string;
+    duration: string;
+    status: string;
+    type: string;
+}
 
-const sessionHistory = [
-    {
-        id: 1,
-        patientName: "Michael Chen",
-        date: "Jan 10, 2024",
-        duration: "30 min",
-        type: "Follow-up"
-    },
-    {
-        id: 2,
-        patientName: "Demo Patient B",
-        date: "Jan 8, 2024",
-        duration: "50 min",
-        type: "Initial Assessment"
-    },
-    {
-        id: 3,
-        patientName: "Lisa Anderson",
-        date: "Jan 5, 2024",
-        duration: "50 min",
-        type: "Therapy Session"
-    }
-];
+interface PastSession {
+    id: string;
+    patientName: string;
+    date: string;
+    duration: string;
+    type: string;
+}
 
 interface CallSession {
     appointmentId: string;
@@ -96,6 +51,85 @@ export default function TelehealthPage() {
     const [isStartingCall, setIsStartingCall] = useState(false);
     const [callSession, setCallSession] = useState<CallSession | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
+    const [sessionHistory, setSessionHistory] = useState<PastSession[]>([]);
+    const [loadingAppointments, setLoadingAppointments] = useState(true);
+
+    useEffect(() => {
+        const fetchAppointments = async () => {
+            try {
+                setLoadingAppointments(true);
+                const response = await fetch("/api/appointments");
+                if (!response.ok) throw new Error("Failed to fetch appointments");
+                const data = await response.json();
+                const appointments = data.appointments || [];
+                const now = new Date();
+
+                const upcoming: Appointment[] = [];
+                const past: PastSession[] = [];
+
+                for (const apt of appointments) {
+                    const aptDate = new Date(apt.appointment_datetime);
+                    const patientName = apt.patient
+                        ? `${apt.patient.first_name} ${apt.patient.last_name}`
+                        : "Unknown Patient";
+                    const durationStr = apt.duration_minutes ? `${apt.duration_minutes} min` : "30 min";
+
+                    // Determine relative date label
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const aptDay = new Date(aptDate);
+                    aptDay.setHours(0, 0, 0, 0);
+
+                    let dateLabel: string;
+                    if (aptDay.getTime() === today.getTime()) {
+                        dateLabel = "Today";
+                    } else if (aptDay.getTime() === tomorrow.getTime()) {
+                        dateLabel = "Tomorrow";
+                    } else {
+                        dateLabel = aptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                    }
+
+                    const timeStr = aptDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+                    if (apt.status === "completed" || apt.status === "cancelled" || aptDate < now) {
+                        past.push({
+                            id: apt.id,
+                            patientName,
+                            date: aptDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                            duration: durationStr,
+                            type: apt.appointment_type || "Session",
+                        });
+                    } else {
+                        // "ready" if the appointment is within the next 15 minutes or already started today
+                        const minutesUntil = (aptDate.getTime() - now.getTime()) / 60000;
+                        const aptStatus = minutesUntil <= 15 ? "ready" : "scheduled";
+
+                        upcoming.push({
+                            id: apt.id,
+                            patientName,
+                            time: timeStr,
+                            date: dateLabel,
+                            duration: durationStr,
+                            status: aptStatus,
+                            type: apt.appointment_type || "Session",
+                        });
+                    }
+                }
+
+                setUpcomingAppointments(upcoming);
+                setSessionHistory(past);
+            } catch (err) {
+                console.error("Failed to fetch appointments:", err);
+            } finally {
+                setLoadingAppointments(false);
+            }
+        };
+
+        fetchAppointments();
+    }, []);
 
     const handleStartCall = async (appointmentId: string, patientName: string) => {
         setIsStartingCall(true);
@@ -226,7 +260,18 @@ export default function TelehealthPage() {
                             </div>
                         </div>
                         <div className="p-8 space-y-4">
-                            {upcomingAppointments.map(apt => (
+                            {loadingAppointments ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                    <span className="ml-2 text-sm text-slate-500">Loading appointments...</span>
+                                </div>
+                            ) : upcomingAppointments.length === 0 ? (
+                                <div className="text-center py-8">
+                                    <Calendar className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                                    <p className="text-sm font-bold text-slate-400">No upcoming telehealth sessions</p>
+                                    <p className="text-xs text-slate-400 mt-1">Schedule an appointment to get started.</p>
+                                </div>
+                            ) : upcomingAppointments.map(apt => (
                                 <div key={apt.id} className="group p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 hover:border-primary transition-all flex items-center justify-between">
                                     <div className="space-y-1">
                                         <h4 className="font-black text-slate-900 dark:text-white">{apt.patientName}</h4>
@@ -334,7 +379,13 @@ export default function TelehealthPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                                {sessionHistory.map(session => (
+                                {sessionHistory.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-8 py-8 text-center">
+                                            <p className="text-sm text-slate-400">No past sessions yet.</p>
+                                        </td>
+                                    </tr>
+                                ) : sessionHistory.map(session => (
                                     <tr key={session.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group">
                                         <td className="px-8 py-4">
                                             <span className="font-black text-slate-900 dark:text-white">{session.patientName}</span>
