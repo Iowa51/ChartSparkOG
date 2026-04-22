@@ -47,12 +47,27 @@ interface CallSession {
     patientName: string;
 }
 
+interface RawAppointment {
+    id: string;
+    patient_id?: string;
+    appointment_datetime: string;
+    duration_minutes?: number;
+    appointment_type?: string;
+    status?: string;
+    patient?: {
+        id?: string;
+        first_name: string;
+        last_name: string;
+    };
+}
+
 export default function TelehealthPage() {
     const [isStartingCall, setIsStartingCall] = useState(false);
     const [callSession, setCallSession] = useState<CallSession | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
     const [sessionHistory, setSessionHistory] = useState<PastSession[]>([]);
+    const [allAppointments, setAllAppointments] = useState<RawAppointment[]>([]);
     const [loadingAppointments, setLoadingAppointments] = useState(true);
 
     useEffect(() => {
@@ -121,6 +136,7 @@ export default function TelehealthPage() {
 
                 setUpcomingAppointments(upcoming);
                 setSessionHistory(past);
+                setAllAppointments(appointments);
             } catch (err) {
                 console.error("Failed to fetch appointments:", err);
             } finally {
@@ -189,6 +205,18 @@ export default function TelehealthPage() {
         setCallSession(null);
     };
 
+    const todayCount = upcomingAppointments.filter(a => a.date === "Today").length;
+    const weeklyCount = upcomingAppointments.length + sessionHistory.length;
+    const durationsWithData = allAppointments.filter(a => typeof a.duration_minutes === 'number');
+    const avgDuration = durationsWithData.length > 0
+        ? Math.round(durationsWithData.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) / durationsWithData.length)
+        : null;
+    const uniquePatientCount = new Set(
+        allAppointments
+            .map(a => a.patient_id ?? a.patient?.id)
+            .filter(Boolean)
+    ).size;
+
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
             <Header
@@ -218,7 +246,7 @@ export default function TelehealthPage() {
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Today</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">2 <span className="text-xs font-medium text-slate-400">Sessions</span></p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">{todayCount} <span className="text-xs font-medium text-slate-400">Sessions</span></p>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
@@ -227,7 +255,7 @@ export default function TelehealthPage() {
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Weekly</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">12 <span className="text-xs font-medium text-slate-400">Sessions</span></p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">{weeklyCount} <span className="text-xs font-medium text-slate-400">Sessions</span></p>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
@@ -236,7 +264,7 @@ export default function TelehealthPage() {
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Avg. Duration</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">42 <span className="text-xs font-medium text-slate-400">min</span></p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">{avgDuration ?? '--'} <span className="text-xs font-medium text-slate-400">min</span></p>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
@@ -245,7 +273,7 @@ export default function TelehealthPage() {
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Patients</p>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">48 <span className="text-xs font-medium text-slate-400">Total</span></p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">{uniquePatientCount} <span className="text-xs font-medium text-slate-400">Total</span></p>
                         </div>
                     </div>
                 </div>
