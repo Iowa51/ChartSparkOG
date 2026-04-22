@@ -205,14 +205,37 @@ export default function TelehealthPage() {
         setCallSession(null);
     };
 
-    const todayCount = upcomingAppointments.filter(a => a.date === "Today").length;
-    const weeklyCount = upcomingAppointments.length + sessionHistory.length;
-    const durationsWithData = allAppointments.filter(a => typeof a.duration_minutes === 'number');
-    const avgDuration = durationsWithData.length > 0
-        ? Math.round(durationsWithData.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) / durationsWithData.length)
+    // Stats filtered by the clinician's local timezone so they reset at local midnight.
+    const isToday = (dateStr: string) => {
+        const d = new Date(dateStr);
+        const now = new Date();
+        return d.getFullYear() === now.getFullYear()
+            && d.getMonth() === now.getMonth()
+            && d.getDate() === now.getDate();
+    };
+    const isThisWeek = (dateStr: string) => {
+        const d = new Date(dateStr);
+        const start = new Date();
+        start.setHours(0, 0, 0, 0);
+        const dayIdx = start.getDay(); // 0=Sun..6=Sat; week starts Monday
+        const offset = dayIdx === 0 ? 6 : dayIdx - 1;
+        start.setDate(start.getDate() - offset);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 7);
+        return d >= start && d < end;
+    };
+
+    const todaysAppointments = allAppointments.filter(a => isToday(a.appointment_datetime));
+    const weeksAppointments = allAppointments.filter(a => isThisWeek(a.appointment_datetime));
+
+    const todayCount = todaysAppointments.length;
+    const weeklyCount = weeksAppointments.length;
+    const todayDurations = todaysAppointments.filter(a => typeof a.duration_minutes === 'number');
+    const avgDuration = todayDurations.length > 0
+        ? Math.round(todayDurations.reduce((sum, a) => sum + (a.duration_minutes || 0), 0) / todayDurations.length)
         : null;
     const uniquePatientCount = new Set(
-        allAppointments
+        weeksAppointments
             .map(a => a.patient_id ?? a.patient?.id)
             .filter(Boolean)
     ).size;
@@ -240,7 +263,10 @@ export default function TelehealthPage() {
             <div className="flex-1 overflow-y-auto p-6 lg:px-10 lg:py-8 space-y-8 max-w-7xl mx-auto w-full">
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
+                    <Link
+                        href="/calendar?view=day"
+                        className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5 cursor-pointer hover:border-primary hover:shadow-md transition-all"
+                    >
                         <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                             <Calendar className="h-7 w-7" />
                         </div>
@@ -248,8 +274,11 @@ export default function TelehealthPage() {
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Today</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white">{todayCount} <span className="text-xs font-medium text-slate-400">Sessions</span></p>
                         </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
+                    </Link>
+                    <Link
+                        href="/calendar?view=week"
+                        className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5 cursor-pointer hover:border-primary hover:shadow-md transition-all"
+                    >
                         <div className="h-14 w-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                             <Video className="h-7 w-7" />
                         </div>
@@ -257,17 +286,24 @@ export default function TelehealthPage() {
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Weekly</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white">{weeklyCount} <span className="text-xs font-medium text-slate-400">Sessions</span></p>
                         </div>
-                    </div>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
+                    </Link>
+                    <div
+                        title="Resets daily at midnight"
+                        className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5"
+                    >
                         <div className="h-14 w-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
                             <Clock className="h-7 w-7" />
                         </div>
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Avg. Duration</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white">{avgDuration ?? '--'} <span className="text-xs font-medium text-slate-400">min</span></p>
+                            <p className="text-[9px] font-medium text-slate-400 mt-0.5">Resets daily at midnight</p>
                         </div>
                     </div>
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5">
+                    <Link
+                        href="/patients"
+                        className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-5 cursor-pointer hover:border-primary hover:shadow-md transition-all"
+                    >
                         <div className="h-14 w-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                             <Users className="h-7 w-7" />
                         </div>
@@ -275,7 +311,7 @@ export default function TelehealthPage() {
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Patients</p>
                             <p className="text-2xl font-black text-slate-900 dark:text-white">{uniquePatientCount} <span className="text-xs font-medium text-slate-400">Total</span></p>
                         </div>
-                    </div>
+                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
