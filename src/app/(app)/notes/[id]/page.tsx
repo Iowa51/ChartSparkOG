@@ -120,7 +120,7 @@ export default function NotePage() {
 
     // Auto-open submit modal when navigated with ?action=submit
     useEffect(() => {
-        if (actionParam === 'submit' && note && (note.status === 'draft' || note.status === 'needs_revision')) {
+        if (actionParam === 'submit' && note && (note.status === 'draft' || note.status === 'needs_revision' || note.status === 'completed')) {
             setShowSubmitModal(true);
         }
     }, [actionParam, note]);
@@ -311,6 +311,8 @@ export default function NotePage() {
                 return { label: 'Approved', color: 'bg-blue-500/10 text-blue-500', icon: CheckCircle2 };
             case 'needs_revision':
                 return { label: 'Needs Revision', color: 'bg-red-500/10 text-red-500', icon: AlertTriangle };
+            case 'completed':
+                return { label: 'Completed', color: 'bg-blue-500/10 text-blue-600', icon: CheckCircle2 };
             default:
                 return { label: 'Draft', color: 'bg-amber-500/10 text-amber-500', icon: Clock };
         }
@@ -372,8 +374,8 @@ export default function NotePage() {
     const hasSOAPContent = !!(note.subjective || note.objective || note.assessment || note.plan);
     const statusConfig = getStatusConfig(note.status);
     const StatusIcon = statusConfig.icon;
-    const isEditable = note.status === 'draft' || note.status === 'needs_revision';
-    const canSubmitForReview = note.status === 'draft' || note.status === 'needs_revision';
+    const isEditable = note.status === 'draft' || note.status === 'needs_revision' || note.status === 'completed';
+    const canSubmitForReview = note.status === 'draft' || note.status === 'needs_revision' || note.status === 'completed';
     const canSubmitClaim = note.status === 'approved';
     const isLocked = note.status === 'signed';
 

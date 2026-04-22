@@ -78,11 +78,11 @@ async function handlePost(context: AuthContext) {
       return NextResponse.json({ error: "Note not found" }, { status: 404 });
     }
 
-    // Workflow gate: only draft or needs_revision notes can be signed and sent for review.
-    if (currentNote.status !== "draft" && currentNote.status !== "needs_revision") {
+    // Workflow gate: only draft, completed, or needs_revision notes can be signed and sent for review.
+    if (currentNote.status !== "draft" && currentNote.status !== "needs_revision" && currentNote.status !== "completed") {
       return NextResponse.json(
         {
-          error: `Only draft or revision-requested notes can be signed. Current status: ${currentNote.status}`,
+          error: `Only draft, completed, or revision-requested notes can be signed. Current status: ${currentNote.status}`,
         },
         { status: 400 },
       );
