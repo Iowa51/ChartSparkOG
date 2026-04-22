@@ -1,7 +1,7 @@
 "use client";
 
 import { Header } from "@/components/layout";
-import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List, Loader2 } from "lucide-react";
+import { Plus, Clock, User, CheckCircle2, Timer, X, Calendar, ChevronLeft, ChevronRight, Grid3x3, List, Loader2, AlertTriangle, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface Patient {
@@ -11,7 +11,7 @@ interface Patient {
 }
 
 interface Appointment {
-    id: number;
+    id: string;
     patientName: string;
     patientId?: string;
     time: string;
@@ -31,6 +31,73 @@ export default function CalendarPage() {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [loadingPatients, setLoadingPatients] = useState(true);
 
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [infoMessage, setInfoMessage] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+
+    const [form, setForm] = useState({
+        patient_id: "",
+        appointment_datetime: "",
+        duration_minutes: "30",
+        appointment_type: "initial",
+        notes: "",
+    });
+
+    const flashSuccess = (msg: string) => {
+        setSuccessMessage(msg);
+        setTimeout(() => setSuccessMessage(null), 4000);
+    };
+    const flashError = (msg: string) => {
+        setErrorMessage(msg);
+        setTimeout(() => setErrorMessage(null), 4000);
+    };
+    const flashInfo = (msg: string) => {
+        setInfoMessage(msg);
+        setTimeout(() => setInfoMessage(null), 4000);
+    };
+
+    const fetchAppointments = async () => {
+        try {
+            const response = await fetch('/api/appointments');
+            if (!response.ok) return;
+            const data = await response.json();
+            const raw = data.appointments || [];
+            const mapped: Appointment[] = raw.map((apt: {
+                id: string;
+                patient_id?: string;
+                appointment_datetime: string;
+                duration_minutes?: number;
+                appointment_type?: string;
+                status?: string;
+                notes?: string;
+                patient?: { first_name: string; last_name: string };
+            }) => {
+                const dt = new Date(apt.appointment_datetime);
+                const year = dt.getFullYear();
+                const month = String(dt.getMonth() + 1).padStart(2, '0');
+                const day = String(dt.getDate()).padStart(2, '0');
+                return {
+                    id: apt.id,
+                    patientName: apt.patient
+                        ? `${apt.patient.first_name} ${apt.patient.last_name}`
+                        : 'Unknown Patient',
+                    patientId: apt.patient_id,
+                    time: dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                    duration: apt.duration_minutes ? `${apt.duration_minutes} min` : '30 min',
+                    type: apt.appointment_type || 'Session',
+                    status: apt.status || 'scheduled',
+                    date: `${year}-${month}-${day}`,
+                    notes: apt.notes || '',
+                };
+            });
+            setAppointments(mapped);
+        } catch (error) {
+            console.error('Failed to fetch appointments:', error);
+        }
+    };
+
     // Fetch patients from database
     useEffect(() => {
         const fetchPatients = async () => {
@@ -48,7 +115,92 @@ export default function CalendarPage() {
             }
         };
         fetchPatients();
+        fetchAppointments();
     }, []);
+
+    const handleCreateAppointment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (submitting) return;
+        if (!form.patient_id) {
+            flashError('Please select a patient');
+            return;
+        }
+        if (!form.appointment_datetime) {
+            flashError('Please choose a date and time');
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const isoDatetime = new Date(form.appointment_datetime).toISOString();
+            const response = await fetch('/api/appointments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    patient_id: form.patient_id,
+                    appointment_datetime: isoDatetime,
+                    duration_minutes: Number(form.duration_minutes),
+                    appointment_type: form.appointment_type,
+                    notes: form.notes,
+                    is_telehealth: true,
+                }),
+            });
+            if (!response.ok) {
+                let message = 'Failed to schedule appointment';
+                try {
+                    const data = await response.json();
+                    if (data?.error) message = data.error;
+                } catch {
+                    // leave default
+                }
+                flashError(message);
+                return;
+            }
+            setShowNewAppt(false);
+            setForm({
+                patient_id: "",
+                appointment_datetime: "",
+                duration_minutes: "30",
+                appointment_type: "initial",
+                notes: "",
+            });
+            flashSuccess('Appointment scheduled successfully');
+            await fetchAppointments();
+        } catch {
+            flashError('Failed to schedule appointment');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleCancelAppointment = async (appt: Appointment) => {
+        if (cancelling) return;
+        setCancelling(true);
+        try {
+            const response = await fetch(`/api/appointments/${appt.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'cancelled' }),
+            });
+            if (!response.ok) {
+                let message = 'Failed to cancel appointment';
+                try {
+                    const data = await response.json();
+                    if (data?.error) message = data.error;
+                } catch {
+                    // leave default
+                }
+                flashError(message);
+                return;
+            }
+            setSelectedAppt(null);
+            flashSuccess('Appointment cancelled');
+            await fetchAppointments();
+        } catch {
+            flashError('Failed to cancel appointment');
+        } finally {
+            setCancelling(false);
+        }
+    };
 
     const today = new Date();
     const todayStr = today.toLocaleDateString('en-US', {
@@ -298,10 +450,15 @@ export default function CalendarPage() {
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
-                        <form onSubmit={(e) => { e.preventDefault(); alert("Appointment scheduled successfully!"); setShowNewAppt(false); }} className="space-y-4">
+                        <form onSubmit={handleCreateAppointment} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Patient</label>
-                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700" required>
+                                <select
+                                    value={form.patient_id}
+                                    onChange={(e) => setForm(f => ({ ...f, patient_id: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
+                                    required
+                                >
                                     <option value="">Select patient...</option>
                                     {loadingPatients ? (
                                         <option value="" disabled>Loading patients...</option>
@@ -318,11 +475,21 @@ export default function CalendarPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">Date & Time</label>
-                                <input type="datetime-local" required className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700" />
+                                <input
+                                    type="datetime-local"
+                                    required
+                                    value={form.appointment_datetime}
+                                    onChange={(e) => setForm(f => ({ ...f, appointment_datetime: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">Duration</label>
-                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
+                                <select
+                                    value={form.duration_minutes}
+                                    onChange={(e) => setForm(f => ({ ...f, duration_minutes: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
+                                >
                                     <option value="30">30 minutes</option>
                                     <option value="50">50 minutes</option>
                                     <option value="60">60 minutes</option>
@@ -330,7 +497,11 @@ export default function CalendarPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">Appointment Type</label>
-                                <select className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700">
+                                <select
+                                    value={form.appointment_type}
+                                    onChange={(e) => setForm(f => ({ ...f, appointment_type: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700"
+                                >
                                     <option value="initial">Initial Assessment</option>
                                     <option value="followup">Follow-up</option>
                                     <option value="therapy">Therapy Session</option>
@@ -339,11 +510,23 @@ export default function CalendarPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">Notes (optional)</label>
-                                <textarea className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 h-20 resize-none" placeholder="Session notes or reminders..." />
+                                <textarea
+                                    value={form.notes}
+                                    onChange={(e) => setForm(f => ({ ...f, notes: e.target.value }))}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800 dark:border-slate-700 h-20 resize-none"
+                                    placeholder="Session notes or reminders..."
+                                />
                             </div>
                             <div className="flex gap-2 pt-4">
                                 <button type="button" onClick={() => setShowNewAppt(false)} className="flex-1 px-4 py-2 border rounded-lg font-medium">Cancel</button>
-                                <button type="submit" className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-bold">Schedule Appointment</button>
+                                <button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    {submitting ? 'Scheduling...' : 'Schedule Appointment'}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -399,19 +582,47 @@ export default function CalendarPage() {
                             </div>
                             <div className="flex gap-2 pt-4">
                                 <button
-                                    onClick={() => { alert("Edit functionality coming soon!"); }}
+                                    onClick={() => flashInfo('Edit functionality coming soon')}
                                     className="flex-1 px-4 py-2 border rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
                                 >
                                     Edit
                                 </button>
                                 <button
-                                    onClick={() => { alert("Appointment cancelled."); setSelectedAppt(null); }}
-                                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600"
+                                    onClick={() => selectedAppt && handleCancelAppointment(selectedAppt)}
+                                    disabled={cancelling}
+                                    className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Cancel Appointment
+                                    {cancelling && <Loader2 className="h-4 w-4 animate-spin" />}
+                                    {cancelling ? 'Cancelling...' : 'Cancel Appointment'}
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast Messages */}
+            {successMessage && (
+                <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center gap-3 px-5 py-3 bg-emerald-600 text-white rounded-xl shadow-lg">
+                        <CheckCircle2 className="h-5 w-5" />
+                        <span className="font-medium">{successMessage}</span>
+                    </div>
+                </div>
+            )}
+            {errorMessage && (
+                <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center gap-3 px-5 py-3 bg-red-600 text-white rounded-xl shadow-lg">
+                        <AlertTriangle className="h-5 w-5" />
+                        <span className="font-medium">{errorMessage}</span>
+                    </div>
+                </div>
+            )}
+            {infoMessage && (
+                <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom duration-300">
+                    <div className="flex items-center gap-3 px-5 py-3 bg-slate-800 text-white rounded-xl shadow-lg">
+                        <Info className="h-5 w-5" />
+                        <span className="font-medium">{infoMessage}</span>
                     </div>
                 </div>
             )}
