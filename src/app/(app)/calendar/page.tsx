@@ -45,6 +45,19 @@ export default function CalendarPage() {
         notes: "",
     });
 
+    const nextRoundedHourLocal = () => {
+        const d = new Date();
+        d.setMinutes(0, 0, 0);
+        d.setHours(d.getHours() + 1);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    const openNewAppt = () => {
+        setForm(f => ({ ...f, appointment_datetime: nextRoundedHourLocal() }));
+        setShowNewAppt(true);
+    };
+
     const flashSuccess = (msg: string) => {
         setSuccessMessage(msg);
         setTimeout(() => setSuccessMessage(null), 4000);
@@ -308,7 +321,7 @@ export default function CalendarPage() {
                             </button>
                         </div>
                         <button
-                            onClick={() => setShowNewAppt(true)}
+                            onClick={openNewAppt}
                             className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/30 flex items-center gap-2 transition-all active:scale-95"
                         >
                             <Plus className="h-5 w-5" />

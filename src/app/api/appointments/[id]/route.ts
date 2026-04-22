@@ -39,7 +39,7 @@ async function handleGet(context: AuthContext) {
         `
       *,
       patient:patients(id, first_name, last_name),
-      provider:profiles(id, first_name, last_name)
+      provider:users(id, first_name, last_name)
     `,
       )
       .eq("id", id)
