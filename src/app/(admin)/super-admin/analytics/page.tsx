@@ -83,7 +83,7 @@ export default function SuperAdminAnalyticsPage() {
 
             // Get notes by org
             const { data: notes } = await supabase
-                .from('notes')
+                .from('clinical_notes')
                 .select('id, organization_id')
                 .gte('created_at', startDate.toISOString());
 

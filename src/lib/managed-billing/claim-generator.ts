@@ -91,10 +91,12 @@ export async function generateClaimFromEncounter(
             };
         }
 
-        // Get signed note for diagnosis and procedure codes
+        // Get signed note for diagnosis and procedure codes. On clinical_notes
+        // the narrative is stored in `content` (legacy `note_content` column
+        // only existed on the old `notes` table).
         const { data: note } = await supabase
-            .from('notes')
-            .select('note_content, status')
+            .from('clinical_notes')
+            .select('content, status')
             .eq('encounter_id', encounterId)
             .eq('status', 'signed')
             .order('signed_at', { ascending: false })
@@ -106,7 +108,7 @@ export async function generateClaimFromEncounter(
         }
 
         // Extract diagnosis and procedure codes from note content
-        const noteContent = note.note_content as Record<string, unknown>;
+        const noteContent = note.content as Record<string, unknown>;
         const diagnosisCodes = extractDiagnosisCodes(noteContent);
         const procedureCodes = extractProcedureCodes(noteContent, encounter);
 

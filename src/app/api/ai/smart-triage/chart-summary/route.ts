@@ -79,7 +79,7 @@ async function handler(context: AuthContext) {
           .single(),
         // Recent notes — SEC-CODEX-2: scope to patient to prevent cross-patient PHI leak
         supabase
-          .from("notes")
+          .from("clinical_notes")
           .select("subjective, objective, assessment, plan, created_at")
           .eq("patient_id", patient_id)
           .eq("organization_id", context.user.organizationId!)

@@ -91,7 +91,7 @@ export default function AdminSettingsPage() {
                 supabase.from('users').select('*', { count: 'exact', head: true }).eq('organization_id', userData.organization_id),
                 supabase.from('users').select('*', { count: 'exact', head: true }).eq('organization_id', userData.organization_id).eq('is_active', true),
                 supabase.from('patients').select('*', { count: 'exact', head: true }).eq('organization_id', userData.organization_id),
-                supabase.from('notes').select('*', { count: 'exact', head: true }).eq('organization_id', userData.organization_id),
+                supabase.from('clinical_notes').select('*', { count: 'exact', head: true }).eq('organization_id', userData.organization_id),
             ]);
 
             setStats({

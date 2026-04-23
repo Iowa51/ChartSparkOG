@@ -28,7 +28,7 @@ export async function getNotesByEncounterId(encounterId: string): Promise<Note[]
         const supabase = await createClient();
 
         const { data, error } = await supabase
-            .from('notes')
+            .from('clinical_notes')
             .select('*')
             .eq('encounter_id', encounterId)
             .order('created_at', { ascending: false });
@@ -62,7 +62,7 @@ export async function getNoteById(noteId: string): Promise<Note> {
         const supabase = await createClient();
 
         const { data, error } = await supabase
-            .from('notes')
+            .from('clinical_notes')
             .select('*')
             .eq('id', noteId)
             .single();
@@ -110,7 +110,7 @@ export async function getNotesByProviderId(
         const { limit = 50, status, startDate, endDate } = options;
 
         let query = supabase
-            .from('notes')
+            .from('clinical_notes')
             .select('*')
             .eq('provider_id', providerId)
             .eq('organization_id', organizationId)
@@ -162,7 +162,7 @@ export async function createNote(
         const supabase = await createClient();
 
         const { data: note, error } = await supabase
-            .from('notes')
+            .from('clinical_notes')
             .insert({
                 encounter_id: input.encounter_id,
                 organization_id: organizationId,
@@ -175,8 +175,6 @@ export async function createNote(
                 cpt_codes: input.cpt_codes || [],
                 icd10_codes: input.icd10_codes || [],
                 billing_amount: 0,
-                platform_fee_amount: 0,
-                net_amount: 0,
                 status: 'draft',
             })
             .select()
@@ -229,7 +227,7 @@ export async function updateNote(
         const { isAutoSave = false } = options;
 
         const { data: note, error } = await supabase
-            .from('notes')
+            .from('clinical_notes')
             .update(input)
             .eq('id', noteId)
             .select()
@@ -282,7 +280,7 @@ export async function signNote(
 
         // First, get the note to calculate billing
         const { data: existingNote, error: fetchError } = await supabase
-            .from('notes')
+            .from('clinical_notes')
             .select('*')
             .eq('id', noteId)
             .single();
@@ -295,20 +293,18 @@ export async function signNote(
             throw new Error(`Note ${noteId} not found`);
         }
 
-        // Calculate billing amounts based on CPT codes
+        // platform_fee_amount / net_amount are legacy columns from the old
+        // `notes` table — they were never migrated onto `clinical_notes`,
+        // so only billing_amount is persisted here.
         const billingAmount = calculateBillingAmount(existingNote.cpt_codes);
-        const platformFeeAmount = calculatePlatformFee(billingAmount);
-        const netAmount = billingAmount - platformFeeAmount;
 
         // Update note with billing and signed status
         const { data: note, error } = await supabase
-            .from('notes')
+            .from('clinical_notes')
             .update({
                 status: 'signed',
                 signed_at: new Date().toISOString(),
                 billing_amount: billingAmount,
-                platform_fee_amount: platformFeeAmount,
-                net_amount: netAmount,
             })
             .eq('id', noteId)
             .select()
@@ -357,7 +353,7 @@ export async function completeNote(
         const supabase = await createClient();
 
         const { data: note, error } = await supabase
-            .from('notes')
+            .from('clinical_notes')
             .update({
                 status: 'completed',
                 updated_at: new Date().toISOString(),

@@ -111,8 +111,8 @@ export default function ProviderAnalyticsPage() {
 
             // Get notes count by user
             const { data: notes } = await supabase
-                .from('notes')
-                .select('user_id, id')
+                .from('clinical_notes')
+                .select('provider_id, id')
                 .eq('organization_id', orgId)
                 .gte('created_at', startDate.toISOString());
 
@@ -131,7 +131,7 @@ export default function ProviderAnalyticsPage() {
 
             // Build provider stats
             const providerStats: ProviderStats[] = (users || []).map((u: any) => {
-                const userNotes = notes?.filter((n: any) => n.user_id === u.id) || [];
+                const userNotes = notes?.filter((n: any) => n.provider_id === u.id) || [];
                 const userSubmissions = submissions?.filter((s: any) => s.provider_id === u.id) || [];
                 const userPatients = patients?.filter((p: any) => p.primary_provider_id === u.id) || [];
 
