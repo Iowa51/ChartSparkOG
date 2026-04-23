@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/service-role-client';
 import { logError, sanitizeError } from '@/lib/logging/safe-logger';
 import { logAuditEvent } from '@/lib/security/audit-log';
+import { checkAuthFailureRate } from '@/lib/security/alerts';
 import { LoginAttemptSchema, validateRequest } from '@/lib/validation/schemas';
 import { validateOrigin } from '@/lib/security/csrf';
 import { getClientIP } from '@/lib/utils/get-client-ip';
@@ -101,6 +102,12 @@ export async function POST(request: NextRequest) {
             });
         } catch {
             // Audit log failure is not blocking
+        }
+
+        if (!success) {
+            await checkAuthFailureRate(email, ipAddress).catch(() => {
+                // Alert dispatch failure is not blocking
+            });
         }
 
         return NextResponse.json({ recorded: true });

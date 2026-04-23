@@ -64,6 +64,7 @@ export type AuditEventType =
     | 'DATA_BREACH_SUSPECTED'
     | 'API_ERROR'
     | 'SYSTEM_ERROR'
+    | 'SECURITY_ALERT'
     | 'AUDIT_LOG_VIEW'
     | 'AUDIT_LOG_EXPORT'
     | 'APPOINTMENT_VIEW'

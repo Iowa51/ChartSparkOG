@@ -9,6 +9,10 @@ import {
 import { getClientIP } from "@/lib/utils/get-client-ip";
 import { logWarn } from "@/lib/logging/safe-logger";
 
+// TODO(alerting): emit a security alert when the 5xx response rate exceeds a
+// threshold (e.g. >5% over 5 minutes). Requires structured error/response
+// tracking in middleware/handlers; not implemented here because middleware
+// does not currently observe handler responses.
 export async function middleware(request: NextRequest) {
   // Generate or forward request ID before any other logic so every response —
   // including redirects, rate-limit rejections, and IDS blocks — carries it.
