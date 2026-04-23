@@ -50,6 +50,8 @@ export default function VitalsEntryPanel({
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState('');
+    const [heightFeet, setHeightFeet] = useState<number | undefined>(undefined);
+    const [heightInches, setHeightInches] = useState<number | undefined>(undefined);
 
     // Auto-calculate BMI when weight/height change
     useEffect(() => {
@@ -69,6 +71,14 @@ export default function VitalsEntryPanel({
 
     const updateField = useCallback((field: keyof VitalFormData, value: unknown) => {
         setVitals(prev => ({ ...prev, [field]: value }));
+        setSaved(false);
+    }, []);
+
+    const updateHeightFromFeetInches = useCallback((feet: number | undefined, inches: number | undefined) => {
+        setHeightFeet(feet);
+        setHeightInches(inches);
+        const totalInches = ((feet || 0) * 12) + (inches || 0);
+        setVitals(prev => ({ ...prev, height: totalInches > 0 ? totalInches : undefined }));
         setSaved(false);
     }, []);
 
@@ -278,17 +288,53 @@ export default function VitalsEntryPanel({
                     <div>
                         <label className={labelClass}>Height</label>
                         <div className="flex gap-1">
-                            <input
-                                type="number"
-                                step="0.1"
-                                placeholder="Height"
-                                value={vitals.height ?? ''}
-                                onChange={e => updateField('height', e.target.value ? Number(e.target.value) : undefined)}
-                                className={`${inputClass()} flex-1`}
-                            />
+                            {vitals.height_unit === 'in' ? (
+                                <div className="flex gap-1 flex-1">
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={8}
+                                        step={1}
+                                        placeholder="ft"
+                                        value={heightFeet ?? ''}
+                                        onChange={e => updateHeightFromFeetInches(
+                                            e.target.value ? Number(e.target.value) : undefined,
+                                            heightInches,
+                                        )}
+                                        className={`${inputClass()} flex-1`}
+                                    />
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={11}
+                                        step={1}
+                                        placeholder="in"
+                                        value={heightInches ?? ''}
+                                        onChange={e => updateHeightFromFeetInches(
+                                            heightFeet,
+                                            e.target.value ? Number(e.target.value) : undefined,
+                                        )}
+                                        className={`${inputClass()} flex-1`}
+                                    />
+                                </div>
+                            ) : (
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    placeholder="Height"
+                                    value={vitals.height ?? ''}
+                                    onChange={e => updateField('height', e.target.value ? Number(e.target.value) : undefined)}
+                                    className={`${inputClass()} flex-1`}
+                                />
+                            )}
                             <select
                                 value={vitals.height_unit}
-                                onChange={e => updateField('height_unit', e.target.value)}
+                                onChange={e => {
+                                    setHeightFeet(undefined);
+                                    setHeightInches(undefined);
+                                    setVitals(prev => ({ ...prev, height: undefined, height_unit: e.target.value as 'in' | 'cm' }));
+                                    setSaved(false);
+                                }}
                                 className="px-1 py-2 rounded-lg border border-gray-200 text-xs bg-gray-50 cursor-pointer"
                             >
                                 <option value="in">in</option>
