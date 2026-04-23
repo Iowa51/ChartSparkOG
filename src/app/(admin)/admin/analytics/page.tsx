@@ -119,7 +119,7 @@ export default function ProviderAnalyticsPage() {
             // Get submissions by user
             const { data: submissions } = await supabase
                 .from('submissions')
-                .select('user_id, status, billing_amount')
+                .select('provider_id, status, billing_amount')
                 .eq('organization_id', orgId)
                 .gte('created_at', startDate.toISOString());
 
@@ -132,7 +132,7 @@ export default function ProviderAnalyticsPage() {
             // Build provider stats
             const providerStats: ProviderStats[] = (users || []).map((u: any) => {
                 const userNotes = notes?.filter((n: any) => n.user_id === u.id) || [];
-                const userSubmissions = submissions?.filter((s: any) => s.user_id === u.id) || [];
+                const userSubmissions = submissions?.filter((s: any) => s.provider_id === u.id) || [];
                 const userPatients = patients?.filter((p: any) => p.primary_provider_id === u.id) || [];
 
                 const approvedCount = userSubmissions.filter((s: any) => s.status === 'approved').length;

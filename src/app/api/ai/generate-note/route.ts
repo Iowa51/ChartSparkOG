@@ -223,7 +223,7 @@ async function handler(context: AuthContext) {
             suggestedCodes,
             isDemo: !safeAzureOpenAI.isAvailable(),
             inputUsed: {
-                hasClinicalInput: !!clinicianInput,
+                hasClinicianInput: !!clinicianInput,
                 phraseCount: Object.values(selectedPhrases || {}).flat().length
             }
         });

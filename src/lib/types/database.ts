@@ -14,7 +14,7 @@ export type SubscriptionTier = "starter" | "pro" | "complete";
 
 export type FeeCollectionMethod = "deduct_from_billing" | "charge_separately";
 
-export type NoteStatus = "draft" | "pending_review" | "signed" | "amended";
+export type NoteStatus = "draft" | "pending_review" | "signed";
 
 export type EncounterStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 
@@ -252,7 +252,7 @@ export interface Note {
   net_amount: number;
   audio_url?: string;
   transcript?: string;
-  status: "draft" | "completed" | "signed" | "amended";
+  status: "draft" | "completed" | "signed";
   signed_at?: string;
   created_at: string;
   updated_at: string;
@@ -360,7 +360,7 @@ export interface NoteUpdateInput {
   plan?: string;
   cpt_codes?: string[];
   icd10_codes?: string[];
-  status?: "draft" | "completed" | "signed" | "amended";
+  status?: "draft" | "completed" | "signed";
 }
 
 // =============================================

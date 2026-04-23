@@ -186,7 +186,7 @@ export const NoteCreateSchema = z.object({
     type: z.enum(['progress', 'intake', 'soap', 'discharge', 'other']).optional().default('progress'),
     content: z.string().min(1, 'Note content required').max(50000),
     template_id: UUIDSchema.optional().nullable(),
-    status: z.enum(['draft', 'completed', 'signed', 'amended', 'pending_review', 'approved', 'needs_revision']).optional(),
+    status: z.enum(['draft', 'completed', 'signed', 'pending_review', 'approved', 'needs_revision']).optional(),
     cpt_codes: z.array(z.string().max(20)).max(20).optional(),
     icd10_codes: z.array(z.string().max(20)).max(20).optional(),
     subjective: z.string().max(10000).optional().nullable(),
@@ -202,7 +202,7 @@ export const NoteCreateSchema = z.object({
 // signed_by, locked_at — those columns were never migrated.
 export const NoteUpdateSchema = z.object({
     content: z.string().min(1).max(50000).optional(),
-    status: z.enum(['draft', 'completed', 'signed', 'amended', 'pending_review', 'approved', 'needs_revision']).optional(),
+    status: z.enum(['draft', 'completed', 'signed', 'pending_review', 'approved', 'needs_revision']).optional(),
     signed_at: z.string().datetime().optional().nullable(),
     cpt_codes: z.array(z.string().max(20)).max(20).optional(),
     icd10_codes: z.array(z.string().max(20)).max(20).optional(),
