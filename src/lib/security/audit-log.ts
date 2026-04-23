@@ -49,6 +49,7 @@ export type AuditEventType =
     | 'USER_UPDATED'
     | 'USER_DEACTIVATED'
     | 'ROLE_CHANGED'
+    | 'USER_ROLE_CHANGE'
     | 'USER_INVITATION_CREATED'
     | 'USER_INVITATION_ACCEPTED'
     | 'USER_INVITATION_ACCEPTED_LINK'
@@ -149,6 +150,7 @@ export function getRiskLevel(eventType: AuditEventType): RiskLevel {
         'PHI_DOWNLOAD',
         'USER_DEACTIVATED',
         'ROLE_CHANGED',
+        'USER_ROLE_CHANGE',
         'SUSPICIOUS_ACTIVITY',
         'PERMISSION_DENIED',
     ];

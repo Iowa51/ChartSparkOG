@@ -32,6 +32,7 @@ export const RATE_LIMITS = {
   passwordReset: { limit: 3, window: 60 * 60 * 1000, failClosed: true },
   emailSend: { limit: 5, window: 60 * 60 * 1000, failClosed: true },
   invitationAccept: { limit: 10, window: 60 * 60 * 1000, failClosed: true },
+  roleChange: { limit: 20, window: 60 * 60 * 1000, failClosed: false },
   telehealth: { limit: 50, window: 60 * 60 * 1000, failClosed: false },
 } satisfies Record<string, RateLimitConfig>;
 
@@ -173,6 +174,8 @@ function getRateLimitPrefix(rateLimitKey: RateLimitKey): string {
       return "ratelimit:password-reset";
     case "emailSend":
       return "ratelimit:email-send";
+    case "roleChange":
+      return "ratelimit:role-change";
     default:
       return "ratelimit:api";
   }
