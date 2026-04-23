@@ -3,6 +3,7 @@
 
 import { AuditLogEntry, RiskLevel } from './audit-log';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 
 export interface SecurityAlert {
     id: string;
@@ -153,7 +154,7 @@ async function sendWebhookAlert(alert: SecurityAlert): Promise<void> {
     }
 
     try {
-        await fetch(webhookUrl, {
+        await fetchWithTimeout(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -170,6 +171,7 @@ async function sendWebhookAlert(alert: SecurityAlert): Promise<void> {
                     },
                 ],
             }),
+            timeoutMs: 5000,
         });
     } catch (error) {
         logError({ action: 'ALERT_WEBHOOK_SEND_FAILED', error: sanitizeError(error) });

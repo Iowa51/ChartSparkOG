@@ -7,6 +7,7 @@ import { logAuditEvent } from '@/lib/security/audit-log';
 import { logError, logInfo, logWarn, sanitizeError } from '@/lib/logging/safe-logger';
 import { TelehealthEndSessionSchema, validateRequest } from '@/lib/validation/schemas';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 
 async function handler(context: AuthContext) {
     try {
@@ -105,11 +106,12 @@ async function handler(context: AuthContext) {
             const dailyApiKey = process.env.DAILY_API_KEY;
             if (dailyApiKey && roomName) {
                 try {
-                    await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+                    await fetchWithTimeout(`https://api.daily.co/v1/rooms/${roomName}`, {
                         method: 'DELETE',
                         headers: {
                             'Authorization': `Bearer ${dailyApiKey}`,
                         },
+                        timeoutMs: 15000,
                     });
                 } catch (deleteError) {
                     logWarn({ action: 'TELEHEALTH_DAILY_ROOM_DELETE_FAILED', error: sanitizeError(deleteError) });

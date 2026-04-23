@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { decryptPHI } from '@/lib/security/encryption';
 import { logWarn, logError, sanitizeError } from '@/lib/logging/safe-logger';
+import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout';
 
 export type ClearinghouseType =
     | 'office_ally'
@@ -230,7 +231,7 @@ async function submitToClaimMD(
         // H3: Decrypt credentials before use
         const apiKey = await decryptPHI(config.api_key_encrypted!);
         const apiSecret = await decryptPHI(config.api_secret_encrypted!);
-        const response = await fetch('https://api.claim.md/api/v2/claims', {
+        const response = await fetchWithTimeout('https://api.claim.md/api/v2/claims', {
             method: 'POST',
             headers: {
                 'Authorization': `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`,
@@ -240,6 +241,7 @@ async function submitToClaimMD(
                 claim_data: ediContent,
                 format: '837P',
             }),
+            timeoutMs: 30000,
         });
 
         if (response.ok) {
@@ -276,7 +278,7 @@ async function submitToAvaility(
         const clientId = await decryptPHI(config.api_key_encrypted!);
         const clientSecret = await decryptPHI(config.api_secret_encrypted!);
         // Get OAuth token
-        const tokenResponse = await fetch('https://api.availity.com/v1/token', {
+        const tokenResponse = await fetchWithTimeout('https://api.availity.com/v1/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -286,6 +288,7 @@ async function submitToAvaility(
                 client_id: clientId,
                 client_secret: clientSecret,
             }),
+            timeoutMs: 30000,
         });
 
         if (!tokenResponse.ok) {
@@ -295,13 +298,14 @@ async function submitToAvaility(
         const { access_token } = await tokenResponse.json();
 
         // Submit claim
-        const claimResponse = await fetch('https://api.availity.com/v1/claims', {
+        const claimResponse = await fetchWithTimeout('https://api.availity.com/v1/claims', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${access_token}`,
                 'Content-Type': 'application/edi-x12',
             },
             body: ediContent,
+            timeoutMs: 30000,
         });
 
         if (claimResponse.ok) {

@@ -10,6 +10,7 @@ import { createTelehealthInviteToken } from "@/lib/security/telehealth-invite-to
 import { logError, sanitizeError } from "@/lib/logging/safe-logger";
 import { TelehealthCreateRoomSchema, validateRequest } from "@/lib/validation/schemas";
 import { getRequestMetadata } from "@/lib/utils/get-client-ip";
+import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout";
 
 async function handler(context: AuthContext) {
   try {
@@ -157,23 +158,33 @@ async function handler(context: AuthContext) {
     }
 
     if (!roomUrl) {
-      const roomResponse = await fetch("https://api.daily.co/v1/rooms", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${dailyApiKey}`,
-        },
-        body: JSON.stringify({
-          name: roomName,
-          privacy: "private",
-          properties: {
-            enable_chat: true,
-            enable_screenshare: true,
-            max_participants: 2,
-            exp: Math.floor(Date.now() / 1000) + 2 * 60 * 60,
+      let roomResponse: Response;
+      try {
+        roomResponse = await fetchWithTimeout("https://api.daily.co/v1/rooms", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${dailyApiKey}`,
           },
-        }),
-      });
+          body: JSON.stringify({
+            name: roomName,
+            privacy: "private",
+            properties: {
+              enable_chat: true,
+              enable_screenshare: true,
+              max_participants: 2,
+              exp: Math.floor(Date.now() / 1000) + 2 * 60 * 60,
+            },
+          }),
+          timeoutMs: 15000,
+        });
+      } catch (fetchError) {
+        logError({ action: "DAILY_API_ERROR", error: sanitizeError(fetchError) });
+        return NextResponse.json(
+          { error: "Telehealth provider unreachable" },
+          { status: 504 },
+        );
+      }
 
       if (!roomResponse.ok) {
         const errorData = await roomResponse.json().catch(() => ({ error: "Unknown error" }));
@@ -189,35 +200,48 @@ async function handler(context: AuthContext) {
       roomUrl = room.url;
     }
 
-    const providerTokenResponse = await fetch("https://api.daily.co/v1/meeting-tokens", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${dailyApiKey}`,
-      },
-      body: JSON.stringify({
-        properties: {
-          room_name: roomName,
-          user_name: `Provider ${providerId || context.user.id}`,
-          is_owner: true,
-          enable_recording: "cloud",
-        },
-      }),
-    });
-
-    const patientTokenResponse = await fetch("https://api.daily.co/v1/meeting-tokens", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${dailyApiKey}`,
-      },
-      body: JSON.stringify({
-        properties: {
-          room_name: roomName,
-          user_name: patientName || "Patient",
-        },
-      }),
-    });
+    let providerTokenResponse: Response;
+    let patientTokenResponse: Response;
+    try {
+      [providerTokenResponse, patientTokenResponse] = await Promise.all([
+        fetchWithTimeout("https://api.daily.co/v1/meeting-tokens", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${dailyApiKey}`,
+          },
+          body: JSON.stringify({
+            properties: {
+              room_name: roomName,
+              user_name: `Provider ${providerId || context.user.id}`,
+              is_owner: true,
+              enable_recording: "cloud",
+            },
+          }),
+          timeoutMs: 15000,
+        }),
+        fetchWithTimeout("https://api.daily.co/v1/meeting-tokens", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${dailyApiKey}`,
+          },
+          body: JSON.stringify({
+            properties: {
+              room_name: roomName,
+              user_name: patientName || "Patient",
+            },
+          }),
+          timeoutMs: 15000,
+        }),
+      ]);
+    } catch (fetchError) {
+      logError({ action: "DAILY_TOKEN_GENERATION_ERROR", error: sanitizeError(fetchError) });
+      return NextResponse.json(
+        { error: "Telehealth provider unreachable" },
+        { status: 504 },
+      );
+    }
 
     if (!providerTokenResponse.ok || !patientTokenResponse.ok) {
       logError({
