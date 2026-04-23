@@ -233,11 +233,11 @@ export function getDemoChartSummaryResponse() {
             { instrument: 'GAD-7', scores: [{ date: '2024-06-15', score: 15 }, { date: '2024-09-20', score: 10 }, { date: '2025-01-10', score: 8 }, { date: '2025-07-15', score: 7 }, { date: '2025-11-20', score: 6 }, { date: '2026-01-15', score: 6 }], trend: 'stable' as const },
         ],
         visit_alerts: [
-            { message: '⚠️ Weight gain of 4kg since starting Sertraline — discuss metabolic monitoring', urgency: 'high' as const, rationale: 'Progressive weight gain may indicate medication side effect requiring intervention' },
-            { message: '📋 Annual metabolic labs overdue — order CMP, lipid panel, HbA1c', urgency: 'high' as const, rationale: 'Standard of care for patients on psychotropic medications' },
-            { message: '💊 Trazodone was started 4 weeks ago — assess sleep improvement and morning sedation', urgency: 'medium' as const, rationale: 'New medication requires efficacy and tolerability assessment' },
-            { message: '📅 PHQ-9 due — last administered 5 weeks ago', urgency: 'medium' as const, rationale: 'Routine depression monitoring during active treatment' },
-            { message: '🔄 Consider Sertraline dose optimization — PHQ-9 at 8, target <5 for full remission', urgency: 'low' as const, rationale: 'Partial response may benefit from dose increase or augmentation' },
+            { message: '[ALERT] Weight gain of 4kg since starting Sertraline — discuss metabolic monitoring', urgency: 'high' as const, rationale: 'Progressive weight gain may indicate medication side effect requiring intervention' },
+            { message: '[SUMMARY] Annual metabolic labs overdue — order CMP, lipid panel, HbA1c', urgency: 'high' as const, rationale: 'Standard of care for patients on psychotropic medications' },
+            { message: '[MEDICATIONS] Trazodone was started 4 weeks ago — assess sleep improvement and morning sedation', urgency: 'medium' as const, rationale: 'New medication requires efficacy and tolerability assessment' },
+            { message: '[SCHEDULE] PHQ-9 due — last administered 5 weeks ago', urgency: 'medium' as const, rationale: 'Routine depression monitoring during active treatment' },
+            { message: '[FOLLOW-UP] Consider Sertraline dose optimization — PHQ-9 at 8, target <5 for full remission', urgency: 'low' as const, rationale: 'Partial response may benefit from dose increase or augmentation' },
         ],
         suggested_agenda: [
             'Assess Trazodone effectiveness for insomnia (4-week check)',

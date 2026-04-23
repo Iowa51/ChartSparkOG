@@ -3,6 +3,7 @@
 // PrescribingCheckDialog — Modal popup during e-prescribe for interaction check
 
 import React, { useState, useEffect } from 'react';
+import { Search, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { getSafetyLevelConfig, type SafetyLevel } from '@/lib/types/smart-triage';
 
 interface PrescribingCheckDialogProps {
@@ -93,8 +94,8 @@ export default function PrescribingCheckDialog({
                                     'bg-blue-50'
                     }`}>
                     <div className="flex items-center justify-between">
-                        <h3 className={`text-base font-semibold ${result?.overall_risk === 'black' ? 'text-white' : 'text-gray-900'}`}>
-                            🔍 Prescribing Safety Check
+                        <h3 className={`text-base font-semibold flex items-center gap-2 ${result?.overall_risk === 'black' ? 'text-white' : 'text-gray-900'}`}>
+                            <Search className="h-4 w-4" aria-hidden="true" /> Prescribing Safety Check
                         </h3>
                         <button onClick={onClose} className={`p-1 rounded-full hover:bg-black/10 ${result?.overall_risk === 'black' ? 'text-gray-300' : 'text-gray-400'}`}>
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,7 +161,7 @@ export default function PrescribingCheckDialog({
                             {result.requires_acknowledgment && (
                                 <div className="p-4 rounded-xl bg-red-50 border border-red-200">
                                     <div className="flex items-start gap-2 mb-3">
-                                        <span className="text-lg">⚠️</span>
+                                        <AlertTriangle className="h-5 w-5 text-red-700 shrink-0" aria-hidden="true" />
                                         <div>
                                             <p className="text-xs font-bold text-red-800">Clinical Override Required</p>
                                             <p className="text-[10px] text-red-600">Significant interaction detected. Provide clinical rationale to proceed.</p>
@@ -209,7 +210,11 @@ export default function PrescribingCheckDialog({
                     >
                         {loading ? 'Checking...' :
                             isBlocked ? 'Acknowledge to Proceed' :
-                                result?.overall_risk === 'green' ? '✓ Proceed Safely' :
+                                result?.overall_risk === 'green' ? (
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Proceed Safely
+                                    </span>
+                                ) :
                                     'Proceed with Caution'}
                     </button>
                 </div>

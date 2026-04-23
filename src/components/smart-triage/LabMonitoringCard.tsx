@@ -3,6 +3,7 @@
 // LabMonitoringCard — Lab monitoring alerts with status badges
 
 import React from 'react';
+import { AlertTriangle, CheckCircle2, FlaskConical } from 'lucide-react';
 
 interface LabMonitoringCardProps {
     labs: Record<string, unknown>[];
@@ -20,15 +21,15 @@ export default function LabMonitoringCard({ labs }: LabMonitoringCardProps) {
     const labItems = labs as unknown as LabItem[];
 
     const statusConfig: Record<string, { text: string; bg: string; label: string; icon: string }> = {
-        current: { text: 'text-emerald-700', bg: 'bg-emerald-100', label: 'Current', icon: '✓' },
+        current: { text: 'text-emerald-700', bg: 'bg-emerald-100', label: 'Current', icon: '[OK]' },
         due: { text: 'text-amber-700', bg: 'bg-amber-100', label: 'Due', icon: '⏰' },
-        overdue: { text: 'text-red-700', bg: 'bg-red-100', label: 'Overdue', icon: '⚠️' },
+        overdue: { text: 'text-red-700', bg: 'bg-red-100', label: 'Overdue', icon: '[ALERT]' },
     };
 
     if (!labItems || labItems.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                <span className="text-2xl mb-2">🧪</span>
+                <FlaskConical className="h-8 w-8 mb-2" aria-hidden="true" />
                 <p className="text-sm">No lab monitoring data available</p>
                 <p className="text-xs mt-1">Run a medication triage to generate lab recommendations</p>
             </div>
@@ -45,7 +46,7 @@ export default function LabMonitoringCard({ labs }: LabMonitoringCardProps) {
             <div className="flex gap-3">
                 {overdue.length > 0 && (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 border border-red-200">
-                        <span className="text-xs">⚠️</span>
+                        <AlertTriangle className="h-3 w-3 text-red-700" aria-hidden="true" />
                         <span className="text-xs font-bold text-red-700">{overdue.length} Overdue</span>
                     </div>
                 )}
@@ -57,7 +58,7 @@ export default function LabMonitoringCard({ labs }: LabMonitoringCardProps) {
                 )}
                 {current.length > 0 && (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-200">
-                        <span className="text-xs">✓</span>
+                        <CheckCircle2 className="h-3 w-3 text-emerald-700" aria-hidden="true" />
                         <span className="text-xs font-bold text-emerald-700">{current.length} Current</span>
                     </div>
                 )}

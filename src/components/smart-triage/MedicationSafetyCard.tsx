@@ -3,6 +3,7 @@
 // MedicationSafetyCard — Drug interactions, black box warnings, pregnancy safety
 
 import React, { useState } from 'react';
+import { Zap, Lightbulb } from 'lucide-react';
 
 interface MedicationSafetyCardProps {
     data: Record<string, unknown>;
@@ -47,7 +48,7 @@ export default function MedicationSafetyCard({ data }: MedicationSafetyCardProps
             {interactions.length > 0 && (
                 <div>
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                        <span>⚡</span> Drug-Drug Interactions ({interactions.length})
+                        <Zap className="h-3 w-3" aria-hidden="true" /> Drug-Drug Interactions ({interactions.length})
                     </h4>
                     <div className="space-y-2">
                         {interactions.map((ddi, i) => {
@@ -127,7 +128,7 @@ export default function MedicationSafetyCard({ data }: MedicationSafetyCardProps
             {pregnancySafety.length > 0 && (
                 <div>
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                        <span>🤰</span> Reproductive Safety
+                        <span className="text-[10px] font-bold tracking-wider">[PREGNANCY]</span> Reproductive Safety
                     </h4>
                     <div className="space-y-2">
                         {pregnancySafety.map((ps, i) => (
@@ -149,7 +150,7 @@ export default function MedicationSafetyCard({ data }: MedicationSafetyCardProps
             {clinicalPearls.length > 0 && (
                 <div>
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                        <span>💡</span> Clinical Pearls
+                        <Lightbulb className="h-3 w-3" aria-hidden="true" /> Clinical Pearls
                     </h4>
                     <div className="space-y-1.5">
                         {clinicalPearls.map((pearl, i) => (
