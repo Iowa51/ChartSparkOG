@@ -183,10 +183,31 @@ export function logAuditEventAsync(entry: AuditLogEntry): void {
     });
 }
 
+// Auth/session events have no resource — they describe the session itself.
+// Default them to 'auth_session' so audit writes succeed without forcing every
+// call site to repeat the same literal.
+const AUTH_SESSION_EVENTS: ReadonlySet<AuditEventType> = new Set<AuditEventType>([
+    'LOGIN_SUCCESS',
+    'LOGIN_FAILURE',
+    'LOGOUT',
+    'PASSWORD_CHANGE',
+    'PASSWORD_RESET',
+    'MFA_ENABLED',
+    'MFA_DISABLED',
+    'MFA_CHALLENGE_SUCCESS',
+    'MFA_CHALLENGE_FAILURE',
+    'SESSION_TIMEOUT',
+    'SESSION_EXTENDED',
+]);
+
 /**
  * Log an audit event
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
+    if (!entry.resourceType && AUTH_SESSION_EVENTS.has(entry.eventType)) {
+        entry = { ...entry, resourceType: 'auth_session' };
+    }
+
     // Defensive guard: production audit_logs.entity_type is NOT NULL.
     // Surface the offending call site immediately instead of a cryptic DB
     // constraint violation later.
