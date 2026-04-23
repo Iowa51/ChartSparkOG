@@ -1,16 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
 import {
-    Users,
-    Plus,
     Search,
-    Edit,
     UserCheck,
     UserX,
-    X,
-    ArrowLeft
+    ArrowLeft,
+    Shield,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -20,176 +16,125 @@ interface User {
     first_name: string | null;
     last_name: string | null;
     role: string;
-    specialty: string | null;
     is_active: boolean;
-    last_login: string | null;
+    created_at: string;
+    organization_id: string | null;
+}
+
+interface CurrentUser {
+    id: string;
+    role: string;
+    organization_id: string | null;
 }
 
 export default function AdminUsersPage() {
-    const supabase = createClient();
     const [users, setUsers] = useState<User[]>([]);
+    const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [organizationId, setOrganizationId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const [formData, setFormData] = useState({
-        first_name: "",
-        last_name: "",
-        specialty: "both",
-    });
-
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [createFormData, setCreateFormData] = useState({
-        email: "",
-        first_name: "",
-        last_name: "",
-        role: "USER",
-        specialty: "both",
-    });
+    // Change-role modal selection state. The modal itself is built in Session 8C;
+    // Session 8B wires the button so it sets these three values on click.
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [selectedUserName, setSelectedUserName] = useState<string>("");
+    const [selectedCurrentRole, setSelectedCurrentRole] = useState<string>("");
 
     useEffect(() => {
-        fetchCurrentUserOrg();
+        fetchUsers();
     }, []);
 
-    const fetchCurrentUserOrg = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                const { data: profile, error } = await supabase
-                    .from('users')
-                    .select('organization_id')
-                    .eq('id', user.id)
-                    .single();
-
-                if (error) throw error;
-
-                if (profile?.organization_id) {
-                    setOrganizationId(profile.organization_id);
-                    fetchUsers(profile.organization_id);
-                } else {
-                    setError("No organization found. Please contact support.");
-                    setLoading(false);
-                }
-            } else {
-                setError("Please log in to view users.");
-                setLoading(false);
-            }
-        } catch (error) {
-            console.error("[Admin Users] Error fetching org:", error);
-            setError("Failed to load organization data.");
-            setLoading(false);
-        }
-    };
-
-    const fetchUsers = async (orgId: string) => {
+    const fetchUsers = async () => {
         setLoading(true);
         setError(null);
         try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('organization_id', orgId)
-                .in('role', ['USER', 'ADMIN']) // Admin can only see their org's admins and users
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            setUsers(data || []);
-        } catch (error) {
-            console.error("[Admin Users] Error fetching users:", error);
-            setError("Failed to load users. Please try again.");
+            const res = await fetch("/api/admin/users");
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to load users");
+            }
+            const payload = await res.json();
+            setUsers(payload.users ?? []);
+            setCurrentUser(payload.currentUser ?? null);
+        } catch (err) {
+            console.error("[Admin Users] fetch error:", err);
+            setError(err instanceof Error ? err.message : "Failed to load users");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleEdit = (user: User) => {
-        setEditingUser(user);
-        setFormData({
-            first_name: user.first_name || "",
-            last_name: user.last_name || "",
-            specialty: user.specialty || "both",
-        });
-        setShowEditModal(true);
-    };
-
-    // SEC-PT6-F7: User modifications via server-side API with audit logging
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editingUser) return;
-
-        try {
-            const response = await fetch(`/api/admin/users/${editingUser.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    first_name: formData.first_name,
-                    last_name: formData.last_name,
-                    specialty: formData.specialty,
-                }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to update user');
-            }
-
-            setShowEditModal(false);
-            setEditingUser(null);
-            if (organizationId) fetchUsers(organizationId);
-        } catch (error) {
-            console.error("Error updating user:", error);
-            alert(error instanceof Error ? error.message : "Failed to update user");
-        }
-    };
-
     const handleToggleActive = async (user: User) => {
+        if (currentUser?.id === user.id) return;
         try {
             const response = await fetch(`/api/admin/users/${user.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ is_active: !user.is_active }),
             });
-
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to toggle user status');
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to toggle status");
             }
-
-            if (organizationId) fetchUsers(organizationId);
-        } catch (error) {
-            console.error("Error toggling user status:", error);
+            fetchUsers();
+        } catch (err) {
+            console.error("[Admin Users] toggle error:", err);
         }
     };
 
-    const handleCreateUser = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!createFormData.email.trim()) return;
-
-        const newUser: User = {
-            id: `new-user-${Date.now()}`,
-            email: createFormData.email,
-            first_name: createFormData.first_name || null,
-            last_name: createFormData.last_name || null,
-            role: createFormData.role,
-            specialty: createFormData.specialty,
-            is_active: true,
-            last_login: null,
-        };
-
-        setUsers(prev => [newUser, ...prev]);
-        setShowCreateModal(false);
-        setCreateFormData({ email: "", first_name: "", last_name: "", role: "USER", specialty: "both" });
+    const handleOpenChangeRole = (user: User) => {
+        const name =
+            `${user.first_name || ""} ${user.last_name || ""}`.trim() || user.email;
+        setSelectedUserId(user.id);
+        setSelectedUserName(name);
+        setSelectedCurrentRole(user.role);
     };
 
-    const filteredUsers = users.filter(user =>
+    const filteredUsers = users.filter((user) =>
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (user.first_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-        (user.last_name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+        (user.first_name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+        (user.last_name?.toLowerCase() || "").includes(searchQuery.toLowerCase())
     );
+
+    const canChangeRole =
+        currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+
+    const isChangeRoleDisabled = (user: User) => {
+        if (!currentUser) return true;
+        if (user.id === currentUser.id) return true;
+        if (user.role === "SUPER_ADMIN" && currentUser.role === "ADMIN") return true;
+        return false;
+    };
+
+    const roleBadgeClass = (role: string) => {
+        switch (role) {
+            case "SUPER_ADMIN":
+                return "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400";
+            case "ADMIN":
+                return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400";
+            case "AUDITOR":
+                return "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400";
+            case "USER":
+            default:
+                return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400";
+        }
+    };
+
+    const roleLabel = (role: string) =>
+        role === "USER" ? "Clinician" : role.replace("_", " ");
+
+    const avatarClass = (role: string) => {
+        switch (role) {
+            case "SUPER_ADMIN":
+                return "bg-purple-600";
+            case "ADMIN":
+                return "bg-blue-600";
+            case "AUDITOR":
+                return "bg-amber-600";
+            default:
+                return "bg-emerald-600";
+        }
+    };
 
     return (
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
@@ -211,20 +156,6 @@ export default function AdminUsersPage() {
                         </p>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowCreateModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium transition-colors"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add User
-                </button>
-            </div>
-
-            {/* Info Banner */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4 mb-6">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Note:</strong> Users created here are added to your organization.
-                </p>
             </div>
 
             {/* Error State */}
@@ -253,263 +184,112 @@ export default function AdminUsersPage() {
                 <table className="w-full">
                     <thead className="bg-slate-50 dark:bg-slate-800">
                         <tr>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">User</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Role</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Specialty</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Last Login</th>
-                            <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                Name
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                Email
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                Role
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                Status
+                            </th>
+                            <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                Actions
+                            </th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
                                     Loading users...
                                 </td>
                             </tr>
                         ) : filteredUsers.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
                                     No users found
                                 </td>
                             </tr>
                         ) : (
-                            filteredUsers.map((user) => (
-                                <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${user.role === 'ADMIN' ? 'bg-blue-600' : 'bg-teal-600'
-                                                }`}>
-                                                {user.first_name?.[0] || user.email[0].toUpperCase()}
-                                                {user.last_name?.[0] || ''}
-                                            </div>
-                                            <div>
+                            filteredUsers.map((user) => {
+                                const changeRoleDisabled = isChangeRoleDisabled(user);
+                                const displayName =
+                                    user.first_name || user.last_name
+                                        ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+                                        : "No Name";
+                                return (
+                                    <tr
+                                        key={user.id}
+                                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                                    >
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${avatarClass(user.role)}`}
+                                                >
+                                                    {user.first_name?.[0] || user.email[0].toUpperCase()}
+                                                    {user.last_name?.[0] || ""}
+                                                </div>
                                                 <p className="font-medium text-slate-900 dark:text-white">
-                                                    {user.first_name || user.last_name
-                                                        ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
-                                                        : 'No Name'}
+                                                    {displayName}
                                                 </p>
-                                                <p className="text-xs text-slate-500">{user.email}</p>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.role === 'ADMIN'
-                                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
-                                            : 'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-400'
-                                            }`}>
-                                            {user.role}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                                        {user.specialty || '—'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <button
-                                            onClick={() => handleToggleActive(user)}
-                                            className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-colors ${user.is_active
-                                                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                                                : 'bg-red-100 text-red-700 hover:bg-red-200'
-                                                }`}
-                                        >
-                                            {user.is_active ? <UserCheck className="h-3 w-3" /> : <UserX className="h-3 w-3" />}
-                                            {user.is_active ? 'Active' : 'Inactive'}
-                                        </button>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-slate-500">
-                                        {user.last_login
-                                            ? new Date(user.last_login).toLocaleDateString()
-                                            : 'Never'}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button
-                                            onClick={() => handleEdit(user)}
-                                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                                            {user.email}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span
+                                                className={`px-2 py-1 text-xs font-medium rounded-full ${roleBadgeClass(user.role)}`}
+                                            >
+                                                {roleLabel(user.role)}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <button
+                                                onClick={() => handleToggleActive(user)}
+                                                disabled={currentUser?.id === user.id}
+                                                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-colors ${user.is_active
+                                                    ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-400"
+                                                    : "bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-400"
+                                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            >
+                                                {user.is_active ? (
+                                                    <UserCheck className="h-3 w-3" />
+                                                ) : (
+                                                    <UserX className="h-3 w-3" />
+                                                )}
+                                                {user.is_active ? "Active" : "Inactive"}
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            {canChangeRole && (
+                                                <button
+                                                    onClick={() => handleOpenChangeRole(user)}
+                                                    disabled={changeRoleDisabled}
+                                                    className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+                                                >
+                                                    <Shield className="h-3.5 w-3.5" />
+                                                    Change Role
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>
             </div>
 
-            {/* Edit Modal */}
-            {showEditModal && editingUser && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl">
-                        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                                Edit User
-                            </h2>
-                            <button
-                                onClick={() => setShowEditModal(false)}
-                                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        First Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.first_name}
-                                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        Last Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.last_name}
-                                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Specialty
-                                </label>
-                                <select
-                                    value={formData.specialty}
-                                    onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-                                >
-                                    <option value="mental_health">Mental Health</option>
-                                    <option value="geriatric">Geriatric</option>
-                                    <option value="both">Both</option>
-                                </select>
-                            </div>
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowEditModal(false)}
-                                    className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
-                                >
-                                    Save Changes
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* Create User Modal */}
-            {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg shadow-2xl">
-                        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                                Add New User
-                            </h2>
-                            <button
-                                onClick={() => setShowCreateModal(false)}
-                                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleCreateUser} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    Email *
-                                </label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={createFormData.email}
-                                    onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
-                                    className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                                    placeholder="user@organization.com"
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        First Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={createFormData.first_name}
-                                        onChange={(e) => setCreateFormData({ ...createFormData, first_name: e.target.value })}
-                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        Last Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={createFormData.last_name}
-                                        onChange={(e) => setCreateFormData({ ...createFormData, last_name: e.target.value })}
-                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                                    />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        Role
-                                    </label>
-                                    <select
-                                        value={createFormData.role}
-                                        onChange={(e) => setCreateFormData({ ...createFormData, role: e.target.value })}
-                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                                    >
-                                        <option value="USER">User</option>
-                                        <option value="ADMIN">Admin</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                        Specialty
-                                    </label>
-                                    <select
-                                        value={createFormData.specialty}
-                                        onChange={(e) => setCreateFormData({ ...createFormData, specialty: e.target.value })}
-                                        className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none"
-                                    >
-                                        <option value="mental_health">Mental Health</option>
-                                        <option value="geriatric">Geriatric</option>
-                                        <option value="both">Both</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCreateModal(false)}
-                                    className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-50 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium transition-colors"
-                                >
-                                    Create User
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+            {/* Selection state is consumed by the Change Role modal in Session 8C. */}
+            {selectedUserId && (
+                <div className="sr-only" aria-live="polite">
+                    Selected {selectedUserName} ({selectedCurrentRole}) — id {selectedUserId}
                 </div>
             )}
         </div>
