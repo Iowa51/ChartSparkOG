@@ -1142,7 +1142,7 @@ Prognosis: Favorable with continued treatment adherence.`;
       <header className="flex-none flex items-center justify-between border-b border-border bg-card px-6 py-3 shadow-sm z-20">
         <div className="flex items-center gap-4">
           <Link
-            href="/templates"
+            href={encounterId ? `/encounters/${encounterId}` : '/notes'}
             className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
