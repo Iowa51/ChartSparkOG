@@ -3,7 +3,7 @@
 // MedicationSafetyCard — Drug interactions, black box warnings, pregnancy safety
 
 import React, { useState } from 'react';
-import { Zap, Lightbulb } from 'lucide-react';
+import { Zap, Lightbulb, ShieldAlert } from 'lucide-react';
 
 interface MedicationSafetyCardProps {
     data: Record<string, unknown>;
@@ -110,7 +110,7 @@ export default function MedicationSafetyCard({ data }: MedicationSafetyCardProps
             {blackBox.length > 0 && (
                 <div>
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                        <span>⬛</span> Black Box Warnings
+                        <ShieldAlert className="h-3 w-3" aria-hidden="true" /> Black Box Warnings
                     </h4>
                     <div className="space-y-2">
                         {blackBox.map((bbw, i) => (

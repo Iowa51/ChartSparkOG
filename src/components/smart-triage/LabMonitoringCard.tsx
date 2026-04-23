@@ -3,7 +3,7 @@
 // LabMonitoringCard — Lab monitoring alerts with status badges
 
 import React from 'react';
-import { AlertTriangle, CheckCircle2, FlaskConical } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, FlaskConical } from 'lucide-react';
 
 interface LabMonitoringCardProps {
     labs: Record<string, unknown>[];
@@ -22,7 +22,7 @@ export default function LabMonitoringCard({ labs }: LabMonitoringCardProps) {
 
     const statusConfig: Record<string, { text: string; bg: string; label: string; icon: string }> = {
         current: { text: 'text-emerald-700', bg: 'bg-emerald-100', label: 'Current', icon: '[OK]' },
-        due: { text: 'text-amber-700', bg: 'bg-amber-100', label: 'Due', icon: '⏰' },
+        due: { text: 'text-amber-700', bg: 'bg-amber-100', label: 'Due', icon: '[DUE]' },
         overdue: { text: 'text-red-700', bg: 'bg-red-100', label: 'Overdue', icon: '[ALERT]' },
     };
 
@@ -52,7 +52,7 @@ export default function LabMonitoringCard({ labs }: LabMonitoringCardProps) {
                 )}
                 {due.length > 0 && (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 border border-amber-200">
-                        <span className="text-xs">⏰</span>
+                        <Clock className="h-3 w-3 text-amber-700" aria-hidden="true" />
                         <span className="text-xs font-bold text-amber-700">{due.length} Due</span>
                     </div>
                 )}
