@@ -9,6 +9,7 @@ import {
     Shield,
 } from "lucide-react";
 import Link from "next/link";
+import ChangeRoleModal from "@/components/admin/ChangeRoleModal";
 
 interface User {
     id: string;
@@ -286,12 +287,19 @@ export default function AdminUsersPage() {
                 </table>
             </div>
 
-            {/* Selection state is consumed by the Change Role modal in Session 8C. */}
-            {selectedUserId && (
-                <div className="sr-only" aria-live="polite">
-                    Selected {selectedUserName} ({selectedCurrentRole}) — id {selectedUserId}
-                </div>
-            )}
+            <ChangeRoleModal
+                isOpen={!!selectedUserId}
+                onClose={() => {
+                    setSelectedUserId(null);
+                    setSelectedUserName("");
+                    setSelectedCurrentRole("");
+                }}
+                onSuccess={fetchUsers}
+                userId={selectedUserId ?? ""}
+                userName={selectedUserName}
+                currentRole={selectedCurrentRole}
+                callerRole={currentUser?.role ?? ""}
+            />
         </div>
     );
 }
