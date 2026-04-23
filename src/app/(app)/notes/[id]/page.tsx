@@ -235,28 +235,30 @@ export default function NotePage() {
         if (!note) return;
         try {
             setSubmittingClaim(true);
-            // Sign the note (final state after billing)
-            const response = await fetch(`/api/notes/${id}`, {
-                method: 'PATCH',
+            const response = await fetch(`/api/notes/${id}/submit-claim`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    status: 'signed',
-                    signed_at: new Date().toISOString(),
-                }),
+                body: JSON.stringify({}),
             });
             if (!response.ok) {
-                const data = await response.json();
+                const data = await response.json().catch(() => ({}));
                 throw new Error(data.error || 'Failed to submit claim');
             }
             const data = await response.json();
-            setNote(data.note);
-            setSuccessMessage('Claim submitted! Note signed and locked.');
+            if (data.note) setNote(data.note);
+            const claimNumber = data.claim?.claim_number;
+            setSuccessMessage(
+                claimNumber
+                    ? `Claim ${claimNumber} created. Note signed and locked.`
+                    : 'Claim created. Note signed and locked.'
+            );
             setTimeout(() => setSuccessMessage(null), 4000);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to submit claim');
-            setTimeout(() => setError(null), 3000);
+            setTimeout(() => setError(null), 4000);
         } finally {
             setSubmittingClaim(false);
+            setShowClaimModal(false);
         }
     };
 

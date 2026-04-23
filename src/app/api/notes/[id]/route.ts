@@ -117,6 +117,20 @@ async function handlePatch(context: AuthContext) {
 
     const rawData = await context.request.json();
 
+    // P0 guard: block the approved -> signed shortcut. Signing an approved
+    // note must go through POST /api/notes/[id]/submit-claim so a
+    // billing_claims row is created. The /api/notes/[id]/sign route is
+    // unaffected (it only handles draft/completed/needs_revision).
+    if (
+      rawData?.status === "signed" &&
+      currentNote?.status === "approved"
+    ) {
+      return NextResponse.json(
+        { error: "Use the Submit Claim workflow to sign approved notes." },
+        { status: 400 },
+      );
+    }
+
     // Prevent editing locked/in-review notes (allow draft and needs_revision)
     const lockedStatuses = ["signed", "pending_review", "approved"];
     if (lockedStatuses.includes(currentNote?.status) && !rawData?.status) {
