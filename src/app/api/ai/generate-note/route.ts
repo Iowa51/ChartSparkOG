@@ -130,7 +130,7 @@ async function handler(context: AuthContext) {
                 const seenCodes = new Set<string>();
                 activeProblemIcd10 = [];
                 for (const p of patientCtx.problems) {
-                    const code = p.icd10_code?.trim();
+                    const code = p.icd10_code?.trim().toUpperCase();
                     if (!code || seenCodes.has(code)) continue;
                     seenCodes.add(code);
                     activeProblemIcd10.push({
@@ -197,10 +197,14 @@ async function handler(context: AuthContext) {
 
         // Merge active-problem ICD-10 codes with keyword-matched codes. When a
         // code is present in both sources, active_problem wins (grounded in
-        // persistent patient record rather than a single dictation).
-        const activeProblemCodeSet = new Set(activeProblemIcd10.map((c) => c.code));
+        // persistent patient record rather than a single dictation). Both
+        // sides are trimmed+uppercased so " e11.9 " and "E11.9" dedup.
+        const activeProblemCodeSet = new Set(
+            activeProblemIcd10.map((c) => c.code.trim().toUpperCase()),
+        );
         const inputIcd10: Array<{ code: string; description: string; source: 'clinician_input' }> =
             codeAnalysis.icd10Details
+                .map((c) => ({ ...c, code: c.code.trim().toUpperCase() }))
                 .filter((c) => !activeProblemCodeSet.has(c.code))
                 .map((c) => ({
                     code: c.code,
@@ -210,7 +214,7 @@ async function handler(context: AuthContext) {
 
         const suggestedCodes = {
             cpt: codeAnalysis.cptDetails.map((c) => ({
-                code: c.code,
+                code: c.code.trim().toUpperCase(),
                 description: c.title,
                 source: 'clinician_input' as const,
             })),

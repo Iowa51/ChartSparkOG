@@ -65,14 +65,19 @@ export function analyzeNoteForCodes(
         subjective, objective, assessment, plan
     }, templateType);
 
-    // Sort by score descending and take top N
+    // Sort by score descending and take top N, normalizing each code at the
+    // output boundary so every downstream consumer sees trimmed/uppercase
+    // codes regardless of how they were entered into the library.
+    const normalize = (m: CodeMatch): CodeMatch => ({ ...m, code: m.code.trim().toUpperCase() });
     const topCPT = cptMatches
         .sort((a, b) => b.score - a.score)
-        .slice(0, maxCPT);
+        .slice(0, maxCPT)
+        .map(normalize);
 
     const topICD10 = icd10Matches
         .sort((a, b) => b.score - a.score)
-        .slice(0, maxICD10);
+        .slice(0, maxICD10)
+        .map(normalize);
 
     return {
         cpt: topCPT.map(c => c.code),

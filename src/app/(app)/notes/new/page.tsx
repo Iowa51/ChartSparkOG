@@ -339,21 +339,26 @@ export default function NewNotePage() {
   } => {
     const normalizeArr = (arr: any): SuggestedCode[] => {
       if (!Array.isArray(arr)) return [];
-      return arr.map((item) => {
-        if (typeof item === "string") {
+      return arr
+        .map((item) => {
+          const rawCode = typeof item === "string" ? item : item?.code;
+          const code = String(rawCode ?? "").trim().toUpperCase();
+          if (!code) return null;
+          if (typeof item === "string") {
+            return {
+              code,
+              description: getCodeInfo(code)?.title || code,
+              source: "clinician_input" as const,
+            };
+          }
           return {
-            code: item,
-            description: getCodeInfo(item)?.title || item,
-            source: "clinician_input" as const,
+            code,
+            description:
+              item.description || getCodeInfo(code)?.title || code,
+            source: (item.source as CodeSource) || "clinician_input",
           };
-        }
-        return {
-          code: item.code,
-          description:
-            item.description || getCodeInfo(item.code)?.title || item.code,
-          source: (item.source as CodeSource) || "clinician_input",
-        };
-      });
+        })
+        .filter((c): c is SuggestedCode => c !== null);
     };
     return {
       cpt: normalizeArr(raw?.cpt),
@@ -383,6 +388,41 @@ export default function NewNotePage() {
         "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
     },
   };
+
+  // When editing a saved note, hydrate its stored cpt_codes / icd10_codes
+  // into the chip UI. Without this, the edit flow starts with empty code
+  // chips even though the note has codes on disk — clinicians would have to
+  // re-add everything by hand. Restored codes use source='manual' because
+  // provenance is lost at persist time (we only store the code string).
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch(`/api/notes/${editId}`);
+        if (!response.ok) return;
+        const payload = await response.json();
+        const note = payload?.note ?? payload;
+        const cpt = Array.isArray(note?.cpt_codes) ? note.cpt_codes : [];
+        const icd10 = Array.isArray(note?.icd10_codes) ? note.icd10_codes : [];
+        if (cancelled || (cpt.length === 0 && icd10.length === 0)) return;
+        setSuggestedCodes(
+          normalizeSuggestedCodes({
+            cpt: cpt.map((c: string) => ({ code: c, source: "manual" })),
+            icd10: icd10.map((c: string) => ({ code: c, source: "manual" })),
+          }),
+        );
+      } catch (err) {
+        console.error("Failed to hydrate note codes for edit", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // normalizeSuggestedCodes is a stable closure (pure, no state deps);
+    // listing it would retrigger on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
 
   // Track which codes have been selected/copied
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
@@ -1075,9 +1115,14 @@ Prognosis: Favorable with continued treatment adherence.`;
       // Persist suggested codes so /notes/[id] and the submit/review flow
       // can display them without the clinician having to re-add everything
       // manually. Strip source metadata — the stored value is just the code
-      // string; source is inferable on read.
-      const cptCodesToPersist = (suggestedCodes?.cpt ?? []).map((c) => c.code);
-      const icd10CodesToPersist = (suggestedCodes?.icd10 ?? []).map((c) => c.code);
+      // string; source is inferable on read. Trim/uppercase defensively so
+      // codes typed manually in mixed case round-trip identically.
+      const cptCodesToPersist = (suggestedCodes?.cpt ?? [])
+        .map((c) => c.code.trim().toUpperCase())
+        .filter(Boolean);
+      const icd10CodesToPersist = (suggestedCodes?.icd10 ?? [])
+        .map((c) => c.code.trim().toUpperCase())
+        .filter(Boolean);
 
       const noteData = editId
         ? {
