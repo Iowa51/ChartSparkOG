@@ -2,7 +2,7 @@
 // AI-powered medication safety triage analysis
 
 import { NextResponse } from "next/server";
-import { withAuth, AuthContext } from "@/lib/auth/api-auth";
+import { withAuth, AuthContext, canAccessPatient } from "@/lib/auth/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import safeAzureOpenAI from "@/services/safeAzureOpenAI";
 import { logAuditEvent } from "@/lib/security/audit-log";
@@ -28,6 +28,12 @@ async function handler(context: AuthContext) {
     }
 
     const { patient_id } = validation.data;
+
+    // SEC: verify caller has access to this patient in their org before any PHI read
+    const canAccess = await canAccessPatient(context.user, patient_id);
+    if (!canAccess) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 403 });
+    }
 
     const supabase = await createClient();
 
@@ -66,21 +72,30 @@ async function handler(context: AuthContext) {
       // not exist yet on older schemas, and any rejection is handled below.
       const [patientResult, medsResult, problemsResult, allergiesResult] = await Promise.allSettled(
         [
-          supabase.from("patients").select("*").eq("id", patient_id).single(),
+          supabase
+            .from("patients")
+            .select("*")
+            .eq("id", patient_id)
+            .eq("organization_id", context.user.organizationId!)
+            .single(),
+          // Child tables lack organization_id; enforce org scope via inner join on patients
           supabase
             .from("patient_medications")
-            .select("medication, dosage, frequency")
+            .select("medication, dosage, frequency, patients!inner(organization_id)")
             .eq("patient_id", patient_id)
+            .eq("patients.organization_id", context.user.organizationId!)
             .eq("status", "active"),
           supabase
             .from("patient_problems")
-            .select("problem, icd10_code")
+            .select("problem, icd10_code, patients!inner(organization_id)")
             .eq("patient_id", patient_id)
+            .eq("patients.organization_id", context.user.organizationId!)
             .eq("status", "active"),
           supabase
             .from("patient_allergies")
-            .select("allergy, severity")
-            .eq("patient_id", patient_id),
+            .select("allergy, severity, patients!inner(organization_id)")
+            .eq("patient_id", patient_id)
+            .eq("patients.organization_id", context.user.organizationId!),
         ],
       );
 
@@ -243,5 +258,6 @@ async function handler(context: AuthContext) {
 
 export const POST = withAuth(handler, {
   requiredRole: ["USER", "ADMIN", "SUPER_ADMIN"],
+  requireOrganization: true,
   requireMFA: true,
 });

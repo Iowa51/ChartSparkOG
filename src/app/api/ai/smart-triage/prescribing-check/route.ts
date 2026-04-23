@@ -2,7 +2,7 @@
 // Real-time prescribing interaction check
 
 import { NextResponse } from "next/server";
-import { withAuth, AuthContext } from "@/lib/auth/api-auth";
+import { withAuth, AuthContext, canAccessPatient } from "@/lib/auth/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import safeAzureOpenAI from "@/services/safeAzureOpenAI";
 import { logAuditEvent } from "@/lib/security/audit-log";
@@ -29,6 +29,12 @@ async function handler(context: AuthContext) {
 
     const { patient_id, new_medication, dose, frequency } = validation.data;
 
+    // SEC: verify caller has access to this patient in their org before any PHI read
+    const canAccess = await canAccessPatient(context.user, patient_id);
+    if (!canAccess) {
+      return NextResponse.json({ error: "Patient not found" }, { status: 403 });
+    }
+
     const supabase = await createClient();
 
     // Gather current medications
@@ -41,11 +47,18 @@ async function handler(context: AuthContext) {
       // Promise.allSettled preserves tolerance for patient_medications
       // which may not exist on older schemas.
       const [patientResult, medsResult] = await Promise.allSettled([
-        supabase.from("patients").select("date_of_birth, gender").eq("id", patient_id).single(),
+        supabase
+          .from("patients")
+          .select("date_of_birth, gender")
+          .eq("id", patient_id)
+          .eq("organization_id", context.user.organizationId!)
+          .single(),
+        // patient_medications has no organization_id column; enforce org scope via patients join
         supabase
           .from("patient_medications")
-          .select("medication, dosage, frequency")
+          .select("medication, dosage, frequency, patients!inner(organization_id)")
           .eq("patient_id", patient_id)
+          .eq("patients.organization_id", context.user.organizationId!)
           .eq("status", "active"),
       ]);
 
@@ -191,5 +204,6 @@ function getDemoPrescribingCheckResponse(medication: string, dose: string): Pres
 
 export const POST = withAuth(handler, {
   requiredRole: ["USER", "ADMIN", "SUPER_ADMIN"],
+  requireOrganization: true,
   requireMFA: true,
 });
