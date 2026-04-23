@@ -95,23 +95,20 @@ export default function AdminSubmissionsPage() {
 
     const handleApprove = async (submissionId: string) => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            const { error } = await supabase
-                .from('submissions')
-                .update({
-                    status: 'approved',
-                    approved_by: user?.id,
-                    approved_at: new Date().toISOString(),
-                })
-                .eq('id', submissionId);
-
-            if (error) throw error;
+            const res = await fetch(`/api/admin/submissions/${submissionId}/review`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'approved' }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to approve submission');
+            }
             if (organizationId) fetchSubmissions(organizationId);
             setSelectedSubmission(null);
         } catch (error) {
             console.error("Error approving submission:", error);
-            alert("Failed to approve submission");
+            alert(error instanceof Error ? error.message : "Failed to approve submission");
         }
     };
 
@@ -120,20 +117,20 @@ export default function AdminSubmissionsPage() {
         if (!reason) return;
 
         try {
-            const { error } = await supabase
-                .from('submissions')
-                .update({
-                    status: 'rejected',
-                    auditor_comments: reason,
-                })
-                .eq('id', submissionId);
-
-            if (error) throw error;
+            const res = await fetch(`/api/admin/submissions/${submissionId}/review`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'rejected', reason }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to reject submission');
+            }
             if (organizationId) fetchSubmissions(organizationId);
             setSelectedSubmission(null);
         } catch (error) {
             console.error("Error rejecting submission:", error);
-            alert("Failed to reject submission");
+            alert(error instanceof Error ? error.message : "Failed to reject submission");
         }
     };
 
