@@ -54,10 +54,13 @@ const publicRoutes = [
     '/auth/auth-code-error',
 ];
 
-export async function updateSession(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
-        request,
-    });
+export async function updateSession(request: NextRequest, requestHeaders?: Headers) {
+    // When middleware forwards a modified header bag (e.g. x-request-id),
+    // propagate it to downstream handlers via NextResponse.next's request option.
+    const nextInit = requestHeaders
+        ? { request: { headers: requestHeaders } }
+        : { request };
+    let supabaseResponse = NextResponse.next(nextInit);
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -100,9 +103,7 @@ export async function updateSession(request: NextRequest) {
                     cookiesToSet.forEach(({ name, value }) =>
                         request.cookies.set(name, value)
                     );
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    });
+                    supabaseResponse = NextResponse.next(nextInit);
                     cookiesToSet.forEach(({ name, value, options }) =>
                         supabaseResponse.cookies.set(name, value, options)
                     );

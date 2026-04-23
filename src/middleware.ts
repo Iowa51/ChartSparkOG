@@ -10,6 +10,17 @@ import { getClientIP } from "@/lib/utils/get-client-ip";
 import { logWarn } from "@/lib/logging/safe-logger";
 
 export async function middleware(request: NextRequest) {
+  // Generate or forward request ID before any other logic so every response —
+  // including redirects, rate-limit rejections, and IDS blocks — carries it.
+  const requestId = request.headers.get("x-request-id") || crypto.randomUUID();
+  const forwardHeaders = new Headers(request.headers);
+  forwardHeaders.set("x-request-id", requestId);
+
+  const withRequestId = <T extends NextResponse>(response: T): T => {
+    response.headers.set("x-request-id", requestId);
+    return response;
+  };
+
   const pathname = request.nextUrl.pathname;
 
   if (
@@ -18,7 +29,9 @@ export async function middleware(request: NextRequest) {
     pathname === "/api/auth" ||
     pathname.startsWith("/api/auth/")
   ) {
-    return NextResponse.next();
+    return withRequestId(
+      NextResponse.next({ request: { headers: forwardHeaders } }),
+    );
   }
 
   // SEC-PT8-F1: Use centralized IP extraction with production guard
@@ -57,13 +70,14 @@ export async function middleware(request: NextRequest) {
         logWarn({
           action: "SECURITY_BLOCKED_REQUEST",
           status: `ip=${ip} threat=${threats[0].threatType}`,
+          requestId,
         });
         const blocked = NextResponse.json(
           { error: "Request blocked for security reasons" },
           { status: 403 },
         );
         blocked.headers.set("X-API-Version", "1");
-        return blocked;
+        return withRequestId(blocked);
       }
     }
 
@@ -72,17 +86,17 @@ export async function middleware(request: NextRequest) {
 
     if (!success && response) {
       response.headers.set("X-API-Version", "1");
-      return response;
+      return withRequestId(response);
     }
 
     // Continue to next middleware/handler
-    const next = NextResponse.next();
+    const next = NextResponse.next({ request: { headers: forwardHeaders } });
     next.headers.set("X-API-Version", "1");
-    return next;
+    return withRequestId(next);
   }
 
   // Handle session for non-API routes
-  return await updateSession(request);
+  return withRequestId(await updateSession(request, forwardHeaders));
 }
 
 export const config = {

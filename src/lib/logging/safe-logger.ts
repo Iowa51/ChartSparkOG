@@ -19,6 +19,7 @@ type SafeLogData = {
   count?: number;
   resourceType?: string;
   resourceId?: string;
+  requestId?: string;
 };
 
 const isProduction = process.env.NODE_ENV === "production";

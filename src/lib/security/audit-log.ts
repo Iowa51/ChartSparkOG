@@ -102,6 +102,7 @@ export interface AuditLogEntry {
     details?: Record<string, any>;
     phiAccessed?: boolean;
     riskLevel: RiskLevel;
+    requestId?: string;
 }
 
 /**
@@ -258,6 +259,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
                 user_agent: entry.userAgent,
                 phi_accessed: entry.phiAccessed || false,
                 risk_level: entry.riskLevel || getRiskLevel(entry.eventType),
+                ...(entry.requestId ? { request_id: entry.requestId } : {}),
             },
         };
 
