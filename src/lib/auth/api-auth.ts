@@ -12,6 +12,7 @@ import {
     PilotPhaseError,
 } from '@/lib/pilot/enforcement';
 import { logAuditEventAsync } from '@/lib/security/audit-log';
+import { dispatchAlert } from '@/lib/security/slack-alerts';
 
 // F-022: HIPAA-compliant server-side session timeout (15 minutes)
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
@@ -155,6 +156,16 @@ export function withAuth<T extends AuthContext>(
         const user = await getAuthenticatedUser(request);
 
         if (!user) {
+            // Build 5: alert on unauthenticated request to a guarded route.
+            // Dedup by fingerprint(route+401+reason) so scripted attacks
+            // don't spam.
+            void dispatchAlert({
+                kind: 'unauthorized_access',
+                route: request.nextUrl.pathname,
+                status: 401,
+                reason: 'unauthenticated',
+                requestId: request.headers.get('x-request-id') ?? undefined,
+            }).catch(() => {});
             return errorResponse('Unauthorized - Please log in', 401);
         }
 
@@ -171,6 +182,19 @@ export function withAuth<T extends AuthContext>(
             if (!options.requiredRole.includes(user.role)) {
                 // Log unauthorized access attempt
                 logWarn({ action: 'API_AUTH_UNAUTHORIZED_ACCESS_ATTEMPT', userId: user.id, status: user.role });
+
+                // Build 5: distinct fingerprint per (route, role-not-allowed)
+                // so attempts to hit different guarded routes fire distinct
+                // alerts, but repeated attempts to the same route collapse.
+                void dispatchAlert({
+                    kind: 'unauthorized_access',
+                    route: request.nextUrl.pathname,
+                    status: 403,
+                    reason: 'role_not_in_allowlist',
+                    requestId: request.headers.get('x-request-id') ?? undefined,
+                    userId: user.id,
+                    organizationId: user.organizationId ?? undefined,
+                }).catch(() => {});
 
                 return errorResponse('Forbidden - Insufficient permissions', 403);
             }
@@ -308,7 +332,44 @@ export function withAuth<T extends AuthContext>(
             params: resolvedParams,
         } as T;
 
-        return handler(context);
+        // Build 5: observe handler response for 5xx and fire alert.
+        // Wraps both the handler-throws case (caught here, returned as 500)
+        // and the handler-returns-5xx case (the route's own catch returned
+        // NextResponse.json(..., { status: 500 })).
+        let response: NextResponse;
+        try {
+            response = await handler(context);
+        } catch (handlerError) {
+            logError({
+                action: 'API_HANDLER_UNCAUGHT',
+                error: sanitizeError(handlerError),
+                userId: user.id,
+            });
+            void dispatchAlert({
+                kind: '5xx',
+                route: request.nextUrl.pathname,
+                status: 500,
+                errorCode: handlerError instanceof Error ? handlerError.name : 'unknown',
+                requestId: request.headers.get('x-request-id') ?? undefined,
+                organizationId: user.organizationId ?? undefined,
+                userRole: user.role,
+            }).catch(() => {});
+            return errorResponse('Internal server error', 500);
+        }
+
+        if (response.status >= 500 && response.status < 600) {
+            void dispatchAlert({
+                kind: '5xx',
+                route: request.nextUrl.pathname,
+                status: response.status,
+                errorCode: response.headers.get('x-error-code') ?? undefined,
+                requestId: request.headers.get('x-request-id') ?? undefined,
+                organizationId: user.organizationId ?? undefined,
+                userRole: user.role,
+            }).catch(() => {});
+        }
+
+        return response;
     };
 }
 

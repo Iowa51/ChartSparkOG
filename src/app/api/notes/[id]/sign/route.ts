@@ -6,10 +6,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { withAuth, AuthContext } from "@/lib/auth/api-auth";
 import { logAuditEventAsync, logPHIAccess } from "@/lib/security/audit-log";
 import { getRequestMetadata } from "@/lib/utils/get-client-ip";
 import { logError, sanitizeError } from "@/lib/logging/safe-logger";
+import { dispatchAlert } from "@/lib/security/slack-alerts";
 import { UUIDSchema } from "@/lib/validation/schemas";
 
 async function handlePost(context: AuthContext) {
@@ -162,6 +164,26 @@ async function handlePost(context: AuthContext) {
         error: sanitizeError(submissionError),
         resourceId: noteId,
       });
+
+      // Build 5: alert James in #pilot-alerts. The note id is hashed so
+      // the alert payload carries no PHI; the first 8 hex chars give
+      // enough uniqueness to correlate with the audit log entry.
+      const noteIdHash = createHash("sha256")
+        .update(noteId)
+        .digest("hex")
+        .slice(0, 8);
+      void dispatchAlert({
+        kind: "submission_create_failed",
+        route: context.request.nextUrl.pathname,
+        noteIdHash,
+        errorCode:
+          (submissionError as { code?: string; name?: string } | null)?.code ??
+          (submissionError as { code?: string; name?: string } | null)?.name ??
+          "unknown",
+        requestId: context.request.headers.get("x-request-id") ?? undefined,
+        organizationId: context.user.organizationId ?? undefined,
+      }).catch(() => {});
+
       await logAuditEventAsync({
         eventType: "SUBMISSION_CREATE_FAILED",
         userId: context.user.id,

@@ -57,6 +57,10 @@ const envSchema = z.object({
   ALERT_EMAIL: z.string().email().optional(),
   ALERT_PHONE: z.string().min(1).optional(),
   SECURITY_WEBHOOK_URL: z.string().url().optional(),
+  // Build 5: pilot Slack alerts (#pilot-alerts) — set in Vercel production env.
+  // Optional so dev/preview environments without it don't crash;
+  // dispatchAlert no-ops when absent.
+  SLACK_PILOT_ALERTS_WEBHOOK: z.string().url().optional(),
   HEALTH_CHECK_KEY: z.string().min(1).optional(),
   ALLOW_DIRECT_API_CALLS: z.string().optional(),
   DISABLE_MFA_ENFORCEMENT: z.string().optional(),
