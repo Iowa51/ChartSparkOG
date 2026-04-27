@@ -12,6 +12,39 @@ import { AzureOpenAI } from "openai";
 import { devLog, devWarn, devError, logError, sanitizeError } from "@/lib/logging/safe-logger";
 import { CircuitBreaker, withRetry, withTimeout } from "@/lib/resilience/circuit-breaker";
 
+/**
+ * Thrown when an upstream AI provider (Azure OpenAI / Whisper) fails and the
+ * caller must NOT receive fabricated demo content. Production code paths
+ * fail closed by surfacing this error; the API layer translates it to 503.
+ */
+export class AIProviderUnavailableError extends Error {
+  readonly code = "AI_PROVIDER_UNAVAILABLE";
+  readonly upstream: "azure_openai" | "whisper" | "agent_sidecar" | "unknown";
+  readonly cause?: unknown;
+
+  constructor(
+    upstream: AIProviderUnavailableError["upstream"],
+    message: string,
+    cause?: unknown,
+  ) {
+    super(message);
+    this.name = "AIProviderUnavailableError";
+    this.upstream = upstream;
+    this.cause = cause;
+  }
+}
+
+/**
+ * Demo fallback content (synthetic SOAP notes, transcripts) is permitted ONLY
+ * in non-production demo mode. Any production environment must fail closed —
+ * a clinician must never sign a fabricated note believing it was real AI
+ * output. Dev/test environments also fail closed unless explicitly opted in.
+ */
+function isDemoFallbackAllowed(): boolean {
+  if (process.env.NODE_ENV === "production") return false;
+  return process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+}
+
 // ─────────────────────────── Resilience config ───────────────────────────
 // Per-call timeouts and retry budget. Circuit breakers are separate per
 // dependency so that Whisper outages do not trip GPT and vice versa.
@@ -474,8 +507,18 @@ Return as JSON with structure: { recommendedOption, options[], monitoring }`;
     patientContext?: string;
   }): AsyncGenerator<string, void, unknown> {
     if (!this.isAvailable()) {
-      yield this.getDemoSOAPNote(sessionData);
-      return;
+      if (isDemoFallbackAllowed()) {
+        devWarn(
+          "safeAzureOpenAI",
+          "Azure OpenAI not configured; yielding DEMO SOAP note (NODE_ENV != production && NEXT_PUBLIC_DEMO_MODE === true)",
+        );
+        yield this.getDemoSOAPNote(sessionData);
+        return;
+      }
+      throw new AIProviderUnavailableError(
+        "azure_openai",
+        "Azure OpenAI is not configured for SOAP note streaming",
+      );
     }
 
     const client = this._getClient();
@@ -552,7 +595,19 @@ PLAN`;
       }
     } catch (error) {
       devError("Azure OpenAI", "SOAP stream error:", error);
-      yield this.getDemoSOAPNote(sessionData);
+      if (isDemoFallbackAllowed()) {
+        devWarn(
+          "safeAzureOpenAI",
+          "Azure OpenAI unavailable; yielding DEMO SOAP note (demo mode only)",
+        );
+        yield this.getDemoSOAPNote(sessionData);
+        return;
+      }
+      throw new AIProviderUnavailableError(
+        "azure_openai",
+        "Azure OpenAI failed during streaming SOAP note generation",
+        error,
+      );
     }
   }
 
@@ -568,7 +623,17 @@ PLAN`;
     patientContext?: string;
   }): Promise<string> {
     if (!this.isAvailable()) {
-      return this.getDemoSOAPNote(sessionData);
+      if (isDemoFallbackAllowed()) {
+        devWarn(
+          "safeAzureOpenAI",
+          "Azure OpenAI not configured; returning DEMO SOAP note (NODE_ENV != production && NEXT_PUBLIC_DEMO_MODE === true)",
+        );
+        return this.getDemoSOAPNote(sessionData);
+      }
+      throw new AIProviderUnavailableError(
+        "azure_openai",
+        "Azure OpenAI is not configured for SOAP note generation",
+      );
     }
 
     const client = this._getClient();
@@ -637,10 +702,35 @@ PLAN`;
       );
 
       const content = response.choices[0].message?.content;
-      return content ? this.normalizeSOAPHeaders(content) : this.getDemoSOAPNote(sessionData);
+      if (content) {
+        return this.normalizeSOAPHeaders(content);
+      }
+      if (isDemoFallbackAllowed()) {
+        devWarn(
+          "safeAzureOpenAI",
+          "Azure OpenAI returned empty content; returning DEMO SOAP note (demo mode only)",
+        );
+        return this.getDemoSOAPNote(sessionData);
+      }
+      throw new AIProviderUnavailableError(
+        "azure_openai",
+        "Azure OpenAI returned empty content for SOAP note",
+      );
     } catch (error) {
+      if (error instanceof AIProviderUnavailableError) throw error;
       devError("Azure OpenAI", "SOAP note error:", error);
-      return this.getDemoSOAPNote(sessionData);
+      if (isDemoFallbackAllowed()) {
+        devWarn(
+          "safeAzureOpenAI",
+          "Azure OpenAI unavailable; returning DEMO SOAP note (demo mode only)",
+        );
+        return this.getDemoSOAPNote(sessionData);
+      }
+      throw new AIProviderUnavailableError(
+        "azure_openai",
+        "Azure OpenAI failed during SOAP note generation",
+        error,
+      );
     }
   }
 
@@ -971,12 +1061,21 @@ Time spent: ${15 + variationSeed * 5} minutes, greater than 50% in counseling an
         devLog("Azure OpenAI Whisper", "Falling back to main Azure OpenAI client");
         client = this._getClient();
       } else {
-        devLog("Azure OpenAI", "Transcription running in DEMO mode");
-        return {
-          transcript: this.getDemoTranscript(),
-          isDemo: true,
-          processingTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
-        };
+        if (isDemoFallbackAllowed()) {
+          devLog(
+            "Azure OpenAI",
+            "Transcription running in DEMO mode (NODE_ENV != production && NEXT_PUBLIC_DEMO_MODE === true)",
+          );
+          return {
+            transcript: this.getDemoTranscript(),
+            isDemo: true,
+            processingTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+          };
+        }
+        throw new AIProviderUnavailableError(
+          "whisper",
+          "Whisper is not configured for audio transcription",
+        );
       }
 
       devLog(
@@ -1021,16 +1120,28 @@ Time spent: ${15 + variationSeed * 5} minutes, greater than 50% in counseling an
         processingTime,
       };
     } catch (error) {
+      if (error instanceof AIProviderUnavailableError) throw error;
+
       // SEC-AUDIT-2026-04-10: Log sanitized metadata only. sanitizeError
       // strips stack traces and redacts PII/PHI patterns before emission.
       logError({ action: "AZURE_WHISPER_TRANSCRIBE_ERROR", error: sanitizeError(error) });
 
-      // Fall back to demo on error
-      return {
-        transcript: this.getDemoTranscript(),
-        isDemo: true,
-        processingTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
-      };
+      if (isDemoFallbackAllowed()) {
+        devWarn(
+          "safeAzureOpenAI",
+          "Whisper unavailable; returning DEMO transcript (demo mode only)",
+        );
+        return {
+          transcript: this.getDemoTranscript(),
+          isDemo: true,
+          processingTime: `${((Date.now() - startTime) / 1000).toFixed(1)}s`,
+        };
+      }
+      throw new AIProviderUnavailableError(
+        "whisper",
+        "Whisper transcription failed",
+        error,
+      );
     }
   }
 

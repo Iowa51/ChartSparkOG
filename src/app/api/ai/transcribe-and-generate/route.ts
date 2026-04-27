@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import { withAuth, AuthContext } from '@/lib/auth/api-auth';
-import safeAzureOpenAI from '@/services/safeAzureOpenAI';
+import safeAzureOpenAI, { AIProviderUnavailableError } from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getSafeAuditErrorDetails } from '@/lib/security/audit-error-codes';
 import { getRequestMetadata } from '@/lib/utils/get-client-ip';
@@ -176,6 +176,38 @@ async function handler(context: AuthContext) {
         });
 
     } catch (error: unknown) {
+        if (error instanceof AIProviderUnavailableError) {
+            // Either Whisper or Azure OpenAI failed; the `upstream` field
+            // identifies which phase. Production fail-closed: response body
+            // contains NO transcript, NO sections, NO clinical content.
+            await logAuditEvent({
+                eventType: 'API_ERROR',
+                userId: context.user.id,
+                userEmail: context.user.email,
+                organizationId: context.user.organizationId || undefined,
+                ipAddress,
+                userAgent,
+                resourceType: 'clinical_note',
+                details: {
+                    action: 'AI_PROVIDER_UNAVAILABLE',
+                    upstream: error.upstream,
+                    route: '/api/ai/transcribe-and-generate',
+                },
+                phiAccessed: false,
+                riskLevel: 'MEDIUM',
+            });
+
+            return NextResponse.json(
+                {
+                    error: 'AI provider temporarily unavailable',
+                    code: error.code,
+                    upstream: error.upstream,
+                    retryable: true,
+                },
+                { status: 503 }
+            );
+        }
+
         logError({
             action: 'ai_transcribe_and_generate_error',
             error: sanitizeError(error),
