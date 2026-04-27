@@ -50,3 +50,6 @@ test-*.js
 
 # claude code per-user local settings (machine-specific, not shared)
 .claude/settings.local.json
+
+# AI agent specs (consumed scratch files)
+docs/specs/
