@@ -169,6 +169,12 @@ These are the items where deferring past the first pilot is acceptable but defer
 - **Problem:** Closed union prevented adding `AI_PROVIDER_UNAVAILABLE` and `AUDITOR_QUEUE_VIEWED` as top-level events. Both were shoehorned into existing types (`API_ERROR` and `PATIENT_SEARCH` respectively) with the real signal in `details.action`. Semantically wrong; queries must check details rather than the indexed event_type column.
 - **Fix:** Widen the union. Add proper top-level event types. Migrate the two trade-off events to their proper names. Update queries downstream.
 
+### B-P2-8 Telehealth join-session cookie TTL is 5 minutes
+- **Origin:** [Trade-off from P0-D]
+- **Files:** `src/lib/security/telehealth-session-tokens.ts` (TTL constant); cookie max-age in `src/app/api/telehealth/create-room/route.ts` and `src/app/api/telehealth/accept-invite/route.ts`
+- **Problem:** From cookie set to cookie consumed must happen within 5 minutes. Provider path is fast (immediate redirect), but the patient path goes through email client → click → redirect → page mount. If the patient's email client adds link-preview delay, slow mobile network, tab-switching, or any pause, they exceed 5 min and get 410 on join. They'd need a fresh invite link.
+- **Fix:** Raise TTL to 30 min for the patient role specifically, keep 5 min for provider. Or keep at 5 min and add a UX path that re-mints the join session (calls a new endpoint that issues a fresh ref bound to the same appointment, requiring a still-valid invite token). Latter is cleaner.
+- **Why deferred:** James IS the test patient for Practice One. He'll click the link immediately and won't hit the timeout. Real-patient pilots need this fixed.
 ---
 
 ## Phase B Priority 3 — nice to have
