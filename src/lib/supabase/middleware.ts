@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { devWarn, devError } from '@/lib/logging/safe-logger';
+import { computePilotState } from '@/lib/pilot/phase';
 
 // Role-based route permissions
 const protectedRoutes: Record<string, string[]> = {
@@ -52,6 +53,7 @@ const publicRoutes = [
     '/auth',
     '/api/auth',
     '/auth/auth-code-error',
+    '/pilot-ended',
 ];
 
 export async function updateSession(request: NextRequest, requestHeaders?: Headers) {
@@ -121,6 +123,28 @@ export async function updateSession(request: NextRequest, requestHeaders?: Heade
 
     if (publicRoutes.some((publicRoute) => path === publicRoute || path.startsWith(`${publicRoute}/`))) {
         return supabaseResponse;
+    }
+
+    // Pilot trial: if authenticated user's org is in locked phase, redirect every page to /pilot-ended.
+    if (user) {
+        const { data: userRow } = await supabase
+            .from('users')
+            .select('organization_id')
+            .eq('id', user.id)
+            .single();
+        if (userRow?.organization_id) {
+            const { data: orgRow } = await supabase
+                .from('organizations')
+                .select('is_pilot, pilot_started_at, pilot_active_until, pilot_readonly_until')
+                .eq('id', userRow.organization_id)
+                .single();
+            if (orgRow) {
+                const pilotState = computePilotState(orgRow);
+                if (pilotState.phase === 'locked') {
+                    return NextResponse.redirect(new URL('/pilot-ended', request.url));
+                }
+            }
+        }
     }
 
     // Find matching protected route

@@ -4,12 +4,13 @@ import { MFAGate } from "@/components/auth/MFAGate";
 import { SessionTimeout } from "@/components/SessionTimeout";
 import { TrialBanner } from "@/components/subscriptions/trial-banner";
 import { ReadOnlyBanner } from "@/components/subscriptions/read-only-banner";
+import { PilotReadOnlyBanner } from "@/components/pilot/pilot-readonly-banner-server";
 import { ToastProvider } from "@/components/ui/toast";
 
 // Force dynamic rendering - app pages require authentication at runtime
 export const dynamic = 'force-dynamic';
 
-export default function AppLayout({
+export default async function AppLayout({
     children,
 }: {
     children: React.ReactNode;
@@ -20,6 +21,7 @@ export default function AppLayout({
     return (
         <ToastProvider>
             <DemoAuthGuard>
+                <PilotReadOnlyBanner />
                 <TrialBanner />
                 <ReadOnlyBanner />
                 <div className="min-h-screen flex bg-background">

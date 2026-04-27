@@ -5,6 +5,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateOrigin } from '@/lib/security/csrf';
 import { logWarn, logError, sanitizeError } from '@/lib/logging/safe-logger';
+import {
+    assertMutationAllowed,
+    assertReadAllowed,
+    getPilotStateForOrg,
+    PilotPhaseError,
+} from '@/lib/pilot/enforcement';
+import { logAuditEventAsync } from '@/lib/security/audit-log';
 
 // F-022: HIPAA-compliant server-side session timeout (15 minutes)
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
@@ -199,6 +206,56 @@ export function withAuth<T extends AuthContext>(
         // Check organization requirement
         if (options?.requireOrganization && !user.organizationId) {
             return errorResponse('Organization required', 403);
+        }
+
+        // Pilot trial enforcement — readonly/locked phases gate mutations and locked phase blocks reads.
+        if (user.organizationId) {
+            try {
+                const pilotState = await getPilotStateForOrg(user.organizationId);
+                const isMutation = method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
+                if (isMutation) {
+                    assertMutationAllowed(pilotState);
+                } else {
+                    assertReadAllowed(pilotState);
+                }
+            } catch (pilotErr) {
+                if (pilotErr instanceof PilotPhaseError) {
+                    const route = request.nextUrl.pathname;
+                    const action = pilotErr.code === 'PILOT_READONLY'
+                        ? 'PILOT_READONLY_DENIED'
+                        : 'PILOT_LOCKED_DENIED';
+                    logAuditEventAsync({
+                        eventType: action,
+                        userId: user.id,
+                        userEmail: user.email,
+                        userRole: user.role,
+                        organizationId: user.organizationId,
+                        resourceType: 'pilot',
+                        resourceId: user.organizationId,
+                        details: { route, method, phase: pilotErr.code },
+                        phiAccessed: false,
+                        riskLevel: 'LOW',
+                    });
+                    if (pilotErr.code === 'PILOT_READONLY') {
+                        return NextResponse.json(
+                            {
+                                error: 'Read-only pilot phase',
+                                message: 'Your pilot has ended its active phase. You can still view your data until your read-only window closes, but cannot make changes. Contact james@redark.ventures to discuss continued access.',
+                            },
+                            { status: 423 },
+                        );
+                    }
+                    return NextResponse.json(
+                        {
+                            error: 'Pilot ended',
+                            message: 'This pilot has ended. Contact james@redark.ventures for continued access.',
+                        },
+                        { status: 423 },
+                    );
+                }
+                logError({ action: 'API_AUTH_PILOT_CHECK_ERROR', error: sanitizeError(pilotErr) });
+                return errorResponse('Pilot validation unavailable', 503);
+            }
         }
 
         // Check feature requirement - SEC-006: FAIL CLOSED

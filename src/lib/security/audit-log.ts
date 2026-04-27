@@ -84,7 +84,10 @@ export type AuditEventType =
     | 'BILLING_CLAIM_GENERATED'
     | 'BILLING_CLAIM_SUBMITTED'
     | 'BILLING_CLAIM_STATUS_CHANGED'
-    | 'BILLING_PAYMENT_RECEIVED';
+    | 'BILLING_PAYMENT_RECEIVED'
+    // Pilot trial enforcement events
+    | 'PILOT_READONLY_DENIED'
+    | 'PILOT_LOCKED_DENIED';
 
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
