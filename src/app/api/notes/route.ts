@@ -13,10 +13,22 @@ const NotesListQuerySchema = z
   .object({
     patient_id: z.string().uuid().optional(),
     patientId: z.string().uuid().optional(),
+    status: z
+      .enum(["draft", "completed", "pending_review", "approved", "needs_revision", "signed", "amended"])
+      .optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(50),
   })
   .strict();
+
+// Statuses an AUDITOR may see. Enforced server-side and not bypassable by
+// query param — passing ?status=draft as an AUDITOR yields an empty result
+// rather than draft notes.
+const AUDITOR_VISIBLE_STATUSES = [
+  "pending_review",
+  "approved",
+  "needs_revision",
+] as const;
 
 async function handleGet(context: AuthContext) {
   const { ipAddress, userAgent } = getRequestMetadata(context.request);
@@ -39,8 +51,58 @@ async function handleGet(context: AuthContext) {
       );
     }
     const patientId = queryParsed.data.patient_id ?? queryParsed.data.patientId ?? null;
+    const requestedStatus = queryParsed.data.status ?? null;
     const { page, limit } = queryParsed.data;
     const offset = (page - 1) * limit;
+
+    // Resolve role-conditional status / provider scoping.
+    // - USER  → only own notes (provider_id = user.id), any status
+    // - AUDITOR → only review-queue statuses, any provider, intersected with
+    //   the optional ?status query param (cannot escape allowlist)
+    // - ADMIN / SUPER_ADMIN → all org notes, optional ?status filter applied
+    let allowedStatuses: string[] | null = null;
+    if (user.role === "AUDITOR") {
+      if (requestedStatus) {
+        allowedStatuses = AUDITOR_VISIBLE_STATUSES.includes(
+          requestedStatus as (typeof AUDITOR_VISIBLE_STATUSES)[number],
+        )
+          ? [requestedStatus]
+          : [];
+      } else {
+        allowedStatuses = [...AUDITOR_VISIBLE_STATUSES];
+      }
+    } else if (requestedStatus) {
+      allowedStatuses = [requestedStatus];
+    }
+
+    // AUDITOR with empty intersection (e.g. ?status=draft) — short-circuit
+    // before hitting the DB. Do NOT return all notes when the intersection
+    // is empty; the bypass attempt is a security boundary.
+    if (allowedStatuses !== null && allowedStatuses.length === 0) {
+      logAuditEventAsync({
+        eventType: "PATIENT_SEARCH",
+        userId: user.id,
+        userEmail: user.email,
+        userRole: user.role,
+        organizationId: user.organizationId,
+        ipAddress,
+        userAgent,
+        resourceType: "clinical_note",
+        details: {
+          action:
+            user.role === "AUDITOR" ? "AUDITOR_QUEUE_VIEWED" : "NOTES_LIST_VIEWED",
+          route: "/api/notes",
+          filterApplied: [],
+          resultCount: 0,
+        },
+        phiAccessed: false,
+        riskLevel: "LOW",
+      });
+      return NextResponse.json({
+        notes: [],
+        pagination: { page, limit, total: 0, totalPages: 0 },
+      });
+    }
 
     // Get total count for pagination
     let countQuery = supabase
@@ -49,6 +111,10 @@ async function handleGet(context: AuthContext) {
       .eq("organization_id", user.organizationId);
 
     if (patientId) countQuery = countQuery.eq("patient_id", patientId);
+    if (user.role === "USER") countQuery = countQuery.eq("provider_id", user.id);
+    if (allowedStatuses && allowedStatuses.length > 0) {
+      countQuery = countQuery.in("status", allowedStatuses);
+    }
 
     const { count: totalCount } = await countQuery;
 
@@ -65,28 +131,53 @@ async function handleGet(context: AuthContext) {
       .range(offset, offset + limit - 1);
 
     if (patientId) query = query.eq("patient_id", patientId);
+    if (user.role === "USER") query = query.eq("provider_id", user.id);
+    if (allowedStatuses && allowedStatuses.length > 0) {
+      query = query.in("status", allowedStatuses);
+    }
 
     const { data: notes, error } = await query;
 
     if (error) throw error;
 
-    logAuditEventAsync({
-      eventType: patientId ? "NOTE_VIEW" : "PATIENT_SEARCH",
-      userId: user.id,
-      userEmail: user.email,
-      userRole: user.role,
-      organizationId: user.organizationId,
-      ipAddress,
-      userAgent,
-      resourceType: "clinical_note",
-      resourceId: patientId || undefined,
-      details: {
-        patientId: patientId || "all",
-        resultCount: notes?.length || 0,
-      },
-      phiAccessed: true,
-      riskLevel: "MEDIUM",
-    });
+    if (user.role === "AUDITOR") {
+      logAuditEventAsync({
+        eventType: "PATIENT_SEARCH",
+        userId: user.id,
+        userEmail: user.email,
+        userRole: user.role,
+        organizationId: user.organizationId,
+        ipAddress,
+        userAgent,
+        resourceType: "clinical_note",
+        details: {
+          action: "AUDITOR_QUEUE_VIEWED",
+          route: "/api/notes",
+          filterApplied: allowedStatuses ?? [],
+          resultCount: notes?.length || 0,
+        },
+        phiAccessed: true,
+        riskLevel: "MEDIUM",
+      });
+    } else {
+      logAuditEventAsync({
+        eventType: patientId ? "NOTE_VIEW" : "PATIENT_SEARCH",
+        userId: user.id,
+        userEmail: user.email,
+        userRole: user.role,
+        organizationId: user.organizationId,
+        ipAddress,
+        userAgent,
+        resourceType: "clinical_note",
+        resourceId: patientId || undefined,
+        details: {
+          patientId: patientId || "all",
+          resultCount: notes?.length || 0,
+        },
+        phiAccessed: true,
+        riskLevel: "MEDIUM",
+      });
+    }
 
     return NextResponse.json({
       notes,
@@ -188,7 +279,7 @@ async function handlePost(context: AuthContext) {
 }
 
 export const GET = withAuth(handleGet, {
-  requiredRole: ["USER", "ADMIN", "SUPER_ADMIN"],
+  requiredRole: ["USER", "ADMIN", "AUDITOR", "SUPER_ADMIN"],
   requireMFA: true,
 });
 
