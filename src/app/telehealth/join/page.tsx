@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
 import DailyIframe, { DailyCall, DailyParticipant } from "@daily-co/daily-js";
 import {
     Video,
@@ -24,20 +23,7 @@ interface ParticipantState {
     isLocal: boolean;
 }
 
-function decodeBase64Url(value: string): string {
-    const padLen = (4 - (value.length % 4)) % 4;
-    const base64 = value.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat(padLen);
-    if (typeof window !== "undefined" && typeof window.atob === "function") {
-        return decodeURIComponent(
-            Array.from(window.atob(base64), (c) => `%${c.charCodeAt(0).toString(16).padStart(2, "0")}`).join(""),
-        );
-    }
-    // Node fallback (SSR in Suspense) — not expected under "use client" but safe.
-    return Buffer.from(base64, "base64").toString("utf8");
-}
-
 function PatientVideoCall() {
-    const searchParams = useSearchParams();
     // SEC-SPRINT9: Session access stored in a ref, not React state, to avoid
     // persisting roomUrl/meetingToken beyond the moment of use.
     const sessionAccessRef = useRef<{ roomUrl: string; token?: string } | null>(null);
@@ -130,30 +116,13 @@ function PatientVideoCall() {
         }
     }, []);
 
-    // Primary path: accept-invite embeds base64url-encoded roomUrl (and optional
-    // meeting token) as `r`/`t` query params so we can bypass the cookie-based
-    // join-session call, which is unreliable across cross-site SameSite contexts.
-    // Fallback path: POST to /api/telehealth/join-session which reads the
-    // httpOnly cookie set by accept-invite.
+    // P0-D: Credentials never appear in the URL. The opaque session ref is
+    // carried in an HTTP-only cookie set by /api/telehealth/accept-invite (or
+    // /api/telehealth/create-room for the provider). The page POSTs to
+    // /api/telehealth/join-session which resolves the cookie ref to the
+    // Daily room URL + meeting token in the response body.
     useEffect(() => {
         let isMounted = true;
-
-        const encodedRoom = searchParams?.get("r");
-        const encodedToken = searchParams?.get("t");
-
-        if (encodedRoom) {
-            try {
-                const roomUrl = decodeBase64Url(encodedRoom);
-                const token = encodedToken ? decodeBase64Url(encodedToken) : undefined;
-                sessionAccessRef.current = { roomUrl, token };
-                setSessionReady(true);
-                return () => {
-                    isMounted = false;
-                };
-            } catch {
-                // Malformed query params — fall through to cookie-based fetch.
-            }
-        }
 
         const loadSession = async () => {
             try {
@@ -189,7 +158,7 @@ function PatientVideoCall() {
         return () => {
             isMounted = false;
         };
-    }, [searchParams]);
+    }, []);
 
     const joinCall = async () => {
         if (!sessionAccessRef.current || !patientName.trim()) {

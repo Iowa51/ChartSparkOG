@@ -1,21 +1,17 @@
-// SEC-AUDIT-2026-04-10: The invite URL carries an opaque single-use token
-// (not the appointment ID). We hash it, look up + atomically consume the
-// invite record, then resolve the patient session ref and drop it into an
-// HTTP-only cookie. The bearer session token never appears in any URL and
-// the invite token is consumed on first use.
+// SEC-AUDIT-2026-04-10 + P0-D: The invite URL carries an opaque single-use
+// token (not the appointment ID, not any meeting credential). We hash it,
+// look up + atomically consume the invite record, drop the patient session
+// ref into an HTTP-only cookie, then redirect to a clean /telehealth/join URL.
+// Neither the bearer session ref nor the room URL nor the meeting token
+// ever appear in any URL or query string.
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getPatientSessionRefByAppointment,
-  resolveTelehealthJoinSession,
-} from "@/lib/security/telehealth-session-tokens";
+import { getPatientSessionRefByAppointment } from "@/lib/security/telehealth-session-tokens";
 import { consumeTelehealthInviteToken } from "@/lib/security/telehealth-invite-tokens";
 import { logError, sanitizeError } from "@/lib/logging/safe-logger";
 import { logAuditEvent } from "@/lib/security/audit-log";
 import { getClientIP } from "@/lib/utils/get-client-ip";
-import { requireServiceRoleClient } from "@/lib/supabase/service-role-client";
-import { decryptPHI } from "@/lib/security/encryption";
 
 const AcceptInviteQuerySchema = z
   .object({
@@ -78,58 +74,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(destination);
     }
 
-    // Look up the server-side patient session token ref. The session token
+    // Look up the server-side patient session token ref. The session ref
     // itself never touches the URL — it's referenced by appointment id only
     // after we've validated + consumed the invite token above.
     const sessionRef = await getPatientSessionRefByAppointment(inviteRecord.appointmentId);
 
-    // Resolve the Daily.co room URL + meeting token so we can hand them to the
-    // patient via query params. The cookie path is kept as fallback but cross-site
-    // SameSite=strict contexts often drop it before /telehealth/join runs.
-    let roomUrl: string | null = null;
-    let meetingToken: string | null = null;
-
-    if (sessionRef) {
-      const resolved = await resolveTelehealthJoinSession(sessionRef);
-      if (resolved) {
-        roomUrl = resolved.roomUrl;
-        meetingToken = resolved.meetingToken ?? null;
-      } else {
-        // Resolve can return null if the token was already consumed in a prior
-        // redirect (e.g. retry). Read the encrypted row directly as a fallback.
-        const supabase = requireServiceRoleClient();
-        const { data: tokenRow } = await supabase
-          .from("telehealth_session_tokens")
-          .select("encrypted_room_url, encrypted_meeting_token")
-          .eq("appointment_id", inviteRecord.appointmentId)
-          .eq("participant_role", "patient")
-          .eq("used", false)
-          .gt("expires_at", new Date().toISOString())
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-        if (tokenRow) {
-          roomUrl = await decryptPHI(tokenRow.encrypted_room_url);
-          meetingToken = tokenRow.encrypted_meeting_token
-            ? await decryptPHI(tokenRow.encrypted_meeting_token)
-            : null;
-        }
-      }
-    }
-
-    if (roomUrl) {
-      destination.searchParams.set(
-        "r",
-        Buffer.from(roomUrl, "utf8").toString("base64url"),
-      );
-      if (meetingToken) {
-        destination.searchParams.set(
-          "t",
-          Buffer.from(meetingToken, "utf8").toString("base64url"),
-        );
-      }
-    }
-
+    // Always redirect to a clean /telehealth/join URL. NO `r=`, NO `t=`,
+    // NO base64url-encoded credentials. The page will resolve credentials
+    // server-side via the cookie set below.
     const response = NextResponse.redirect(destination);
 
     if (sessionRef) {
@@ -145,12 +97,12 @@ export async function GET(request: NextRequest) {
         riskLevel: "LOW",
       }).catch(() => {});
 
-      response.cookies.set("telehealth_session", sessionRef, {
+      response.cookies.set("chartspark_th_session_patient", sessionRef, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
         maxAge: 300, // 5 minutes — matches session token TTL
-        path: "/",
+        path: "/api/telehealth",
       });
     } else {
       // Invite was valid but no active patient session ref exists for the

@@ -136,24 +136,27 @@ async function handler(context: AuthContext) {
         participantRole: "patient",
       });
 
-      // SEC-PT4-F2: Provider token delivered via HTTP-only cookie when same-site allows it.
-      // Body fallback included for cross-site contexts (e.g. hosted on Vercel behind proxies)
-      // where the cookie may be dropped before join-session runs.
+      // P0-D: Credentials never leave the server. Provider's browser receives
+      // an opaque ref via HTTP-only cookie; the actual roomUrl + meeting token
+      // are resolved server-side at /api/telehealth/join-session and never
+      // appear in URLs, redirects, response bodies, or logs.
       const demoResponse = NextResponse.json({
+        ok: true,
         appointmentId,
         patientInvitePath: `/api/telehealth/accept-invite?token=${encodeURIComponent(demoInviteToken)}`,
-        providerSessionToken: providerSessionTokenRef,
-        roomUrl,
-        meetingToken: "demo-provider-token",
         isDemo: true,
       });
-      demoResponse.cookies.set("telehealth_provider_session", providerSessionTokenRef, {
-        httpOnly: true,
-        secure: false, // Demo mode is always non-production
-        sameSite: "strict",
-        maxAge: 300,
-        path: "/",
-      });
+      demoResponse.cookies.set(
+        "chartspark_th_session_provider",
+        providerSessionTokenRef,
+        {
+          httpOnly: true,
+          secure: false, // Demo mode is always non-production
+          sameSite: "strict",
+          maxAge: 300,
+          path: "/api/telehealth",
+        },
+      );
       return demoResponse;
     }
 
@@ -310,23 +313,26 @@ async function handler(context: AuthContext) {
       participantRole: "patient",
     });
 
-    // SEC-PT4-F2: Provider token delivered via HTTP-only cookie when same-site allows it.
-    // Body fallback included for cross-site contexts (e.g. hosted on Vercel behind proxies)
-    // where the cookie may be dropped before join-session runs.
+    // P0-D: Credentials never leave the server. Provider's browser receives
+    // an opaque ref via HTTP-only cookie; the actual roomUrl + meeting token
+    // are resolved server-side at /api/telehealth/join-session and never
+    // appear in URLs, redirects, response bodies, or logs.
     const response = NextResponse.json({
+      ok: true,
       appointmentId,
       patientInvitePath: `/api/telehealth/accept-invite?token=${encodeURIComponent(patientInviteToken)}`,
-      providerSessionToken: providerSessionTokenRef,
-      roomUrl,
-      meetingToken: providerToken.token,
     });
-    response.cookies.set("telehealth_provider_session", providerSessionTokenRef, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 300,
-      path: "/",
-    });
+    response.cookies.set(
+      "chartspark_th_session_provider",
+      providerSessionTokenRef,
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 300,
+        path: "/api/telehealth",
+      },
+    );
     return response;
   } catch (error: unknown) {
     logError({ action: "ERROR_CREATING_ROOM", error: sanitizeError(error) });

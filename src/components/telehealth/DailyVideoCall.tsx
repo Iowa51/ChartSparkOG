@@ -15,17 +15,11 @@ import {
 } from "lucide-react";
 
 interface DailyVideoCallProps {
-    // SEC-PT4-F2: provider token delivered via HTTP-only cookie when same-site allows it.
-    // providerSessionToken is an optional body fallback for cross-site hosts where the
-    // cookie may be stripped. join-session accepts either.
+    // P0-D: All meeting credentials are resolved server-side via
+    // POST /api/telehealth/join-session, which reads an HTTP-only cookie.
+    // No credentials cross this prop boundary.
     userName?: string;
     patientLink?: string;
-    providerSessionToken?: string;
-    // When roomUrl is supplied (provider flow), we skip /api/telehealth/join-session
-    // entirely and drive the Daily call directly. Avoids HMAC validation drift across
-    // serverless instances. Patient flow still falls through to the join-session fetch.
-    roomUrl?: string;
-    meetingToken?: string;
     onLeave?: () => void;
     onError?: (error: string) => void;
 }
@@ -48,9 +42,6 @@ interface SessionAccessData {
 export default function DailyVideoCall({
     userName = "Provider",
     patientLink,
-    providerSessionToken,
-    roomUrl,
-    meetingToken,
     onLeave,
     onError
 }: DailyVideoCallProps) {
@@ -151,24 +142,16 @@ export default function DailyVideoCall({
         let isMounted = true;
 
         const loadSession = async () => {
-            // Provider flow: room credentials passed directly from create-room — bypass
-            // join-session to avoid cross-instance HMAC validation drift.
-            if (roomUrl) {
-                sessionAccessRef.current = {
-                    roomUrl,
-                    token: meetingToken,
-                };
-                setSessionReady(true);
-                return;
-            }
-
             try {
-                // Patient flow (or legacy): resolve credentials via join-session.
-                // Cookie is primary; body fallback covers cross-site contexts.
+                // P0-D: Cookie-only credential resolution. The provider's
+                // chartspark_th_session_provider cookie was set by
+                // /api/telehealth/create-room; the patient's
+                // chartspark_th_session_patient cookie was set by
+                // /api/telehealth/accept-invite. Either resolves here.
                 const response = await fetch("/api/telehealth/join-session", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ providerSessionToken }),
+                    body: JSON.stringify({}),
                 });
 
                 const payload = await response.json();
@@ -195,7 +178,7 @@ export default function DailyVideoCall({
         return () => {
             isMounted = false;
         };
-    }, [onError, providerSessionToken, roomUrl, meetingToken]);
+    }, [onError]);
 
     useEffect(() => {
         let isMounted = true;

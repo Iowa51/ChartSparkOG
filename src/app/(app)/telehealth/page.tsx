@@ -42,15 +42,12 @@ interface PastSession {
 
 interface CallSession {
     appointmentId: string;
-    // Provider token is delivered via HTTP-only cookie when possible; the body fallback
-    // is stored here for cross-site hosts where the cookie may be dropped.
+    // P0-D: Provider's session ref lives in an HTTP-only cookie set by
+    // /api/telehealth/create-room. Meeting credentials are resolved by
+    // <DailyVideoCall> via POST /api/telehealth/join-session and never
+    // reach this client surface.
     patientLink: string;
     patientName: string;
-    providerSessionToken?: string;
-    // Direct Daily.co credentials returned from create-room — bypass join-session entirely
-    // when present to avoid cross-instance HMAC validation issues.
-    roomUrl?: string;
-    meetingToken?: string;
 }
 
 interface RawAppointment {
@@ -190,16 +187,13 @@ export default function TelehealthPage() {
 
             const data = await response.json();
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-            // SEC-SPRINT10: Invite link uses opaque appointment ID only, no bearer token
+            // SEC-SPRINT10: Invite link uses opaque single-use invite token, no meeting credentials
             const patientLink = `${baseUrl}${data.patientInvitePath}`;
 
             setCallSession({
                 appointmentId: data.appointmentId,
                 patientLink: patientLink,
                 patientName: patientName,
-                providerSessionToken: data.providerSessionToken,
-                roomUrl: data.roomUrl,
-                meetingToken: data.meetingToken,
             });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to start telehealth session");
@@ -433,9 +427,6 @@ export default function TelehealthPage() {
                                 <DailyVideoCall
                                     userName="Provider"
                                     patientLink={callSession.patientLink}
-                                    providerSessionToken={callSession.providerSessionToken}
-                                    roomUrl={callSession.roomUrl}
-                                    meetingToken={callSession.meetingToken}
                                     onLeave={handleEndCall}
                                     onError={(err) => setError(err)}
                                 />
