@@ -1,6 +1,6 @@
 "use client";
 
-import { Header } from "@/components/layout";
+import { CSPageHeader, CSButton } from "@/components/cs";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasMFAEnabled } from "@/lib/auth/mfa";
@@ -176,16 +176,11 @@ export default function SettingsPage() {
 
     return (
         <>
-            <Header
-                title="User Settings"
-                description="Manage your clinical profile, notifications, and security preferences."
-                breadcrumbs={[
-                    { label: "Dashboard", href: "/dashboard" },
-                    { label: "Settings" },
-                ]}
-            />
-
-            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-5xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-5xl mx-auto w-full">
+                <CSPageHeader
+                    title="User Settings"
+                    subtitle="Manage your clinical profile, notifications, and security preferences."
+                />
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Navigation sidebar for settings */}
                     <div className="space-y-2">
@@ -226,7 +221,7 @@ export default function SettingsPage() {
                         {/* Profile Section */}
                         {activeTab === 'profile' && (
                             <>
-                                <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                                <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                     <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
                                         <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                             <User className="h-4 w-4 text-primary" />
@@ -283,7 +278,7 @@ export default function SettingsPage() {
                                 </div>
 
                                 {/* Preferences Section */}
-                                <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                                <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                     <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
                                         <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                             <Globe className="h-4 w-4 text-primary" />
@@ -323,7 +318,7 @@ export default function SettingsPage() {
 
                         {/* Notifications Section */}
                         {activeTab === 'notifications' && (
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                            <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                 <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
                                     <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                         <Bell className="h-4 w-4 text-primary" />
@@ -356,7 +351,7 @@ export default function SettingsPage() {
 
                         {/* Security Section */}
                         {activeTab === 'security' && (
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                            <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                 <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
                                     <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                         <Shield className="h-4 w-4 text-primary" />
@@ -396,7 +391,7 @@ export default function SettingsPage() {
 
                         {/* Appearance Section */}
                         {activeTab === 'appearance' && (
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                            <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                 <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
                                     <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                         <Palette className="h-4 w-4 text-primary" />
@@ -436,7 +431,7 @@ export default function SettingsPage() {
 
                         {/* EHR Section */}
                         {activeTab === 'ehr' && (
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                            <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                 <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
                                     <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                         <Database className="h-4 w-4 text-primary" />
@@ -469,7 +464,7 @@ export default function SettingsPage() {
 
                         {/* Clinical Templates & Dot Phrases */}
                         {activeTab === 'templates' && (
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                            <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                 <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
                                     <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                         <FileText className="h-4 w-4 text-primary" />
@@ -509,7 +504,7 @@ export default function SettingsPage() {
 
                         {/* EHR Sync History */}
                         {activeTab === 'ehr-logs' && (
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                            <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                 <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
                                     <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                         <History className="h-4 w-4 text-primary" />
@@ -559,7 +554,7 @@ export default function SettingsPage() {
 
                         {/* Mobile Section */}
                         {activeTab === 'mobility' && (
-                            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden ring-1 ring-border/5">
+                            <div className="bg-[var(--cs-card-bg)] border border-[var(--cs-card-border)] shadow-[var(--cs-shadow-card)] rounded-[var(--cs-radius-card)] overflow-hidden">
                                 <div className="px-6 py-4 border-b border-border bg-slate-50 dark:bg-slate-900/50">
                                     <h2 className="text-xs font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
                                         <Smartphone className="h-4 w-4 text-primary" />
@@ -633,23 +628,15 @@ export default function SettingsPage() {
 
                         {/* Save Button */}
                         <div className="flex justify-end">
-                            <button
+                            <CSButton
+                                variant="primary"
+                                size="lg"
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="flex items-center gap-2 px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
+                                leftIcon={<Save className={isSaving ? "h-4 w-4 animate-spin" : "h-4 w-4"} />}
                             >
-                                {isSaving ? (
-                                    <>
-                                        <Save className="h-4 w-4 animate-spin" />
-                                        Saving Changes...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="h-4 w-4" />
-                                        Save All Preferences
-                                    </>
-                                )}
-                            </button>
+                                {isSaving ? "Saving Changes..." : "Save All Preferences"}
+                            </CSButton>
                         </div>
                     </div>
                 </div>

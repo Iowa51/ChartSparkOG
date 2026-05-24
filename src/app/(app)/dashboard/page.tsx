@@ -1,6 +1,6 @@
 "use client";
 
-import { Header } from "@/components/layout";
+import { CSCard, CSPageHeader, CSBadge, CSButton } from "@/components/cs";
 import {
     TrendingUp,
     CheckCircle,
@@ -13,7 +13,6 @@ import {
     ArrowRight,
     Minus,
     Users,
-    Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
@@ -26,32 +25,20 @@ const quickTools = [
         description: "Check ICD-10 codes and CPT compliance instantly.",
         icon: DollarSign,
         href: "/billing",
-        iconBg: "bg-blue-50 dark:bg-blue-900/20",
-        iconColor: "text-primary",
     },
     {
         title: "Smart Templates",
         description: "Access your saved SOAP note templates.",
         icon: FileText,
         href: "/templates",
-        iconBg: "bg-purple-50 dark:bg-purple-900/20",
-        iconColor: "text-purple-600 dark:text-purple-400",
     },
     {
         title: "Clinical References",
         description: "Look up drug interactions and guidelines.",
         icon: BookOpen,
         href: "/references",
-        iconBg: "bg-teal-50 dark:bg-teal-900/20",
-        iconColor: "text-teal-600 dark:text-teal-400",
     },
 ];
-
-const statusStyles = {
-    Draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-    Signed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
-    "Pending Review": "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-};
 
 export default function DashboardPage() {
     const [stats, setStats] = useState<any>(null);
@@ -117,8 +104,6 @@ export default function DashboardPage() {
             change: "In your organization",
             changeType: "neutral" as const,
             icon: Users,
-            iconBg: "bg-blue-100 dark:bg-blue-900/30",
-            iconColor: "text-blue-600 dark:text-blue-400",
             href: "/patients",
         },
         {
@@ -127,8 +112,6 @@ export default function DashboardPage() {
             change: "Notes you signed today",
             changeType: "positive" as const,
             icon: CheckCircle,
-            iconBg: "bg-emerald-100 dark:bg-emerald-900/30",
-            iconColor: "text-emerald-600 dark:text-emerald-400",
             href: "/notes",
         },
         {
@@ -137,8 +120,6 @@ export default function DashboardPage() {
             change: "Drafts to complete",
             changeType: stats.unfinishedNotes > 0 ? "warning" as const : "neutral" as const,
             icon: FileText,
-            iconBg: "bg-amber-100 dark:bg-amber-900/30",
-            iconColor: "text-amber-600 dark:text-amber-400",
             href: "/notes",
         },
     ] : [];
@@ -163,95 +144,80 @@ export default function DashboardPage() {
         fetchUserName();
     }, []);
 
-    const greeting = useMemo(() => {
+    // Greeting/userName retained per Phase 3 rule "keep all data fetching as-is".
+    // Currently consumed only by the void below; safe to remove in a follow-up.
+    void useMemo(() => {
         const hour = new Date().getHours();
         if (hour >= 5 && hour < 12) return "Good morning";
         if (hour >= 12 && hour < 17) return "Good afternoon";
         if (hour >= 17 && hour < 21) return "Good evening";
         return "Good night";
     }, []);
+    void userName;
+    void loading;
 
     return (
-        <>
-            <Header
-                title={`${greeting}${userName ? `, ${userName}` : ''} 👋`}
-                description={
-                    loading
-                        ? "Loading your activity..."
-                        : stats
-                            ? `You have ${stats.unfinishedNotes ?? 0} unfinished note${stats.unfinishedNotes === 1 ? '' : 's'} and ${stats.signedToday ?? 0} signed today.`
-                            : "Welcome back — start a new note or review your schedule."
-                }
-                breadcrumbs={[{ label: "Dashboard" }]}
-            />
+        <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
+            <CSPageHeader title="Dashboard" subtitle="Welcome back" />
 
-            {/* OPTIMIZATION: Reduced animation duration and use GPU-accelerated transforms */}
-            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full space-y-8 animate-in fade-in duration-300">
+            <div className="space-y-6">
                 {/* Hero Section with Stats */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Welcome Card */}
-                    <div className="lg:col-span-2 bg-card rounded-xl p-8 border border-border relative overflow-hidden">
-                        <div className="relative z-10">
-                            <div className="flex flex-wrap gap-4">
-                                <button
-                                    onClick={() => setIsPatientModalOpen(true)}
-                                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-xl font-semibold shadow-lg shadow-primary/30 flex items-center gap-2 transition-all active:scale-95"
-                                >
-                                    <Plus className="h-5 w-5" />
-                                    Start New Note
-                                </button>
-                                <Link
-                                    href="/calendar"
-                                    className="bg-card text-foreground border border-border px-6 py-3 rounded-xl font-medium hover:bg-muted/50 flex items-center gap-2 transition-colors"
-                                >
-                                    <Calendar className="h-5 w-5 text-muted-foreground" />
+                    {/* Welcome / Actions Card */}
+                    <CSCard className="lg:col-span-2" padding="lg">
+                        <div className="flex flex-wrap gap-3">
+                            <CSButton
+                                variant="primary"
+                                onClick={() => setIsPatientModalOpen(true)}
+                                leftIcon={<Plus className="h-4 w-4" />}
+                            >
+                                Start New Note
+                            </CSButton>
+                            <Link href="/calendar">
+                                <CSButton variant="secondary" leftIcon={<Calendar className="h-4 w-4" />}>
                                     View Schedule
-                                </Link>
-                            </div>
+                                </CSButton>
+                            </Link>
                         </div>
-                        {/* Decorative background */}
-                        <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-primary/5 to-transparent pointer-events-none" />
-                    </div>
+                    </CSCard>
 
                     {/* Stats Cards */}
                     <div className="grid grid-rows-2 gap-4">
                         {statCards.map((stat: any) => {
                             const Icon = stat.icon;
                             return (
-                                <Link
-                                    key={stat.label}
-                                    href={stat.href}
-                                    className="bg-card rounded-xl p-5 border border-border flex items-center justify-between hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer group"
-                                >
-                                    <div>
-                                        <p className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">
-                                            {stat.label}
-                                        </p>
-                                        <p className="text-3xl font-bold text-foreground mt-1">
-                                            {stat.value}
-                                        </p>
-                                        <p
-                                            className={`text-xs mt-1 flex items-center gap-1 ${
-                                                stat.changeType === "positive"
-                                                    ? "text-emerald-600"
-                                                    : stat.changeType === "neutral"
-                                                        ? "text-muted-foreground"
-                                                        : "text-amber-600"
-                                                }`}
-                                        >
-                                            {stat.changeType === "positive" ? (
-                                                <TrendingUp className="h-3 w-3" />
-                                            ) : stat.changeType === "neutral" ? (
-                                                <Minus className="h-3 w-3" />
-                                            ) : (
-                                                <AlertTriangle className="h-3 w-3" />
-                                            )}
-                                            {stat.change}
-                                        </p>
-                                    </div>
-                                    <div className={`p-3 rounded-full ${stat.iconBg} group-hover:scale-110 transition-transform`}>
-                                        <Icon className={`h-6 w-6 ${stat.iconColor}`} />
-                                    </div>
+                                <Link key={stat.label} href={stat.href} className="group">
+                                    <CSCard className="flex items-center justify-between hover:border-[var(--cs-teal)] transition-colors">
+                                        <div>
+                                            <p className="text-sm font-medium text-[var(--cs-text-muted)] group-hover:text-[var(--cs-teal)] transition-colors">
+                                                {stat.label}
+                                            </p>
+                                            <p className="text-2xl font-semibold text-[var(--cs-text-primary)] mt-1">
+                                                {stat.value}
+                                            </p>
+                                            <p
+                                                className={`text-xs mt-1 flex items-center gap-1 ${
+                                                    stat.changeType === "positive"
+                                                        ? "text-[var(--cs-success)]"
+                                                        : stat.changeType === "neutral"
+                                                            ? "text-[var(--cs-text-muted)]"
+                                                            : "text-[var(--cs-warning)]"
+                                                    }`}
+                                            >
+                                                {stat.changeType === "positive" ? (
+                                                    <TrendingUp className="h-3 w-3" />
+                                                ) : stat.changeType === "neutral" ? (
+                                                    <Minus className="h-3 w-3" />
+                                                ) : (
+                                                    <AlertTriangle className="h-3 w-3" />
+                                                )}
+                                                {stat.change}
+                                            </p>
+                                        </div>
+                                        <div className="h-9 w-9 rounded-md bg-[var(--cs-teal-light)] flex items-center justify-center">
+                                            <Icon className="h-4 w-4 text-[var(--cs-teal)]" />
+                                        </div>
+                                    </CSCard>
                                 </Link>
                             );
                         })}
@@ -260,137 +226,134 @@ export default function DashboardPage() {
 
                 {/* Quick Tools */}
                 <section>
-                    <h2 className="text-lg font-semibold text-foreground mb-4">
+                    <h2 className="text-base font-semibold text-[var(--cs-text-primary)] mb-3">
                         Quick Tools
                     </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {quickTools.map((tool) => {
                             const Icon = tool.icon;
                             return (
-                                <Link
-                                    key={tool.title}
-                                    href={tool.href}
-                                    className="group bg-card rounded-xl p-6 border border-border hover:shadow-md hover:border-primary/30 transition-all"
-                                >
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div
-                                            className={`p-3 rounded-lg ${tool.iconBg} group-hover:bg-primary/10 transition-colors`}
-                                        >
-                                            <Icon className={`h-6 w-6 ${tool.iconColor}`} />
+                                <Link key={tool.title} href={tool.href} className="group">
+                                    <CSCard className="hover:border-[var(--cs-teal)] transition-colors">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="h-9 w-9 rounded-md bg-[var(--cs-teal-light)] flex items-center justify-center">
+                                                <Icon className="h-4 w-4 text-[var(--cs-teal)]" />
+                                            </div>
+                                            <ArrowRight className="h-4 w-4 text-[var(--cs-text-muted)] group-hover:text-[var(--cs-teal)] transition-colors" />
                                         </div>
-                                        <ArrowRight className="h-5 w-5 text-border group-hover:text-primary transition-colors" />
-                                    </div>
-                                    <h3 className="font-bold text-foreground mb-1">{tool.title}</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        {tool.description}
-                                    </p>
+                                        <h3 className="font-semibold text-[var(--cs-text-primary)] mb-1 text-sm">{tool.title}</h3>
+                                        <p className="text-xs text-[var(--cs-text-muted)]">
+                                            {tool.description}
+                                        </p>
+                                    </CSCard>
                                 </Link>
                             );
                         })}
                     </div>
                 </section>
 
-                {/* Recent Notes - OPTIMIZATION: Simplified animation, removed layout-thrashing slide */}
-                <section className="bg-card rounded-xl border border-border overflow-hidden animate-in fade-in duration-300">
-                    <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-muted/30">
-                        <h2 className="text-lg font-semibold text-foreground">
-                            Recent Notes
-                        </h2>
-                        <Link
-                            href="/notes"
-                            className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1"
-                        >
-                            View all history
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
-                    </div>
+                {/* Recent Notes */}
+                <section>
+                    <CSCard padding="none">
+                        <div className="px-5 py-4 border-b border-[var(--cs-card-border)] flex items-center justify-between bg-[var(--cs-teal-xlight)]">
+                            <h2 className="text-base font-semibold text-[var(--cs-text-primary)]">
+                                Recent Notes
+                            </h2>
+                            <Link
+                                href="/notes"
+                                className="text-sm text-[var(--cs-teal)] hover:text-[var(--cs-teal-mid)] font-medium flex items-center gap-1"
+                            >
+                                View all history
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
+                        </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-border">
-                            <thead className="bg-muted/50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                        Patient
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                        Diagnosis
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                        Last Edited
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th className="relative px-6 py-3">
-                                        <span className="sr-only">Actions</span>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {recentNotes.length === 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-[var(--cs-card-border)]">
+                                <thead className="bg-[var(--cs-teal-xlight)]">
                                     <tr>
-                                        <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                                            No notes yet. Click "Start New Note" to create one.
-                                        </td>
+                                        <th className="px-5 py-2.5 text-left text-[11px] font-semibold text-[var(--cs-text-muted)] uppercase tracking-wider">
+                                            Patient
+                                        </th>
+                                        <th className="px-5 py-2.5 text-left text-[11px] font-semibold text-[var(--cs-text-muted)] uppercase tracking-wider">
+                                            Diagnosis
+                                        </th>
+                                        <th className="px-5 py-2.5 text-left text-[11px] font-semibold text-[var(--cs-text-muted)] uppercase tracking-wider">
+                                            Last Edited
+                                        </th>
+                                        <th className="px-5 py-2.5 text-left text-[11px] font-semibold text-[var(--cs-text-muted)] uppercase tracking-wider">
+                                            Status
+                                        </th>
+                                        <th className="relative px-5 py-2.5">
+                                            <span className="sr-only">Actions</span>
+                                        </th>
                                     </tr>
-                                ) : recentNotes.map((note) => (
-                                    <tr
-                                        key={note.id}
-                                        className="hover:bg-muted/30 transition-colors"
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                                                    {note.patient?.first_name?.[0]}{note.patient?.last_name?.[0] || '?'}
-                                                </div>
-                                                <div className="ml-4">
-                                                    <div className="text-sm font-medium text-foreground">
-                                                        {note.patient ? `${note.patient.first_name} ${note.patient.last_name}` : 'Unknown Patient'}
+                                </thead>
+                                <tbody className="divide-y divide-[var(--cs-card-border)]">
+                                    {recentNotes.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="px-5 py-8 text-center text-[var(--cs-text-muted)]">
+                                                No notes yet. Click &quot;Start New Note&quot; to create one.
+                                            </td>
+                                        </tr>
+                                    ) : recentNotes.map((note) => (
+                                        <tr
+                                            key={note.id}
+                                            className="hover:bg-[var(--cs-teal-xlight)] transition-colors"
+                                        >
+                                            <td className="px-5 py-3 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-[var(--cs-teal-light)] flex items-center justify-center text-xs font-semibold text-[var(--cs-teal)]">
+                                                        {note.patient?.first_name?.[0]}{note.patient?.last_name?.[0] || '?'}
+                                                    </div>
+                                                    <div className="ml-3">
+                                                        <div className="text-sm font-medium text-[var(--cs-text-primary)]">
+                                                            {note.patient ? `${note.patient.first_name} ${note.patient.last_name}` : 'Unknown Patient'}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-foreground">
-                                                Clinical Note
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-muted-foreground">
-                                                {new Date(note.updated_at || note.created_at).toLocaleDateString('en-US', {
-                                                    month: 'short',
-                                                    day: 'numeric',
-                                                    hour: 'numeric',
-                                                    minute: '2-digit'
-                                                })}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span
-                                                className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${note.status === 'signed' ? statusStyles["Signed"] :
-                                                    note.status === 'completed' ? statusStyles["Pending Review"] :
-                                                        statusStyles["Draft"]
-                                                    }`}
-                                            >
-                                                {note.status === 'signed' ? "Signed" : note.status === 'completed' ? "Complete" : "Draft"}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <Link
-                                                href={`/notes/${note.id}`}
-                                                className={`px-3 py-1 rounded transition-colors ${note.status === "signed"
-                                                    ? "text-muted-foreground hover:text-foreground"
-                                                    : "text-primary bg-primary/10 hover:bg-primary/20"
-                                                    }`}
-                                            >
-                                                {note.status === "signed" ? "View" : "Edit"}
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                            </td>
+                                            <td className="px-5 py-3 whitespace-nowrap">
+                                                <div className="text-sm text-[var(--cs-text-secondary)]">
+                                                    Clinical Note
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3 whitespace-nowrap">
+                                                <div className="text-sm text-[var(--cs-text-muted)]">
+                                                    {new Date(note.updated_at || note.created_at).toLocaleDateString('en-US', {
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                        hour: 'numeric',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3 whitespace-nowrap">
+                                                {note.status === 'signed' ? (
+                                                    <CSBadge variant="success">Signed</CSBadge>
+                                                ) : note.status === 'completed' ? (
+                                                    <CSBadge variant="warning">Complete</CSBadge>
+                                                ) : (
+                                                    <CSBadge variant="warning">Draft</CSBadge>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-3 whitespace-nowrap text-right text-sm font-medium">
+                                                <Link
+                                                    href={`/notes/${note.id}`}
+                                                    className={`px-3 py-1 rounded transition-colors ${note.status === "signed"
+                                                        ? "text-[var(--cs-text-muted)] hover:text-[var(--cs-text-primary)]"
+                                                        : "text-[var(--cs-teal)] bg-[var(--cs-teal-light)] hover:bg-[var(--cs-card-border)]"
+                                                        }`}
+                                                >
+                                                    {note.status === "signed" ? "View" : "Edit"}
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </CSCard>
                 </section>
             </div>
 
@@ -399,6 +362,6 @@ export default function DashboardPage() {
                 isOpen={isPatientModalOpen}
                 onClose={() => setIsPatientModalOpen(false)}
             />
-        </>
+        </div>
     );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Header } from "@/components/layout";
+import { CSCard, CSPageHeader, CSBadge, CSButton } from "@/components/cs";
 import {
     Search,
     ChevronRight,
@@ -28,10 +28,13 @@ interface Note {
     };
 }
 
-const statusStyles: Record<string, string> = {
-    draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-    signed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
-    completed: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+const statusBadgeVariant = (status?: string): 'success' | 'warning' | 'info' | 'default' => {
+    switch (status) {
+        case 'signed': return 'success';
+        case 'completed': return 'info';
+        case 'draft': return 'warning';
+        default: return 'default';
+    }
 };
 
 export default function NotesHistoryPage() {
@@ -145,107 +148,107 @@ export default function NotesHistoryPage() {
     });
 
     return (
-        <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
-            <Header
+        <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
+            <CSPageHeader
                 title="Clinical Notes"
-                description="View and manage your clinical documentation history."
-                breadcrumbs={[
-                    { label: "Dashboard", href: "/dashboard" },
-                    { label: "Notes" }
-                ]}
+                subtitle="View and manage your clinical documentation history"
+                actions={
+                    <Link href="/notes/new">
+                        <CSButton variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+                            New Note
+                        </CSButton>
+                    </Link>
+                }
             />
 
-            <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full space-y-6">
+            <div className="space-y-4">
                 {/* Filters Row */}
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-                    <div className="relative w-full md:w-96">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Search patients or content..."
-                            className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-xl focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
+                <CSCard>
+                    <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
+                        <div className="relative w-full md:w-96">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--cs-text-muted)]" />
+                            <input
+                                type="text"
+                                placeholder="Search patients or content..."
+                                className="w-full pl-10 pr-4 py-2 bg-white border border-[var(--cs-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--cs-teal)] text-sm transition-colors"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
 
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 w-full md:w-auto">
-                        <Link
-                            href="/notes"
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${!statusFilter ? "bg-primary text-white" : "bg-card border border-border text-muted-foreground hover:bg-muted"
-                                }`}
-                        >
-                            All Notes
-                        </Link>
-                        <Link
-                            href="/notes?status=signed"
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${statusFilter === "signed" ? "bg-primary text-white" : "bg-card border border-border text-muted-foreground hover:bg-muted"
-                                }`}
-                        >
-                            Signed
-                        </Link>
-                        <Link
-                            href="/notes?status=draft"
-                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${statusFilter === "draft" ? "bg-primary text-white" : "bg-card border border-border text-muted-foreground hover:bg-muted"
-                                }`}
-                        >
-                            Drafts
-                        </Link>
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1 w-full md:w-auto">
+                            {[
+                                { href: '/notes', label: 'All Notes', match: !statusFilter },
+                                { href: '/notes?status=signed', label: 'Signed', match: statusFilter === 'signed' },
+                                { href: '/notes?status=draft', label: 'Drafts', match: statusFilter === 'draft' },
+                            ].map(tab => (
+                                <Link
+                                    key={tab.label}
+                                    href={tab.href}
+                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${tab.match
+                                        ? 'bg-[var(--cs-teal)] text-white'
+                                        : 'bg-white border border-[var(--cs-border)] text-[var(--cs-text-secondary)] hover:bg-[var(--cs-teal-xlight)] hover:text-[var(--cs-teal)]'
+                                        }`}
+                                >
+                                    {tab.label}
+                                </Link>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                </CSCard>
 
                 {/* Notes List */}
-                <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+                <CSCard padding="none">
                     {loading ? (
                         <div className="flex items-center justify-center py-16">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <Loader2 className="h-7 w-7 animate-spin text-[var(--cs-teal)]" />
                         </div>
                     ) : error ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-destructive">
-                            <AlertCircle className="h-8 w-8 mb-2" />
+                        <div className="flex flex-col items-center justify-center py-16 text-[var(--cs-danger)]">
+                            <AlertCircle className="h-7 w-7 mb-2" />
                             <p>{error}</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-muted/50 border-b border-border">
-                                        <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Patient</th>
-                                        <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Content Preview</th>
-                                        <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Last Updated</th>
-                                        <th className="px-6 py-4 text-xs font-black text-muted-foreground uppercase tracking-widest">Status</th>
-                                        <th className="px-6 py-4 text-right"></th>
+                                    <tr className="bg-[var(--cs-teal-xlight)] border-b border-[var(--cs-card-border)]">
+                                        <th className="px-5 py-2.5 text-[11px] font-semibold text-[var(--cs-text-muted)] uppercase tracking-wider">Patient</th>
+                                        <th className="px-5 py-2.5 text-[11px] font-semibold text-[var(--cs-text-muted)] uppercase tracking-wider">Content Preview</th>
+                                        <th className="px-5 py-2.5 text-[11px] font-semibold text-[var(--cs-text-muted)] uppercase tracking-wider">Last Updated</th>
+                                        <th className="px-5 py-2.5 text-[11px] font-semibold text-[var(--cs-text-muted)] uppercase tracking-wider">Status</th>
+                                        <th className="px-5 py-2.5 text-right"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border/50">
+                                <tbody className="divide-y divide-[var(--cs-card-border)]">
                                     {filteredNotes.length > 0 ? (
                                         filteredNotes.map((note) => (
-                                            <tr key={note.id} className="hover:bg-muted/20 transition-colors group">
-                                                <td className="px-6 py-4">
+                                            <tr key={note.id} className="hover:bg-[var(--cs-teal-xlight)] transition-colors group">
+                                                <td className="px-5 py-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                                                        <div className="h-9 w-9 rounded-full bg-[var(--cs-teal-light)] flex items-center justify-center text-[var(--cs-teal)] font-semibold text-xs">
                                                             {note.patient?.first_name?.[0]}{note.patient?.last_name?.[0] || '?'}
                                                         </div>
                                                         <div>
-                                                            <div className="font-bold text-foreground">
+                                                            <div className="font-medium text-[var(--cs-text-primary)]">
                                                                 {note.patient ? `${note.patient.first_name} ${note.patient.last_name}` : 'Unknown Patient'}
                                                             </div>
-                                                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            <div className="text-xs text-[var(--cs-text-muted)] flex items-center gap-1">
                                                                 <User className="h-3 w-3" />
                                                                 Clinical Note
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm text-muted-foreground max-w-xs truncate">
+                                                <td className="px-5 py-3">
+                                                    <div className="text-sm text-[var(--cs-text-muted)] max-w-xs truncate">
                                                         {note.content?.substring(0, 80) || 'No content'}
                                                         {(note.content?.length || 0) > 80 ? '...' : ''}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm text-foreground flex items-center gap-1.5">
-                                                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                                <td className="px-5 py-3">
+                                                    <div className="text-sm text-[var(--cs-text-primary)] flex items-center gap-1.5">
+                                                        <Clock className="h-3.5 w-3.5 text-[var(--cs-text-muted)]" />
                                                         {new Date(note.updated_at || note.created_at).toLocaleDateString('en-US', {
                                                             month: 'short',
                                                             day: 'numeric',
@@ -255,15 +258,15 @@ export default function NotesHistoryPage() {
                                                         })}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${statusStyles[note.status] || statusStyles.draft}`}>
+                                                <td className="px-5 py-3">
+                                                    <CSBadge variant={statusBadgeVariant(note.status)}>
                                                         {note.status || 'draft'}
-                                                    </span>
+                                                    </CSBadge>
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
+                                                <td className="px-5 py-3 text-right">
                                                     <Link
                                                         href={`/notes/${note.id}`}
-                                                        className="inline-flex items-center gap-2 px-4 py-2 bg-muted/50 hover:bg-primary hover:text-white rounded-xl text-sm font-medium transition-all group-hover:scale-105"
+                                                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--cs-teal-light)] text-[var(--cs-teal)] hover:bg-[var(--cs-teal)] hover:text-white rounded-md text-sm font-medium transition-colors"
                                                     >
                                                         {note.status === "signed" ? "View" : "Edit"}
                                                         <ChevronRight className="h-4 w-4" />
@@ -273,16 +276,14 @@ export default function NotesHistoryPage() {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                                            <td colSpan={5} className="px-5 py-12 text-center text-[var(--cs-text-muted)]">
                                                 <div className="flex flex-col items-center gap-3">
-                                                    <AlertCircle className="h-8 w-8 opacity-20" />
+                                                    <AlertCircle className="h-7 w-7 opacity-30" />
                                                     <p>No notes found.</p>
-                                                    <Link
-                                                        href="/notes/new"
-                                                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all"
-                                                    >
-                                                        <Plus className="h-4 w-4" />
-                                                        Create First Note
+                                                    <Link href="/notes/new">
+                                                        <CSButton variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
+                                                            Create First Note
+                                                        </CSButton>
                                                     </Link>
                                                 </div>
                                             </td>
@@ -292,7 +293,7 @@ export default function NotesHistoryPage() {
                             </table>
                         </div>
                     )}
-                </div>
+                </CSCard>
             </div>
         </div>
     );

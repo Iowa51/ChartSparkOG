@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Header } from "@/components/layout";
+import { CSCard, CSPageHeader, CSBadge } from "@/components/cs";
 import {
     Search,
     DollarSign,
@@ -263,12 +263,9 @@ function UserBillingView({ isPendingOnly }: { isPendingOnly: boolean }) {
                                             </td>
                                             <td className="px-6 py-4 text-right font-black text-foreground">{formatCurrency(claim.amount)}</td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${claim.type === "Pending" ? "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800" :
-                                                    claim.type === "Paid" ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800" :
-                                                        "bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
-                                                    }`}>
+                                                <CSBadge variant={claim.type === "Pending" ? "warning" : claim.type === "Paid" ? "success" : "danger"}>
                                                     {claim.status}
-                                                </span>
+                                                </CSBadge>
                                             </td>
                                         </tr>
                                     )) : (
@@ -680,12 +677,9 @@ function SuperAdminBillingView() {
                                     )}
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${config.method === "deduct_from_billing"
-                                        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                        : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                        }`}>
+                                    <CSBadge variant={config.method === "deduct_from_billing" ? "info" : "warning"}>
                                         {config.method === "deduct_from_billing" ? "Deduct from Billing" : "Charge Separately"}
-                                    </span>
+                                    </CSBadge>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     {editingFee === config.org_id ? (
@@ -760,85 +754,38 @@ function BillingContent() {
 
     return (
         <>
-            <Header
-                title="Financial Governance Hub"
-                description="Manage billing cycles, verify CPT compliance, and oversee revenue distributions."
-                breadcrumbs={[
-                    { label: "Dashboard", href: "/dashboard" },
-                    { label: "Billing" },
-                ]}
-            />
-
             <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full">
+                <CSPageHeader
+                    title="Financial Governance Hub"
+                    subtitle="Manage billing cycles, verify CPT compliance, and oversee revenue distributions."
+                />
+
                 {/* Action Cards Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    {/* Revenue Dashboard Link */}
-                    <Link
-                        href="/billing/revenue"
-                        className="flex items-center justify-between p-6 bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 border border-teal-200 dark:border-teal-800 rounded-2xl hover:shadow-md transition-all group"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-teal-500 rounded-xl">
-                                <BarChart3 className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                                <span className="text-lg font-bold text-teal-700 dark:text-teal-300">Revenue Dashboard</span>
-                                <p className="text-sm text-teal-600 dark:text-teal-400">Collections performance & KPI tracking</p>
-                            </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-teal-500 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-
-                    {/* Claims Manager Link */}
-                    <Link
-                        href="/billing/claims"
-                        className="flex items-center justify-between p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-indigo-800 rounded-2xl hover:shadow-md transition-all group"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-blue-500 rounded-xl">
-                                <FileText className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                                <span className="text-lg font-bold text-blue-700 dark:text-blue-300">Claims Manager</span>
-                                <p className="text-sm text-blue-600 dark:text-blue-400">Manage worklists & EDI transmission status</p>
-                            </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-blue-500 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-
-                    {/* ERA Inbox Link */}
-                    <Link
-                        href="/billing/era-inbox"
-                        className="flex items-center justify-between p-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-orange-800 rounded-2xl hover:shadow-md transition-all group"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-amber-500 rounded-xl">
-                                <History className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                                <span className="text-lg font-bold text-amber-700 dark:text-amber-300">ERA Triage Inbox</span>
-                                <p className="text-sm text-amber-600 dark:text-amber-400">Match electronic remittances manually</p>
-                            </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-amber-500 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-
-                    {/* Fee Schedule Link */}
-                    <Link
-                        href="/billing/fee-schedule"
-                        className="flex items-center justify-between p-6 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800/50 dark:to-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-2xl hover:shadow-md transition-all group"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-slate-600 rounded-xl">
-                                <DollarSign className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                                <span className="text-lg font-bold text-slate-700 dark:text-slate-300">Fee Schedule Manager</span>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">Manage CPT pricing & payer contracts</p>
-                            </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-slate-500 group-hover:translate-x-1 transition-transform" />
-                    </Link>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    {[
+                        { href: "/billing/revenue", icon: BarChart3, title: "Revenue Dashboard", desc: "Collections performance & KPI tracking" },
+                        { href: "/billing/claims", icon: FileText, title: "Claims Manager", desc: "Manage worklists & EDI transmission status" },
+                        { href: "/billing/era-inbox", icon: History, title: "ERA Triage Inbox", desc: "Match electronic remittances manually" },
+                        { href: "/billing/fee-schedule", icon: DollarSign, title: "Fee Schedule Manager", desc: "Manage CPT pricing & payer contracts" },
+                    ].map((card) => {
+                        const Icon = card.icon;
+                        return (
+                            <Link key={card.href} href={card.href} className="group">
+                                <CSCard className="flex items-center justify-between hover:border-[var(--cs-teal)] transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-9 w-9 rounded-md bg-[var(--cs-teal-light)] flex items-center justify-center">
+                                            <Icon className="h-4 w-4 text-[var(--cs-teal)]" />
+                                        </div>
+                                        <div>
+                                            <span className="text-sm font-semibold text-[var(--cs-text-primary)] group-hover:text-[var(--cs-teal)] transition-colors">{card.title}</span>
+                                            <p className="text-xs text-[var(--cs-text-muted)]">{card.desc}</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 text-[var(--cs-text-muted)] group-hover:text-[var(--cs-teal)] group-hover:translate-x-0.5 transition-all" />
+                                </CSCard>
+                            </Link>
+                        );
+                    })}
                 </div>
 
                 {/* Role-based Content */}
