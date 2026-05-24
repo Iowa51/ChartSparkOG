@@ -104,7 +104,7 @@ export function Sidebar() {
   if (!hasMounted) return null;
 
   return (
-    <aside className="hidden lg:flex flex-col w-60 bg-surface border-r border-border h-screen sticky top-0" role="complementary" aria-label="Main sidebar navigation">
+    <div className="flex flex-col w-full h-full" role="navigation" aria-label="Main sidebar navigation">
       {/* Navigation */}
       <div className="px-6 pb-4 pt-6">
 
@@ -205,6 +205,6 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
