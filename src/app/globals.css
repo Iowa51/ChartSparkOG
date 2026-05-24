@@ -60,97 +60,138 @@
 }
 
 :root {
-  /* ChartSpark Teal Design System */
+  /* ChartSpark Design System v2.0 — Tebra-Inspired (unified with ChartSpark Medical) */
   --radius: 0.5rem;
-  
-  /* Primary: Teal #0d968b */
-  --primary: #0d968b;
-  --primary-foreground: #ffffff;
-  
-  /* Backgrounds */
-  --background: #f6f8f8;
-  --foreground: #111817;
-  
-  /* Surface (cards, panels) */
-  --surface: #ffffff;
-  --surface-foreground: #111817;
-  
-  /* Card */
-  --card: #ffffff;
-  --card-foreground: #111817;
-  
-  /* Popover */
-  --popover: #ffffff;
-  --popover-foreground: #111817;
-  
-  /* Secondary */
-  --secondary: #f0f4f4;
-  --secondary-foreground: #618986;
-  
-  /* Muted */
-  --muted: #f0f4f4;
-  --muted-foreground: #618986;
-  
-  /* Accent */
-  --accent: rgba(13, 150, 139, 0.1);
-  --accent-foreground: #0d968b;
-  
-  /* Destructive */
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  
-  /* Border & Input */
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --ring: #0d968b;
-  
+
+  /* Navbar (top bar) */
+  --cs-nav-bg: #0f2e2a;
+  --cs-nav-text: #ffffff;
+  --cs-nav-text-muted: #a8c5c0;
+  --cs-nav-active: #ffffff;
+  --cs-nav-height: 48px;
+
   /* Sidebar */
-  --sidebar: #ffffff;
-  --sidebar-foreground: #111817;
-  --sidebar-primary: #0d968b;
+  --cs-sidebar-width: 240px;
+  --cs-sidebar-bg: #ffffff;
+  --cs-sidebar-text: #3d5c57;
+  --cs-sidebar-text-active: #1a5c4f;
+
+  /* Primary brand — deep teal (replaces #0d968b) */
+  --cs-teal: #1a5c4f;
+  --cs-teal-mid: #237060;
+  --cs-teal-light: #eef4f3;
+  --cs-teal-xlight: #f4f9f8;
+
+  /* Coral (CTAs, warnings, tier badges) */
+  --cs-coral: #e8603a;
+  --cs-coral-light: #fdf1ed;
+
+  /* Surfaces */
+  --cs-page-bg: #f7fafa;
+  --cs-surface: #ffffff;
+  --cs-card-bg: #ffffff;
+  --cs-card-border: #e4edeb;
+
+  /* Borders */
+  --cs-border: #e4edeb;
+  --cs-border-strong: #dde9e7;
+
+  /* Text */
+  --cs-text-primary: #0f2e2a;
+  --cs-text-secondary: #3d5c57;
+  --cs-text-muted: #7a9e99;
+  --cs-text-disabled: #b6c9c6;
+
+  /* Semantic */
+  --cs-success: #1a7a50;
+  --cs-success-light: #e8f5ee;
+  --cs-warning: #d97706;
+  --cs-warning-light: #fef3c7;
+  --cs-danger: #c0392b;
+  --cs-danger-light: #fdecea;
+  --cs-info: #1d4ed8;
+  --cs-info-light: #eff6ff;
+
+  /* Shadows & radius */
+  --cs-shadow-card: 0 1px 3px rgba(0,0,0,0.08);
+  --cs-shadow-popover: 0 8px 24px rgba(0,0,0,0.12);
+  --cs-radius-card: 10px;
+  --cs-radius-btn: 6px;
+  --cs-radius-pill: 9999px;
+
+  /* === Bridge: keep existing Tailwind v4 token names pointing at
+     new values so existing utility classes (bg-primary, border-border,
+     etc.) keep working without a global find-replace. === */
+  --primary: var(--cs-teal);
+  --primary-foreground: #ffffff;
+  --background: var(--cs-page-bg);
+  --foreground: var(--cs-text-primary);
+  --surface: var(--cs-surface);
+  --surface-foreground: var(--cs-text-primary);
+  --card: var(--cs-card-bg);
+  --card-foreground: var(--cs-text-primary);
+  --popover: var(--cs-surface);
+  --popover-foreground: var(--cs-text-primary);
+  --secondary: var(--cs-teal-light);
+  --secondary-foreground: var(--cs-text-secondary);
+  --muted: var(--cs-teal-light);
+  --muted-foreground: var(--cs-text-muted);
+  --accent: var(--cs-teal-light);
+  --accent-foreground: var(--cs-teal);
+  --destructive: var(--cs-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--cs-border);
+  --input: var(--cs-border);
+  --ring: var(--cs-teal);
+  --sidebar: var(--cs-sidebar-bg);
+  --sidebar-foreground: var(--cs-sidebar-text);
+  --sidebar-primary: var(--cs-teal);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(13, 150, 139, 0.1);
-  --sidebar-accent-foreground: #0d968b;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #0d968b;
-  
-  /* Charts */
-  --chart-1: #0d968b;
-  --chart-2: #06b6d4;
+  --sidebar-accent: var(--cs-teal-light);
+  --sidebar-accent-foreground: var(--cs-teal);
+  --sidebar-border: var(--cs-border);
+  --sidebar-ring: var(--cs-teal);
+  --chart-1: var(--cs-teal);
+  --chart-2: var(--cs-coral);
   --chart-3: #8b5cf6;
-  --chart-4: #f59e0b;
-  --chart-5: #ef4444;
+  --chart-4: var(--cs-warning);
+  --chart-5: var(--cs-danger);
 }
 
 .dark {
-  /* Dark mode adjustments */
-  --background: #102220;
-  --foreground: #f1f5f9;
-  
-  --surface: #1c2e2c;
-  --surface-foreground: #f1f5f9;
-  
-  --card: #1c2e2c;
-  --card-foreground: #f1f5f9;
-  
-  --popover: #1c2e2c;
-  --popover-foreground: #f1f5f9;
-  
+  --cs-nav-bg: #061a17;
+  --cs-sidebar-bg: #102220;
+  --cs-sidebar-text: #94a3b8;
+  --cs-page-bg: #102220;
+  --cs-surface: #1c2e2c;
+  --cs-card-bg: #1c2e2c;
+  --cs-card-border: #2d4a47;
+  --cs-border: #2d4a47;
+  --cs-text-primary: #f1f5f9;
+  --cs-text-secondary: #cbd5e1;
+  --cs-text-muted: #94a3b8;
+  --cs-teal-light: rgba(26, 92, 79, 0.18);
+
+  /* Bridge for dark mode */
+  --background: var(--cs-page-bg);
+  --foreground: var(--cs-text-primary);
+  --surface: var(--cs-surface);
+  --surface-foreground: var(--cs-text-primary);
+  --card: var(--cs-card-bg);
+  --card-foreground: var(--cs-text-primary);
+  --popover: var(--cs-surface);
+  --popover-foreground: var(--cs-text-primary);
   --secondary: #233d3a;
-  --secondary-foreground: #94a3b8;
-  
+  --secondary-foreground: #cbd5e1;
   --muted: #233d3a;
   --muted-foreground: #94a3b8;
-  
-  --accent: rgba(13, 150, 139, 0.2);
-  --accent-foreground: #14b8a6;
-  
-  --border: #2d4a47;
-  --input: #2d4a47;
-  
-  --sidebar: #1c2e2c;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-border: #2d4a47;
+  --accent: rgba(26, 92, 79, 0.2);
+  --accent-foreground: #2bb5a0;
+  --border: var(--cs-card-border);
+  --input: var(--cs-card-border);
+  --sidebar: var(--cs-sidebar-bg);
+  --sidebar-foreground: var(--cs-sidebar-text);
+  --sidebar-border: var(--cs-card-border);
 }
 
 @layer base {
