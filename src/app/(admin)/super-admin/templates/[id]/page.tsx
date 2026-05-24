@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { Header } from "@/components/layout";
 import { templates } from "@/lib/demo-data/templates";
 import {
     ArrowLeft,

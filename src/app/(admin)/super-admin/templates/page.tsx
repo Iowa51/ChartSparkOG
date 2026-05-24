@@ -1,6 +1,6 @@
 "use client";
 
-import { Header } from "@/components/layout";
+import { CSPageHeader } from "@/components/cs";
 import { templates } from "@/lib/demo-data/templates";
 import {
     FileText,
@@ -16,13 +16,9 @@ import Link from "next/link";
 export default function SuperAdminTemplatesPage() {
     return (
         <div className="flex flex-col h-full bg-slate-50/50 dark:bg-slate-950/50">
-            <Header
+            <CSPageHeader
                 title="Clinical Templates"
-                description="Global SOAP note structures for the platform."
-                breadcrumbs={[
-                    { label: "Super Admin", href: "/super-admin" },
-                    { label: "Templates" },
-                ]}
+                subtitle="Global SOAP note structures for the platform."
             />
 
             <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
