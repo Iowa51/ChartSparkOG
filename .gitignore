@@ -53,3 +53,6 @@ test-*.js
 
 # AI agent specs (consumed scratch files)
 docs/specs/
+
+# cc prompt scratch
+cc-prompt.txt
