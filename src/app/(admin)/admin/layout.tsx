@@ -5,27 +5,6 @@ import Link from "next/link";
 
 // Force dynamic rendering - admin pages need authentication at runtime
 export const dynamic = 'force-dynamic';
-import {
-    LayoutDashboard,
-    Users,
-    FileText,
-    Zap,
-    MessageSquare,
-    Settings,
-    LogOut,
-    User,
-    ChevronLeft,
-    Building2,
-} from "lucide-react";
-
-const adminNavItems = [
-    { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Users", href: "/admin/users", icon: Users },
-    { label: "Submissions", href: "/admin/submissions", icon: FileText },
-    { label: "Features", href: "/admin/features", icon: Zap },
-    { label: "Auditor Notes", href: "/admin/auditor-notes", icon: MessageSquare },
-    { label: "Settings", href: "/admin/settings", icon: Settings },
-];
 
 export default async function AdminLayout({
     children,
