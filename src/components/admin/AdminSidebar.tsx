@@ -148,87 +148,66 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
     const primaryNavItems = context === "super-admin" ? superAdminNavItems : adminNavItems;
 
     return (
-        <aside className={cn(
-            "hidden lg:flex flex-col w-64 h-screen sticky top-0 text-white transition-colors duration-300 shadow-2xl z-40",
-            context === "super-admin" ? "bg-slate-950" : "bg-slate-900"
-        )}>
-            {/* Header label */}
-            <div className="px-6 pb-4 pt-6">
-                <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] opacity-70">
-                    <Shield className={cn("h-3.5 w-3.5", context === "super-admin" ? "text-purple-500" : "text-primary")} />
-                    <span>{context === "super-admin" ? "Platform Control" : "Administrative Console"}</span>
-                </div>
+        <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 bg-[var(--cs-sidebar-bg)] border-r border-[var(--cs-border)]">
+            {/* Role badge */}
+            <div className="px-4 py-3 border-b border-[var(--cs-border)]">
+                <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--cs-teal-light)] text-[var(--cs-teal)]">
+                    {context === "super-admin" ? "Super Admin" : "Admin"}
+                </span>
             </div>
 
             {/* Scrollable Navigation Area */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4">
-                {/* Admin/SuperAdmin Specific Section */}
-                <div className="mb-6 mt-2">
-                    <h3 className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">
-                        {context === "super-admin" ? "Platform Master" : "Management Console"}
-                    </h3>
-                    <div className="space-y-1">
-                        {primaryNavItems.map((item) => {
-                            const isActive = pathname === item.href || (item.href !== "/admin" && item.href !== "/super-admin" && pathname.startsWith(item.href));
-                            const Icon = item.icon;
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4">
+                <h3 className="px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--cs-text-muted)] mb-1.5">
+                    {context === "super-admin" ? "Platform Master" : "Management Console"}
+                </h3>
+                <div className="flex flex-col gap-0.5">
+                    {primaryNavItems.map((item) => {
+                        const isActive = pathname === item.href || (item.href !== "/admin" && item.href !== "/super-admin" && pathname.startsWith(item.href));
+                        const Icon = item.icon;
 
-                            return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={cn(
-                                        "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all text-sm group relative",
-                                        isActive
-                                            ? (context === "super-admin" ? "bg-purple-600/20 text-purple-400 border border-purple-500/20 shadow-[0_0_15px_rgba(147,51,234,0.1)]" : "bg-primary/20 text-primary border border-primary/20 shadow-[0_0_15px_rgba(37,99,235,0.1)]")
-                                            : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
-                                    )}
-                                >
-                                    {isActive && (
-                                        <div className={cn(
-                                            "absolute left-0 w-1 h-5 rounded-r-full shadow-lg",
-                                            context === "super-admin" ? "bg-purple-500 shadow-purple-500/40" : "bg-primary shadow-primary/40"
-                                        )} />
-                                    )}
-                                    <Icon className={cn("h-4.5 w-4.5 shrink-0 transition-transform group-hover:scale-110", isActive ? (context === "super-admin" ? "text-purple-400" : "text-primary") : "text-slate-500")} />
-                                    <span className="font-bold tracking-tight">{item.label}</span>
-                                </Link>
-                            );
-                        })}
-                    </div>
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                className={cn(
+                                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                                    isActive
+                                        ? "bg-[var(--cs-teal-light)] text-[var(--cs-teal)] border-l-[3px] border-[var(--cs-teal)]"
+                                        : "text-[var(--cs-text-secondary)] hover:bg-[var(--cs-teal-xlight)] hover:text-[var(--cs-teal)]"
+                                )}
+                            >
+                                <Icon className="h-4 w-4 shrink-0" />
+                                <span className="whitespace-nowrap">{item.label}</span>
+                            </Link>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* User Profile & Global Actions */}
-            <div className="p-4 border-t border-slate-800 bg-black/20">
-                <Link
-                    href={context === "super-admin" ? "/super-admin/settings" : "/admin/settings"}
-                    className="flex items-center gap-3 mb-4 px-2 py-2 -mx-2 rounded-xl hover:bg-slate-800/50 transition-colors cursor-pointer group"
-                >
-                    <div className={cn(
-                        "h-10 w-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-inner",
-                        context === "super-admin" ? "bg-gradient-to-br from-purple-600 to-indigo-700" : "bg-gradient-to-br from-blue-600 to-primary"
-                    )}>
+            {/* User Profile & Logout */}
+            <div className="p-3 border-t border-[var(--cs-border)]">
+                <div className="flex items-center gap-3 px-2 py-2">
+                    <div className="h-8 w-8 rounded-full bg-[var(--cs-teal)] flex items-center justify-center text-white text-xs font-semibold">
                         {role === "SUPER_ADMIN" ? "SA" : "AD"}
                     </div>
-                    <div className="flex flex-col min-w-0 flex-1">
-                        <p className="text-white text-[13px] font-black truncate leading-tight group-hover:text-primary transition-colors">
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--cs-text-primary)] truncate">
                             {role === "SUPER_ADMIN" ? "Platform Admin" : "Clinic Director"}
                         </p>
-                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                            Click for Settings
+                        <p className="text-xs text-[var(--cs-text-muted)] truncate">
+                            {context === "super-admin" ? "Platform console" : "Admin console"}
                         </p>
                     </div>
-                </Link>
-
-                <div className="grid grid-cols-1 gap-2">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[11px] font-black uppercase tracking-[0.1em] text-red-500 hover:bg-red-500/10 hover:text-red-400 rounded-xl transition-all border border-red-500/20 hover:border-red-500/40"
-                    >
-                        <LogOut className="h-3.5 w-3.5" />
-                        Terminate Session
-                    </button>
                 </div>
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 mt-2 px-3 py-1.5 text-xs font-medium text-[var(--cs-text-muted)] hover:text-[var(--cs-danger)] hover:bg-[var(--cs-danger-light)] rounded-md transition-colors"
+                    aria-label="Log out of your account"
+                >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Log out
+                </button>
             </div>
         </aside>
     );

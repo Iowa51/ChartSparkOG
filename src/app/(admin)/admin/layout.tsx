@@ -63,7 +63,7 @@ export default async function AdminLayout({
         : user?.email || 'Admin';
 
     return (
-        <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950">
+        <div className="flex min-h-screen bg-[var(--cs-page-bg)]">
             {/* Sidebar */}
             <AdminSidebar role="ADMIN" context="admin" />
 

@@ -54,12 +54,12 @@ export default async function SuperAdminLayout({
         : user?.email || 'Super Admin';
 
     return (
-        <div className="flex min-h-screen bg-slate-950">
+        <div className="flex min-h-screen bg-[var(--cs-page-bg)]">
             {/* Sidebar */}
             <AdminSidebar role="SUPER_ADMIN" context="super-admin" />
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-950">
+            <main className="flex-1 flex flex-col overflow-hidden bg-[var(--cs-page-bg)]">
                 {children}
             </main>
         </div>
