@@ -148,7 +148,7 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
     const primaryNavItems = context === "super-admin" ? superAdminNavItems : adminNavItems;
 
     return (
-        <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 bg-[var(--cs-sidebar-bg)] border-r border-[var(--cs-border)]">
+        <div className="flex flex-col w-full h-full">
             {/* Role badge */}
             <div className="px-4 py-3 border-b border-[var(--cs-border)]">
                 <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[var(--cs-teal-light)] text-[var(--cs-teal)]">
@@ -209,6 +209,6 @@ export function AdminSidebar({ role = "ADMIN", context = "admin" }: AdminSidebar
                     Log out
                 </button>
             </div>
-        </aside>
+        </div>
     );
 }

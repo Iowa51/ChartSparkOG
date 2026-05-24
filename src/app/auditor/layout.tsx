@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { AuditorSidebarNav } from "./_components/auditor-sidebar-nav";
+import { CSShell } from "@/components/cs";
 
 // Force dynamic rendering - auditor pages need authentication at runtime
 export const dynamic = 'force-dynamic';
@@ -47,15 +48,16 @@ export default async function AuditorLayout({
         : (user?.email?.[0]?.toUpperCase() ?? 'A');
 
     return (
-        <div className="flex min-h-screen bg-[var(--cs-page-bg)]">
-            <AuditorSidebarNav
-                displayName={displayName}
-                email={user?.email ?? ''}
-                initials={initials}
-            />
-            <main className="flex-1 flex flex-col overflow-hidden">
-                {children}
-            </main>
-        </div>
+        <CSShell
+            sidebar={
+                <AuditorSidebarNav
+                    displayName={displayName}
+                    email={user?.email ?? ''}
+                    initials={initials}
+                />
+            }
+        >
+            {children}
+        </CSShell>
     );
 }

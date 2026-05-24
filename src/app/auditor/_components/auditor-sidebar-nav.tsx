@@ -64,7 +64,7 @@ export function AuditorSidebarNav({ displayName, email, initials }: AuditorSideb
     const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
     return (
-        <aside className="w-64 bg-[var(--cs-sidebar-bg)] border-r border-[var(--cs-border)] flex flex-col h-screen sticky top-0">
+        <div className="flex flex-col w-full h-full">
             {/* Header */}
             <div className="px-4 py-3 border-b border-[var(--cs-border)]">
                 <div className="flex items-center gap-2">
@@ -137,6 +137,6 @@ export function AuditorSidebarNav({ displayName, email, initials }: AuditorSideb
                     a follow-up alongside any other auth-component refresh. */}
                 <LogoutButton />
             </div>
-        </aside>
+        </div>
     );
 }

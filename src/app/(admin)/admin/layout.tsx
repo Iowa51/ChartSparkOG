@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { CSShell } from "@/components/cs";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -63,14 +64,8 @@ export default async function AdminLayout({
         : user?.email || 'Admin';
 
     return (
-        <div className="flex min-h-screen bg-[var(--cs-page-bg)]">
-            {/* Sidebar */}
-            <AdminSidebar role="ADMIN" context="admin" />
-
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col overflow-hidden">
-                {children}
-            </main>
-        </div>
+        <CSShell sidebar={<AdminSidebar role="ADMIN" context="admin" />}>
+            {children}
+        </CSShell>
     );
 }
