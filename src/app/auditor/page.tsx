@@ -9,6 +9,7 @@ import {
     DollarSign,
 } from "lucide-react";
 import Link from "next/link";
+import { CSCard, CSPageHeader } from "@/components/cs";
 
 export default async function AuditorDashboard() {
     const supabase = await createClient();
@@ -126,175 +127,126 @@ export default async function AuditorDashboard() {
         }
     }
 
+    void auditorId;
+
+    const statTiles = [
+        { href: "/auditor/submissions?status=pending_audit", icon: ClipboardCheck, value: stats.pendingAudits, label: "Pending Audits" },
+        { href: "/auditor/submissions?audited_today=true", icon: CheckCircle2, value: stats.auditedToday, label: "Audited Today" },
+        { href: "/auditor/flags", icon: Flag, value: stats.flagsRaised, label: "Flags Raised" },
+        { href: "/auditor/reports", icon: TrendingUp, value: `${stats.passRate}%`, label: "Pass Rate" },
+        { href: "/auditor/billing", icon: DollarSign, value: "Financial", label: "Billing Compliance" },
+    ];
+
     return (
         <div className="flex-1 p-6 lg:p-8 overflow-auto">
-            {/* Header */}
-            <div className="mb-8 flex items-start justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-                        Auditor Dashboard
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-1">
-                        Review submissions and ensure compliance across assigned organizations
-                    </p>
-                </div>
-                <img
-                    src="/assets/logo.svg"
-                    alt="ChartSpark"
-                    className="h-24 w-auto hidden md:block"
-                />
+            <CSPageHeader
+                title="Auditor Dashboard"
+                subtitle="Review submissions and ensure compliance across assigned organizations"
+            />
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                {statTiles.map((tile) => {
+                    const Icon = tile.icon;
+                    return (
+                        <Link key={tile.href} href={tile.href} className="group">
+                            <CSCard className="hover:border-[var(--cs-teal)] transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-md bg-[var(--cs-teal-light)] flex items-center justify-center">
+                                        <Icon className="h-4 w-4 text-[var(--cs-teal)]" />
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-semibold text-[var(--cs-text-primary)]">
+                                            {tile.value}
+                                        </p>
+                                        <p className="text-xs text-[var(--cs-text-muted)]">{tile.label}</p>
+                                    </div>
+                                </div>
+                            </CSCard>
+                        </Link>
+                    );
+                })}
             </div>
 
-            {/* Stats Cards - Clickable */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <Link href="/auditor/submissions?status=pending_audit" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-amber-400 hover:shadow-lg transition-all cursor-pointer group">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <ClipboardCheck className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {stats.pendingAudits}
-                            </p>
-                            <p className="text-sm text-slate-500">Pending Audits</p>
-                        </div>
-                    </div>
-                </Link>
-
-                <Link href="/auditor/submissions?audited_today=true" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-emerald-400 hover:shadow-lg transition-all cursor-pointer group">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {stats.auditedToday}
-                            </p>
-                            <p className="text-sm text-slate-500">Audited Today</p>
-                        </div>
-                    </div>
-                </Link>
-
-                <Link href="/auditor/flags" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-red-400 hover:shadow-lg transition-all cursor-pointer group">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Flag className="h-6 w-6 text-red-600 dark:text-red-400" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {stats.flagsRaised}
-                            </p>
-                            <p className="text-sm text-slate-500">Flags Raised</p>
-                        </div>
-                    </div>
-                </Link>
-
-                <Link href="/auditor/reports" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer group">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                {stats.passRate}%
-                            </p>
-                            <p className="text-sm text-slate-500">Pass Rate</p>
-                        </div>
-                    </div>
-                </Link>
-
-                <Link href="/auditor/billing" className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 hover:border-emerald-500 hover:shadow-lg transition-all cursor-pointer group lg:col-span-1 md:col-span-2">
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                                Financial
-                            </p>
-                            <p className="text-sm text-slate-500">Billing Compliance</p>
-                        </div>
-                    </div>
-                </Link>
-            </div>
-
-            {/* Assigned Organizations */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
+            {/* Assigned Organizations + Queue Preview */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+                <CSCard>
+                    <h3 className="text-sm font-semibold text-[var(--cs-text-primary)] mb-3 flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-[var(--cs-teal)]" />
                         Assigned Organizations
                     </h3>
                     {assignedOrgs.length === 0 ? (
-                        <p className="text-sm text-slate-500">No organizations assigned yet.</p>
+                        <p className="text-sm text-[var(--cs-text-muted)]">No organizations assigned yet.</p>
                     ) : (
                         <ul className="space-y-2">
                             {assignedOrgs.map((org) => (
-                                <li key={org.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                <li key={org.id} className="flex items-center gap-2 text-sm text-[var(--cs-text-secondary)]">
+                                    <div className="h-2 w-2 rounded-full bg-[var(--cs-success)]" />
                                     {org.name}
                                 </li>
                             ))}
                         </ul>
                     )}
-                </div>
+                </CSCard>
 
                 {/* Queue Preview */}
-                <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                            Pending Audits Queue
-                        </h3>
-                        <Link
-                            href="/auditor/submissions"
-                            className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                            View All <ArrowRight className="h-4 w-4" />
-                        </Link>
-                    </div>
+                <div className="lg:col-span-2">
+                    <CSCard>
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-[var(--cs-text-primary)]">
+                                Pending Audits Queue
+                            </h3>
+                            <Link
+                                href="/auditor/submissions"
+                                className="text-sm font-medium text-[var(--cs-teal)] hover:text-[var(--cs-teal-mid)] flex items-center gap-1"
+                            >
+                                View All <ArrowRight className="h-3.5 w-3.5" />
+                            </Link>
+                        </div>
 
-                    {pendingSubmissions.length === 0 ? (
-                        <div className="text-center py-8">
-                            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-                            <p className="text-slate-500">All caught up! No pending audits.</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {pendingSubmissions.map((sub) => (
-                                <div
-                                    key={sub.id}
-                                    className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl"
-                                >
-                                    <div>
-                                        <p className="text-sm font-medium text-slate-900 dark:text-white">
-                                            {sub.patients?.first_name?.[0] || '?'}{sub.patients?.last_name?.[0] || '?'} - {sub.cpt_code}
-                                        </p>
-                                        <p className="text-xs text-slate-500">
-                                            {sub.organizations?.name} • {sub.users?.first_name} {sub.users?.last_name}
-                                        </p>
-                                    </div>
-                                    <Link
-                                        href={`/auditor/submissions/${sub.id}`}
-                                        className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                        {pendingSubmissions.length === 0 ? (
+                            <div className="text-center py-8">
+                                <CheckCircle2 className="h-10 w-10 text-[var(--cs-success)] mx-auto mb-2" />
+                                <p className="text-sm text-[var(--cs-text-muted)]">All caught up! No pending audits.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {pendingSubmissions.map((sub) => (
+                                    <div
+                                        key={sub.id}
+                                        className="flex items-center justify-between p-3 bg-[var(--cs-teal-xlight)] rounded-md"
                                     >
-                                        Audit Now
-                                    </Link>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                                        <div>
+                                            <p className="text-sm font-medium text-[var(--cs-text-primary)]">
+                                                {sub.patients?.first_name?.[0] || '?'}{sub.patients?.last_name?.[0] || '?'} - {sub.cpt_code}
+                                            </p>
+                                            <p className="text-xs text-[var(--cs-text-muted)]">
+                                                {sub.organizations?.name} • {sub.users?.first_name} {sub.users?.last_name}
+                                            </p>
+                                        </div>
+                                        <Link
+                                            href={`/auditor/submissions/${sub.id}`}
+                                            className="px-3 py-1.5 text-sm font-medium bg-[var(--cs-teal)] text-white rounded-md hover:bg-[var(--cs-teal-mid)] transition-colors"
+                                        >
+                                            Audit Now
+                                        </Link>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CSCard>
                 </div>
             </div>
 
             {/* Read-Only Notice */}
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6">
-                <div className="flex items-start gap-4">
-                    <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
-                        <Flag className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <div className="rounded-[var(--cs-radius-card)] bg-[var(--cs-coral-light)] border border-[var(--cs-coral)]/20 p-4">
+                <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 rounded-md bg-white flex items-center justify-center flex-shrink-0">
+                        <Flag className="h-4 w-4 text-[var(--cs-coral)]" />
                     </div>
                     <div>
-                        <h4 className="font-bold text-amber-800 dark:text-amber-200">Read-Only Access</h4>
-                        <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                        <h4 className="text-sm font-semibold text-[var(--cs-coral)]">Read-Only Access</h4>
+                        <p className="text-sm text-[var(--cs-text-secondary)] mt-1">
                             As an auditor, you can view all clinical documentation but cannot edit or delete any records.
                             Use the flagging system to note any compliance concerns for admin review.
                         </p>

@@ -132,9 +132,6 @@ export function AuditorSidebarNav({ displayName, email, initials }: AuditorSideb
                         </p>
                     </div>
                 </div>
-                {/* NOTE: LogoutButton retains its legacy red styling — kept untouched
-                    in Phase 3 because it lives next to auth/Supabase code. Restyle in
-                    a follow-up alongside any other auth-component refresh. */}
                 <LogoutButton />
             </div>
         </div>
