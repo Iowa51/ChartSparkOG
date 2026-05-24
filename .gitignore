@@ -56,3 +56,8 @@ docs/specs/
 
 # cc prompt scratch
 cc-prompt.txt
+
+# Playwright visual smoke output
+screenshots/
+playwright-report/
+test-results/
