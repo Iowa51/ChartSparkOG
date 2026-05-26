@@ -1,6 +1,6 @@
 # PRD-01 — Rating Scales Library
 
-**Version:** 1.1
+**Version:** 1.2
 **Track:** A (CC)
 **Mode:** Sidecar (`chartspark-assessments`)
 **Weeks:** 1–3
@@ -174,6 +174,74 @@ export const phq9: Scale = {
 ```
 
 Scoring is deterministic, fully unit-tested, no LLM involvement.
+
+## Established patterns (from Week 1 build)
+
+These patterns emerged during Week 1's first 5 scales (PHQ-9, GAD-7, C-SSRS, AUDIT-C, CAGE). They are the canonical templates for the remaining 10.
+
+### Generic `Scale<R>` for non-Likert response shapes
+
+The `Scale` interface is generic on its response type, defaulting to `Responses` (the plain `Record<string, number>` Likert-friendly shape). Most scales declare as `: Scale` and let TypeScript infer `Scale<Responses>`. Scales whose items carry richer per-item state (Yes/No + timeframe + behavior context, like C-SSRS) declare their own response type alongside, then `: Scale<CssrsResponses>` etc.
+
+```typescript
+// types.ts adds the richer type alongside Responses
+export type CssrsResponses = { item1: CssrsItemResponse; ...; item6: CssrsItemResponse };
+
+// cssrs.ts uses the explicit generic
+export const cssrs: Scale<CssrsResponses> = { ..., scoringFn: scoreCssrs, ... };
+```
+
+The Supabase `responses JSONB` column accommodates either shape. The API endpoint that receives responses Zod-validates against the scale's expected shape before invoking the scoring function.
+
+### Context-aware scoring (when out-of-band data influences the score)
+
+When a scale's scoring depends on data outside the clinical responses — patient sex for AUDIT-C, age for HAM-D pediatric variants — use **parallel signatures with a conservative-default wrapper**:
+
+```typescript
+// Rich functions accept the context
+export function scoreXxx(responses: Responses, context?: XxxContext): ScoringResult
+export function narrativeXxx(result: ScoringResult, context?: XxxContext): string
+
+// Scale wrapper defaults context to undefined (conservative posture)
+export const xxx: Scale = {
+  scoringFn: (responses) => scoreXxx(responses, undefined),
+  narrativeFn: (result) => narrativeXxx(result, undefined),
+  ...
+};
+```
+
+The context type lives in the scale's own file (e.g., `auditc.ts`), not in shared `types.ts`. It's a scoring-time argument, not a framework type.
+
+### Refuse-to-claim-without-data
+
+When a label or flag requires input you don't have, return `null` from the threshold lookup and refuse to emit the flag. The positive-screen flag can still fire under the conservative default; the more specific severity flag (which depends on the missing data) does NOT fire.
+
+```typescript
+function severeThreshold(sex: AuditCContext["patientSex"]): number | null {
+  if (sex === "male") return 7;
+  if (sex === "female") return 5;
+  return null;  // unknown sex — refuse to assert severity
+}
+```
+
+### `noUncheckedIndexedAccess` defensive-fallback in `reduce`
+
+Every scale that sums Likert items uses the same `?? 0` + `istanbul ignore next` template after `validateResponses`. See `testing-patterns` skill for the canonical block.
+
+### Stable narrative markers
+
+Narratives use **stable phrasing** that clinicians can scan for:
+
+- **"Clinically indicated: ..."** — surfaces actionable findings (C-SSRS High, AUDIT-C severe-use, CAGE positive). Treat as a contract; any future scale that wants to surface "this requires clinician action" uses this exact prefix.
+- **"thresholds not applied"** — appears in narratives where out-of-band context was missing and a conservative posture was used. Tells the clinician the result is preliminary pending demographic data.
+
+### `POSITIVE_THRESHOLD` (or similar) as a named constant
+
+Pulling the binary cutoff out as a named constant (vs embedding it in both the cutoffs array and the flag logic) is the readable pattern. Future scales adopt it; existing scales backport in a refactoring day.
+
+### Public-domain attribution
+
+Every scale's source file leads with a comment block naming the original authors, year, publication, and explicit licensing terms (free clinical/research/educational use). This is for audit traceability — if a scale's licensing changes, the comment tells the reviewer where to verify.
 
 ## OG-edit declarations
 

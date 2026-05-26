@@ -1,7 +1,7 @@
 # ChartSparkOG Parity Build — Master PRD
 
 **Owner:** James Morrison, RedArk Ventures
-**Status:** Active (v1.2, 2026-05-26)
+**Status:** Active (v1.3, 2026-05-26)
 **Goal:** Bring ChartSparkOG to feature parity with ICANotes+ in 90 days so behavioral health clinicians can switch with zero friction
 **Audience:** Claude Code (CC), Antigravity (AG), Codex — and human engineers reviewing their output
 
@@ -188,6 +188,40 @@ When you add a new sidecar, claim its port in this table via PRD amendment (bump
 
 Outside those, leave dependencies unpinned (`^x.y.z`) and let lockfiles record the resolution.
 
+### 3.7 Out-of-band context vs response data
+
+**Response data** is what the patient or clinician answers — the clinical-instrument input. It has a stable shape per scale (Likert integers, Yes/No booleans, structured timeframes). Response data lives in the typed `Responses` parameter and in the `responses JSONB` column.
+
+**Out-of-band context** is anything the scoring or narrative function needs that is NOT part of the clinical-instrument input — patient demographics (sex for AUDIT-C, age for HAM-D pediatric variants), clinician identity, time-of-day, etc.
+
+**Never fold out-of-band context into the response shape.** That conflates clinical input with patient metadata and pollutes the data model:
+- The `Responses` type stays clean (instrument data only)
+- The Supabase `responses JSONB` column doesn't accidentally store PHI demographics under a clinical-data field name
+- Audit log entries describing "the responses for assessment X" don't surprisingly include the patient's sex
+- Future scales can adopt the pattern without re-litigating the same architectural choice
+
+**Pattern for context-aware scoring (per `01-rating-scales.md`):**
+```typescript
+// Rich function — direct clinical callers pass context
+export function scoreAuditC(responses: Responses, context?: AuditCContext): ScoringResult
+
+// Scale wrapper — framework dispatch defaults to conservative posture
+export const auditc: Scale = {
+  scoringFn: (responses) => scoreAuditC(responses, undefined),
+  ...
+}
+```
+
+When the context is unknown, the wrapper applies the **conservative-default** — the choice that is safe to over-flag rather than miss. Same pattern as fail-closed auth.
+
+### 3.8 Refuse to claim without data
+
+When a clinical assertion requires input you don't have, the safe answer is to **not make the assertion** — return null, omit the flag, surface "thresholds not applied" in the narrative. Default to a defensible label only when the default is genuinely safer than silence.
+
+Example: AUDIT-C's severe-use indicator threshold differs by sex (7+ men, 5+ women). When sex is unknown, the scoring engine returns `null` from `severeThreshold()` and refuses to emit any severe-use flag. The positive-screen flag still fires (using the conservative threshold of 3), but the more specific severity label requires data we don't have, so we don't claim it.
+
+This is the difference between "I don't know" (safe) and "I'll guess and might be wrong" (clinically dangerous). Code that processes clinical decisions defaults to the former.
+
 ---
 
 ## 4. Tech stack (locked)
@@ -336,11 +370,39 @@ Stop-and-ask **always** applies to:
 - Any change to base `tsconfig.json`, `.eslintrc.json` rules (beyond documented exceptions), or production scripts
 - Any new security-plugin disable beyond patterns already approved in `security-first.md`
 - Any deviation from the mini-PRD's spec
+- **BREAKING changes** to shared types like `Scale` — removing fields, changing required field types, adding required fields that existing consumers don't supply
+- Any clinical-decision-boundary question — risk classifications, severity thresholds, item interpretations, public-domain attributions
 - Anything the session is not certain matches the human's intent
+
+**Backward-compatible extensions** to shared types are permitted as additions (do NOT require stop-and-ask). These include:
+- Adding a generic parameter WITH A DEFAULT (e.g., `Scale<R = Responses>` so `phq9: Scale` keeps inferring `Scale<Responses>`)
+- Adding OPTIONAL fields (`field?: Type`)
+- Adding new named exports alongside existing ones
+- Adding new type declarations that don't replace existing ones
+
+If you're unsure whether a change is backward-compatible, treat it as breaking and stop.
 
 Each autonomously-applied fix must surface in the task close-out as a one-liner receipt: `Autonomously applied: <change> — reason: <pattern>`. The human reviewer can roll the receipt into the PRD on the next patch.
 
 This reduced threshold is per-task, not standing. The default is full stop-and-ask. The human reviewer must explicitly invoke the reduced threshold each time.
+
+#### Close-out contract (mandatory, every Day)
+
+Every Day-N task ends with a close-out that includes ALL of the following, regardless of how clean the work was:
+
+1. **Full contents of every source file created or modified.** Pasted verbatim, not summarized.
+2. **Full contents of every test file created or modified.** Pasted verbatim.
+3. **Verbatim output of `npm run lint`** (or the equivalent linter command).
+4. **Verbatim output of `npm run typecheck`** (or the equivalent type-checker command).
+5. **Verbatim output of `npm test`** including the coverage report table.
+6. **Receipts list** — every autonomously-applied fix with a one-line reason. If none, state "Autonomous fixes applied: None."
+7. **State summary** — which commits exist locally, whether anything was pushed, what's blocked or pending.
+
+The temptation to skip the close-out on "clean" Days must be resisted. Clean Days deserve clean close-outs. The review layer cannot approve a push without seeing the artifacts; condensing the close-out to a summary makes the review impossible and breaks the merge gate's integrity.
+
+If the close-out is large (long source files, large test suites), paste the file contents in full anyway. Token cost is not a reason to skip; the review is the merge gate.
+
+If the close-out reveals missing deliverables on first send, the session must paste them on the next send without defensiveness — process correction is part of the contract.
 
 ### 8.3 Communication
 
@@ -371,3 +433,4 @@ This reduced threshold is per-task, not standing. The default is full stop-and-a
 | 2026-05-25 | v1.0 | Initial PRD | James + Claude |
 | 2026-05-26 | v1.1 | Verification-round fixes: added §3.5 port assignments; tightened §2.5 E2E criteria. Skills updated: sidecar-scaffolding (Step 9 expanded with sidecar Postgres role + audit_log GRANT, removed hardcoded port default), api-endpoints (runtime-specific helper layouts, named the `@/lib/auth` barrel), rls-testing (clarified service role keys, prose aligned to 5 tests), testing-patterns (path alignment with PRD-01, E2E criteria made explicit). PRD-01 updated: clarified screening_scores is legacy (replaced by new tables), explicit port 3301, TODO on CHECK constraint. | James + Claude |
 | 2026-05-26 | v1.2 | Day-1/Day-2 scaffold-drift fixes (chartspark-assessments). Master PRD: added §3.6 dependency version policy (no major pinning, drift goes into next PRD minor); §8.2 reduced stop-and-ask threshold for skill-drift fixes documented. Skills updated: sidecar-scaffolding (Step 3 +`@types/cors` and TS 6.x default note; Step 4 expanded tsconfig with `verbatimModuleSyntax: false` + `include: ["src/**/*"]` + `types: []` rationale; Step 5 ESLint config rewritten with `recommended-legacy` plugin name, `argsIgnorePattern`/`varsIgnorePattern: "^_"` for Express 4-arg error middleware, `"log"` added to no-console allowlist, full framework-dispatch disable pattern documented; Step 8 rewritten with `tsconfig.test.json` template, per-path coverage threshold with TODO+RULE comments, ts-jest transform config). security-first: new section on `detect-object-injection` framework-dispatch pattern with 3-condition criteria and comment template. testing-patterns: new section on `noUncheckedIndexedAccess` defensive-fallback pattern with `istanbul ignore next` template. | James + Claude |
+| 2026-05-26 | v1.3 | Week-1 build lessons from chartspark-assessments Days 3-6 (C-SSRS, AUDIT-C, CAGE). Master PRD: §3.7 out-of-band-context-vs-response-data principle (demographics never folded into response shape); §3.8 refuse-to-claim-without-data principle (return null when a clinical assertion needs data you don't have); §8.2 widened backward-compatible-extensions rule (generic params with defaults + optional fields permitted as additions; breaking changes still STOP); §8.2 close-out contract made mandatory and explicit (full source, tests, verbatim check outputs, every Day, no skipping on "clean" Days). PRD-01: new "Established patterns" section codifying Scale<R> generics, context-aware scoring with conservative-default wrappers, refuse-to-claim, istanbul-ignore template, stable "Clinically indicated:" / "thresholds not applied" narrative markers, POSITIVE_THRESHOLD-style named constants, public-domain attribution requirement. Skills updated: testing-patterns (clinical-logic stop-and-ask as a good pattern, exhaustive flag-trigger boundary tests with AUDIT-C as canonical example); security-first (defense-in-depth at classifier boundaries — clinical decision functions guard their inputs even when upstream validation should make them unreachable). | James + Claude |

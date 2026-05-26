@@ -260,6 +260,29 @@ const value = responses[suicideItem];
 
 **Never disable the rule globally.** It catches real bugs in feature code where the input chain isn't this clean.
 
+## Defense-in-depth at classifier boundaries
+
+When code makes a clinical decision (risk classification, severity labeling, flag-emission), include defensive guards in the classifier even when upstream validation should make them unreachable.
+
+Example from C-SSRS's risk classifier:
+```typescript
+// MODERATE: item 6 (behavior) when the behavior was more than 3 months ago.
+if (view.item6 && item6Behavior !== undefined && item6Behavior !== "within_3_months") {
+  risk = maxRisk(risk, 2);
+}
+```
+
+The `item6Behavior !== undefined` check is technically redundant — `validateCssrsResponses` already throws on item 6 = Yes without `behaviorTimeframe`. But the redundant guard:
+
+1. Documents the invariant at the classifier site (a reader doesn't have to trust upstream validation to understand the boundary)
+2. Survives future refactors where upstream validation might move, change, or be bypassed by a new caller
+3. Costs nothing at runtime — a single `!== undefined` check
+4. Fails gracefully (`undefined` falls through to "no risk increment") rather than silently misclassifying
+
+**Pattern:** clinical classifiers treat their inputs as untrusted, even when upstream validation should have caught the bad case. The boundary check + the classifier check are two independent layers; neither is sufficient alone.
+
+This is the same instinct as fail-closed auth — defense in depth at the most consequential decision points.
+
 ## See also
 
 - `rls-testing` — how to test RLS policies

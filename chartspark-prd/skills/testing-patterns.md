@@ -247,6 +247,38 @@ The comment must name:
 
 This pattern is **the** way to handle the `noUncheckedIndexedAccess` defensive-code class. Do not lower the coverage threshold to match the dead branch; do not write a test that exercises the unreachable path; do not remove the `?? 0` (it's a TypeScript correctness guard, not just a runtime check).
 
+## Stop-and-ask before encoding clinical decision boundaries
+
+This is the opposite of a code smell — it's a **good pattern that looks like over-caution**. When you're about to write the function that decides "this score is moderate" vs "this score is high" or "this patient is at risk," stop and re-confirm your reading of the spec with the human reviewer before writing the function body.
+
+Why: clinical decision boundaries are where bugs become patient harm. The cost of a 5-minute confirmation round is trivial; the cost of an off-by-one in a suicide-risk classifier could be a missed intervention.
+
+Confirm specifically:
+- The exact boundary values ("≥3" vs ">3" — are they inclusive?)
+- The dispatch logic for ambiguous inputs (item 6 = Yes but timeframe missing — error? default? which default?)
+- Whether the same logic runs twice over different slices (C-SSRS lifetime + past-month) — and whether the cross-slice combiner is MAX or some other aggregation
+
+The good signal: a session that stops here, asks 2-3 sharp questions, gets confirmation, then implements the spec literally. The bad signal: a session that infers boundary logic from "what would make sense" without spec confirmation.
+
+## Boundary-test every flag-trigger combination
+
+For scales with multiple flag conditions (e.g., AUDIT-C: positive-screen-male, positive-screen-female, positive-screen-unknown, severe-use-male, severe-use-female), write tests that exhaustively exercise each (input × demographic) combination at the boundary value.
+
+Example bar from AUDIT-C:
+- `total === screenThreshold - 1` for each sex → no positive screen for that sex
+- `total === screenThreshold` for each sex → positive screen fires for that sex
+- `total === severeThreshold - 1` for each sex → no severe-use flag
+- `total === severeThreshold` for each sex → severe-use flag fires
+- `total === severeThreshold` for unknown sex → NO severe-use flag (refuse-to-claim)
+
+This catches:
+- Off-by-one errors at the cutoff
+- Wrong sex-variant of the flag firing (e.g., male-flag firing for female input)
+- The "unknown sex doesn't get a severity claim" rule being silently violated
+- Cross-flag interaction bugs (e.g., severe firing without positive — should be impossible)
+
+Use `test.each` to compress repetition; the test names alone should make the matrix readable. AUDIT-C's test file is the canonical example.
+
 ## What NOT to test
 
 - Third-party library internals (assume Zod parses correctly)
