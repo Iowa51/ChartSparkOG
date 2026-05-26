@@ -17,7 +17,7 @@ description: Write tests for ChartSparkOG code that meet the 80% coverage gate a
 ## Unit tests — domain logic
 
 ```typescript
-// src/domain/scoring/__tests__/phq9.test.ts
+// src/scales/__tests__/phq9.test.ts
 
 import { scorePhq9 } from "../phq9";
 
@@ -169,7 +169,14 @@ test("clinician sends intake invite; patient claims and submits", async ({ brows
 });
 ```
 
-E2E tests are expensive — write them for critical paths only:
+E2E tests are expensive — write them for **critical paths only**. The bar: any flow that
+
+- writes PHI (clinical notes, assessments, treatment plans, safety plans)
+- processes billing (claim submission, ERA posting, payments)
+- handles auth (login, MFA enrollment, portal invite claim, password reset)
+- sends external communications (SMS reminders, email, eRx)
+
+Examples of flows that meet the bar:
 - New patient → portal invite → intake submission
 - Clinician note creation → AI draft → sign
 - Appointment scheduling → reminder sent → check-in

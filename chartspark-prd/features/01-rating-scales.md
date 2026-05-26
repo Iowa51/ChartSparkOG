@@ -1,6 +1,6 @@
 # PRD-01 — Rating Scales Library
 
-**Version:** 1.0
+**Version:** 1.1
 **Track:** A (CC)
 **Mode:** Sidecar (`chartspark-assessments`)
 **Weeks:** 1–3
@@ -12,7 +12,9 @@
 
 A behavioral health clinician's daily workflow includes administering standardized rating scales — PHQ-9 for depression, GAD-7 for anxiety, C-SSRS for suicide risk. ICANotes+ ships 100+ scales built-in. Without these, ChartSparkOG isn't a viable EHR for behavioral health.
 
-This is the highest-impact, lowest-risk feature in the parity plan. The `screening_scores` table already exists in OG with RLS; we connect to it.
+This is the highest-impact, lowest-risk feature in the parity plan.
+
+**Note on `screening_scores`:** A legacy `screening_scores` table exists in the OG schema as a leftover scaffold from a prior sprint and is not connected to any production code path. It is NOT used by this feature. The three new tables defined below (`assessment_administrations`, `assessment_results`, `assessment_assignments`) are the canonical data model. The legacy table will be dropped in a separate cleanup migration after this feature ships; do not write to it, do not migrate data from it.
 
 ## Success criteria
 
@@ -51,7 +53,7 @@ All 15 are freely usable; no licensing fees. **Out of scope for v1:** copyrighte
 
 **Repo:** `RedArkventures/chartspark-assessments` at `C:\Users\joman\OneDrive\Desktop\chartspark-assessments\`
 
-**Service:** Express on port 3300, deployed to Vercel as `chartspark-assessments`
+**Service:** Express on **port 3301** (Track A's assigned port; see master PRD §3.5 for port assignments), deployed to Vercel as `chartspark-assessments`
 
 **Database:** New tables in the shared Supabase project (`eepwbtdqtdnqxeznykbh`)
 
@@ -70,6 +72,8 @@ CREATE TABLE assessment_administrations (
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'abandoned')),
   completed_at TIMESTAMPTZ,
   responses JSONB NOT NULL DEFAULT '{}',
+  -- TODO(v2): move scale_id validation to a lookup table (scales_catalog)
+  -- to avoid destructive ALTER TABLE migrations when adding new scales.
   CONSTRAINT valid_scale CHECK (scale_id IN (
     'phq9','gad7','cssrs','auditc','cage','dast10','mdq','pcl5',
     'ace','asrs','ciwaar','cows','dass21','hama','hamd'

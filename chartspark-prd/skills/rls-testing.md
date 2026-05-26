@@ -9,18 +9,21 @@ description: Write RLS (Row-Level Security) tests for every new PHI table in Cha
 
 RLS is ChartSparkOG's primary defense against cross-org data leaks. A misconfigured policy means org A can read or write org B's patient data. The only reliable way to catch this is automated tests that try to do exactly that and fail.
 
-## The four tests every PHI table needs
+## The five tests every PHI table needs
 
 For every new table, write tests that prove:
 
 1. **An authenticated user in org A CAN read their own org's rows**
 2. **An authenticated user in org A CANNOT read org B's rows**
 3. **An authenticated user in org A CANNOT insert a row with org B's `org_id`**
-4. **An authenticated user in org A CANNOT update or delete org B's rows**
+4. **An authenticated user in org A CANNOT update org B's rows**
+5. **An authenticated user in org A CANNOT delete org B's rows**
 
 If any of these tests pass when they should fail (or fail when they should pass), the RLS is broken and the PR cannot merge.
 
 ## Test pattern (Jest + Supabase)
+
+> **Note on service role keys.** Test setup/teardown below uses `SUPABASE_SERVICE_ROLE_KEY` — OG's full service role, which bypasses RLS. This is correct for tests because we need to provision org/user fixtures across RLS boundaries. **Runtime sidecar code must NOT use this key.** Sidecars use a scoped, least-privilege key named `SUPABASE_SERVICE_ROLE_KEY_SIDECAR` (see `sidecar-scaffolding` skill). Mixing them is a security regression.
 
 `tests/rls/<table-name>.test.ts`:
 

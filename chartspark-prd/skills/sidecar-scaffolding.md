@@ -135,7 +135,17 @@ import { requestId } from "./middleware/request-id";
 import { rateLimit } from "./middleware/rate-limit";
 
 const app = express();
-const port = Number(process.env.PORT ?? 3300);
+
+// Port is REQUIRED. Each sidecar has an assigned port (see master PRD §3.5).
+// Fail closed if PORT is missing — we never want two sidecars colliding.
+const portEnv = process.env.PORT;
+if (!portEnv) {
+  throw new Error("PORT env var is required. See master PRD §3.5 for assignments.");
+}
+const port = Number(portEnv);
+if (!Number.isFinite(port) || port < 1024 || port > 65535) {
+  throw new Error(`PORT must be a valid port number, got: ${portEnv}`);
+}
 
 app.use(helmet());
 app.use(cors({ origin: process.env.ALLOWED_ORIGINS?.split(",") ?? false }));
@@ -194,12 +204,16 @@ module.exports = {
 };
 ```
 
-### Step 9 — Add the migration for new tables
+### Step 9 — Add the migration for new tables AND provision the sidecar Postgres role
+
+The sidecar runs as its own Postgres role with least-privilege grants. This is what makes the sidecar pattern secure: even if the sidecar code is fully compromised, the role can only touch what's explicitly granted.
 
 `supabase/migrations/<timestamp>_create_<feature>_tables.sql`:
 
 ```sql
 -- Apply via supabase CLI; do NOT modify OG's migrations directory
+
+-- 1. Create the sidecar's tables
 CREATE TABLE <feature>_main_table (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id UUID NOT NULL REFERENCES organizations(id),
@@ -214,7 +228,34 @@ ALTER TABLE <feature>_main_table ENABLE ROW LEVEL SECURITY;
 CREATE POLICY <feature>_select ON <feature>_main_table FOR SELECT
   USING (org_id IN (SELECT organization_id FROM users WHERE id = auth.uid()));
 -- ... (insert, update, delete policies)
+
+-- 2. Provision the sidecar's Postgres role
+CREATE ROLE sidecar_<feature> NOINHERIT LOGIN PASSWORD '<rotated_via_vault>';
+GRANT USAGE ON SCHEMA public TO sidecar_<feature>;
+
+-- 3. Grant on this sidecar's OWN tables (full CRUD)
+GRANT SELECT, INSERT, UPDATE, DELETE ON <feature>_main_table TO sidecar_<feature>;
+-- ... (grants for each table this sidecar owns)
+
+-- 4. Grant on OG tables this sidecar must READ (least privilege)
+--    Replace with the actual OG tables your mini-PRD declares you need.
+GRANT SELECT ON patients TO sidecar_<feature>;
+GRANT SELECT ON organizations TO sidecar_<feature>;
+GRANT SELECT ON users TO sidecar_<feature>;
+
+-- 5. Audit log write access (REQUIRED for every sidecar)
+--    Every PHI action this sidecar performs must write to audit_log.
+GRANT INSERT ON audit_log TO sidecar_<feature>;
+-- Note: SELECT/UPDATE/DELETE on audit_log are NEVER granted to sidecars.
+-- Audit log is append-only by design.
+
+-- 6. Sequences (required for UUID generation and any serial columns)
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO sidecar_<feature>;
 ```
+
+The sidecar's `SUPABASE_SERVICE_ROLE_KEY_SIDECAR` environment variable holds the connection string for THIS role (not OG's full service role). Mixing them invalidates the least-privilege guarantee.
+
+If your mini-PRD requires SELECT/INSERT/UPDATE/DELETE on additional OG tables beyond what's listed above, declare them explicitly in the mini-PRD's "OG-EDIT REQUIRED" section so they're tracked in the re-pentest scope.
 
 ### Step 10 — Register the feature flag in OG
 

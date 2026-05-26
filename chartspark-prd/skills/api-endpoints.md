@@ -5,6 +5,26 @@ description: Write secure, validated, audited API endpoints for ChartSparkOG and
 
 # API Endpoint Pattern
 
+## Runtime layouts (read this first)
+
+ChartSparkOG uses two API runtimes. The 5-layer pattern is identical; the file layout differs.
+
+**Next.js App Router (OG core only):**
+- Routes: `src/app/api/.../route.ts`
+- Auth helper: `src/lib/auth/require-user.ts` (barrel exported as `@/lib/auth`)
+- Security helpers: `src/lib/security/{rate-limit,audit-log,mfa,hmac}.ts`
+- Supabase: `src/lib/supabase/server.ts` (request-scoped)
+
+**Express sidecars (all chartspark-* sidecars):**
+- Routes: `src/api/<resource>.ts`
+- Auth: `src/middleware/auth.ts`
+- MFA: `src/middleware/mfa.ts`
+- Rate limit: `src/middleware/rate-limit.ts`
+- Audit log: `src/lib/audit-log.ts` (NOT under `lib/security/`)
+- Supabase: `src/lib/supabase-client.ts` (singleton, scoped service role)
+
+If you're working in a sidecar, ignore the Next.js paths below and follow the Express example. If you're working in OG core, follow the Next.js example. Do not mix layouts — the scaffolding skill enforces the Express layout for sidecars.
+
 ## The five layers of every PHI route
 
 Every API endpoint that touches PHI runs through these five layers, in this order:
@@ -274,24 +294,48 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-## Helper file structure
+## Helper file structure (per runtime)
 
-Every sidecar/app uses the same helper layout:
+### Next.js (OG core)
 
 ```
 src/lib/
 ├── auth/
+│   ├── index.ts              (barrel — exports requireAuthenticatedUser)
 │   └── require-user.ts       (returns user or null)
 ├── security/
 │   ├── rate-limit.ts         (Upstash Redis-backed)
-│   ├── audit-log.ts          (writes to OG audit_log)
-│   └── mfa.ts                (verifyMfa(user) -> boolean)
+│   ├── audit-log.ts          (writes to audit_log)
+│   ├── mfa.ts                (verifyMfa(user) -> boolean)
+│   └── hmac.ts               (verify-only for webhook receivers)
 ├── supabase/
 │   ├── server.ts             (server-side client with cookies)
 │   └── service-role.ts       (service role, isolated use)
 └── validation/
     └── schemas.ts            (shared Zod schemas)
 ```
+
+`@/lib/auth` resolves to `src/lib/auth/index.ts`, which re-exports `requireAuthenticatedUser` from `./require-user.ts`. Other helpers are imported by full path (`@/lib/security/rate-limit`).
+
+### Express sidecars
+
+```
+src/
+├── middleware/
+│   ├── auth.ts               (verifies JWT from OG, attaches req.user)
+│   ├── mfa.ts                (mfaRequired middleware)
+│   ├── rate-limit.ts         (per-route limits)
+│   ├── request-id.ts         (X-Request-ID propagation)
+│   └── error-handler.ts      (no stack traces leaked)
+├── lib/
+│   ├── supabase-client.ts    (scoped service role singleton)
+│   ├── audit-log.ts          (INSERT into audit_log via sidecar role)
+│   └── validation.ts         (Zod helpers)
+└── api/
+    └── <resource>.ts         (Express routers)
+```
+
+Pick the layout that matches your runtime. Do not invent a third hybrid.
 
 ## See also
 

@@ -1,7 +1,7 @@
 # ChartSparkOG Parity Build — Master PRD
 
 **Owner:** James Morrison, RedArk Ventures
-**Status:** Active (v1.0, 2026-05-25)
+**Status:** Active (v1.1, 2026-05-26)
 **Goal:** Bring ChartSparkOG to feature parity with ICANotes+ in 90 days so behavioral health clinicians can switch with zero friction
 **Audience:** Claude Code (CC), Antigravity (AG), Codex — and human engineers reviewing their output
 
@@ -91,7 +91,7 @@ Every feature ships with:
 - Unit tests (Jest) for business logic
 - Integration tests (Supertest) for API endpoints
 - **RLS test** for every new table (mandatory — see skill `rls-testing`)
-- E2E test (Playwright) for any user-facing flow
+- E2E test (Playwright) for **critical user-facing flows** — any flow that writes PHI, processes billing, handles auth, or sends external communications (SMS/email/eRx). See `testing-patterns` skill for the full criteria.
 
 Coverage target: ≥80% on new code. PRs with <80% are blocked.
 
@@ -159,6 +159,22 @@ Sidecars **do not**:
 - Forms: React Hook Form + Zod resolver
 - Loading states: Suspense boundaries with skeleton fallbacks
 - Error boundaries on every route segment
+
+### 3.5 Sidecar port assignments (locked)
+
+Every sidecar has an assigned port. The Express bootstrap REQUIRES `PORT` to be set explicitly — there is no default, to prevent silent collisions during local development.
+
+| Sidecar | Port (local + Vercel) | Track | Mini-PRD |
+|---|---|---|---|
+| `chartspark-assessments` | 3301 | A | PRD-01 |
+| `chartspark-portal` | 3302 (Next.js dev default 3000 in repo but deploys at portal.chartspark.io) | B | PRD-02 |
+| `chartspark-claims` | 3303 | D | PRD-10 |
+| `chartspark-content` | 3304 | F | PRD-08 |
+| `chartspark-scribe` | 3200 (existing) | H | PRD-13 |
+| `chartspark-fhir-mcp` | 3100 (existing) | — | — |
+| Reserved for future sidecars | 3305–3399 | — | — |
+
+When you add a new sidecar, claim its port in this table via PRD amendment (bump master PRD version) before scaffolding.
 
 ---
 
@@ -320,3 +336,4 @@ Re-pentest is scheduled with Cobalt at week 13 (consolidated).
 | Date | Version | Change | Author |
 |---|---|---|---|
 | 2026-05-25 | v1.0 | Initial PRD | James + Claude |
+| 2026-05-26 | v1.1 | Verification-round fixes: added §3.5 port assignments; tightened §2.5 E2E criteria. Skills updated: sidecar-scaffolding (Step 9 expanded with sidecar Postgres role + audit_log GRANT, removed hardcoded port default), api-endpoints (runtime-specific helper layouts, named the `@/lib/auth` barrel), rls-testing (clarified service role keys, prose aligned to 5 tests), testing-patterns (path alignment with PRD-01, E2E criteria made explicit). PRD-01 updated: clarified screening_scores is legacy (replaced by new tables), explicit port 3301, TODO on CHECK constraint. | James + Claude |
