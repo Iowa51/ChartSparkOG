@@ -74,12 +74,48 @@ gh repo create RedArkventures/chartspark-<feature> --private --source=. --remote
 ```bash
 npm init -y
 npm install --save express zod @supabase/supabase-js helmet cors
-npm install --save-dev typescript @types/node @types/express jest ts-jest @types/jest supertest @types/supertest
+npm install --save-dev typescript @types/node @types/express @types/cors jest ts-jest @types/jest supertest @types/supertest
 npm install --save-dev eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint-plugin-security
 npx tsc --init --strict --target es2022 --module commonjs --outDir dist --rootDir src
 ```
 
-### Step 4 — Lock down `package.json`
+> **Note on TypeScript 6.x defaults.** As of TS 6.x, `tsc --init --strict` writes `"verbatimModuleSyntax": true` by default, which forbids ES `import`/`export` syntax under `module: commonjs`. We use ES syntax throughout the templates below, so Step 4 below overrides this back to `false`. Also note: `tsc --init` writes `"types": []` by default — this opts out of auto-loading any @types package, which is correct for the production build but means test files need their own `tsconfig.test.json` with explicit `types: ["node", "jest"]` (see Step 8).
+
+### Step 4 — Lock down `package.json` and `tsconfig.json`
+
+Edit `tsconfig.json` (the file `tsc --init` just wrote) — apply these overrides:
+
+```json
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "module": "commonjs",
+    "target": "es2022",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noUncheckedSideEffectImports": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "types": []
+  },
+  "include": ["src/**/*"]
+}
+```
+
+Key points:
+- `verbatimModuleSyntax: false` — required for our ES import syntax under `module: commonjs` (TS 6.x default of `true` breaks the templates below).
+- `include: ["src/**/*"]` — confines the production build to `src/`. Tests get their own config in Step 8.
+- `types: []` is the TS-6 default; keep it — we override per-config in `tsconfig.test.json`.
+- `noUncheckedIndexedAccess: true` — types `obj[key]` as `T | undefined` even after validation. The `?? 0` fallback pattern (with `istanbul ignore next` to satisfy coverage) is the standard idiom; see `testing-patterns` skill.
+
+Now `package.json`:
 
 ```json
 {
@@ -92,10 +128,10 @@ npx tsc --init --strict --target es2022 --module commonjs --outDir dist --rootDi
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit",
-    "test": "jest --coverage",
-    "test:rls": "jest tests/rls",
-    "test:integration": "jest tests/integration"
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "jest --coverage --passWithNoTests",
+    "test:rls": "jest tests/rls --passWithNoTests",
+    "test:integration": "jest tests/integration --passWithNoTests"
   }
 }
 ```
@@ -107,20 +143,60 @@ npx tsc --init --strict --target es2022 --module commonjs --outDir dist --rootDi
 ```json
 {
   "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "env": {
+    "node": true,
+    "es2022": true,
+    "jest": true
+  },
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    "plugin:security/recommended"
+    "plugin:security/recommended-legacy"
   ],
   "plugins": ["@typescript-eslint", "security"],
   "rules": {
     "@typescript-eslint/no-explicit-any": "error",
-    "@typescript-eslint/no-unused-vars": "error",
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
     "security/detect-object-injection": "warn",
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
-  }
+    "no-console": ["warn", { "allow": ["log", "warn", "error"] }]
+  },
+  "ignorePatterns": ["dist/", "node_modules/", "coverage/"]
 }
 ```
+
+Three details that matter:
+
+1. **`plugin:security/recommended-legacy`** — `eslint-plugin-security` v3+ split configs by ESLint config format. The `-legacy` variant is for `.eslintrc.json` (what we use); the unsuffixed `recommended` is for the new `eslint.config.js` flat-config format. Wrong name = ESLint fails to load.
+
+2. **`argsIgnorePattern: "^_"` / `varsIgnorePattern: "^_"`** — required for Express's 4-argument error middleware signature (`err, _req, res, _next`). Express counts arguments at runtime to distinguish error handlers from regular middleware, so the 4-arg form is mandatory; the `_` prefix is the standard "intentionally unused" marker.
+
+3. **`"log"` in the no-console allowlist** — server-startup events (`console.log("server.started", …)`) are info-level structured operational telemetry, not warnings. Severity-shifting to `console.warn` would corrupt log streams (alerts would fire on every cold start). The rule stays active to catch stray debug `console.log` in feature code; the allowlist names the three levels we permit.
+
+### `detect-object-injection` and the framework-dispatch pattern
+
+The `security/detect-object-injection` rule flags `obj[variableKey]` access. It catches a real attack class (prototype pollution, arbitrary property access from user input). It also has frequent false positives in framework code where the key is internal-to-the-codebase. When you hit one:
+
+**Inline disable is acceptable IF ALL of these hold:**
+- The index originates from code-defined literals or values you control (not user input)
+- The data being indexed is Zod-validated upstream
+- The result is re-validated (existence check, range check) before branching
+
+**Comment template:**
+
+```typescript
+// Why: <key-var> is a literal value defined by <where>. Not user input.
+// Responses are Zod-validated upstream; value is re-checked below.
+// eslint-disable-next-line security/detect-object-injection
+const value = responses[suicideItem];
+```
+
+Place the `eslint-disable-next-line` comment **immediately** before the offending line — comments between the disable and the line break it.
+
+**Never disable the rule globally.** It catches real bugs in feature code where the input chain is less clean.
 
 ### Step 6 — Create the Express bootstrap
 
@@ -190,7 +266,30 @@ export const supabase = createClient(url, serviceRoleKey, {
 
 ### Step 8 — Set up the test scaffold
 
-`jest.config.js`:
+The test scaffold has three files because TypeScript+Jest+ts-jest in TS 6.x requires explicit configuration.
+
+**1. `tsconfig.test.json`** — a second tsconfig that extends the base and includes `tests/`:
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "types": ["node", "jest"],
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src/**/*", "tests/**/*"]
+}
+```
+
+Why each override:
+- `noEmit: true` — typecheck only, never emit
+- `rootDir: "."` — the base config sets `rootDir: src`, which rejects any `.ts` file under `tests/`. Override required. Safe because `noEmit: true` makes rootDir's emit-shaping role inert.
+- `types: ["node", "jest"]` — base config has `types: []` (opt-out of auto-loading), which is right for production builds but means test files can't see `describe`/`test`/`expect` globals or Node types. Add them per-config.
+- `ignoreDeprecations: "6.0"` — ts-jest treats inherited `moduleResolution=node10` deprecation warnings as hard errors. This override is test-config-only and base-config-unaffected.
+
+**2. `jest.config.js`** — Jest config with per-path coverage thresholds:
 
 ```javascript
 module.exports = {
@@ -198,11 +297,22 @@ module.exports = {
   testEnvironment: "node",
   collectCoverageFrom: ["src/**/*.ts", "!src/server.ts", "!src/types/**"],
   coverageThreshold: {
-    global: { branches: 80, functions: 80, lines: 80, statements: 80 },
+    // Per-path thresholds. Add an entry as each feature's implementation lands.
+    // RULE: when a stub gains real logic, add its path to this block in the
+    //       SAME PR. Adding code without adding a threshold path is a
+    //       security-gate regression.
+    "./src/<feature>/**/*.ts": { branches: 80, functions: 80, lines: 80, statements: 80 },
   },
   testMatch: ["**/tests/**/*.test.ts"],
+  transform: {
+    "^.+\\.tsx?$": ["ts-jest", { tsconfig: "tsconfig.test.json" }],
+  },
 };
 ```
+
+The `transform` block is critical — it points ts-jest at `tsconfig.test.json` so the deprecation override and test-only types are applied during test compilation.
+
+**On per-path thresholds vs global.** The original v1.0 skill used a global 80% threshold. That fails immediately on Day-1 scaffolds because the Day-1 middleware stubs are 0% (correctly — they're placeholders). Per-path thresholds enforce 80% on real implementation code without demanding test coverage of placeholder code that will be replaced. The TODO list in the threshold block makes the stub→real transitions explicit: when a stub gains real code, its path must be added to the threshold block in the same PR.
 
 ### Step 9 — Add the migration for new tables AND provision the sidecar Postgres role
 

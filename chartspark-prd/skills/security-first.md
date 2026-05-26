@@ -237,6 +237,29 @@ If any box is unchecked, the PR is not ready.
 - `// @ts-ignore` or `// @ts-expect-error` without a comment explaining why
 - `any` type without a comment explaining why
 
+## On `security/detect-object-injection` warnings
+
+ESLint's `security/detect-object-injection` rule flags `obj[variableKey]` access. It catches a real attack class (prototype pollution, arbitrary property access from untrusted input). It also has frequent false positives in framework code where the key is internal-to-the-codebase.
+
+**An inline disable is acceptable IF ALL THREE hold:**
+
+1. The index variable originates from **code-defined literals or values you control** — not user input. Example: `specialRules.suicideRiskItem = "q9"` set in `phq9.ts` source.
+2. The data being indexed is **Zod-validated upstream** at the API layer.
+3. The result is **re-validated** before branching (existence check, range check, type guard).
+
+**Comment template — three lines, always together:**
+
+```typescript
+// Why: <var> is a literal value defined by <where>. Not user input.
+// <data> is Zod-validated upstream; value is re-checked below.
+// eslint-disable-next-line security/detect-object-injection
+const value = responses[suicideItem];
+```
+
+**Placement matters.** The `eslint-disable-next-line` comment must be **immediately** before the offending line. Comments between the disable and the line break the disable — ESLint applies to the literal next non-comment line.
+
+**Never disable the rule globally.** It catches real bugs in feature code where the input chain isn't this clean.
+
 ## See also
 
 - `rls-testing` — how to test RLS policies

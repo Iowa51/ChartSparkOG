@@ -223,6 +223,30 @@ module.exports = {
 
 If a PR drops coverage below 80%, CI blocks merge. You can't `--no-verify` your way past it.
 
+## The `noUncheckedIndexedAccess` defensive-fallback pattern
+
+`noUncheckedIndexedAccess: true` in `tsconfig.json` types `obj[key]` as `T | undefined` even when the code has just validated that the key exists. This forces a defensive `?? 0` or `if (v === undefined)` guard that is dead code at runtime — and dead code drags branch-coverage below 80%.
+
+The standard idiom: use `/* istanbul ignore next */` with a `Why:` comment that names the invariant the validator guarantees.
+
+```typescript
+const total = ITEMS.reduce((sum, item) => {
+  /* istanbul ignore next: validateResponses(ITEMS, responses) above guarantees
+     every item.id is present and in-range. The ?? 0 fallback exists only because
+     noUncheckedIndexedAccess types responses[item.id] as number | undefined;
+     TypeScript cannot infer the post-validation invariant. */
+  const v = responses[item.id] ?? 0;
+  return sum + v;
+}, 0);
+```
+
+The comment must name:
+- The validator (which function guarantees the invariant)
+- What the invariant proves (every key present, value in range)
+- Why TypeScript can't infer it (the tsconfig flag)
+
+This pattern is **the** way to handle the `noUncheckedIndexedAccess` defensive-code class. Do not lower the coverage threshold to match the dead branch; do not write a test that exercises the unreachable path; do not remove the `?? 0` (it's a TypeScript correctness guard, not just a runtime check).
+
 ## What NOT to test
 
 - Third-party library internals (assume Zod parses correctly)

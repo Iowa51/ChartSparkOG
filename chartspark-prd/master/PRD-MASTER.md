@@ -1,7 +1,7 @@
 # ChartSparkOG Parity Build — Master PRD
 
 **Owner:** James Morrison, RedArk Ventures
-**Status:** Active (v1.1, 2026-05-26)
+**Status:** Active (v1.2, 2026-05-26)
 **Goal:** Bring ChartSparkOG to feature parity with ICANotes+ in 90 days so behavioral health clinicians can switch with zero friction
 **Audience:** Claude Code (CC), Antigravity (AG), Codex — and human engineers reviewing their output
 
@@ -176,6 +176,18 @@ Every sidecar has an assigned port. The Express bootstrap REQUIRES `PORT` to be 
 
 When you add a new sidecar, claim its port in this table via PRD amendment (bump master PRD version) before scaffolding.
 
+### 3.6 Dependency version policy
+
+**We do not pin npm major versions.** New sidecars install latest stable for `typescript`, `express`, `jest`, ESLint, `ts-jest`, and related toolchain packages. When a toolchain default changes between major versions (e.g., TS 6.x flipping `verbatimModuleSyntax` to true), the right response is to update the skills (the canonical templates) — not to roll dependencies backward.
+
+**Drift is logged, not avoided.** Every sidecar's `package.json` lockfile is the source of truth for what it actually runs. When a new sidecar scaffolds against a newer toolchain and surfaces a difference from the skill template, the difference gets captured in the next PRD minor version (e.g., v1.1 → v1.2). This is how skill-drift fixes get folded back in.
+
+**Exceptions:** Two cases force pinning:
+1. A vendor SDK with a documented BAA-version pairing (e.g., if Anthropic ships a major SDK bump that hasn't been re-BAA'd, stay on the previous major)
+2. A toolchain version known to be incompatible with our deployment target (Vercel, Azure)
+
+Outside those, leave dependencies unpinned (`^x.y.z`) and let lockfiles record the resolution.
+
 ---
 
 ## 4. Tech stack (locked)
@@ -309,6 +321,27 @@ Re-pentest is scheduled with Cobalt at week 13 (consolidated).
 - All PRs reference the mini-PRD by feature number (e.g., "feat(01): scoring engine for PHQ-9")
 - All PRs include the security gate checklist in the description
 
+#### Reduced stop-and-ask threshold for skill-drift fixes
+
+After a session has caught and stopped on its first few skill-drift issues in a task, the human reviewer may reduce the stop-and-ask threshold for the rest of that task. Under the reduced threshold, the session may **autonomously apply** fixes that meet ALL of these criteria:
+
+1. The fix is a **tsconfig, ESLint, or `package.json` change** (config-only, no `src/` source code)
+2. The fix is **necessary to make the test scaffold or build function** (not a quality-of-life improvement)
+3. The fix has **no production-build impact** (base `tsconfig.json` unchanged, no new runtime dependencies, no security-relevant change)
+4. The fix fits an **already-established drift pattern** named in this PRD or its skills (e.g., "TS 6.x default conflicts with our chosen architecture")
+
+Stop-and-ask **always** applies to:
+- Anything that touches `src/` source code outside the explicit feature spec
+- Any new dependency (runtime or dev)
+- Any change to base `tsconfig.json`, `.eslintrc.json` rules (beyond documented exceptions), or production scripts
+- Any new security-plugin disable beyond patterns already approved in `security-first.md`
+- Any deviation from the mini-PRD's spec
+- Anything the session is not certain matches the human's intent
+
+Each autonomously-applied fix must surface in the task close-out as a one-liner receipt: `Autonomously applied: <change> — reason: <pattern>`. The human reviewer can roll the receipt into the PRD on the next patch.
+
+This reduced threshold is per-task, not standing. The default is full stop-and-ask. The human reviewer must explicitly invoke the reduced threshold each time.
+
 ### 8.3 Communication
 
 - AI agents do not modify the PRD. Only James can amend it.
@@ -337,3 +370,4 @@ Re-pentest is scheduled with Cobalt at week 13 (consolidated).
 |---|---|---|---|
 | 2026-05-25 | v1.0 | Initial PRD | James + Claude |
 | 2026-05-26 | v1.1 | Verification-round fixes: added §3.5 port assignments; tightened §2.5 E2E criteria. Skills updated: sidecar-scaffolding (Step 9 expanded with sidecar Postgres role + audit_log GRANT, removed hardcoded port default), api-endpoints (runtime-specific helper layouts, named the `@/lib/auth` barrel), rls-testing (clarified service role keys, prose aligned to 5 tests), testing-patterns (path alignment with PRD-01, E2E criteria made explicit). PRD-01 updated: clarified screening_scores is legacy (replaced by new tables), explicit port 3301, TODO on CHECK constraint. | James + Claude |
+| 2026-05-26 | v1.2 | Day-1/Day-2 scaffold-drift fixes (chartspark-assessments). Master PRD: added §3.6 dependency version policy (no major pinning, drift goes into next PRD minor); §8.2 reduced stop-and-ask threshold for skill-drift fixes documented. Skills updated: sidecar-scaffolding (Step 3 +`@types/cors` and TS 6.x default note; Step 4 expanded tsconfig with `verbatimModuleSyntax: false` + `include: ["src/**/*"]` + `types: []` rationale; Step 5 ESLint config rewritten with `recommended-legacy` plugin name, `argsIgnorePattern`/`varsIgnorePattern: "^_"` for Express 4-arg error middleware, `"log"` added to no-console allowlist, full framework-dispatch disable pattern documented; Step 8 rewritten with `tsconfig.test.json` template, per-path coverage threshold with TODO+RULE comments, ts-jest transform config). security-first: new section on `detect-object-injection` framework-dispatch pattern with 3-condition criteria and comment template. testing-patterns: new section on `noUncheckedIndexedAccess` defensive-fallback pattern with `istanbul ignore next` template. | James + Claude |
