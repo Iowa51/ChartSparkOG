@@ -96,3 +96,42 @@ The following migrations are confirmed not applied in production. None are requi
 | 20260327150000_pt5_billing_claims_null_encounter_unique.sql | SEC-PT5-F10: Partial unique index `idx_billing_claims_null_encounter_unique` on `(organization_id, patient_id, provider_id, service_date)` WHERE `encounter_id IS NULL`, complementing the existing not-null index. | Duplicate billing claims for the same patient/provider/service-date when no encounter is linked; potential payer rejections, double-billing exposure. | Phase B, before billing goes live |
 | 20260327160000_pt6_storage_rls_org_scoped.sql | SEC-PT6-F1: Replaces permissive `storage.objects` policies on `patient-documents` bucket with org-scoped path-based policies (`{organization_id}/...` prefix) for SELECT, INSERT, and DELETE. | Cross-org PHI exposure: any authenticated user can currently read/write/delete documents across all organizations. HIPAA breach risk as soon as a second org joins. | Phase B, BEFORE onboarding any second organization |
 | 20260411120000_audit_logs_archive.sql | Adds standalone `created_at` index on `audit_logs`, an `audit_logs_archive` mirror table, and `archive_old_audit_logs(cutoff_days)` SECURITY DEFINER function (EXECUTE revoked from PUBLIC) that atomically moves rows older than the cutoff via a single CTE DELETE...INSERT. | Unbounded `audit_logs` growth at ~1000 clinicians × ~250 events/day; query latency degradation and storage cost over time. Archive cron has nothing to call. | Phase B, before scale (>~100 active clinicians or >90 days of accumulated audit rows) |
+
+| 20260526120000_create_write_audit_log_helper.sql | applied (manual, not tracked) | applied 2026-05-27 via `supabase db query --linked --file`; function verified via `pg_proc` (proname, prosecdef=true, owner=postgres, all 8 args present), comment present, search_path locked to ''. Smoke test row inserted via direct call: test_id `33133b14-4401-43bc-8134-9b7f877586b9` with correctly-merged JSONB details (source key preserved, risk_level injected). SEE 20260527120000 entry below for important post-apply finding re Supabase default privileges. |
+| 20260527120000_fix_write_audit_log_default_privileges.sql | applied (manual, not tracked) | applied 2026-05-27 via `supabase db query --linked --file`. Fixup migration codifying ad-hoc REVOKE run within minutes of the original migration applying. Production verification on 2026-05-27 ~17:38 UTC found that `REVOKE ALL FROM PUBLIC` (in the original migration) was insufficient on Supabase: the new function inherited default EXECUTE grants for anon, authenticated, and service_role from pg_default_acl on the public schema. Ad-hoc `REVOKE EXECUTE ... FROM anon, authenticated, service_role` run immediately; audit_logs verified unpolluted during the ~2-3 minute exposure window. Re-verification confirms only postgres (owner) retains EXECUTE. |
+
+## Lessons learned
+
+### Supabase default function privileges (2026-05-27)
+
+Functions created in the `public` schema on Supabase inherit default EXECUTE grants for the `anon`, `authenticated`, and `service_role` roles via `pg_default_acl`. These default grants are SEPARATE from the `PUBLIC` virtual role and are NOT removed by `REVOKE ALL ON FUNCTION ... FROM PUBLIC`.
+
+Discovered while applying `20260526120000_create_write_audit_log_helper.sql`. The original migration contained `REVOKE ALL FROM PUBLIC` as its lockdown step but this proved insufficient: post-apply, `information_schema.routine_privileges` showed `anon | EXECUTE`, `authenticated | EXECUTE`, `service_role | EXECUTE`, and `postgres | EXECUTE`. Audit log was verified unpolluted during the brief exposure window.
+
+**Mandatory pattern for future SECURITY DEFINER (and SECURITY INVOKER) functions in `public`:**
+
+```sql
+REVOKE EXECUTE ON FUNCTION public.<fn_name>(<arg_types>)
+    FROM anon, authenticated, service_role;
+```
+
+Use this REVOKE in addition to (or instead of) `REVOKE FROM PUBLIC`. The owner (typically `postgres`) retains EXECUTE inherently. The REVOKE does not affect the owner.
+
+**Verification query (run after applying any new SECURITY DEFINER function):**
+
+```sql
+SELECT grantee, privilege_type FROM information_schema.routine_privileges
+WHERE routine_name = '<fn_name>';
+```
+
+Expect: exactly one row with `grantee = postgres`. Any row showing `anon`, `authenticated`, or `service_role` indicates the default grants slipped through and must be REVOKEd before any production traffic.
+
+### Migration file encoding (2026-05-27)
+
+PowerShell 5.x has two encoding pitfalls when authoring SQL migration files:
+
+1. `Set-Content -Encoding UTF8` emits a UTF-8 BOM (3-byte prefix EF BB BF). The Supabase CLI rejects SQL files with a BOM (`syntax error at or near` followed by the BOM glyph). Fix: write via `[System.IO.File]::WriteAllText(path, content, [System.Text.UTF8Encoding]::new($false))`.
+
+2. `Get-Content -Raw` reads files using the system code page (Windows-1252 on most US Windows installs), not UTF-8. Multi-byte UTF-8 characters (em-dashes, smart quotes, etc.) get mangled into Latin-1 sequences. Fix: read via `[System.IO.File]::ReadAllText(path, [System.Text.Encoding]::UTF8)`, OR avoid reading entirely and use `[System.IO.File]::AppendAllText` to append.
+
+Verify file bytes after writing: `[System.IO.File]::ReadAllBytes(path) | Select-Object -First 5 | ForEach-Object { "{0:X2}" -f $_ }`. SQL files should start with the SQL content bytes (e.g., `2D 2D` for `--`), not `EF BB BF` (BOM) or anything else.
