@@ -37,6 +37,8 @@ If the mini-PRD does not declare OG-EDIT REQUIRED, you may not modify OG. Period
 
 ## The 9-step protocol
 
+Before beginning any OG-edit, complete the reconnaissance ritual from `using-skills` skill, Step 0. The protocol below extends that ritual with OG-specific concerns — edit-window verification, audit-protected file checks, and re-pentest scoping.
+
 ### Step 1 — Confirm the edit window is open
 
 Verify with James (or check the project status) that the OG freeze has been temporarily lifted for this feature. The git pre-commit hook will block commits otherwise.
@@ -106,6 +108,8 @@ COMMIT;
 Verify the migration applies cleanly to a fresh local DB before pushing.
 
 Never `ALTER TABLE` an existing PHI table without explicit James approval. Migration drift is a known OG pain point (per observability roadmap).
+
+When the migration creates or modifies `SECURITY DEFINER` functions in the `public` schema, follow the Supabase default-grant pattern in `security-first` skill. `REVOKE ALL ... FROM PUBLIC` is insufficient on Supabase — functions in `public` inherit default `EXECUTE` grants for `anon`, `authenticated`, and `service_role` from `pg_default_acl` that must be revoked explicitly.
 
 ### Step 7 — Write tests
 

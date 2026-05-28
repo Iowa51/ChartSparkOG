@@ -15,6 +15,28 @@ Every task. Read this first, then the master PRD, then the feature mini-PRD, the
 
 ## How to use it
 
+### Step 0 — Reconnaissance before any task
+
+Before reading the constitution, confirm where you are and that you can act:
+
+```bash
+pwd                                  # working directory
+git remote -v                        # remote URL — verify it's the right repo
+git branch --show-current            # current branch
+git log --oneline -1                 # HEAD — what you would be amending
+gh auth status                       # active GitHub account
+```
+
+If any of these doesn't match the task's expectations — wrong repo, wrong branch, wrong account, surprising HEAD — STOP and resolve before reading further. `gh auth switch` for account; resolve repo/branch out of band.
+
+Common failure modes the ritual catches: sessions with multiple repos attached anchored to the wrong one; sessions that were correct at start but drifted mid-conversation; stale `gh auth` state from a prior task switching accounts.
+
+**For multi-file tasks:** read every file you will modify IN FULL before drafting any changes. Surface unknowns before code.
+
+**For tasks touching unfamiliar code:** identify any assumption the spec makes that you cannot verify from the code itself. Flag the assumption and STOP rather than coding past it.
+
+CARDINAL: reconnaissance is NOT optional. The cost of reading-before-writing is one or two minutes. The cost of discovering an issue mid-implementation — or worse, post-commit — is hours. Every multi-file task starts with reconnaissance.
+
 ### Step 1 — Read the master PRD
 
 Read `master/PRD-MASTER.md` in full. It contains the cardinal principles, security gate, and tech stack. Everything else assumes you know this.
