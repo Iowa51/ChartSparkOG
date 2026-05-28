@@ -41,7 +41,7 @@ chartspark-<feature>/
 │   ├── api/                       (route handlers)
 │   ├── lib/
 │   │   ├── supabase-client.ts     (scoped service role)
-│   │   ├── audit-log.ts           (writes to OG's audit_log)
+│   │   ├── audit-log.ts           (calls write_audit_log RPC)
 │   │   └── validation.ts          (Zod helpers)
 │   ├── domain/                    (business logic, no HTTP/DB awareness)
 │   └── types/
@@ -314,7 +314,7 @@ The `transform` block is critical — it points ts-jest at `tsconfig.test.json` 
 
 **On per-path thresholds vs global.** The original v1.0 skill used a global 80% threshold. That fails immediately on Day-1 scaffolds because the Day-1 middleware stubs are 0% (correctly — they're placeholders). Per-path thresholds enforce 80% on real implementation code without demanding test coverage of placeholder code that will be replaced. The TODO list in the threshold block makes the stub→real transitions explicit: when a stub gains real code, its path must be added to the threshold block in the same PR.
 
-### Step 9 — Add the migration for new tables AND provision the sidecar Postgres role
+### Step 9 — Add the migration: tables, sidecar role, and grants
 
 The sidecar runs as its own Postgres role with least-privilege grants. This is what makes the sidecar pattern secure: even if the sidecar code is fully compromised, the role can only touch what's explicitly granted.
 
@@ -353,11 +353,25 @@ GRANT SELECT ON patients TO sidecar_<feature>;
 GRANT SELECT ON organizations TO sidecar_<feature>;
 GRANT SELECT ON users TO sidecar_<feature>;
 
--- 5. Audit log write access (REQUIRED for every sidecar)
---    Every PHI action this sidecar performs must write to audit_log.
-GRANT INSERT ON audit_log TO sidecar_<feature>;
--- Note: SELECT/UPDATE/DELETE on audit_log are NEVER granted to sidecars.
--- Audit log is append-only by design.
+-- 5. Audit-write access (REQUIRED for every sidecar).
+--    Sidecars NEVER perform direct INSERT on audit_logs. All audit writes
+--    go through the SECURITY DEFINER chokepoint public.write_audit_log.
+--    See the cardinal principle below for the contract.
+--
+--    Defense-in-depth: REVOKE first, then GRANT exactly what's needed.
+--    Even if the role somehow inherits unwanted privileges from PUBLIC
+--    or default ACLs, the REVOKE strips them before the explicit GRANT.
+--    Idempotent.
+REVOKE ALL ON FUNCTION public.write_audit_log(
+    text, text, uuid, uuid, uuid, text, jsonb, text
+) FROM sidecar_<feature>;
+GRANT EXECUTE ON FUNCTION public.write_audit_log(
+    text, text, uuid, uuid, uuid, text, jsonb, text
+) TO sidecar_<feature>;
+-- The sidecar role gets NO direct grants on the audit_logs table itself
+-- — no SELECT, no INSERT, no UPDATE, no DELETE. The audit_logs RLS
+-- restricts direct INSERT to service_role only; sidecars are not
+-- members of service_role.
 
 -- 6. Sequences (required for UUID generation and any serial columns)
 GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO sidecar_<feature>;
@@ -366,6 +380,56 @@ GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO sidecar_<feature>;
 The sidecar's `SUPABASE_SERVICE_ROLE_KEY_SIDECAR` environment variable holds the connection string for THIS role (not OG's full service role). Mixing them invalidates the least-privilege guarantee.
 
 If your mini-PRD requires SELECT/INSERT/UPDATE/DELETE on additional OG tables beyond what's listed above, declare them explicitly in the mini-PRD's "OG-EDIT REQUIRED" section so they're tracked in the re-pentest scope.
+
+#### The audit-write contract (cardinal)
+
+CARDINAL: Sidecars NEVER perform direct INSERT on the `audit_logs` table. All audit writes go through `public.write_audit_log` via RPC. Sidecar Postgres roles are granted EXECUTE on the function and nothing else on `audit_logs` — no SELECT, no INSERT, no UPDATE, no DELETE. The `audit_logs` RLS restricts direct INSERT to `service_role` only; sidecars are not members of `service_role`.
+
+The deployed function signature:
+
+```sql
+public.write_audit_log(
+  p_action          text,        -- REQUIRED, UPPERCASE_SNAKE_CASE
+  p_entity_type     text,        -- REQUIRED, lowercase singular
+  p_user_id         uuid,        -- nullable
+  p_organization_id uuid,        -- nullable
+  p_entity_id       uuid,        -- nullable (entity audited)
+  p_ip_address      text,        -- nullable
+  p_details         jsonb,       -- nullable, metadata-only (no PHI)
+  p_risk_level      text         -- default 'INFO'; 'HIGH' for safety-relevant
+) RETURNS uuid                   -- the inserted audit_logs row id
+```
+
+#### Calling write_audit_log from sidecar code
+
+```typescript
+await writeAuditLog(client, {
+  action: 'ENTITY_CREATED',
+  entityType: 'assessment_administration',
+  userId: req.user.id,
+  organizationId: req.user.organizationId,
+  entityId: newId,
+  ipAddress: req.ip,
+  details: { /* metadata only — NO PHI */ },
+  riskLevel: 'INFO',
+});
+```
+
+- The helper takes a `PoolClient`, not the `Pool`. It must run inside the caller's transaction so a failed audit rolls back the entire request.
+- `details` (JSONB) carries metadata ABOUT the access — entity ids, filter shapes, counts, `has_safety_flags` booleans. NEVER the PHI itself.
+- On safety-relevant flags (`suicide_risk_*`, `recent_suicidal_behavior`, etc., detected via `hasSafetyRelevantFlags` from the scale registry), `riskLevel: 'HIGH'`. Otherwise `'INFO'`.
+
+#### Read paths audit too
+
+Every successful read of PHI writes one audit row inside `withTransaction`; an audit-write failure rolls back the read and returns 500 — the caller does not receive data whose access could not be logged. 404 paths do NOT audit (no PHI was accessed). See `api-endpoints` skill for the canonical read pattern.
+
+#### Supabase default-grant warning
+
+WARNING: On Supabase, functions in the `public` schema inherit default EXECUTE grants for `anon`, `authenticated`, and `service_role` from `pg_default_acl`. `REVOKE ALL ON FUNCTION ... FROM PUBLIC` does NOT remove these default grants. Every SECURITY DEFINER function in `public` must explicitly REVOKE EXECUTE from `anon`, `authenticated`, and `service_role` at definition time. See `security-first` skill for the full pattern.
+
+#### Authoring migration SQL on Windows
+
+Write migration files as UTF-8 WITHOUT BOM. PowerShell's `Set-Content -Encoding UTF8` emits a BOM that Supabase CLI rejects. Use `[System.IO.File]::WriteAllText` with `[System.Text.UTF8Encoding]::new($false)`, or PowerShell 6+'s `-Encoding UTF8NoBOM`. Avoid `Get-Content -Raw` to re-read existing files — it reads via the Windows-1252 code page and corrupts multi-byte UTF-8 characters (em-dashes, smart quotes, etc.).
 
 ### Step 10 — Register the feature flag in OG
 
