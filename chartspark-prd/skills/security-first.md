@@ -9,7 +9,7 @@ description: Apply security-first patterns to all ChartSparkOG code — input va
 
 Every line of code is reviewed against OWASP Top 10 and HIPAA Security Rule before merge. Security is not a phase; it is woven through every feature. If you skip a check "because the feature is small," you have introduced a vulnerability.
 
-## The Big 9 — every PR must satisfy these
+## The Big 10 — every PR must satisfy these
 
 ### 1. Input validation (Zod, no exceptions)
 
@@ -106,21 +106,29 @@ WITH CHECK is mandatory for INSERT/UPDATE. Without it, RLS only filters reads �
 
 ### 4. Audit logging on PHI access
 
-Every read and write of PHI is logged. The audit log itself is append-only with its own RLS.
+Every successful read and write of PHI is logged. The audit log table (`audit_logs`) is append-only with its own RLS. All writes go through the `public.write_audit_log` SECURITY DEFINER function — never direct INSERT.
 
 ```typescript
-import { auditLog } from "@/lib/security/audit-log";
+import { writeAuditLog } from "@/lib/security/audit-log";
+import { pool, withTransaction } from "@/lib/db";
 
-// ✅ After successful PHI access
-await auditLog({
-  actorId: user.id,
-  orgId: user.orgId,
-  action: "patient.note.read",
-  resourceType: "patient_note",
-  resourceId: noteId,
-  // ❌ Never include the note content itself
+// ✅ After successful PHI access — same transaction as the SELECT or INSERT
+await withTransaction(pool, async (client) => {
+  // ... the SELECT or INSERT that touched PHI ...
+  await writeAuditLog(client, {
+    action: "PATIENT_NOTE_READ",       // UPPERCASE_SNAKE_CASE
+    entityType: "patient_note",        // lowercase singular
+    userId: user.id,
+    organizationId: user.orgId,
+    entityId: noteId,
+    ipAddress: req.ip,
+    details: { /* metadata only — NO PHI */ },
+    riskLevel: "INFO",                 // 'HIGH' for safety-relevant flagged events
+  });
 });
 ```
+
+If the audit-write fails, the transaction rolls back. The caller does not receive data whose access could not be logged. See `api-endpoints` skill for the read-path and write-path patterns; see `sidecar-scaffolding` skill for the function contract and role grants.
 
 ### 5. No PHI in logs (anywhere)
 
@@ -206,6 +214,44 @@ Defaults:
 - All secrets in Vercel env vars or Azure Key Vault
 - Rotation schedule: 90 days for non-customer-facing, 30 days for sensitive (Supabase service role, PHI encryption keys)
 
+### 10. Supabase default function privileges (explicit REVOKE)
+
+On Supabase, functions created in the `public` schema inherit default `EXECUTE` grants for `anon`, `authenticated`, and `service_role` from `pg_default_acl`. `REVOKE ALL ... FROM PUBLIC` does NOT remove these — it only revokes the `PUBLIC` virtual role.
+
+Every `SECURITY DEFINER` function in `public` must explicitly revoke EXECUTE from the three Supabase default roles at definition time:
+
+```sql
+CREATE OR REPLACE FUNCTION public.<fn_name>(...)
+RETURNS <type>
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$ ... $$;
+
+-- Explicit REVOKE — required, not implied by SECURITY DEFINER
+REVOKE ALL ON FUNCTION public.<fn_name>(...) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.<fn_name>(...) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.<fn_name>(...) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.<fn_name>(...) FROM service_role;
+
+-- Then GRANT EXECUTE only to the roles that should call it
+GRANT EXECUTE ON FUNCTION public.<fn_name>(...) TO sidecar_<feature>;
+```
+
+Both the `REVOKE ALL ... FROM PUBLIC` and the three role-specific `REVOKE EXECUTE` are required. The first revokes the `PUBLIC` virtual role; the second three revoke the Supabase default grants. Each addresses a different inheritance path.
+
+Verify with:
+
+```sql
+SELECT grantee, privilege_type
+FROM information_schema.routine_privileges
+WHERE routine_schema = 'public' AND routine_name = '<fn_name>';
+```
+
+Only the function owner (typically `postgres`) and the explicitly-granted callers should appear. If `anon`, `authenticated`, or `service_role` appear without an explicit GRANT, the REVOKE was missed.
+
+See `sidecar-scaffolding` skill, Step 9, for the sidecar-role GRANT EXECUTE pattern. The `og-edit-protocol` skill, Step 6, cross-links here when migrations create SECURITY DEFINER functions.
+
 ## Pre-merge mental checklist
 
 Before opening a PR, the agent runs through this list:
@@ -223,6 +269,7 @@ Before opening a PR, the agent runs through this list:
 - [ ] TypeScript strict passes with zero `any`
 - [ ] All new code has ≥80% test coverage
 - [ ] RLS tests written for every new table
+- [ ] If new SECURITY DEFINER functions in `public`: explicit REVOKE EXECUTE from `anon`, `authenticated`, `service_role`
 
 If any box is unchecked, the PR is not ready.
 

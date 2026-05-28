@@ -15,7 +15,7 @@ chartspark-prd/
 │   └── PRD-MASTER.md               The constitution. Read first.
 ├── skills/                         The HOW — coding patterns for AI agents
 │   ├── using-skills.md             Entry point — read this first in every session
-│   ├── security-first.md           Big 9 security patterns (the merge gate)
+│   ├── security-first.md           Big 10 security patterns (the merge gate)
 │   ├── sidecar-scaffolding.md      Canonical pattern for new sidecar services
 │   ├── rls-testing.md              Mandatory pattern for PHI tables
 │   ├── api-endpoints.md            5-layer pattern for API routes
