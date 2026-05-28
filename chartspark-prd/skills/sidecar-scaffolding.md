@@ -206,6 +206,7 @@ Place the `eslint-disable-next-line` comment **immediately** before the offendin
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
+import { auth } from "./middleware/auth";
 import { errorHandler } from "./middleware/error-handler";
 import { requestId } from "./middleware/request-id";
 import { rateLimit } from "./middleware/rate-limit";
@@ -238,9 +239,23 @@ app.get("/health", (_req, res) => {
 
 app.use(errorHandler);
 
-app.listen(port, () => {
-  console.log("server.started", { port, service: "chartspark-<feature>" });
-});
+// Eager-warmup: load jose, fetch JWKS, validate config at boot.
+// Fail loud if anything is misconfigured rather than failing the
+// first user request. JWKS is cached for the lifetime of the
+// process so the first real request is fast.
+auth.warmup()
+  .then(() => {
+    app.listen(port, () => {
+      console.log("server.started", { port, service: "chartspark-<feature>" });
+    });
+  })
+  .catch((err) => {
+    console.error("server.start.failed", {
+      errorClass: err instanceof Error ? err.constructor.name : "unknown",
+      message: err instanceof Error ? err.message : String(err),
+    });
+    process.exit(1);
+  });
 ```
 
 ### Step 7 — Create the Supabase client
