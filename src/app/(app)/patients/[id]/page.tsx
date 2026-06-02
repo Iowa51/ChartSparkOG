@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout";
 import {
   Activity,
@@ -17,10 +17,12 @@ import {
   Shield,
   Loader2,
   ClipboardList,
+  ClipboardCheck,
   Heart,
   Brain,
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import VitalsEntryPanel from "@/components/vitals/VitalsEntryPanel";
 import ScreeningPanel from "@/components/vitals/ScreeningPanel";
@@ -29,6 +31,36 @@ import ScreeningTrendChart from "@/components/vitals/ScreeningTrendChart";
 import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
 import PatientDocuments from "@/components/patients/PatientDocuments";
 import { formatEncounterType } from "@/lib/utils/encounter-type";
+
+// Lazy-loaded — defers loading the assessments client + sidecar projection cache
+// until the user actually opens the tab.
+const AssessmentsTab = dynamic(() => import("@/components/patients/AssessmentsTab"), {
+  ssr: false,
+  loading: () => (
+    <div className="lg:col-span-3 flex items-center justify-center py-12 text-muted-foreground">
+      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+      Loading assessments…
+    </div>
+  ),
+});
+
+const VALID_TABS = [
+  "overview",
+  "vitals",
+  "encounters",
+  "notes",
+  "smart-triage",
+  "assessments",
+  "allergies",
+  "medications",
+  "problems",
+  "insurance",
+] as const;
+type TabId = (typeof VALID_TABS)[number];
+
+function isValidTab(value: string | null | undefined): value is TabId {
+  return Boolean(value && (VALID_TABS as readonly string[]).includes(value));
+}
 
 // Card components
 const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -110,6 +142,7 @@ interface PatientWithDetails {
 export default function PatientDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const patientId = params.id as string;
 
   const [patient, setPatient] = useState<PatientWithDetails | null>(null);
@@ -119,7 +152,30 @@ export default function PatientDetailPage() {
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const initialTabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<TabId>(
+    isValidTab(initialTabParam) ? initialTabParam : "overview",
+  );
+
+  // Keep ?tab= in sync with activeTab. Uses replace + scroll:false so the
+  // back button still escapes the page rather than navigating between tabs.
+  useEffect(() => {
+    const current = searchParams.get("tab");
+    if (activeTab === "overview") {
+      if (current) {
+        const next = new URLSearchParams(searchParams.toString());
+        next.delete("tab");
+        const qs = next.toString();
+        router.replace(qs ? `?${qs}` : `?`, { scroll: false });
+      }
+      return;
+    }
+    if (current !== activeTab) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.set("tab", activeTab);
+      router.replace(`?${next.toString()}`, { scroll: false });
+    }
+  }, [activeTab, router, searchParams]);
 
   // Fetch patient details
   useEffect(() => {
@@ -333,17 +389,20 @@ export default function PatientDetailPage() {
 
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {[
-            { id: "overview", label: "Overview", icon: Activity },
-            { id: "vitals", label: "Vitals", icon: Heart },
-            { id: "encounters", label: "Encounters", icon: Calendar },
-            { id: "notes", label: "Notes", icon: ClipboardList },
-            { id: "smart-triage", label: "Smart Triage", icon: Brain },
-            { id: "allergies", label: "Allergies", icon: AlertCircle },
-            { id: "medications", label: "Medications", icon: Pill },
-            { id: "problems", label: "Problems", icon: FileText },
-            { id: "insurance", label: "Insurance", icon: Shield },
-          ].map((tab) => (
+          {(
+            [
+              { id: "overview", label: "Overview", icon: Activity },
+              { id: "vitals", label: "Vitals", icon: Heart },
+              { id: "encounters", label: "Encounters", icon: Calendar },
+              { id: "notes", label: "Notes", icon: ClipboardList },
+              { id: "smart-triage", label: "Smart Triage", icon: Brain },
+              { id: "assessments", label: "Assessments", icon: ClipboardCheck },
+              { id: "allergies", label: "Allergies", icon: AlertCircle },
+              { id: "medications", label: "Medications", icon: Pill },
+              { id: "problems", label: "Problems", icon: FileText },
+              { id: "insurance", label: "Insurance", icon: Shield },
+            ] as const
+          ).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -547,6 +606,8 @@ export default function PatientDetailPage() {
               <SmartTriagePanel patientId={patientId} />
             </div>
           )}
+
+          {activeTab === "assessments" && <AssessmentsTab patientId={patientId} />}
 
           {activeTab === "encounters" && (
             <Card className="lg:col-span-3">
