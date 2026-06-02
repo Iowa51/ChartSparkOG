@@ -1,0 +1,290 @@
+You are implementing Phase 5 of the ChartSparkOG agent integration. 
+This wires the agent-orchestrator service into the existing ChartSparkOG 
+Next.js application. Read existing files before modifying anything.
+
+ENVIRONMENT:
+- Windows machine, PowerShell (no && operator)
+- Working directory: C:\Users\joman\OneDrive\Desktop\ChartSparkOG
+- Branch: feature/chartspark-agent-orchestrator
+- Agent orchestrator runs on port 3300
+- Supabase project ref: eepwbtdqtdnqxeznykbh
+- Next.js App Router at src/app/
+
+EXISTING INFRASTRUCTURE TO USE:
+- Subscription tiers: organizations.subscription_tier 
+  ('starter' | 'pro' | 'complete')
+- Session page: src/app/(app)/encounters/[id]/page.tsx
+- Auditor page: src/app/(admin)/admin/auditor-notes/page.tsx
+- Notes table: clinical_notes (columns: subjective, objective, 
+  assessment, plan, content, status, signed_at, reviewer_feedback)
+- Encounter status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+- Superbill widget already exists on encounter page
+- API base: src/app/api/
+
+SUBSCRIPTION GATE RULES:
+- starter + pro = Core tier (Documentation Agent only)
+  Gets: auto-generated note, CPT/ICD-10 suggestions, quality score
+  Does NOT get: full billing pipeline, auditor queue, RCM features
+- complete = RCM tier (all 3 agents)
+  Gets: everything in Core PLUS full billing pipeline,
+  auditor queue, denied claim recovery, reimbursement tracking
+
+BUTTON NAME: "End Session" (not "Complete Session")
+Button state progression:
+  idle:    [End Session]          primary color, clickable
+  loading: [Ending session...]    spinner, disabled
+  success: [✅ Session Complete]  green, disabled for 3s then idle
+  error:   [End Session]          primary color + error toast
+
+Work through each section sequentially. Read existing files before 
+editing them. Do not break any existing functionality.
+
+WHAT TO BUILD:
+
+1. ENVIRONMENT VARIABLE
+Add to .env.local:
+AGENT_ORCHESTRATOR_URL=http://localhost:3300
+
+Add to .env.example if it exists:
+AGENT_ORCHESTRATOR_URL=http://localhost:3300
+
+2. AGENT API ROUTE GROUP
+Create src/app/api/agent/complete-session/route.ts
+
+POST handler:
+- Authenticate request using existing auth pattern from other API routes
+- Get clinician organization subscription_tier from Supabase
+- Determine feature set based on tier:
+  starter/pro → mode: 'documentation_only'
+  complete → mode: 'full_pipeline'
+- Build request body for agent-orchestrator:
+  {
+    sessionId,
+    clinicianId,
+    patientId,
+    inputMode: 'text',
+    clinicianInput,
+    noteFormat: noteFormat || 'SOAP',
+    sessionType,
+    duration,
+    payerType: payerType || 'commercial',
+    mode
+  }
+- POST to AGENT_ORCHESTRATOR_URL/sessions/:sessionId/complete
+- On success (documentation_only mode):
+  Update clinical_notes: set subjective, objective, assessment, plan 
+  from generated note, set status to 'pending_review'
+  Update encounter status to 'completed'
+  Return { success: true, mode, note, cptCode, icd10Codes,
+  qualityScore, confidence }
+- On success (full_pipeline mode):
+  Update clinical_notes with generated note
+  Update encounter status to 'completed'
+  Create audit_flags record for any agent flags
+  Return { success: true, mode, note, cptCode, icd10Codes,
+  qualityScore, confidence, billingResult, reimbursementEstimate,
+  requiresReview }
+- On error: return { success: false, error, fallback: true }
+  NEVER block the clinician — they can still save manually on failure
+
+3. END SESSION BUTTON COMPONENT
+Create src/components/agent/EndSessionButton.tsx
+
+Props:
+  encounterId: string
+  patientId: string
+  clinicianId: string
+  sessionType: string
+  duration: number
+  clinicianInput?: string
+  noteFormat?: string
+  payerType?: string
+  onComplete: (result: AgentResult) => void
+  onError: (error: string) => void
+  disabled?: boolean
+
+States:
+  idle → "End Session" button in primary color
+  loading → spinner + "Ending session..." disabled
+  success → "✅ Session Complete" green, disabled 3s then back to idle
+  error → "End Session" primary + error toast, always retryable
+
+On click:
+- Set loading state immediately
+- POST to /api/agent/complete-session
+- On success: call onComplete(result), show success state 3s
+- On error: call onError(message), show toast, reset to idle
+- Never permanently disable — clinician must always be able to retry
+
+4. AGENT RESULT PANEL COMPONENT
+Create src/components/agent/AgentResultPanel.tsx
+
+Displays after agent completes successfully.
+
+SECTION A — All tiers (always visible):
+  Generated note preview (first 200 chars + "View full note" link)
+  Suggested CPT code + description
+  Suggested ICD-10 codes as badge list
+  Quality score: circular indicator, color coded:
+    >= 0.90 → green
+    0.75 to 0.89 → yellow  
+    < 0.75 → red
+  Confidence percentage
+  Any quality flags as dismissible warnings
+
+SECTION B — Complete plan only:
+  If complete tier: show fully
+  If starter/pro: show blurred/locked with upgrade prompt
+  Content:
+    Estimated reimbursement: $X.XX (labeled "Medicare baseline estimate")
+    Billing status: "Queued for auditor review" or "Needs attention"
+    Prior auth required: Yes/No badge
+    Issues found and fixed by billing agent
+
+SECTION C — Review required (if requiresReview is true):
+  Yellow warning banner:
+  "⚠️ This session has been flagged for supervisor review.
+   An auditor will review before claim submission."
+
+Upgrade prompt for starter/pro (shown below Section B lock):
+  "Your note and billing codes have been generated. Upgrade to the
+   Complete plan to have our team handle all claim submission,
+   denied claim recovery, and auditor review for you. →"
+
+5. INTEGRATE INTO ENCOUNTER PAGE
+Read src/app/(app)/encounters/[id]/page.tsx carefully first.
+
+Add to the encounter detail page:
+- Import EndSessionButton and AgentResultPanel
+- Add state: agentResult (null initially)
+- Add state: sessionEnded (false initially)
+
+Button placement:
+  Place EndSessionButton in the action area of the page
+  alongside existing status and superbill controls
+  Show button only when encounter.status is 'scheduled' 
+  or 'in_progress'
+  When encounter.status is 'completed' and agentResult is null:
+    Show "Session completed" badge instead of button
+
+When onComplete fires:
+  Set agentResult with result
+  Set sessionEnded to true
+  Auto-populate the superbill widget with cptCode and icd10Codes
+  if superbill widget accepts props or has a state update mechanism
+  Scroll smoothly to AgentResultPanel
+
+AgentResultPanel renders below main encounter details 
+when agentResult is not null.
+
+On error: show toast notification, keep button enabled for retry.
+Never navigate away automatically — let clinician confirm.
+
+6. INTEGRATE INTO AUDITOR DASHBOARD
+Read src/app/(admin)/admin/auditor-notes/page.tsx carefully first.
+
+Add tabbed interface:
+  Tab 1: "Audit Flags" — existing content completely unchanged
+  Tab 2: "Agent Queue" — new content
+
+Agent Queue tab:
+  Fetches from quality_reviews table where 
+  requires_supervisor_review = true and status != 'resolved'
+  
+  Each row displays:
+    Patient name, clinician name, session date
+    Overall quality score (color coded badge)
+    Flags list (expandable)
+    CPT code + ICD-10 codes
+    Estimated reimbursement (if available)
+    
+  Action buttons per row:
+    "Approve & Submit" 
+      → updates quality_reviews status to 'resolved'
+      → updates encounter status confirms completed
+      → shows success toast
+    "Request Revision"
+      → creates new audit_flags record
+      → shows revision notes input modal
+    "Override Codes"
+      → opens inline editor for CPT and ICD-10 codes
+      → saves changes to clinical_notes and quality_reviews
+
+  Empty state: "No sessions pending review"
+  Loading state: skeleton rows
+
+7. SUBSCRIPTION GATE UTILITY
+Create src/lib/agent/subscription-gate.ts
+
+  export function getAgentMode(
+    subscriptionTier: string
+  ): 'documentation_only' | 'full_pipeline'
+  
+  export function isRCMEnabled(subscriptionTier: string): boolean
+  
+  export function getUpgradeMessage(feature: string): string
+    Returns appropriate upgrade message per feature:
+    'billing' → message about billing pipeline
+    'auditor' → message about auditor review
+    'reimbursement' → message about reimbursement tracking
+
+8. TYPES
+Create src/lib/agent/types.ts
+
+  export type AgentMode = 'documentation_only' | 'full_pipeline'
+  
+  export interface AgentResult {
+    success: boolean
+    mode: AgentMode
+    note?: string
+    cptCode?: string
+    icd10Codes?: string[]
+    qualityScore?: number
+    confidence?: number
+    billingResult?: BillingResult
+    reimbursementEstimate?: number
+    requiresReview?: boolean
+    flags?: string[]
+    error?: string
+    fallback?: boolean
+  }
+  
+  export interface BillingResult {
+    finalCptCode: string
+    issuesFound: string[]
+    issuesFixed: string[]
+    authRequired: boolean
+    estimatedReimbursement: number
+  }
+
+9. UPDATE AGENT-ORCHESTRATOR SESSIONS ROUTE
+Read C:\Users\joman\OneDrive\Desktop\agent-orchestrator\src\routes\sessions.ts
+
+Update POST /sessions/:id/complete to handle mode field:
+  If mode === 'documentation_only':
+    Run only DocumentationAgent
+    Return documentation result only
+  If mode === 'full_pipeline' or mode is undefined:
+    Run all three agents as normal
+  
+  Commit this change to agent-orchestrator separately.
+
+QUALITY LOOP:
+After all implementation, one review pass:
+- End Session button never permanently disabled after error
+- Subscription gate is checked server-side in API route only
+- Upgrade prompt shown only when mode === 'documentation_only'
+- Agent Queue tab only visible to admin/auditor roles
+- Reimbursement labeled as "Medicare baseline estimate" not 
+  guaranteed amount
+- All new components use TypeScript interfaces from types.ts
+- No existing encounter page functionality broken
+- Superbill widget receives CPT and ICD-10 from agent result
+- Fix any issues found, then stop.
+
+When complete output:
+1. Summary of all files created
+2. Summary of all files modified and what changed
+3. What to add to .env.local
+4. Any decisions or edge cases handled
+5. Any items that need manual follow-up

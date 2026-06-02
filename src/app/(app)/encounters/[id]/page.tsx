@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Header } from "@/components/layout";
 import {
   Calendar,
@@ -14,11 +15,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
 import { SuperbillWidget } from "@/components/billing/SuperbillWidget";
 import VitalsEntryPanel from "@/components/vitals/VitalsEntryPanel";
 import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
 import { EndSessionButton } from "@/components/agent/EndSessionButton";
+import { AgentResultPanel } from "@/components/agent/AgentResultPanel";
+import { AgentResult } from "@/lib/agent/types";
 import { formatEncounterType } from "@/lib/utils/encounter-type";
 
 interface EncounterDetail {
@@ -60,11 +62,14 @@ export default function EncounterDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const agentResultRef = useRef<HTMLDivElement>(null);
 
   const [encounter, setEncounter] = useState<EncounterDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [agentResult, setAgentResult] = useState<AgentResult | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchEncounter = async () => {
@@ -101,6 +106,17 @@ export default function EncounterDetailPage() {
   const providerName =
     encounter?.provider?.full_name || encounter?.provider?.email || "Unknown Provider";
 
+  // Session duration (minutes) derived from the scheduled window; falls back to 60.
+  const durationMinutes = useMemo(() => {
+    if (!encounter?.scheduled_start || !encounter?.scheduled_end) return 60;
+    const mins = Math.round(
+      (new Date(encounter.scheduled_end).getTime() -
+        new Date(encounter.scheduled_start).getTime()) /
+        60000,
+    );
+    return mins > 0 ? mins : 60;
+  }, [encounter]);
+
   const handleStatusUpdate = async (status: "completed" | "in_progress") => {
     try {
       setSaving(true);
@@ -124,6 +140,21 @@ export default function EncounterDetailPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSessionComplete = (result: AgentResult) => {
+    setAgentResult(result);
+    // The route marks the encounter completed server-side; reflect it optimistically.
+    setEncounter((current) => (current ? { ...current, status: "completed" } : current));
+    // Scroll to the agent result panel.
+    setTimeout(() => {
+      agentResultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  };
+
+  const handleSessionError = (message: string) => {
+    setErrorToast(message);
+    setTimeout(() => setErrorToast(null), 5000);
   };
 
   if (loading) {
@@ -188,7 +219,15 @@ export default function EncounterDetailPage() {
         ]}
       />
 
+      {/* Error toast */}
+      {errorToast && (
+        <div className="fixed top-4 right-4 z-50 px-4 py-3 bg-red-600 text-white text-sm font-medium rounded-xl shadow-lg animate-in slide-in-from-top-2 max-w-sm">
+          {errorToast}
+        </div>
+      )}
+
       <div className="flex-1 p-6 lg:px-10 lg:py-8 max-w-5xl mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        {/* Actions Toolbar */}
         <div className="flex items-center justify-between">
           <Link
             href="/encounters"
@@ -225,7 +264,18 @@ export default function EncounterDetailPage() {
               )}
               {encounter.status === "completed" ? "Mark In Progress" : "Complete Encounter"}
             </button>
-            <EndSessionButton encounterId={encounter.id} patientId={encounter.patient_id} />
+            <EndSessionButton
+              encounterId={encounter.id}
+              patientId={encounter.patient_id}
+              clinicianId={encounter.provider?.id ?? ""}
+              sessionType={encounter.encounter_type}
+              duration={durationMinutes}
+              clinicianInput={encounter.chief_complaint ?? ""}
+              noteFormat="SOAP"
+              payerType="commercial"
+              onComplete={handleSessionComplete}
+              onError={handleSessionError}
+            />
           </div>
         </div>
 
@@ -235,6 +285,7 @@ export default function EncounterDetailPage() {
           </div>
         )}
 
+        {/* Patient / Encounter Info Card */}
         <div className="bg-card rounded-2xl border border-border p-6 shadow-sm overflow-hidden relative">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="flex items-center gap-4">
@@ -349,7 +400,10 @@ export default function EncounterDetailPage() {
           </div>
 
           <div className="space-y-6">
-            <SuperbillWidget />
+            <SuperbillWidget
+              initialCptCode={agentResult?.cptCode}
+              initialIcd10Codes={agentResult?.icd10Codes}
+            />
 
             <div className="bg-card rounded-2xl border border-border shadow-sm">
               <VitalsEntryPanel patientId={encounter.patient_id} encounterId={id} />
@@ -366,6 +420,13 @@ export default function EncounterDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Agent Result Panel — rendered below main content after the session ends */}
+        {agentResult && (
+          <div ref={agentResultRef}>
+            <AgentResultPanel result={agentResult} />
+          </div>
+        )}
       </div>
     </div>
   );

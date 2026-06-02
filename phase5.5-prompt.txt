@@ -1,0 +1,44 @@
+You are implementing Phase 5.5 fixes for ChartSparkOG. Two small 
+targeted fixes only. Read existing files before modifying anything.
+Do not change anything outside of what is specified.
+
+FIX 1 — SUPERBILL WIDGET AUTO-POPULATION
+Read src/app/(app)/encounters/[id]/page.tsx and find the SuperbillWidget 
+component and its source file.
+
+Update SuperbillWidget to accept these optional props:
+  initialCptCode?: string
+  initialIcd10Codes?: string[]
+
+When these props are provided on mount, pre-populate the CPT code 
+and ICD-10 code fields in the widget automatically.
+If props are not provided, widget behaves exactly as before.
+
+Then update the encounter page to pass these props to SuperbillWidget
+when agentResult is available:
+  initialCptCode={agentResult?.cptCode}
+  initialIcd10Codes={agentResult?.icd10Codes}
+
+FIX 2 — ADMIN ROLE GATE ON AGENT QUEUE TAB
+Read src/app/(admin)/admin/auditor-notes/page.tsx and find how the 
+existing page checks user roles.
+
+Add an explicit role check for the Agent Queue tab:
+- Only users with role 'ADMIN' or 'SUPER_ADMIN' can see and interact 
+  with the Agent Queue tab
+- If user has a different role, hide the Agent Queue tab entirely
+- Use the same role checking pattern already used elsewhere in the 
+  admin section
+
+Do not change anything else on the page.
+
+QUALITY LOOP:
+- SuperbillWidget still works correctly when no props provided
+- Agent Queue tab completely hidden for non-admin roles
+- No TypeScript errors introduced
+- No existing functionality broken
+- Fix any issues found, then stop.
+
+When complete output:
+1. Files modified and exactly what changed
+2. Any decisions made
