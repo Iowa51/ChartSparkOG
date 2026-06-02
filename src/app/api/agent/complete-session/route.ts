@@ -87,7 +87,7 @@ async function handler(context: AuthContext) {
   // Prevents cross-org data access and processing of invalid/closed encounters.
   const { data: encounter, error: encounterError } = await supabase
     .from("encounters")
-    .select("id, organization_id, patient_id, assigned_clinician_id, status")
+    .select("id, organization_id, patient_id, provider_id, status")
     .eq("id", sessionId)
     .single();
 
@@ -106,7 +106,7 @@ async function handler(context: AuthContext) {
   const isAdminOrAbove = (["ADMIN", "SUPER_ADMIN"] as string[]).includes(
     (user as unknown as Record<string, string>).role ?? "",
   );
-  if (encounter.assigned_clinician_id !== user.id && !isAdminOrAbove) {
+  if (encounter.provider_id !== user.id && !isAdminOrAbove) {
     logError({
       action: "agent_complete_session_forbidden",
       error: sanitizeError("Clinician mismatch"),
@@ -122,6 +122,28 @@ async function handler(context: AuthContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // IF-1: bind the client-supplied patientId to the encounter; never forward a mismatched id.
+  if (patientId && patientId !== encounter.patient_id) {
+    logError({
+      action: "agent_complete_session_forbidden",
+      error: sanitizeError("patientId does not match encounter"),
+    });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // IF-3: orchestrator shared secret is mandatory — fail closed if unset (never send an empty Bearer).
+  const orchestratorSecret = process.env.ORCHESTRATOR_SECRET;
+  if (!orchestratorSecret) {
+    logError({
+      action: "agent_complete_session_misconfig",
+      error: sanitizeError("ORCHESTRATOR_SECRET is not configured"),
+    });
+    return NextResponse.json(
+      { error: "AI scribe unavailable in this environment.", code: "ORCHESTRATOR_SECRET_MISSING" },
+      { status: 503 },
+    );
+  }
+
   // Forward to agent-orchestrator
   const orchestratorUrl = process.env.AGENT_ORCHESTRATOR_URL ?? "http://localhost:3300";
   let orchestratorResult: Record<string, unknown>;
@@ -130,7 +152,7 @@ async function handler(context: AuthContext) {
     const orchestratorBody = {
       sessionId,
       clinicianId: user.id,
-      patientId: patientId ?? "",
+      patientId: encounter.patient_id, // authoritative — not the client-supplied value
       inputMode: "text",
       clinicianInput: clinicianInput ?? "",
       noteFormat: noteFormat ?? "SOAP",
@@ -146,7 +168,7 @@ async function handler(context: AuthContext) {
       headers: {
         "Content-Type": "application/json",
         // FIX 1: Shared secret for service-to-service authentication
-        Authorization: `Bearer ${process.env.ORCHESTRATOR_SECRET ?? ""}`,
+        Authorization: `Bearer ${orchestratorSecret}`,
       },
       body: JSON.stringify(orchestratorBody),
       signal: AbortSignal.timeout(60_000),

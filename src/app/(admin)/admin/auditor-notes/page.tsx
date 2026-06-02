@@ -218,12 +218,6 @@ function AgentQueueTab({ organizationId }: { organizationId: string | null }) {
         .update({ cpt_code: codeEdits.cpt, icd10_codes: icd10 })
         .eq("id", item.id);
 
-      // Also update clinical_notes
-      await supabase
-        .from("clinical_notes")
-        .update({ content: null }) // placeholder — update any linked note fields if schema allows
-        .eq("encounter_id", item.encounter_id);
-
       setCodeEditing(null);
       showToast("Codes updated.");
       fetchQueue(organizationId);
