@@ -104,11 +104,12 @@ export async function getAssessmentTrend(
   patientId: string,
   scaleId: string,
 ): Promise<TrendPoint[]> {
-  const data = await request<{ points?: TrendPoint[] } | TrendPoint[]>(
+  // Sidecar returns { patient_id, scale_id, from, to, count, results: [...] }.
+  const data = await request<{ results?: TrendPoint[] } | TrendPoint[]>(
     `/api/assessments/patient/${encodeURIComponent(patientId)}/trend/${encodeURIComponent(scaleId)}`,
   );
   if (Array.isArray(data)) return data;
-  return data.points ?? [];
+  return data.results ?? [];
 }
 
 export async function administerAssessment(input: AdministerInput): Promise<{ id: string }> {

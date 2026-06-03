@@ -149,18 +149,15 @@ export type CssrsResponses = Record<string, CssrsItemResponse>;
 export type AssessmentResponses = FlatLikertResponses | CssrsResponses;
 
 // =========================================================================
-// Trend
-// NOTE: the trend response shape (sidecar returns `{ results: [...] }` with
-// `scored_at`) is NOT reconciled here — trend was out of scope for the
-// #1–#6 contract pass. See planning/ASSESSMENTS-CONTRACT.md open items.
+// Trend — one row of the sidecar `GET .../trend/:scaleId` response, which is
+// `{ patient_id, scale_id, from, to, count, results: TrendPoint[] }`.
 // =========================================================================
 
 export interface TrendPoint {
-  administration_id: string;
-  completed_at: string;
+  scored_at: string;
   total_score: number;
-  severity: string;
   severity_code: string;
+  flags: string[];
 }
 
 // =========================================================================
