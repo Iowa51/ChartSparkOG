@@ -10,7 +10,7 @@ function chooseOption(itemId: string, optionLabel: RegExp) {
 }
 
 const PHQ9_PROJECTION: RenderProjection = {
-  scaleId: "phq-9",
+  id: "phq9",
   name: "PHQ-9",
   responseShape: "flat-likert",
   description: "Patient Health Questionnaire-9",

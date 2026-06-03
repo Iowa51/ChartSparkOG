@@ -91,8 +91,8 @@ describe("POST /api/assessments/administer", () => {
     const res = await (POST as unknown as (r: unknown) => Promise<Response>)(
       makeRequest({
         patient_id: VALID_PATIENT_ID,
-        scale_id: "phq-9",
-        delivery_method: "in_office",
+        scale_id: "phq9",
+        delivery_method: "clinician",
       }),
     );
 
@@ -112,7 +112,7 @@ describe("POST /api/assessments/administer", () => {
         phiAccessed: true,
         details: expect.objectContaining({
           patient_id: VALID_PATIENT_ID,
-          scale_id: "phq-9",
+          scale_id: "phq9",
           success: true,
         }),
       }),

@@ -82,7 +82,7 @@ function makeRouteContext(id: string) {
 }
 
 const PHQ9_PROJECTION = {
-  scaleId: "phq-9",
+  id: "phq9",
   name: "PHQ-9",
   responseShape: "flat-likert",
   options: [
@@ -109,7 +109,7 @@ describe("GET /api/assessments/scales/[id]", () => {
     );
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.scaleId).toBe("phq-9");
+    expect(body.id).toBe("phq9");
     expect(logAuditEventMock).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: "ASSESSMENT_SCALE_READ",

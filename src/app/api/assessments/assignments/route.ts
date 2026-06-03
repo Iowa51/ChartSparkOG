@@ -14,21 +14,18 @@ const AssignmentCreateSchema = z
   .object({
     patient_id: UUIDSchema,
     scale_id: z.string().min(1).max(64),
-    due_date: z.string().datetime().optional(),
-    recurring: z
-      .object({
-        interval: z.enum(["daily", "weekly", "biweekly", "monthly"]),
-        count: z.number().int().min(1).max(52).optional(),
-      })
-      .optional(),
-    notes: z.string().max(2000).optional(),
+    // Day precision (YYYY-MM-DD) — the sidecar `due_date` is a DATE column.
+    due_date: z.string().date().optional(),
+    // Sidecar `recurring` is a string enum (no "daily", no count).
+    recurring: z.enum(["weekly", "biweekly", "monthly"]).optional(),
   })
   .strict();
 
 const AssignmentListQuerySchema = z
   .object({
     patient_id: UUIDSchema,
-    status: z.enum(["pending", "completed", "expired", "cancelled"]).optional(),
+    // Sidecar filters by completion, not a status enum. "Pending" ⇒ completed=false.
+    completed: z.enum(["true", "false"]).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })
   .strict();
@@ -135,7 +132,7 @@ async function handleGet(context: AuthContext) {
       { status: 400 },
     );
   }
-  const { patient_id, status, limit } = queryParsed.data;
+  const { patient_id, completed, limit } = queryParsed.data;
 
   const allowed = await canAccessPatient(context.user, patient_id);
   if (!allowed) {
@@ -160,7 +157,7 @@ async function handleGet(context: AuthContext) {
   }
 
   const upstreamQs = new URLSearchParams({ patient_id });
-  if (status) upstreamQs.set("status", status);
+  if (completed) upstreamQs.set("completed", completed);
   if (limit) upstreamQs.set("limit", String(limit));
 
   const result = await callSidecar(context.user, {
@@ -179,7 +176,7 @@ async function handleGet(context: AuthContext) {
     resourceType: "assessment_assignment",
     details: {
       patient_id,
-      status: status || undefined,
+      completed: completed || undefined,
       success: result.ok,
       sidecar_status: result.status,
     },

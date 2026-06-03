@@ -1,24 +1,21 @@
 "use client";
 
-// Renders a single completed assessment summary: total score, severity,
-// flags as chips, and the optional narrative text.
+// Renders one row in the patient's assessment list: scale name, date, score,
+// severity code, and — critically — a prominent SAFETY indicator whenever the
+// sidecar marks the result safety-relevant (has_safety_flags). The list
+// payload deliberately carries only derived metadata: severity_code (no human
+// severity label) and has_safety_flags (no raw flag strings). Full flags and
+// the narrative live behind the detail endpoint.
 
 import { useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
-import type { AssessmentSummary, AssessmentResult } from "@/lib/assessments/types";
+import type { AssessmentSummary } from "@/lib/assessments/types";
+import { scaleLabel } from "@/lib/assessments/scale-labels";
 
 interface AssessmentResultDisplayProps {
   summary: AssessmentSummary;
-  result?: AssessmentResult | null;
-  /** Optional callback when the user clicks to view trend. */
+  /** Optional callback when the user clicks to view the trend chart. */
   onViewTrend?: (scaleId: string) => void;
-}
-
-const SAFETY_FLAG_PREFIXES = ["SAFETY", "SUICIDE", "CSSRS", "HIGH_RISK"];
-
-function isSafetyFlag(flag: string): boolean {
-  const upper = flag.toUpperCase();
-  return SAFETY_FLAG_PREFIXES.some((p) => upper.includes(p));
 }
 
 function formatDate(value?: string | null): string {
@@ -34,15 +31,15 @@ function formatDate(value?: string | null): string {
 
 export default function AssessmentResultDisplay({
   summary,
-  result,
   onViewTrend,
 }: AssessmentResultDisplayProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const score = result?.total_score ?? summary.total_score ?? null;
-  const severity = result?.severity ?? summary.severity ?? null;
-  const flags = result?.flags ?? summary.flags ?? [];
-  const completedAt = result?.completed_at ?? summary.completed_at ?? null;
+  const result = summary.result_summary ?? null;
+  const score = result?.total_score ?? null;
+  const severityCode = result?.severity_code ?? null;
+  const hasSafetyFlags = result?.has_safety_flags ?? false;
+  const completedAt = summary.completed_at ?? null;
 
   return (
     <div
@@ -57,7 +54,7 @@ export default function AssessmentResultDisplay({
       >
         <div className="flex flex-col">
           <span className="font-semibold text-sm text-foreground">
-            {summary.scale_name ?? summary.scale_id}
+            {scaleLabel(summary.scale_id)}
           </span>
           <span className="text-xs text-muted-foreground">{formatDate(completedAt)}</span>
         </div>
@@ -65,9 +62,9 @@ export default function AssessmentResultDisplay({
           {score !== null && (
             <span className="text-lg font-black tabular-nums text-foreground">{score}</span>
           )}
-          {severity && (
+          {severityCode && (
             <span className="text-xs font-semibold px-2 py-1 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              {severity}
+              {severityCode}
             </span>
           )}
           {expanded ? (
@@ -78,33 +75,24 @@ export default function AssessmentResultDisplay({
         </div>
       </button>
 
-      {flags.length > 0 && (
-        <div className="px-4 pb-2 flex flex-wrap gap-1.5">
-          {flags.map((flag) => {
-            const safety = isSafetyFlag(flag);
-            return (
-              <span
-                key={flag}
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md inline-flex items-center gap-1 ${
-                  safety
-                    ? "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800"
-                    : "bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
-                }`}
-              >
-                {safety && <AlertTriangle className="h-2.5 w-2.5" />}
-                {flag}
-              </span>
-            );
-          })}
+      {/* SAFETY GUARDRAIL: never let a suicide-risk / safety flag be invisible
+          in the list. Wired directly to the sidecar's has_safety_flags. */}
+      {hasSafetyFlags && (
+        <div className="px-4 pb-2">
+          <span
+            role="alert"
+            data-testid={`safety-flag-${summary.id}`}
+            className="text-[11px] font-bold px-2 py-1 rounded-md inline-flex items-center gap-1 bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800"
+          >
+            <AlertTriangle className="h-3 w-3" />
+            Safety flag — review required
+          </span>
         </div>
       )}
 
       {expanded && (
         <div className="px-4 pb-4 border-t border-slate-200 dark:border-slate-800 pt-3 space-y-3">
-          {result?.narrative && (
-            <p className="text-sm text-slate-700 dark:text-slate-300">{result.narrative}</p>
-          )}
-          {onViewTrend && (
+          {onViewTrend ? (
             <button
               type="button"
               onClick={() => onViewTrend(summary.scale_id)}
@@ -112,6 +100,10 @@ export default function AssessmentResultDisplay({
             >
               View trend →
             </button>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Open the assessment for full flags and the clinical narrative.
+            </p>
           )}
         </div>
       )}

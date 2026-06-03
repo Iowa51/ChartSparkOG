@@ -15,7 +15,7 @@ const AdministerSchema = z
   .object({
     patient_id: UUIDSchema,
     scale_id: z.string().min(1).max(64),
-    delivery_method: z.enum(["in_office", "self_report", "remote", "paper"]).default("in_office"),
+    delivery_method: z.enum(["clinician", "portal_self", "portal_assigned"]).default("clinician"),
     encounter_id: UUIDSchema.optional(),
     notes: z.string().max(2000).optional(),
   })

@@ -15,6 +15,7 @@ import {
   getPatientAssessments,
 } from "@/lib/assessments/client";
 import type { Assignment, AssessmentSummary } from "@/lib/assessments/types";
+import { scaleLabel } from "@/lib/assessments/scale-labels";
 import AdministerModal from "./assessments/AdministerModal";
 import AssessmentResultDisplay from "./assessments/AssessmentResultDisplay";
 
@@ -43,7 +44,8 @@ function AssessmentsTabInner({ patientId }: AssessmentsTabProps) {
     try {
       const [a, asgn] = await Promise.all([
         getPatientAssessments(patientId, { limit: 25 }),
-        getAssignments(patientId, { status: "pending" }),
+        // "Pending" assignments ⇒ not yet completed.
+        getAssignments(patientId, { completed: false }),
       ]);
       setAssessments(a);
       setAssignments(asgn);
@@ -170,11 +172,11 @@ function AssessmentsTabInner({ patientId }: AssessmentsTabProps) {
                   >
                     <div>
                       <p className="text-sm font-semibold text-foreground">
-                        {a.scale_name ?? a.scale_id}
+                        {scaleLabel(a.scale_id)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Due: {formatDueDate(a.due_date)}
-                        {a.recurring && ` · Recurring (${a.recurring.interval})`}
+                        {a.recurring && ` · Recurring (${a.recurring})`}
                       </p>
                     </div>
                     <button
