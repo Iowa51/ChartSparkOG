@@ -14,29 +14,17 @@ import type {
   RenderProjection,
 } from "@/lib/assessments/types";
 import { administerAssessment, completeAssessment, getScale } from "@/lib/assessments/client";
+import { KNOWN_SCALE_IDS, scaleLabel } from "@/lib/assessments/scale-labels";
 import ScaleForm from "./ScaleForm";
 import CssrsForm from "./CssrsForm";
 
-// Sidecar v1 catalog — 15 known scales. Curated rather than fetched because
-// the sidecar's render-only endpoint is keyed by id (no list endpoint at
-// time of writing). Order is rough clinical priority.
-const KNOWN_SCALES: Array<{ id: string; label: string; description?: string }> = [
-  { id: "phq-9", label: "PHQ-9 — Patient Health Questionnaire-9" },
-  { id: "gad-7", label: "GAD-7 — Generalized Anxiety Disorder-7" },
-  { id: "cssrs", label: "C-SSRS — Columbia Suicide Severity Rating Scale" },
-  { id: "audit-c", label: "AUDIT-C — Alcohol Use Disorders Identification (Concise)" },
-  { id: "dast-10", label: "DAST-10 — Drug Abuse Screening Test" },
-  { id: "pcl-5", label: "PCL-5 — PTSD Checklist" },
-  { id: "phq-2", label: "PHQ-2 — Depression Screen (Short)" },
-  { id: "gad-2", label: "GAD-2 — Anxiety Screen (Short)" },
-  { id: "mdq", label: "MDQ — Mood Disorder Questionnaire" },
-  { id: "ace", label: "ACE — Adverse Childhood Experiences" },
-  { id: "edinburgh", label: "EPDS — Edinburgh Postnatal Depression Scale" },
-  { id: "ymrs", label: "YMRS — Young Mania Rating Scale" },
-  { id: "panss", label: "PANSS — Positive and Negative Syndrome Scale" },
-  { id: "ham-d", label: "HAM-D — Hamilton Depression Rating Scale" },
-  { id: "srs-2", label: "SRS-2 — Social Responsiveness Scale" },
-];
+// Administer dropdown — exactly the scale ids the sidecar registry implements,
+// with human labels. Curated rather than fetched (the sidecar has no list
+// endpoint); order is rough clinical priority. See scale-labels.ts.
+const KNOWN_SCALES: Array<{ id: string; label: string }> = KNOWN_SCALE_IDS.map((id) => ({
+  id,
+  label: scaleLabel(id),
+}));
 
 interface AdministerModalProps {
   patientId: string;
@@ -93,8 +81,8 @@ export default function AdministerModal({
       try {
         const created = await administerAssessment({
           patient_id: patientId,
-          scale_id: projection.scaleId,
-          delivery_method: "in_office",
+          scale_id: projection.id,
+          delivery_method: "clinician",
           ...(encounterId ? { encounter_id: encounterId } : {}),
         });
         await completeAssessment(created.id, responses);

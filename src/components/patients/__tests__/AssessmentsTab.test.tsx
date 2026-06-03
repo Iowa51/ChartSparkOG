@@ -86,18 +86,18 @@ describe("<AssessmentsTab />", () => {
     expect(screen.getByText(/no pending assignments/i)).toBeInTheDocument();
   });
 
-  it("renders fetched assessments with their scale name and score", async () => {
+  it("renders fetched assessments with their scale name, score, and safety flag", async () => {
     clientMocks.getPatientAssessments.mockResolvedValue([
       {
         id: "admin-1",
-        patient_id: PATIENT_ID,
-        scale_id: "phq-9",
-        scale_name: "PHQ-9",
+        scale_id: "phq9",
         status: "completed",
         completed_at: "2026-05-01T12:00:00Z",
-        total_score: 14,
-        severity: "Moderately Severe",
-        flags: ["HIGH_RISK"],
+        result_summary: {
+          total_score: 14,
+          severity_code: "mod_severe",
+          has_safety_flags: true,
+        },
       },
     ]);
     clientMocks.getAssignments.mockResolvedValue([]);
@@ -107,9 +107,12 @@ describe("<AssessmentsTab />", () => {
     await waitFor(() => {
       expect(screen.getByTestId("assessment-result-admin-1")).toBeInTheDocument();
     });
-    expect(screen.getByText("PHQ-9")).toBeInTheDocument();
+    // Scale id renders as a human label, never the raw id.
+    expect(screen.getByText(/PHQ-9/)).toBeInTheDocument();
     expect(screen.getByText("14")).toBeInTheDocument();
-    expect(screen.getByText("HIGH_RISK")).toBeInTheDocument();
+    // SAFETY GUARDRAIL: has_safety_flags must surface as a prominent indicator.
+    expect(screen.getByTestId("safety-flag-admin-1")).toBeInTheDocument();
+    expect(screen.getByText(/safety flag/i)).toBeInTheDocument();
   });
 
   it("surfaces a friendly message when the sidecar reports a fallback error", async () => {

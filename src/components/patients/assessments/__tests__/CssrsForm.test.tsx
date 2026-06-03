@@ -7,7 +7,7 @@ import type { RenderProjection } from "@/lib/assessments/types";
 // Trimmed CSSRS projection — 3 items is enough to exercise the
 // timeframe-dropdown contract on item6.
 const CSSRS_PROJECTION: RenderProjection = {
-  scaleId: "cssrs",
+  id: "cssrs",
   name: "C-SSRS",
   responseShape: "cssrs",
   items: [

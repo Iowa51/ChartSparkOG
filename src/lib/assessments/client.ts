@@ -7,6 +7,7 @@
 
 import type {
   AdministerInput,
+  AdministrationStatus,
   Assignment,
   AssessmentResponses,
   AssessmentResult,
@@ -78,7 +79,7 @@ export function _clearScaleCache(): void {
 export interface PatientAssessmentsOptions {
   limit?: number;
   scaleId?: string;
-  status?: "pending" | "completed" | "expired";
+  status?: AdministrationStatus;
 }
 
 export async function getPatientAssessments(
@@ -93,9 +94,10 @@ export async function getPatientAssessments(
   const path = `/api/assessments/patient/${encodeURIComponent(patientId)}${
     search ? `?${search}` : ""
   }`;
-  const data = await request<{ assessments?: AssessmentSummary[] } | AssessmentSummary[]>(path);
+  // Sidecar returns { patient_id, count, administrations: [...] }.
+  const data = await request<{ administrations?: AssessmentSummary[] } | AssessmentSummary[]>(path);
   if (Array.isArray(data)) return data;
-  return data.assessments ?? [];
+  return data.administrations ?? [];
 }
 
 export async function getAssessmentTrend(
@@ -140,7 +142,8 @@ export async function getAssessment(administrationId: string): Promise<Assessmen
 }
 
 export interface AssignmentsListOptions {
-  status?: "pending" | "completed" | "expired" | "cancelled";
+  /** Sidecar filters by completion, not a status enum. "Pending" ⇒ completed:false. */
+  completed?: boolean;
   limit?: number;
 }
 
@@ -149,7 +152,7 @@ export async function getAssignments(
   options?: AssignmentsListOptions,
 ): Promise<Assignment[]> {
   const qs = new URLSearchParams({ patient_id: patientId });
-  if (options?.status) qs.set("status", options.status);
+  if (options?.completed !== undefined) qs.set("completed", String(options.completed));
   if (options?.limit) qs.set("limit", String(options.limit));
   const data = await request<{ assignments?: Assignment[] } | Assignment[]>(
     `/api/assessments/assignments?${qs.toString()}`,
