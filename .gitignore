@@ -61,3 +61,7 @@ cc-prompt.txt
 screenshots/
 playwright-report/
 test-results/
+
+# Throwaway CC prompt files and CLI temp
+cc-*.txt
+supabase/.temp/
