@@ -18,6 +18,13 @@ interface CssrsFormProps {
 
 const EMPTY: CssrsItemResponse = { answered: false };
 
+// Item ids are "item1".."item6"; surface the human number in messages
+// (e.g. "item1" -> "1") rather than the raw id.
+function itemNumber(id: string): string {
+  const match = id.match(/\d+/);
+  return match ? match[0] : id;
+}
+
 export default function CssrsForm({
   projection,
   onSubmit,
@@ -56,7 +63,13 @@ export default function CssrsForm({
       for (const it of projection.items) {
         const r = responses[it.id];
         if (!r) {
-          setValidationError(`Please answer item ${it.id} before submitting.`);
+          setValidationError(`Please answer item ${itemNumber(it.id)} before submitting.`);
+          return;
+        }
+        // Answered "Yes" requires at least one timeframe column. The sidecar
+        // rejects answered-without-a-timeframe with a 400, so block it here.
+        if (r.answered && !r.lifetime && !r.pastMonth) {
+          setValidationError(`Select Lifetime and/or Past month for item ${itemNumber(it.id)}.`);
           return;
         }
       }

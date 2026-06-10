@@ -89,7 +89,30 @@ describe("<CssrsForm />", () => {
     fireEvent.click(screen.getByTestId("cssrs-item2-no"));
 
     fireEvent.click(screen.getByRole("button", { name: /submit/i }));
-    expect(await screen.findByText(/please answer item item6/i)).toBeInTheDocument();
+    expect(await screen.findByText(/please answer item 6 before submitting/i)).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("requires Lifetime or Past month when an item is answered Yes", async () => {
+    const onSubmit = vi.fn();
+    render(<CssrsForm projection={CSSRS_PROJECTION} onSubmit={onSubmit} />);
+
+    // Answer item1 Yes but tick neither Lifetime nor Past month.
+    fireEvent.click(screen.getByTestId("cssrs-item1-yes"));
+    fireEvent.click(screen.getByTestId("cssrs-item2-no"));
+    fireEvent.click(screen.getByTestId("cssrs-item6-no"));
+
+    fireEvent.click(screen.getByRole("button", { name: /submit/i }));
+    expect(
+      await screen.findByText(/select lifetime and\/or past month for item 1/i),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    // Tick Past month — submit should now go through.
+    fireEvent.click(screen.getByTestId("cssrs-item1-past-month"));
+    fireEvent.click(screen.getByRole("button", { name: /submit/i }));
+    await Promise.resolve();
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 });
