@@ -35,7 +35,9 @@ const SAFETY_CHIP_CLASS =
 // drift on what counts as safety-critical.
 const SAFETY_FLAG_PATTERN = /critical|suicide|suicidal|self_harm|immediate|high_risk/i;
 
-function isSafetyFlag(flag: string): boolean {
+// Exported so AssessmentTrendView marks the same flags as safety-relevant —
+// one predicate, no drift between the list chips and the trend chart dots.
+export function isSafetyFlag(flag: string): boolean {
   return SAFETY_FLAG_PATTERN.test(flag);
 }
 
@@ -155,11 +157,12 @@ export default function AssessmentResultDisplay({
   const [detailError, setDetailError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
 
-  // One-shot fetch the first time the live (no-onViewTrend) card is expanded.
-  // Collapsing then re-expanding does not refetch — the guard ref makes this
-  // idempotent per card. Skipped entirely when onViewTrend owns the body.
+  // One-shot fetch the first time the card is expanded. Collapsing then
+  // re-expanding does not refetch — the guard ref makes this idempotent per
+  // card. The detail body always owns the expanded content; onViewTrend only
+  // adds a trend affordance, so it never suppresses this fetch.
   useEffect(() => {
-    if (!expanded || onViewTrend || hasFetchedRef.current) return;
+    if (!expanded || hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     const load = async () => {
       setDetailLoading(true);
@@ -172,7 +175,7 @@ export default function AssessmentResultDisplay({
       }
     };
     load();
-  }, [expanded, onViewTrend, summary.id]);
+  }, [expanded, summary.id]);
 
   const result = summary.result_summary ?? null;
   const score = result?.total_score ?? null;
@@ -231,7 +234,7 @@ export default function AssessmentResultDisplay({
 
       {expanded && (
         <div className="px-4 pb-4 border-t border-slate-200 dark:border-slate-800 pt-3 space-y-3">
-          {onViewTrend ? (
+          {onViewTrend && (
             <button
               type="button"
               onClick={() => onViewTrend(summary.scale_id)}
@@ -239,14 +242,13 @@ export default function AssessmentResultDisplay({
             >
               View trend →
             </button>
-          ) : (
-            <AssessmentDetailBody
-              administrationId={summary.id}
-              detail={detail}
-              loading={detailLoading}
-              error={detailError}
-            />
           )}
+          <AssessmentDetailBody
+            administrationId={summary.id}
+            detail={detail}
+            loading={detailLoading}
+            error={detailError}
+          />
         </div>
       )}
     </div>

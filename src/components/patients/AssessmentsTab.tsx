@@ -6,7 +6,7 @@
 // scale. Gated behind the ASSESSMENTS_V1 feature.
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, ClipboardCheck, Loader2, Plus, RefreshCw } from "lucide-react";
+import { AlertCircle, ClipboardCheck, Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { FeatureGate } from "@/components/FeatureGate";
 import {
   AssessmentsApiError,
@@ -18,6 +18,8 @@ import type { Assignment, AssessmentSummary } from "@/lib/assessments/types";
 import { scaleLabel } from "@/lib/assessments/scale-labels";
 import AdministerModal from "./assessments/AdministerModal";
 import AssessmentResultDisplay from "./assessments/AssessmentResultDisplay";
+import AssessmentTrendView from "./assessments/AssessmentTrendView";
+import AssignModal from "./assessments/AssignModal";
 
 interface AssessmentsTabProps {
   patientId: string;
@@ -36,6 +38,8 @@ function AssessmentsTabInner({ patientId }: AssessmentsTabProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAdministerModal, setShowAdministerModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [trendScaleId, setTrendScaleId] = useState<string | null>(null);
   const [deletingAssignmentId, setDeletingAssignmentId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -150,16 +154,27 @@ function AssessmentsTabInner({ patientId }: AssessmentsTabProps) {
             ) : (
               <div className="space-y-2">
                 {assessments.map((a) => (
-                  <AssessmentResultDisplay key={a.id} summary={a} />
+                  <AssessmentResultDisplay key={a.id} summary={a} onViewTrend={setTrendScaleId} />
                 ))}
               </div>
             )}
           </section>
 
           <section data-testid="pending-assignments">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground mb-3">
-              Pending assignments
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                Pending assignments
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAssignModal(true)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                data-testid="assign-new-btn"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Assign
+              </button>
+            </div>
             {assignments.length === 0 ? (
               <p className="text-sm text-muted-foreground italic">No pending assignments.</p>
             ) : (
@@ -204,6 +219,45 @@ function AssessmentsTabInner({ patientId }: AssessmentsTabProps) {
           loadData();
         }}
       />
+
+      <AssignModal
+        patientId={patientId}
+        open={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        onCreated={() => {
+          setShowAssignModal(false);
+          loadData();
+        }}
+      />
+
+      {trendScaleId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="trend-modal-title"
+          data-testid="trend-modal"
+        >
+          <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 shadow-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <h2 id="trend-modal-title" className="text-base font-bold text-foreground">
+                {scaleLabel(trendScaleId)} — Trend
+              </h2>
+              <button
+                type="button"
+                onClick={() => setTrendScaleId(null)}
+                aria-label="Close"
+                className="p-1 rounded-md hover:bg-muted/50 text-muted-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-6">
+              <AssessmentTrendView patientId={patientId} scaleId={trendScaleId} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
