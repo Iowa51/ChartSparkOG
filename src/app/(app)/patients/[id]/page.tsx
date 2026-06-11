@@ -21,6 +21,7 @@ import {
   ClipboardCheck,
   Heart,
   Brain,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -31,6 +32,7 @@ import WeightTrendChart from "@/components/vitals/WeightTrendChart";
 import ScreeningTrendChart from "@/components/vitals/ScreeningTrendChart";
 import SmartTriagePanel from "@/components/smart-triage/SmartTriagePanel";
 import PatientDocuments from "@/components/patients/PatientDocuments";
+import PortalInviteDialog from "@/components/patients/PortalInviteDialog";
 import { formatEncounterType } from "@/lib/utils/encounter-type";
 
 // Lazy-loaded — defers loading the assessments client + sidecar projection cache
@@ -153,6 +155,7 @@ export default function PatientDetailPage() {
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [portalInviteOpen, setPortalInviteOpen] = useState(false);
   const initialTabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState<TabId>(
     isValidTab(initialTabParam) ? initialTabParam : "overview",
@@ -376,6 +379,14 @@ export default function PatientDetailPage() {
                 </div>
               </div>
               <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPortalInviteOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-primary/30 text-primary rounded-xl text-sm font-bold shadow-sm hover:bg-primary/10 transition-all"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Send Portal Invite
+                </button>
                 <Link
                   href={`/notes/new?patientId=${patient.id}&mode=ambient`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-primary/30 text-primary rounded-xl text-sm font-bold shadow-sm hover:bg-primary/10 transition-all"
@@ -394,6 +405,13 @@ export default function PatientDetailPage() {
             </div>
           </div>
         </Card>
+
+        <PortalInviteDialog
+          patientId={patient.id}
+          patientEmail={patient.email ?? null}
+          open={portalInviteOpen}
+          onClose={() => setPortalInviteOpen(false)}
+        />
 
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
