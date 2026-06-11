@@ -10,10 +10,11 @@ import {
   RefreshCw,
   Copy,
   Check,
+  ChevronDown,
+  ChevronRight,
   Download,
   Send,
   Mic,
-  MicOff,
   FileText,
   Clock,
   Calendar,
@@ -30,7 +31,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { getTemplateById, getDefaultTemplate, templates } from "@/lib/demo-data/templates";
-import { generateDemoNote, demoTranscript } from "@/lib/demo-data/notes";
+import { demoTranscript } from "@/lib/demo-data/notes";
+import AmbientRecorder, { type ScribeResult } from "@/components/scribe/AmbientRecorder";
 import { getCodeInfo } from "@/lib/billing/code-library";
 import { quickSuggestCodes } from "@/lib/billing/code-analyzer";
 import { useToast } from "@/components/ui/toast";
@@ -82,13 +84,13 @@ interface NewNoteFormProps {
   // clinician sees a sign instead of walking into the wall.
   isReadonly?: boolean;
   pilotReadonlyUntil?: string | null;
-  pilotPhase?: 'not_pilot' | 'active' | 'readonly' | 'locked';
+  pilotPhase?: "not_pilot" | "active" | "readonly" | "locked";
 }
 
 export default function NewNoteForm({
   isReadonly = false,
   pilotReadonlyUntil = null,
-  pilotPhase = 'not_pilot',
+  pilotPhase = "not_pilot",
 }: NewNoteFormProps = {}) {
   const toast = useToast();
   const searchParams = useSearchParams();
@@ -97,6 +99,7 @@ export default function NewNoteForm({
   const editId = searchParams.get("edit"); // Get the note ID being edited
   const patientId = searchParams.get("patientId"); // Get patient ID from URL
   const encounterId = searchParams.get("encounterId"); // Get encounter ID from URL
+  const entryMode = searchParams.get("mode"); // "ambient" opens with the recorder active
   const template = getTemplateById(templateId) || getDefaultTemplate();
 
   // Fetch patient data based on patientId from URL
@@ -219,8 +222,6 @@ export default function NewNoteForm({
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isRecordingVisible, setIsRecordingVisible] = useState(true);
   const [showTranscript, setShowTranscript] = useState(true);
   const [autoSaved, setAutoSaved] = useState<string | null>(null);
   const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
@@ -232,24 +233,19 @@ export default function NewNoteForm({
   const [loadingTriage, setLoadingTriage] = useState(false);
   const [savedNoteId, setSavedNoteId] = useState<string | null>(null);
 
-  // Scribe state
+  // Scribe state — capture itself lives in <AmbientRecorder>; the form keeps
+  // only the returned transcript for the read-only panel.
   const [scribeTranscription, setScribeTranscription] = useState("");
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [hasRecording, setHasRecording] = useState(false);
-
-  // MediaRecorder-based recording state
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
-  const audioChunksRef = React.useRef<Blob[]>([]);
-  const audioBlobRef = React.useRef<Blob | null>(null);
-  const durationIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-  const mediaStreamRef = React.useRef<MediaStream | null>(null);
-  const mimeTypeRef = React.useRef<string>("audio/webm");
+  const [isTranscriptExpanded, setIsTranscriptExpanded] = useState(false);
+  // Conservative default: a scribe draft counts as ungrounded unless the
+  // server explicitly said patient context was injected (grounded === true).
+  const [scribeUngrounded, setScribeUngrounded] = useState(false);
 
   // State for clinician's manual notes/input
   const [clinicianInput, setClinicianInput] = useState("");
-  const [activeInputTab, setActiveInputTab] = useState<"scribe" | "phrases" | "manual">("phrases");
+  const [activeInputTab, setActiveInputTab] = useState<"scribe" | "phrases" | "manual">(
+    entryMode === "ambient" ? "scribe" : "phrases",
+  );
   const [selectedPhrases, setSelectedPhrases] = useState<Record<string, string[]>>({
     Subjective: [],
     Objective: [],
@@ -348,7 +344,9 @@ export default function NewNoteForm({
   // Normalize backend/demo-mode payloads into the SuggestedCode shape. Handles
   // the legacy string[] shape emitted by demo paths that call quickSuggestCodes
   // directly, as well as the enriched shape from /api/ai/generate-note.
-  const normalizeSuggestedCodes = (raw: any): {
+  const normalizeSuggestedCodes = (
+    raw: any,
+  ): {
     cpt: SuggestedCode[];
     icd10: SuggestedCode[];
   } => {
@@ -357,7 +355,9 @@ export default function NewNoteForm({
       return arr
         .map((item) => {
           const rawCode = typeof item === "string" ? item : item?.code;
-          const code = String(rawCode ?? "").trim().toUpperCase();
+          const code = String(rawCode ?? "")
+            .trim()
+            .toUpperCase();
           if (!code) return null;
           if (typeof item === "string") {
             return {
@@ -368,8 +368,7 @@ export default function NewNoteForm({
           }
           return {
             code,
-            description:
-              item.description || getCodeInfo(code)?.title || code,
+            description: item.description || getCodeInfo(code)?.title || code,
             source: (item.source as CodeSource) || "clinician_input",
           };
         })
@@ -383,10 +382,7 @@ export default function NewNoteForm({
 
   // Badge metadata for each code source — colors + labels chosen for a11y
   // contrast in both themes and to align with existing chip palette.
-  const codeSourceStyles: Record<
-    CodeSource,
-    { label: string; chipClasses: string }
-  > = {
+  const codeSourceStyles: Record<CodeSource, { label: string; chipClasses: string }> = {
     active_problem: {
       label: "From active problems",
       chipClasses:
@@ -674,7 +670,9 @@ export default function NewNoteForm({
       severityLabel = score >= 80 ? "Low Risk" : score >= 60 ? "Moderate Risk" : "High Risk";
     }
     lines.push(
-      severityLabel ? `Safety Score: ${score}/100 (${severityLabel})` : `Safety Score: ${score}/100`,
+      severityLabel
+        ? `Safety Score: ${score}/100 (${severityLabel})`
+        : `Safety Score: ${score}/100`,
     );
 
     // Drug-drug interactions
@@ -769,7 +767,7 @@ export default function NewNoteForm({
   const handleGenerateNote = async () => {
     if (isReadonly) return;
     const hasPhrases = Object.values(selectedPhrases).some((p) => p.length > 0);
-    if (!clinicianInput && !isRecording && demoTranscript.length === 0 && !hasPhrases) {
+    if (!clinicianInput && demoTranscript.length === 0 && !hasPhrases) {
       toast.warning(
         "No input provided",
         "Please add voice, typed notes, or phrases before generating a note.",
@@ -1017,6 +1015,50 @@ Prognosis: Favorable with continued treatment adherence.`;
     setSuggestedCodes(normalizeSuggestedCodes(demoNote.suggestedCodes));
   };
 
+  // Receives the transcribe-and-generate result from the ambient recorder:
+  // populate the editor sections (clinician can edit everything), keep the
+  // transcript for the read-only panel, and route suggested codes through
+  // the same normalize step as every other AI flow so the source badges
+  // render. Drafts only — signing stays in the existing manual workflow.
+  const handleScribeComplete = (result: ScribeResult) => {
+    setScribeUngrounded(result.grounded !== true);
+    if (result.transcript) {
+      setScribeTranscription(result.transcript);
+      setIsTranscriptExpanded(false);
+    }
+    if (result.sections) {
+      const updatedSections: Record<string, string> = { ...noteSections };
+      if (template.format === "soap") {
+        template.sections.forEach((s) => {
+          const label = s.label.toLowerCase();
+          if (label.includes("subjective"))
+            updatedSections[s.id] = result.sections.subjective || "";
+          else if (label.includes("objective"))
+            updatedSections[s.id] = result.sections.objective || "";
+          else if (label.includes("assessment"))
+            updatedSections[s.id] = result.sections.assessment || "";
+          else if (label.includes("plan")) updatedSections[s.id] = result.sections.plan || "";
+        });
+      } else {
+        updatedSections[template.sections[0].id] =
+          result.sections.content ||
+          [
+            result.sections.subjective,
+            result.sections.objective,
+            result.sections.assessment,
+            result.sections.plan,
+          ]
+            .filter(Boolean)
+            .join("\n\n");
+      }
+      setNoteSections(updatedSections);
+    }
+    if (result.suggestedCodes) {
+      setSuggestedCodes(normalizeSuggestedCodes(result.suggestedCodes));
+    }
+    setHasAIContent(true);
+  };
+
   // Auto-save simulation
   useEffect(() => {
     const hasContent = Object.values(noteSections).some((v) => v.length > 0);
@@ -1199,341 +1241,324 @@ Prognosis: Favorable with continued treatment adherence.`;
 
   return (
     <>
-    <fieldset
-      disabled={isReadonly}
-      aria-disabled={isReadonly}
-      className="flex flex-col h-screen overflow-hidden bg-background border-0 p-0 m-0"
-      style={{ minWidth: 0 }}
-    >
-      {isReadonly && (
-        <PilotReadonlyFormBanner
-          pilotReadonlyUntil={pilotReadonlyUntil}
-          pilotPhase={pilotPhase}
-        />
-      )}
-      {/* Top Navigation */}
-      <header className="flex-none flex items-center justify-between border-b border-border bg-card px-6 py-3 shadow-sm z-20">
-        <div className="flex items-center gap-4">
-          <Link
-            href={encounterId ? `/encounters/${encounterId}` : '/notes'}
-            className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div className="flex items-center gap-2 text-foreground">
-            <div className="h-6 w-6 text-primary">
-              <Sparkles className="h-6 w-6" />
+      <fieldset
+        disabled={isReadonly}
+        aria-disabled={isReadonly}
+        className="flex flex-col h-screen overflow-hidden bg-background border-0 p-0 m-0"
+        style={{ minWidth: 0 }}
+      >
+        {isReadonly && (
+          <PilotReadonlyFormBanner
+            pilotReadonlyUntil={pilotReadonlyUntil}
+            pilotPhase={pilotPhase}
+          />
+        )}
+        {/* Top Navigation */}
+        <header className="flex-none flex items-center justify-between border-b border-border bg-card px-6 py-3 shadow-sm z-20">
+          <div className="flex items-center gap-4">
+            <Link
+              href={encounterId ? `/encounters/${encounterId}` : "/notes"}
+              className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="flex items-center gap-2 text-foreground">
+              <div className="h-6 w-6 text-primary">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h2 className="text-lg font-bold leading-tight tracking-tight">ChartSpark</h2>
             </div>
-            <h2 className="text-lg font-bold leading-tight tracking-tight">ChartSpark</h2>
+            <span className="text-border">/</span>
+            <span className="text-sm font-medium text-muted-foreground">AI Scribe & Editor</span>
           </div>
-          <span className="text-border">/</span>
-          <span className="text-sm font-medium text-muted-foreground">AI Scribe & Editor</span>
-        </div>
 
-        <div className="flex items-center gap-3">
-          {autoSaved && (
-            <span className="text-xs text-muted-foreground italic mr-2 animate-pulse">
-              Auto-saved {autoSaved}
-            </span>
-          )}
-          <button
-            onClick={() => handleSaveNote(false)}
-            disabled={isSaving || isReadonly}
-            aria-disabled={isSaving || isReadonly}
-            className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save Draft"}
-          </button>
-          <button
-            onClick={() => handleSaveNote(true)}
-            disabled={isSaving || isReadonly}
-            aria-disabled={isSaving || isReadonly}
-            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-          >
-            <CheckCircle className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save & Finish"}
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-3">
+            {autoSaved && (
+              <span className="text-xs text-muted-foreground italic mr-2 animate-pulse">
+                Auto-saved {autoSaved}
+              </span>
+            )}
+            <button
+              onClick={() => handleSaveNote(false)}
+              disabled={isSaving || isReadonly}
+              aria-disabled={isSaving || isReadonly}
+              className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-medium text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? "Saving..." : "Save Draft"}
+            </button>
+            <button
+              onClick={() => handleSaveNote(true)}
+              disabled={isSaving || isReadonly}
+              aria-disabled={isSaving || isReadonly}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              <CheckCircle className="h-4 w-4" />
+              {isSaving ? "Saving..." : "Save & Finish"}
+            </button>
+          </div>
+        </header>
 
-      {/* Sub-header / Patient Info */}
-      {currentPatient ? (
-        <div className="flex-none bg-card border-b border-border">
-          <div className="max-w-[1700px] mx-auto px-6 py-4">
-            <div className="flex justify-between items-start gap-4">
-              {/* Left: Patient Identity */}
-              <div className="flex items-start gap-5 flex-1">
-                <div
-                  className={`h-16 w-16 rounded-2xl ${currentPatient.avatarColor} flex items-center justify-center font-bold text-2xl shrink-0`}
-                >
-                  {currentPatient.initials}
-                </div>
-                <div className="flex flex-col gap-2 flex-1">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                      {currentPatient.name}
-                    </h1>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
-                      {editId ? "Editing Note" : "New Note"}
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                        currentPatient.status === "Active"
-                          ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
-                      }`}
-                    >
-                      {currentPatient.status}
-                    </span>
+        {/* Sub-header / Patient Info */}
+        {currentPatient ? (
+          <div className="flex-none bg-card border-b border-border">
+            <div className="max-w-[1700px] mx-auto px-6 py-4">
+              <div className="flex justify-between items-start gap-4">
+                {/* Left: Patient Identity */}
+                <div className="flex items-start gap-5 flex-1">
+                  <div
+                    className={`h-16 w-16 rounded-2xl ${currentPatient.avatarColor} flex items-center justify-center font-bold text-2xl shrink-0`}
+                  >
+                    {currentPatient.initials}
                   </div>
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h1 className="text-2xl font-bold text-foreground tracking-tight">
+                        {currentPatient.name}
+                      </h1>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 uppercase tracking-wider">
+                        {editId ? "Editing Note" : "New Note"}
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          currentPatient.status === "Active"
+                            ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        {currentPatient.status}
+                      </span>
+                    </div>
 
-                  {/* Demographics Row */}
-                  <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      DOB: {currentPatient.dob}
-                    </span>
-                    <span>•</span>
-                    <span>{currentPatient.gender}</span>
-                    <span>•</span>
-                    <span className="font-semibold">{currentPatient.mrn}</span>
-                    {currentPatient.lastVisit !== "--" && (
-                      <>
-                        <span>•</span>
-                        <span>Last visit: {currentPatient.lastVisit}</span>
-                      </>
-                    )}
-                  </div>
+                    {/* Demographics Row */}
+                    <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5" />
+                        DOB: {currentPatient.dob}
+                      </span>
+                      <span>•</span>
+                      <span>{currentPatient.gender}</span>
+                      <span>•</span>
+                      <span className="font-semibold">{currentPatient.mrn}</span>
+                      {currentPatient.lastVisit !== "--" && (
+                        <>
+                          <span>•</span>
+                          <span>Last visit: {currentPatient.lastVisit}</span>
+                        </>
+                      )}
+                    </div>
 
-                  {/* Contact Info Row */}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                    <span className="flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5" />
-                      {currentPatient.phone}
-                    </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5" />
-                      {currentPatient.email}
-                    </span>
-                  </div>
+                    {/* Contact Info Row */}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5" />
+                        {currentPatient.phone}
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5" />
+                        {currentPatient.email}
+                      </span>
+                    </div>
 
-                  {/* Collapsible Details */}
-                  {showPatientInfo && (
-                    <div className="mt-2 pt-2 border-t border-border grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Allergies */}
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                            Allergies
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {currentPatient.allergies?.map((allergy: PatientAllergy, idx: number) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs rounded-md border border-amber-200 dark:border-amber-800"
-                            >
-                              {allergy.allergy}
-                              {allergy.reaction ? ` — ${allergy.reaction}` : ""}
-                              {allergy.severity ? ` (${allergy.severity})` : ""}
+                    {/* Collapsible Details */}
+                    {showPatientInfo && (
+                      <div className="mt-2 pt-2 border-t border-border grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Allergies */}
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                              Allergies
                             </span>
-                          )) || <span className="text-xs text-muted-foreground italic">None</span>}
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {currentPatient.allergies?.map(
+                              (allergy: PatientAllergy, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs rounded-md border border-amber-200 dark:border-amber-800"
+                                >
+                                  {allergy.allergy}
+                                  {allergy.reaction ? ` — ${allergy.reaction}` : ""}
+                                  {allergy.severity ? ` (${allergy.severity})` : ""}
+                                </span>
+                              ),
+                            ) || <span className="text-xs text-muted-foreground italic">None</span>}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Medications */}
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Pill className="h-3.5 w-3.5 text-blue-600" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                            Medications
-                          </span>
+                        {/* Medications */}
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Pill className="h-3.5 w-3.5 text-blue-600" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                              Medications
+                            </span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {currentPatient.medications?.length > 0 ? (
+                              currentPatient.medications.map(
+                                (med: PatientMedication, idx: number) => (
+                                  <div key={idx} className="text-xs text-foreground">
+                                    • {med.medication}
+                                    {med.dosage ? ` ${med.dosage}` : ""}
+                                    {med.frequency ? ` — ${med.frequency}` : ""}
+                                  </div>
+                                ),
+                              )
+                            ) : (
+                              <div className="text-xs text-muted-foreground italic">None</div>
+                            )}
+                          </div>
                         </div>
-                        <div className="space-y-0.5">
-                          {currentPatient.medications?.length > 0 ? (
-                            currentPatient.medications.map(
-                              (med: PatientMedication, idx: number) => (
+
+                        {/* Active Problems */}
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <FileText className="h-3.5 w-3.5 text-primary" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                              Active Problems
+                            </span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {currentPatient.problems?.map(
+                              (problem: PatientProblem, idx: number) => (
                                 <div key={idx} className="text-xs text-foreground">
-                                  • {med.medication}
-                                  {med.dosage ? ` ${med.dosage}` : ""}
-                                  {med.frequency ? ` — ${med.frequency}` : ""}
+                                  • {problem.problem}
+                                  {problem.icd10_code ? ` (${problem.icd10_code})` : ""}
                                 </div>
                               ),
-                            )
-                          ) : (
-                            <div className="text-xs text-muted-foreground italic">None</div>
-                          )}
+                            ) || <div className="text-xs text-muted-foreground italic">None</div>}
+                          </div>
                         </div>
                       </div>
+                    )}
 
-                      {/* Active Problems */}
-                      <div>
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <FileText className="h-3.5 w-3.5 text-primary" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                            Active Problems
-                          </span>
-                        </div>
-                        <div className="space-y-0.5">
-                          {currentPatient.problems?.map((problem: PatientProblem, idx: number) => (
-                            <div key={idx} className="text-xs text-foreground">
-                              • {problem.problem}
-                              {problem.icd10_code ? ` (${problem.icd10_code})` : ""}
-                            </div>
-                          )) || <div className="text-xs text-muted-foreground italic">None</div>}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    {/* Toggle Button */}
+                    <button
+                      onClick={() => setShowPatientInfo(!showPatientInfo)}
+                      className="text-xs text-primary hover:text-primary/80 font-semibold mt-1 self-start transition-colors"
+                    >
+                      {showPatientInfo ? "▼ Show Less" : "▶ Show More Details"}
+                    </button>
+                  </div>
+                </div>
 
-                  {/* Toggle Button */}
-                  <button
-                    onClick={() => setShowPatientInfo(!showPatientInfo)}
-                    className="text-xs text-primary hover:text-primary/80 font-semibold mt-1 self-start transition-colors"
+                {/* Right: Template Selector */}
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs font-medium text-muted-foreground">Template:</span>
+                  <select
+                    value={template.id}
+                    onChange={(e) => {
+                      const patientParam = patientId ? `&patientId=${patientId}` : "";
+                      const editParam = editId ? `&edit=${editId}` : "";
+                      const newPath = `/notes/new?template=${e.target.value}${patientParam}${editParam}`;
+                      router.push(newPath);
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-muted text-foreground text-xs font-bold outline-none cursor-pointer border border-border hover:border-primary transition-colors"
                   >
-                    {showPatientInfo ? "▼ Show Less" : "▶ Show More Details"}
-                  </button>
+                    {templates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
-
-              {/* Right: Template Selector */}
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-xs font-medium text-muted-foreground">Template:</span>
-                <select
-                  value={template.id}
-                  onChange={(e) => {
-                    const patientParam = patientId ? `&patientId=${patientId}` : "";
-                    const editParam = editId ? `&edit=${editId}` : "";
-                    const newPath = `/notes/new?template=${e.target.value}${patientParam}${editParam}`;
-                    router.push(newPath);
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-muted text-foreground text-xs font-bold outline-none cursor-pointer border border-border hover:border-primary transition-colors"
+            </div>
+          </div>
+        ) : (
+          <div className="flex-none bg-card border-b border-border px-6 py-4">
+            <div className="max-w-[1700px] mx-auto">
+              <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                    No Patient Selected
+                  </p>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                    Patient information will be added when you select a patient or complete the
+                    encounter.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPatientPickerOpen(true)}
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors shrink-0"
                 >
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                  Select Patient
+                </button>
               </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="flex-none bg-card border-b border-border px-6 py-4">
-          <div className="max-w-[1700px] mx-auto">
-            <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                  No Patient Selected
-                </p>
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                  Patient information will be added when you select a patient or complete the
-                  encounter.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsPatientPickerOpen(true)}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors shrink-0"
-              >
-                Select Patient
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Workspace */}
-      <main className="flex-1 overflow-hidden flex bg-slate-50/30 dark:bg-slate-950/30">
-        <div className="w-full max-w-[1700px] mx-auto h-full flex flex-col md:flex-row gap-6 p-4 md:p-6 overflow-hidden">
-          {/* Left Pane: Transcript & Input Hub */}
-          {showTranscript && (
-            <aside className="flex flex-col w-full md:w-[420px] lg:w-[500px] gap-6 shrink-0 flex-none h-full overflow-y-auto">
-              {/* Input Clinical Hub */}
-              <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-visible shrink-0 transition-all duration-500">
-                <div className="px-5 py-3 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => setActiveInputTab("phrases")}
-                      className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "phrases" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
-                    >
-                      Phrases
-                    </button>
-                    <button
-                      onClick={() => setActiveInputTab("manual")}
-                      className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "manual" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
-                    >
-                      Manual
-                    </button>
-                    <button
-                      onClick={() => setActiveInputTab("scribe")}
-                      className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "scribe" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
-                    >
-                      Scribe
-                    </button>
+        {/* Main Workspace */}
+        <main className="flex-1 overflow-hidden flex bg-slate-50/30 dark:bg-slate-950/30">
+          <div className="w-full max-w-[1700px] mx-auto h-full flex flex-col md:flex-row gap-6 p-4 md:p-6 overflow-hidden">
+            {/* Left Pane: Transcript & Input Hub */}
+            {showTranscript && (
+              <aside className="flex flex-col w-full md:w-[420px] lg:w-[500px] gap-6 shrink-0 flex-none h-full overflow-y-auto">
+                {/* Input Clinical Hub */}
+                <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-visible shrink-0 transition-all duration-500">
+                  <div className="px-5 py-3 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setActiveInputTab("phrases")}
+                        className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "phrases" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
+                      >
+                        Phrases
+                      </button>
+                      <button
+                        onClick={() => setActiveInputTab("manual")}
+                        className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "manual" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
+                      >
+                        Manual
+                      </button>
+                      <button
+                        onClick={() => setActiveInputTab("scribe")}
+                        className={`text-[10px] font-black uppercase tracking-widest transition-all ${activeInputTab === "scribe" ? "text-primary border-b-2 border-primary" : "text-muted-foreground opacity-50 hover:opacity-100"}`}
+                      >
+                        Scribe
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setShowTranscript(false)}
+                        className="group p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all flex items-center gap-2"
+                        title="Collapse Sidebar"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setShowTranscript(false)}
-                      className="group p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all flex items-center gap-2"
-                      title="Collapse Sidebar"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
 
-                <div className="p-5 flex-1 overflow-y-auto">
-                  {activeInputTab === "phrases" && (
-                    <div className="space-y-6 animate-in fade-in duration-300">
-                      {Object.entries(PREBUILT_PHRASES).map(([section, phrases]) => (
-                        <div key={section} className="space-y-3">
-                          <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center justify-between">
-                            {section}
-                            <button
-                              onClick={() => {
-                                setNewPhrase("");
-                                setPhraseCategory(
-                                  section as "Subjective" | "Objective" | "Assessment" | "Plan",
-                                );
-                                setShowPhraseModal(true);
-                              }}
-                              className="text-primary hover:underline lowercase font-bold"
-                            >
-                              + custom
-                            </button>
-                          </h4>
-                          <div className="grid grid-cols-1 gap-2">
-                            {/* System phrases */}
-                            {phrases.map((phrase) => (
+                  <div className="p-5 flex-1 overflow-y-auto">
+                    {activeInputTab === "phrases" && (
+                      <div className="space-y-6 animate-in fade-in duration-300">
+                        {Object.entries(PREBUILT_PHRASES).map(([section, phrases]) => (
+                          <div key={section} className="space-y-3">
+                            <h4 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center justify-between">
+                              {section}
                               <button
-                                key={phrase}
                                 onClick={() => {
-                                  setSelectedPhrases((prev) => ({
-                                    ...prev,
-                                    [section]: prev[section].includes(phrase)
-                                      ? prev[section].filter((p) => p !== phrase)
-                                      : [...prev[section], phrase],
-                                  }));
+                                  setNewPhrase("");
+                                  setPhraseCategory(
+                                    section as "Subjective" | "Objective" | "Assessment" | "Plan",
+                                  );
+                                  setShowPhraseModal(true);
                                 }}
-                                className={`text-left p-2.5 rounded-xl border text-[11px] font-medium transition-all ${
-                                  selectedPhrases[section].includes(phrase)
-                                    ? "bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.02]"
-                                    : "bg-muted/30 border-border text-foreground/70 hover:border-primary/30"
-                                }`}
+                                className="text-primary hover:underline lowercase font-bold"
                               >
-                                {phrase}
+                                + custom
                               </button>
-                            ))}
-                            {/* Custom phrases with delete */}
-                            {(customPhrases[section] || []).map((phrase) => (
-                              <div key={phrase} className="flex gap-1">
+                            </h4>
+                            <div className="grid grid-cols-1 gap-2">
+                              {/* System phrases */}
+                              {phrases.map((phrase) => (
                                 <button
+                                  key={phrase}
                                   onClick={() => {
                                     setSelectedPhrases((prev) => ({
                                       ...prev,
@@ -1542,1027 +1567,794 @@ Prognosis: Favorable with continued treatment adherence.`;
                                         : [...prev[section], phrase],
                                     }));
                                   }}
-                                  className={`flex-1 text-left p-2.5 rounded-xl border text-[11px] font-medium transition-all ${
+                                  className={`text-left p-2.5 rounded-xl border text-[11px] font-medium transition-all ${
                                     selectedPhrases[section].includes(phrase)
-                                      ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
-                                      : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-foreground/70 hover:border-primary/30"
+                                      ? "bg-primary text-white border-primary shadow-md shadow-primary/20 scale-[1.02]"
+                                      : "bg-muted/30 border-border text-foreground/70 hover:border-primary/30"
                                   }`}
                                 >
                                   {phrase}
                                 </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    // Delete custom phrase
-                                    const updated = {
-                                      ...customPhrases,
-                                      [section]: (customPhrases[section] || []).filter(
-                                        (p) => p !== phrase,
-                                      ),
-                                    };
-                                    setCustomPhrases(updated);
-                                    localStorage.setItem("customPhrases", JSON.stringify(updated));
-                                    // Also remove from selected if it was selected
-                                    setSelectedPhrases((prev) => ({
-                                      ...prev,
-                                      [section]: prev[section].filter((p) => p !== phrase),
-                                    }));
-                                  }}
-                                  className="px-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
-                                  title="Delete custom phrase"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ))}
+                              ))}
+                              {/* Custom phrases with delete */}
+                              {(customPhrases[section] || []).map((phrase) => (
+                                <div key={phrase} className="flex gap-1">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPhrases((prev) => ({
+                                        ...prev,
+                                        [section]: prev[section].includes(phrase)
+                                          ? prev[section].filter((p) => p !== phrase)
+                                          : [...prev[section], phrase],
+                                      }));
+                                    }}
+                                    className={`flex-1 text-left p-2.5 rounded-xl border text-[11px] font-medium transition-all ${
+                                      selectedPhrases[section].includes(phrase)
+                                        ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
+                                        : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-foreground/70 hover:border-primary/30"
+                                    }`}
+                                  >
+                                    {phrase}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      // Delete custom phrase
+                                      const updated = {
+                                        ...customPhrases,
+                                        [section]: (customPhrases[section] || []).filter(
+                                          (p) => p !== phrase,
+                                        ),
+                                      };
+                                      setCustomPhrases(updated);
+                                      localStorage.setItem(
+                                        "customPhrases",
+                                        JSON.stringify(updated),
+                                      );
+                                      // Also remove from selected if it was selected
+                                      setSelectedPhrases((prev) => ({
+                                        ...prev,
+                                        [section]: prev[section].filter((p) => p !== phrase),
+                                      }));
+                                    }}
+                                    className="px-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all"
+                                    title="Delete custom phrase"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
 
-                  {activeInputTab === "scribe" && (
-                    <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
-                            AI Voice Scribe
-                          </label>
-                          {isRecording && (
-                            <span className="text-xs font-mono text-red-500 flex items-center gap-1.5">
-                              <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                              {Math.floor(recordingDuration / 60)}:
-                              {String(recordingDuration % 60).padStart(2, "0")}
+                    {activeInputTab === "scribe" && (
+                      <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
+                        <AmbientRecorder
+                          patientId={currentPatient?.id || patientId}
+                          templateFormat={template.format}
+                          selectedPhrases={selectedPhrases}
+                          onComplete={handleScribeComplete}
+                        />
+
+                        {!currentPatient && (
+                          <p className="text-[10px] font-medium text-muted-foreground">
+                            Select a patient first so the dictated note saves to the right chart.
+                          </p>
+                        )}
+
+                        {/* Collapsible read-only transcript */}
+                        {scribeTranscription && (
+                          <div className="border border-border rounded-xl overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => setIsTranscriptExpanded((prev) => !prev)}
+                              aria-expanded={isTranscriptExpanded}
+                              className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors"
+                            >
+                              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                Transcript (read-only)
+                              </span>
+                              {isTranscriptExpanded ? (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </button>
+                            {isTranscriptExpanded && (
+                              <p
+                                data-testid="scribe-transcript"
+                                className="px-4 py-3 text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto"
+                              >
+                                {scribeTranscription}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeInputTab === "manual" && (
+                      <div className="space-y-4 animate-in fade-in duration-300">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                              Manual Note Entry
+                            </label>
+                            <span className="text-[9px] text-muted-foreground">
+                              {clinicianInput.length} characters
                             </span>
-                          )}
+                          </div>
+                          <textarea
+                            value={clinicianInput}
+                            onChange={(e) => {
+                              const expanded = expandDotPhrases(e.target.value);
+                              setClinicianInput(expanded);
+                            }}
+                            placeholder="Type your clinical observations here...
+
+Example: 45yo male, depression follow-up. Reports improved mood on current medication. Sleeping better, 7-8 hours. No side effects. Appetite normal. Denies SI/HI. Continue current treatment plan."
+                            className="w-full h-56 p-4 bg-muted/20 hover:bg-muted/30 rounded-2xl border border-border text-sm leading-relaxed focus:bg-card focus:ring-4 focus:ring-primary/5 transition-all resize-none outline-none font-medium"
+                          />
                         </div>
-
-                        {/* Recording Control Button */}
                         <button
-                          onClick={() => {
-                            if (isRecording) {
-                              // Stop recording
-                              if (
-                                mediaRecorderRef.current &&
-                                mediaRecorderRef.current.state !== "inactive"
-                              ) {
-                                mediaRecorderRef.current.stop();
-                              }
-                              // Stop all tracks to release microphone
-                              if (mediaStreamRef.current) {
-                                mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-                                mediaStreamRef.current = null;
-                              }
-                              // Clear duration interval
-                              if (durationIntervalRef.current) {
-                                clearInterval(durationIntervalRef.current);
-                                durationIntervalRef.current = null;
-                              }
-                              setIsRecording(false);
-                            } else {
-                              // Start recording with MediaRecorder
-                              navigator.mediaDevices
-                                .getUserMedia({ audio: true })
-                                .then((stream) => {
-                                  mediaStreamRef.current = stream;
-
-                                  // Pick best supported mimeType
-                                  const mimeTypes = ["audio/webm", "audio/ogg", "audio/mp4"];
-                                  let selectedMime = "";
-                                  for (const mime of mimeTypes) {
-                                    if (MediaRecorder.isTypeSupported(mime)) {
-                                      selectedMime = mime;
-                                      break;
-                                    }
-                                  }
-                                  mimeTypeRef.current = selectedMime || "audio/webm";
-
-                                  const recorder = new MediaRecorder(
-                                    stream,
-                                    selectedMime ? { mimeType: selectedMime } : undefined,
-                                  );
-                                  audioChunksRef.current = [];
-                                  audioBlobRef.current = null;
-
-                                  recorder.ondataavailable = (event) => {
-                                    if (event.data.size > 0) {
-                                      audioChunksRef.current.push(event.data);
-                                    }
-                                  };
-
-                                  recorder.onstop = () => {
-                                    // Assemble chunks into a single Blob
-                                    const blob = new Blob(audioChunksRef.current, {
-                                      type: mimeTypeRef.current,
-                                    });
-                                    audioBlobRef.current = blob;
-                                    setHasRecording(true);
-                                  };
-
-                                  mediaRecorderRef.current = recorder;
-                                  recorder.start(1000); // 1-second chunks
-
-                                  // Start duration counter
-                                  setRecordingDuration(0);
-                                  durationIntervalRef.current = setInterval(() => {
-                                    setRecordingDuration((prev) => prev + 1);
-                                  }, 1000);
-
-                                  setIsRecording(true);
-                                  setScribeTranscription("");
-                                })
-                                .catch((err) => {
-                                  if (process.env.NODE_ENV === "development")
-                                    console.error("[Scribe] Microphone access denied:", err);
-                                  toast.error(
-                                    "Microphone access denied",
-                                    "Allow microphone access in browser settings or use the Manual tab.",
-                                  );
-                                });
-                            }
-                          }}
-                          className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 ${
-                            isRecording
-                              ? "bg-red-500 text-white shadow-red-500/30 ring-4 ring-red-500/20"
-                              : "bg-slate-900 text-white hover:bg-slate-800 dark:bg-primary dark:hover:bg-primary/90 shadow-primary/20"
-                          }`}
+                          onClick={handleGenerateNote}
+                          disabled={isGenerating || !clinicianInput.trim()}
+                          className="w-full py-3.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         >
-                          {isRecording ? (
+                          {isGenerating ? (
                             <>
-                              <MicOff className="h-4 w-4" />
-                              Stop Recording
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                              Generating Note...
                             </>
                           ) : (
                             <>
-                              <Mic className="h-4 w-4" />
-                              Start AI Scribe
+                              <Sparkles className="h-4 w-4" />
+                              Generate Note with AI
                             </>
                           )}
                         </button>
-
-                        {/* Audio ready indicator */}
-                        {!isRecording && audioBlobRef.current && !scribeTranscription && (
-                          <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
-                            <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                              Audio ready — tap Generate to transcribe and create note
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Transcription Area */}
-                        {(hasRecording || scribeTranscription) && (
-                          <div className="space-y-3 pt-2">
-                            <div className="flex items-center justify-between">
-                              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                Transcription
-                              </label>
-                              <button
-                                onClick={() => {
-                                  setScribeTranscription("");
-                                  setHasRecording(false);
-                                  audioBlobRef.current = null;
-                                  audioChunksRef.current = [];
-                                }}
-                                className="text-[9px] text-muted-foreground hover:text-red-500 font-bold uppercase"
-                              >
-                                Clear
-                              </button>
-                            </div>
-                            <textarea
-                              value={scribeTranscription}
-                              onChange={(e) => setScribeTranscription(e.target.value)}
-                              placeholder="Transcription will appear here after processing..."
-                              className="w-full h-32 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
-                            />
-                            <button
-                              onClick={async () => {
-                                if (audioBlobRef.current) {
-                                  // Send audio to server for transcription + note generation
-                                  setIsTranscribing(true);
-                                  try {
-                                    const formData = new FormData();
-                                    const ext = mimeTypeRef.current.includes("ogg")
-                                      ? "ogg"
-                                      : mimeTypeRef.current.includes("mp4")
-                                        ? "mp4"
-                                        : "webm";
-                                    formData.append(
-                                      "audio",
-                                      audioBlobRef.current,
-                                      `recording.${ext}`,
-                                    );
-                                    formData.append("templateFormat", "soap");
-                                    if (Object.values(selectedPhrases).some((p) => p.length > 0)) {
-                                      formData.append(
-                                        "selectedPhrases",
-                                        JSON.stringify(selectedPhrases),
-                                      );
-                                    }
-                                    if (patientId) {
-                                      formData.append("patientId", patientId);
-                                    }
-
-                                    const response = await fetch(
-                                      "/api/ai/transcribe-and-generate",
-                                      {
-                                        method: "POST",
-                                        body: formData,
-                                      },
-                                    );
-
-                                    if (!response.ok) {
-                                      throw new Error("Transcription request failed");
-                                    }
-
-                                    const data = await response.json();
-
-                                    // Show transcription
-                                    if (data.transcript) {
-                                      setScribeTranscription(data.transcript);
-                                    }
-
-                                    // Populate note sections
-                                    if (data.sections) {
-                                      let updatedSections: Record<string, string> = {
-                                        ...noteSections,
-                                      };
-                                      if (template.format === "soap") {
-                                        template.sections.forEach((s) => {
-                                          const label = s.label.toLowerCase();
-                                          if (label.includes("subjective"))
-                                            updatedSections[s.id] = data.sections.subjective || "";
-                                          else if (label.includes("objective"))
-                                            updatedSections[s.id] = data.sections.objective || "";
-                                          else if (label.includes("assessment"))
-                                            updatedSections[s.id] = data.sections.assessment || "";
-                                          else if (label.includes("plan"))
-                                            updatedSections[s.id] = data.sections.plan || "";
-                                        });
-                                      } else {
-                                        updatedSections[template.sections[0].id] =
-                                          data.sections.content ||
-                                          `${data.sections.subjective}\n\n${data.sections.objective}\n\n${data.sections.assessment}\n\n${data.sections.plan}`;
-                                      }
-                                      setNoteSections(updatedSections);
-                                    }
-
-                                    // Populate suggested codes
-                                    if (data.suggestedCodes) {
-                                      setSuggestedCodes(normalizeSuggestedCodes(data.suggestedCodes));
-                                    }
-
-                                    // Free memory
-                                    audioBlobRef.current = null;
-                                    audioChunksRef.current = [];
-                                  } catch (error) {
-                                    console.error("Transcription error:", error);
-                                    // Demo mode fallback: use demo transcript + generate demo note
-                                    const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-                                    if (isDemoMode) {
-                                      // Convert demo transcript array to readable text
-                                      const demoText = demoTranscript
-                                        .map((t) => `[${t.speaker}] ${t.text}`)
-                                        .join("\n");
-                                      setScribeTranscription(demoText);
-                                      const demoNote = generateDemoNote(templateId);
-                                      if (demoNote) {
-                                        let updatedSections: Record<string, string> = {
-                                          ...noteSections,
-                                        };
-                                        if (template.format === "soap") {
-                                          template.sections.forEach((s) => {
-                                            const label = s.label.toLowerCase();
-                                            if (label.includes("subjective"))
-                                              updatedSections[s.id] = demoNote.subjective || "";
-                                            else if (label.includes("objective"))
-                                              updatedSections[s.id] = demoNote.objective || "";
-                                            else if (label.includes("assessment"))
-                                              updatedSections[s.id] = demoNote.assessment || "";
-                                            else if (label.includes("plan"))
-                                              updatedSections[s.id] = demoNote.plan || "";
-                                          });
-                                        }
-                                        setNoteSections(updatedSections);
-                                      }
-                                      if (demoNote?.suggestedCodes)
-                                        setSuggestedCodes(normalizeSuggestedCodes(demoNote.suggestedCodes));
-                                      audioBlobRef.current = null;
-                                      audioChunksRef.current = [];
-                                    } else {
-                                      toast.error(
-                                        "Transcription failed",
-                                        "Please try again or switch to the Manual tab.",
-                                      );
-                                    }
-                                  } finally {
-                                    setIsTranscribing(false);
-                                  }
-                                } else if (scribeTranscription.trim()) {
-                                  // Text-only: use existing generate flow
-                                  setClinicianInput(scribeTranscription);
-                                  handleGenerateNote();
-                                }
-                              }}
-                              disabled={
-                                isGenerating ||
-                                isTranscribing ||
-                                (!hasRecording && !scribeTranscription.trim())
-                              }
-                              className="w-full py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {isTranscribing ? (
-                                <>
-                                  <RefreshCw className="h-4 w-4 animate-spin" />
-                                  Processing audio...
-                                </>
-                              ) : isGenerating ? (
-                                <>
-                                  <RefreshCw className="h-4 w-4 animate-spin" />
-                                  Generating...
-                                </>
-                              ) : (
-                                <>
-                                  <Sparkles className="h-4 w-4" />
-                                  {hasRecording
-                                    ? "Transcribe & Generate Note"
-                                    : "Generate Note from Transcription"}
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
-                  {activeInputTab === "manual" && (
-                    <div className="space-y-4 animate-in fade-in duration-300">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
-                            Manual Note Entry
-                          </label>
-                          <span className="text-[9px] text-muted-foreground">
-                            {clinicianInput.length} characters
-                          </span>
-                        </div>
-                        <textarea
-                          value={clinicianInput}
-                          onChange={(e) => {
-                            const expanded = expandDotPhrases(e.target.value);
-                            setClinicianInput(expanded);
-                          }}
-                          placeholder="Type your clinical observations here...
-
-Example: 45yo male, depression follow-up. Reports improved mood on current medication. Sleeping better, 7-8 hours. No side effects. Appetite normal. Denies SI/HI. Continue current treatment plan."
-                          className="w-full h-56 p-4 bg-muted/20 hover:bg-muted/30 rounded-2xl border border-border text-sm leading-relaxed focus:bg-card focus:ring-4 focus:ring-primary/5 transition-all resize-none outline-none font-medium"
-                        />
+                  {/* Selected Phrases Summary / Editable Area */}
+                  {activeInputTab === "phrases" && (
+                    <div className="p-5 bg-primary/5 border-t border-primary/10 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-[10px] font-black text-primary uppercase tracking-widest">
+                          Selected Phrases Context (Editable)
+                        </h5>
+                        <button
+                          onClick={() =>
+                            setSelectedPhrases({
+                              Subjective: [],
+                              Objective: [],
+                              Assessment: [],
+                              Plan: [],
+                            })
+                          }
+                          className="text-[9px] font-bold text-muted-foreground hover:text-red-500 uppercase"
+                        >
+                          Clear All
+                        </button>
                       </div>
+                      <textarea
+                        value={Object.entries(selectedPhrases)
+                          .filter(([_, ps]) => ps.length > 0)
+                          .map(([s, ps]) => `${s}: ${ps.join(", ")}`)
+                          .join("\n")}
+                        onChange={(e) => {
+                          // This is tricky because it's derived state.
+                          // For the demo, we'll let them edit 'clinicianInput' instead if they want full custom text,
+                          // or we can just make this a read-only preview and the AI button is below it.
+                          // BUT the user asked for EDITABLE.
+                          // I'll use clinicianInput as the FINAL context.
+                          setClinicianInput(e.target.value);
+                        }}
+                        placeholder="Selected phrases will appear here as context for the AI..."
+                        className="w-full h-32 p-3 bg-white dark:bg-slate-900 border border-primary/20 rounded-xl text-xs font-medium leading-relaxed focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+                      />
                       <button
                         onClick={handleGenerateNote}
-                        disabled={isGenerating || !clinicianInput.trim()}
-                        className="w-full py-3.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                        disabled={isGenerating}
+                        className="w-full py-3 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:-translate-y-0.5 transition-all"
                       >
-                        {isGenerating ? (
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Generate Full Note with AI
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Smart Triage Toggle */}
+                {currentPatient && (
+                  <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0">
+                    <div className="px-5 py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                          <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-foreground leading-tight">
+                            Medication Safety
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Include Smart Triage summary in note
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setIncludeTriageSummary(!includeTriageSummary)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${includeTriageSummary ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`}
+                      >
+                        <span
+                          className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform ${includeTriageSummary ? "translate-x-4" : "translate-x-1"}`}
+                        />
+                      </button>
+                    </div>
+                    {loadingTriage && (
+                      <div className="px-5 pb-3">
+                        <div className="flex items-center gap-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          Fetching medication triage...
+                        </div>
+                      </div>
+                    )}
+                    {triageSummary && !loadingTriage && (
+                      <div className="px-5 pb-3">
+                        <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          <CheckCircle className="h-3 w-3" />
+                          Triage data loaded — will be added to Assessment
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Transcript Content */}
+                <div className="flex-1 flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+                  <div className="px-5 py-3 border-b border-border bg-card flex items-center justify-between sticky top-0 z-10">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2 uppercase tracking-widest">
+                      <FileText className="h-4 w-4 text-primary" />
+                      Transcript Preview
+                    </h3>
+                    <button className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all">
+                      <Download className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-muted/10">
+                    {demoTranscript.length > 0 ? (
+                      demoTranscript.map((entry, index) => (
+                        <div
+                          key={index}
+                          className="group relative pl-4 border-l-2 border-transparent hover:border-primary/50 transition-all"
+                        >
+                          <div className="flex justify-between items-baseline mb-1.5">
+                            <span
+                              className={`text-[11px] font-black uppercase px-2.5 py-1 rounded tracking-widest ${
+                                entry.speaker === "NP"
+                                  ? "text-primary bg-primary/10"
+                                  : "text-muted-foreground bg-muted"
+                              }`}
+                            >
+                              {entry.speaker === "NP"
+                                ? providerLabel
+                                : (currentPatient?.name ?? "Patient")}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono">
+                              {entry.time}
+                            </span>
+                          </div>
+                          <p className="text-base text-foreground/80 leading-relaxed italic">
+                            "{entry.text}"
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
+                        <div className="p-4 bg-muted rounded-full mb-4">
+                          <Mic className="h-8 w-8 opacity-20" />
+                        </div>
+                        <p className="text-sm font-medium">No recording transcript yet.</p>
+                        <p className="text-xs opacity-60 mt-1">
+                          Start voice scribe to see live transcription.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </aside>
+            )}
+
+            {/* Right Pane: Note Editor */}
+            <section className="flex flex-col flex-1 h-full overflow-hidden min-w-0">
+              <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border pr-2 pb-24 space-y-6">
+                {hasAIContent && (
+                  <div
+                    role="alert"
+                    aria-live="polite"
+                    className="flex gap-3 items-start rounded-2xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600 px-5 py-4 shadow-sm"
+                  >
+                    <AlertTriangle
+                      aria-hidden="true"
+                      className="h-6 w-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+                    />
+                    <div className="flex-1 text-sm text-amber-900 dark:text-amber-100">
+                      <p className="font-bold uppercase tracking-wide">
+                        AI-generated content — Review carefully before signing
+                      </p>
+                      <p className="mt-1 leading-relaxed font-medium">
+                        This note was drafted by AI from your clinical observations. Verify all
+                        medications, vitals, diagnoses, and clinical facts reflect the patient
+                        accurately before saving. AI can make errors.
+                      </p>
+                      {scribeUngrounded && (
+                        <p
+                          className="mt-1 leading-relaxed font-medium"
+                          data-testid="scribe-ungrounded-warning"
+                        >
+                          This dictated draft was generated without patient chart context —
+                          medications, allergies, and active problems were not available to ground
+                          it. Select a patient before recording to enable grounding.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {/* Dynamic Note Container */}
+                <div className="bg-card rounded-2xl border border-border shadow-md overflow-hidden ring-1 ring-border/5">
+                  <div className="px-8 py-5 border-b border-border flex justify-between items-center bg-card sticky top-0 z-10">
+                    <div className="flex flex-col">
+                      <h2 className="text-lg font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
+                        <FileText className="h-5 w-5 text-primary" />
+                        {template.name}
+                      </h2>
+                      <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                        Note Format: {template.format.toUpperCase()}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleGenerateNote}
+                        disabled={isGenerating}
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary px-4 py-2 bg-primary/10 rounded-xl hover:bg-primary/20 transition-all"
+                      >
+                        <RefreshCw
+                          className={`h-3.5 w-3.5 ${isGenerating ? "animate-spin" : ""}`}
+                        />
+                        Re-Sync AI
+                      </button>
+                      <button
+                        onClick={copyFullNote}
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-4 py-2 hover:bg-muted border border-border rounded-xl transition-all"
+                      >
+                        {noteCopied ? (
                           <>
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            Generating Note...
+                            <Check className="h-3.5 w-3.5" />
+                            Copied!
                           </>
                         ) : (
                           <>
-                            <Sparkles className="h-4 w-4" />
-                            Generate Note with AI
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy
                           </>
                         )}
                       </button>
                     </div>
-                  )}
-                </div>
-
-                {/* Selected Phrases Summary / Editable Area */}
-                {activeInputTab === "phrases" && (
-                  <div className="p-5 bg-primary/5 border-t border-primary/10 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-[10px] font-black text-primary uppercase tracking-widest">
-                        Selected Phrases Context (Editable)
-                      </h5>
-                      <button
-                        onClick={() =>
-                          setSelectedPhrases({
-                            Subjective: [],
-                            Objective: [],
-                            Assessment: [],
-                            Plan: [],
-                          })
-                        }
-                        className="text-[9px] font-bold text-muted-foreground hover:text-red-500 uppercase"
-                      >
-                        Clear All
-                      </button>
-                    </div>
-                    <textarea
-                      value={Object.entries(selectedPhrases)
-                        .filter(([_, ps]) => ps.length > 0)
-                        .map(([s, ps]) => `${s}: ${ps.join(", ")}`)
-                        .join("\n")}
-                      onChange={(e) => {
-                        // This is tricky because it's derived state.
-                        // For the demo, we'll let them edit 'clinicianInput' instead if they want full custom text,
-                        // or we can just make this a read-only preview and the AI button is below it.
-                        // BUT the user asked for EDITABLE.
-                        // I'll use clinicianInput as the FINAL context.
-                        setClinicianInput(e.target.value);
-                      }}
-                      placeholder="Selected phrases will appear here as context for the AI..."
-                      className="w-full h-32 p-3 bg-white dark:bg-slate-900 border border-primary/20 rounded-xl text-xs font-medium leading-relaxed focus:ring-2 focus:ring-primary/10 transition-all resize-none"
-                    />
-                    <button
-                      onClick={handleGenerateNote}
-                      disabled={isGenerating}
-                      className="w-full py-3 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:-translate-y-0.5 transition-all"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Generate Full Note with AI
-                    </button>
                   </div>
-                )}
-              </div>
 
-              {/* Smart Triage Toggle */}
-              {currentPatient && (
-                <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden shrink-0">
-                  <div className="px-5 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                        <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-foreground leading-tight">
-                          Medication Safety
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          Include Smart Triage summary in note
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setIncludeTriageSummary(!includeTriageSummary)}
-                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${includeTriageSummary ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"}`}
-                    >
-                      <span
-                        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform ${includeTriageSummary ? "translate-x-4" : "translate-x-1"}`}
-                      />
-                    </button>
-                  </div>
-                  {loadingTriage && (
-                    <div className="px-5 pb-3">
-                      <div className="flex items-center gap-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                        <RefreshCw className="h-3 w-3 animate-spin" />
-                        Fetching medication triage...
-                      </div>
-                    </div>
-                  )}
-                  {triageSummary && !loadingTriage && (
-                    <div className="px-5 pb-3">
-                      <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                        <CheckCircle className="h-3 w-3" />
-                        Triage data loaded — will be added to Assessment
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Transcript Content */}
-              <div className="flex-1 flex flex-col bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-                <div className="px-5 py-3 border-b border-border bg-card flex items-center justify-between sticky top-0 z-10">
-                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2 uppercase tracking-widest">
-                    <FileText className="h-4 w-4 text-primary" />
-                    Transcript Preview
-                  </h3>
-                  <button className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground transition-all">
-                    <Download className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-muted/10">
-                  {demoTranscript.length > 0 ? (
-                    demoTranscript.map((entry, index) => (
-                      <div
-                        key={index}
-                        className="group relative pl-4 border-l-2 border-transparent hover:border-primary/50 transition-all"
-                      >
-                        <div className="flex justify-between items-baseline mb-1.5">
-                          <span
-                            className={`text-[11px] font-black uppercase px-2.5 py-1 rounded tracking-widest ${
-                              entry.speaker === "NP"
-                                ? "text-primary bg-primary/10"
-                                : "text-muted-foreground bg-muted"
-                            }`}
-                          >
-                            {entry.speaker === "NP"
-                              ? providerLabel
-                              : (currentPatient?.name ?? "Patient")}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground/60 font-mono">
-                            {entry.time}
-                          </span>
+                  {/* Editor Sections — continuous flowing document */}
+                  <div className="px-8 py-6 max-h-[75vh] overflow-y-auto">
+                    {template.sections.map((section, idx) => (
+                      <div key={section.id} className={`group relative ${idx > 0 ? "mt-6" : ""}`}>
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="text-xs font-black text-foreground uppercase tracking-[0.2em]">
+                            {section.label}
+                          </label>
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            {section.required && !noteSections[section.id] && (
+                              <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md border border-amber-100 dark:border-amber-800">
+                                <AlertCircle className="h-3 w-3" />
+                                Required
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleRegenerateSection(section.id)}
+                              className="p-1.5 text-muted-foreground hover:text-primary rounded-lg"
+                              title="Regenerate this section"
+                            >
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-base text-foreground/80 leading-relaxed italic">
-                          "{entry.text}"
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
-                      <div className="p-4 bg-muted rounded-full mb-4">
-                        <Mic className="h-8 w-8 opacity-20" />
-                      </div>
-                      <p className="text-sm font-medium">No recording transcript yet.</p>
-                      <p className="text-xs opacity-60 mt-1">
-                        Start voice scribe to see live transcription.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </aside>
-          )}
-
-          {/* Right Pane: Note Editor */}
-          <section className="flex flex-col flex-1 h-full overflow-hidden min-w-0">
-            <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-border pr-2 pb-24 space-y-6">
-              {hasAIContent && (
-                <div
-                  role="alert"
-                  aria-live="polite"
-                  className="flex gap-3 items-start rounded-2xl border-2 border-amber-400 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600 px-5 py-4 shadow-sm"
-                >
-                  <AlertTriangle
-                    aria-hidden="true"
-                    className="h-6 w-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
-                  />
-                  <div className="flex-1 text-sm text-amber-900 dark:text-amber-100">
-                    <p className="font-bold uppercase tracking-wide">
-                      AI-generated content — Review carefully before signing
-                    </p>
-                    <p className="mt-1 leading-relaxed font-medium">
-                      This note was drafted by AI from your clinical observations. Verify all
-                      medications, vitals, diagnoses, and clinical facts reflect the patient
-                      accurately before saving. AI can make errors.
-                    </p>
-                  </div>
-                </div>
-              )}
-              {/* Dynamic Note Container */}
-              <div className="bg-card rounded-2xl border border-border shadow-md overflow-hidden ring-1 ring-border/5">
-                <div className="px-8 py-5 border-b border-border flex justify-between items-center bg-card sticky top-0 z-10">
-                  <div className="flex flex-col">
-                    <h2 className="text-lg font-black text-foreground flex items-center gap-2 uppercase tracking-widest">
-                      <FileText className="h-5 w-5 text-primary" />
-                      {template.name}
-                    </h2>
-                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                      Note Format: {template.format.toUpperCase()}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleGenerateNote}
-                      disabled={isGenerating}
-                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary px-4 py-2 bg-primary/10 rounded-xl hover:bg-primary/20 transition-all"
-                    >
-                      <RefreshCw className={`h-3.5 w-3.5 ${isGenerating ? "animate-spin" : ""}`} />
-                      Re-Sync AI
-                    </button>
-                    <button
-                      onClick={copyFullNote}
-                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground px-4 py-2 hover:bg-muted border border-border rounded-xl transition-all"
-                    >
-                      {noteCopied ? (
-                        <>
-                          <Check className="h-3.5 w-3.5" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3.5 w-3.5" />
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Editor Sections — continuous flowing document */}
-                <div className="px-8 py-6 max-h-[75vh] overflow-y-auto">
-                  {template.sections.map((section, idx) => (
-                    <div key={section.id} className={`group relative ${idx > 0 ? "mt-6" : ""}`}>
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="text-xs font-black text-foreground uppercase tracking-[0.2em]">
-                          {section.label}
-                        </label>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                          {section.required && !noteSections[section.id] && (
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded-md border border-amber-100 dark:border-amber-800">
-                              <AlertCircle className="h-3 w-3" />
-                              Required
-                            </span>
-                          )}
-                          <button
-                            onClick={() => handleRegenerateSection(section.id)}
-                            className="p-1.5 text-muted-foreground hover:text-primary rounded-lg"
-                            title="Regenerate this section"
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                      <textarea
-                        value={noteSections[section.id] || ""}
-                        onChange={(e) => handleSectionChange(section.id, e.target.value)}
-                        placeholder={section.placeholder}
-                        rows={1}
-                        ref={(el) => {
-                          if (el) {
+                        <textarea
+                          value={noteSections[section.id] || ""}
+                          onChange={(e) => handleSectionChange(section.id, e.target.value)}
+                          placeholder={section.placeholder}
+                          rows={1}
+                          ref={(el) => {
+                            if (el) {
+                              el.style.height = "auto";
+                              el.style.height = el.scrollHeight + "px";
+                            }
+                          }}
+                          onInput={(e) => {
+                            const el = e.currentTarget;
                             el.style.height = "auto";
                             el.style.height = el.scrollHeight + "px";
-                          }
-                        }}
-                        onInput={(e) => {
-                          const el = e.currentTarget;
-                          el.style.height = "auto";
-                          el.style.height = el.scrollHeight + "px";
-                        }}
-                        className="w-full text-base md:text-lg text-foreground bg-transparent leading-relaxed outline-none resize-none placeholder:text-muted-foreground/30 font-medium border-0 p-0 overflow-hidden block"
-                      />
+                          }}
+                          className="w-full text-base md:text-lg text-foreground bg-transparent leading-relaxed outline-none resize-none placeholder:text-muted-foreground/30 font-medium border-0 p-0 overflow-hidden block"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {triageSummary && (
+                  <div className="bg-card rounded-2xl border border-border shadow-sm ring-1 ring-border/5 overflow-hidden">
+                    <div className="px-8 py-5 border-b border-border flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20">
+                      <ShieldCheck className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
+                      <h3 className="text-sm font-black text-foreground uppercase tracking-widest">
+                        Medication Safety — Smart Triage
+                      </h3>
                     </div>
-                  ))}
+                    <pre className="px-8 py-6 text-sm text-foreground font-mono whitespace-pre-wrap leading-relaxed">
+                      {triageSummary}
+                    </pre>
+                  </div>
+                )}
+
+                {/* Billing & Coding Hub */}
+                <div className="bg-card rounded-2xl border border-border shadow-sm p-8 ring-1 ring-border/5">
+                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/50">
+                    <h3 className="text-sm font-black text-foreground flex items-center gap-3 uppercase tracking-widest">
+                      <CreditCard className="h-5 w-5 text-muted-foreground" />
+                      Suggested Billing & Coding
+                    </h3>
+                    <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">
+                      Modify Codes
+                    </button>
+                  </div>
+
+                  <div className="space-y-8">
+                    {/* CPT Codes */}
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                      <div className="flex flex-col gap-1 w-32 shrink-0">
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                          CPT Codes
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">Level of Service</span>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        {(suggestedCodes?.cpt?.length ?? 0) > 0 ? (
+                          suggestedCodes.cpt.map((c) => {
+                            const src = codeSourceStyles[c.source];
+                            return (
+                              <button
+                                key={c.code}
+                                onClick={() => handleCodeClick(c.code, "cpt")}
+                                className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer ${
+                                  selectedCodes.has(c.code)
+                                    ? "bg-emerald-500 text-white border-emerald-500 scale-105"
+                                    : "bg-muted/50 border-border hover:border-primary/30 hover:bg-primary/5"
+                                }`}
+                                title="Click to copy code"
+                              >
+                                <span
+                                  className={`text-base font-black tracking-tight ${selectedCodes.has(c.code) ? "text-white" : "text-foreground underline decoration-primary/30 underline-offset-4"}`}
+                                >
+                                  {selectedCodes.has(c.code) ? "✓ Copied!" : c.code}
+                                </span>
+                                <div className="w-px h-6 bg-border mx-1" />
+                                <span
+                                  className={`text-xs font-bold ${selectedCodes.has(c.code) ? "text-white/80" : "text-muted-foreground"}`}
+                                >
+                                  {c.description || getCodeInfo(c.code)?.title || c.code}
+                                </span>
+                                <span
+                                  className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${src.chipClasses}`}
+                                >
+                                  {src.label}
+                                </span>
+                                {!selectedCodes.has(c.code) && (
+                                  <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                )}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground italic bg-muted/20 px-4 py-2 rounded-xl border border-dashed border-border">
+                            <Sparkles className="h-4 w-4 opacity-50" />
+                            Generate note to analyze level of service...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ICD-10 Codes */}
+                    <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                      <div className="flex flex-col gap-1 w-32 shrink-0">
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                          ICD-10 CM
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">Clinical Diagnoses</span>
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        {(suggestedCodes?.icd10?.length ?? 0) > 0 ? (
+                          suggestedCodes.icd10.map((c) => {
+                            const src = codeSourceStyles[c.source];
+                            return (
+                              <button
+                                key={c.code}
+                                onClick={() => handleCodeClick(c.code, "icd10")}
+                                className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer shadow-sm ${
+                                  selectedCodes.has(c.code)
+                                    ? "bg-emerald-500 text-white border-emerald-500 scale-105"
+                                    : "bg-card border-border hover:border-primary/30 hover:bg-primary/5"
+                                }`}
+                                title="Click to copy code"
+                              >
+                                <span
+                                  className={`text-sm font-black px-2 py-1 rounded border tracking-wider ${
+                                    selectedCodes.has(c.code)
+                                      ? "text-white bg-white/20 border-white/30"
+                                      : "text-primary bg-primary/5 border-primary/10"
+                                  }`}
+                                >
+                                  {selectedCodes.has(c.code) ? "✓" : c.code}
+                                </span>
+                                <span
+                                  className={`text-xs font-bold ${selectedCodes.has(c.code) ? "text-white" : "text-foreground/80"}`}
+                                >
+                                  {selectedCodes.has(c.code) && "Copied! - "}
+                                  {c.description || getCodeInfo(c.code)?.title || c.code}
+                                </span>
+                                <span
+                                  className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${src.chipClasses}`}
+                                >
+                                  {src.label}
+                                </span>
+                                {!selectedCodes.has(c.code) && (
+                                  <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
+                                )}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          <button className="flex items-center gap-3 text-sm text-muted-foreground italic bg-muted/20 px-4 py-2 rounded-xl border border-dashed border-border hover:border-primary group transition-all">
+                            <Plus className="h-4 w-4 group-hover:rotate-90 transition-all" />
+                            Add primary diagnosis code...
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
+            </section>
+          </div>
+        </main>
 
-              {triageSummary && (
-                <div className="bg-card rounded-2xl border border-border shadow-sm ring-1 ring-border/5 overflow-hidden">
-                  <div className="px-8 py-5 border-b border-border flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/20">
-                    <ShieldCheck className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
-                    <h3 className="text-sm font-black text-foreground uppercase tracking-widest">
-                      Medication Safety — Smart Triage
-                    </h3>
-                  </div>
-                  <pre className="px-8 py-6 text-sm text-foreground font-mono whitespace-pre-wrap leading-relaxed">
-                    {triageSummary}
-                  </pre>
-                </div>
-              )}
-
-              {/* Billing & Coding Hub */}
-              <div className="bg-card rounded-2xl border border-border shadow-sm p-8 ring-1 ring-border/5">
-                <div className="flex items-center justify-between mb-8 pb-4 border-b border-border/50">
-                  <h3 className="text-sm font-black text-foreground flex items-center gap-3 uppercase tracking-widest">
-                    <CreditCard className="h-5 w-5 text-muted-foreground" />
-                    Suggested Billing & Coding
-                  </h3>
-                  <button className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline px-3 py-1 bg-primary/5 rounded-lg border border-primary/10">
-                    Modify Codes
+        {/* Add Custom Phrase Modal */}
+        {showPhraseModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+              <div className="p-5 border-b border-border">
+                <h3 className="text-lg font-bold">Add Custom Phrase</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add to: <span className="font-bold text-primary">{phraseCategory}</span>
+                </p>
+              </div>
+              <div className="p-5 space-y-4">
+                <textarea
+                  value={newPhrase}
+                  onChange={(e) => setNewPhrase(e.target.value)}
+                  placeholder="Enter your custom phrase..."
+                  className="w-full h-24 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
+                  autoFocus
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowPhraseModal(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (newPhrase.trim()) {
+                        const updated = {
+                          ...customPhrases,
+                          [phraseCategory]: [
+                            ...(customPhrases[phraseCategory] || []),
+                            newPhrase.trim(),
+                          ],
+                        };
+                        setCustomPhrases(updated);
+                        localStorage.setItem("customPhrases", JSON.stringify(updated));
+                        setNewPhrase("");
+                        setShowPhraseModal(false);
+                      }
+                    }}
+                    disabled={!newPhrase.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+                  >
+                    Add Phrase
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <div className="space-y-8">
-                  {/* CPT Codes */}
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                    <div className="flex flex-col gap-1 w-32 shrink-0">
-                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                        CPT Codes
+        {/* Code Explanation Modal */}
+        {codeModalOpen && selectedCodeInfo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
+              <div className="sticky top-0 bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b border-border">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span
+                        className={`text-lg font-black px-3 py-1.5 rounded-lg ${
+                          selectedCodeInfo.type === "cpt"
+                            ? "bg-blue-500 text-white"
+                            : "bg-primary text-white"
+                        }`}
+                      >
+                        {selectedCodeInfo.code}
                       </span>
-                      <span className="text-[9px] text-muted-foreground">Level of Service</span>
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${
+                          selectedCodeInfo.type === "cpt"
+                            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                            : "bg-primary/10 text-primary"
+                        }`}
+                      >
+                        {selectedCodeInfo.type === "cpt" ? "CPT Code" : "ICD-10 Code"}
+                      </span>
                     </div>
-                    <div className="flex flex-wrap gap-3">
-                      {(suggestedCodes?.cpt?.length ?? 0) > 0 ? (
-                        suggestedCodes.cpt.map((c) => {
-                          const src = codeSourceStyles[c.source];
-                          return (
-                          <button
-                            key={c.code}
-                            onClick={() => handleCodeClick(c.code, "cpt")}
-                            className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer ${
-                              selectedCodes.has(c.code)
-                                ? "bg-emerald-500 text-white border-emerald-500 scale-105"
-                                : "bg-muted/50 border-border hover:border-primary/30 hover:bg-primary/5"
-                            }`}
-                            title="Click to copy code"
-                          >
-                            <span
-                              className={`text-base font-black tracking-tight ${selectedCodes.has(c.code) ? "text-white" : "text-foreground underline decoration-primary/30 underline-offset-4"}`}
-                            >
-                              {selectedCodes.has(c.code) ? "✓ Copied!" : c.code}
-                            </span>
-                            <div className="w-px h-6 bg-border mx-1" />
-                            <span
-                              className={`text-xs font-bold ${selectedCodes.has(c.code) ? "text-white/80" : "text-muted-foreground"}`}
-                            >
-                              {c.description || getCodeInfo(c.code)?.title || c.code}
-                            </span>
-                            <span
-                              className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${src.chipClasses}`}
-                            >
-                              {src.label}
-                            </span>
-                            {!selectedCodes.has(c.code) && (
-                              <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            )}
-                          </button>
-                          );
-                        })
-                      ) : (
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground italic bg-muted/20 px-4 py-2 rounded-xl border border-dashed border-border">
-                          <Sparkles className="h-4 w-4 opacity-50" />
-                          Generate note to analyze level of service...
-                        </div>
-                      )}
-                    </div>
+                    <h2 className="text-xl font-bold text-foreground">{selectedCodeInfo.title}</h2>
                   </div>
+                  <button
+                    onClick={() => setCodeModalOpen(false)}
+                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-all"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
 
-                  {/* ICD-10 Codes */}
-                  <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                    <div className="flex flex-col gap-1 w-32 shrink-0">
-                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                        ICD-10 CM
-                      </span>
-                      <span className="text-[9px] text-muted-foreground">Clinical Diagnoses</span>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
-                      {(suggestedCodes?.icd10?.length ?? 0) > 0 ? (
-                        suggestedCodes.icd10.map((c) => {
-                          const src = codeSourceStyles[c.source];
-                          return (
-                          <button
-                            key={c.code}
-                            onClick={() => handleCodeClick(c.code, "icd10")}
-                            className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all cursor-pointer shadow-sm ${
-                              selectedCodes.has(c.code)
-                                ? "bg-emerald-500 text-white border-emerald-500 scale-105"
-                                : "bg-card border-border hover:border-primary/30 hover:bg-primary/5"
-                            }`}
-                            title="Click to copy code"
-                          >
-                            <span
-                              className={`text-sm font-black px-2 py-1 rounded border tracking-wider ${
-                                selectedCodes.has(c.code)
-                                  ? "text-white bg-white/20 border-white/30"
-                                  : "text-primary bg-primary/5 border-primary/10"
-                              }`}
-                            >
-                              {selectedCodes.has(c.code) ? "✓" : c.code}
-                            </span>
-                            <span
-                              className={`text-xs font-bold ${selectedCodes.has(c.code) ? "text-white" : "text-foreground/80"}`}
-                            >
-                              {selectedCodes.has(c.code) && "Copied! - "}
-                              {c.description || getCodeInfo(c.code)?.title || c.code}
-                            </span>
-                            <span
-                              className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${src.chipClasses}`}
-                            >
-                              {src.label}
-                            </span>
-                            {!selectedCodes.has(c.code) && (
-                              <Copy className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
-                            )}
-                          </button>
-                          );
-                        })
-                      ) : (
-                        <button className="flex items-center gap-3 text-sm text-muted-foreground italic bg-muted/20 px-4 py-2 rounded-xl border border-dashed border-border hover:border-primary group transition-all">
-                          <Plus className="h-4 w-4 group-hover:rotate-90 transition-all" />
-                          Add primary diagnosis code...
-                        </button>
-                      )}
-                    </div>
-                  </div>
+              <div className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                    Description
+                  </h3>
+                  <p className="text-foreground leading-relaxed">{selectedCodeInfo.description}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
+                    Key Details
+                  </h3>
+                  <ul className="space-y-2">
+                    {selectedCodeInfo.details.map((detail, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm">
+                        <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                        <span className="text-foreground/80">{detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="pt-4 border-t border-border flex gap-3">
+                  <button
+                    onClick={() => {
+                      copyCodeToClipboard(selectedCodeInfo.code);
+                    }}
+                    className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                      selectedCodes.has(selectedCodeInfo.code)
+                        ? "bg-emerald-500 text-white"
+                        : "bg-muted hover:bg-muted/80 text-foreground"
+                    }`}
+                  >
+                    {selectedCodes.has(selectedCodeInfo.code) ? (
+                      <>
+                        <CheckCircle className="h-4 w-4" />
+                        Copied to Clipboard!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4" />
+                        Copy Code
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setCodeModalOpen(false)}
+                    className="px-6 py-3 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-all"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
             </div>
-          </section>
-        </div>
-      </main>
+          </div>
+        )}
 
-      {/* Add Custom Phrase Modal */}
-      {showPhraseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-border">
-              <h3 className="text-lg font-bold">Add Custom Phrase</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Add to: <span className="font-bold text-primary">{phraseCategory}</span>
-              </p>
-            </div>
-            <div className="p-5 space-y-4">
-              <textarea
-                value={newPhrase}
-                onChange={(e) => setNewPhrase(e.target.value)}
-                placeholder="Enter your custom phrase..."
-                className="w-full h-24 p-3 bg-muted/20 rounded-xl border border-border text-sm font-medium leading-relaxed resize-none focus:ring-2 focus:ring-primary/10 transition-all"
-                autoFocus
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowPhraseModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-border text-sm font-bold hover:bg-muted transition-all"
-                >
-                  Cancel
-                </button>
+        {/* Post-Save Success Modal — Submit to Insurance */}
+        {showSaveSuccessModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-card rounded-3xl shadow-2xl border border-border w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95 duration-300">
+              {/* Success Header */}
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-6 text-center">
+                <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle className="h-9 w-9 text-white" />
+                </div>
+                <h3 className="text-xl font-black text-white tracking-tight">
+                  Note Saved Successfully!
+                </h3>
+                <p className="text-sm text-white/80 mt-1">Your clinical note has been saved.</p>
+              </div>
+
+              {/* Action Options */}
+              <div className="p-8 space-y-4">
+                <p className="text-sm text-muted-foreground text-center font-medium">
+                  Would you like to sign this note and send it for auditor review?
+                </p>
+
+                {/* Sign & Send for Review — Primary CTA */}
                 <button
                   onClick={() => {
-                    if (newPhrase.trim()) {
-                      const updated = {
-                        ...customPhrases,
-                        [phraseCategory]: [
-                          ...(customPhrases[phraseCategory] || []),
-                          newPhrase.trim(),
-                        ],
-                      };
-                      setCustomPhrases(updated);
-                      localStorage.setItem("customPhrases", JSON.stringify(updated));
-                      setNewPhrase("");
-                      setShowPhraseModal(false);
+                    setShowSaveSuccessModal(false);
+                    if (savedNoteId) {
+                      router.push(`/notes/${savedNoteId}?action=submit`);
                     }
                   }}
-                  disabled={!newPhrase.trim()}
-                  className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-all disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-2xl text-base font-black uppercase tracking-widest shadow-xl shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all"
                 >
-                  Add Phrase
+                  <Send className="h-5 w-5" />
+                  Sign &amp; Send for Review
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Code Explanation Modal */}
-      {codeModalOpen && selectedCodeInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card rounded-2xl border border-border shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto animate-in zoom-in-95 duration-200">
-            <div className="sticky top-0 bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b border-border">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span
-                      className={`text-lg font-black px-3 py-1.5 rounded-lg ${
-                        selectedCodeInfo.type === "cpt"
-                          ? "bg-blue-500 text-white"
-                          : "bg-primary text-white"
-                      }`}
-                    >
-                      {selectedCodeInfo.code}
-                    </span>
-                    <span
-                      className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded ${
-                        selectedCodeInfo.type === "cpt"
-                          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                          : "bg-primary/10 text-primary"
-                      }`}
-                    >
-                      {selectedCodeInfo.type === "cpt" ? "CPT Code" : "ICD-10 Code"}
-                    </span>
-                  </div>
-                  <h2 className="text-xl font-bold text-foreground">{selectedCodeInfo.title}</h2>
-                </div>
-                <button
-                  onClick={() => setCodeModalOpen(false)}
-                  className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-all"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div>
-                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">
-                  Description
-                </h3>
-                <p className="text-foreground leading-relaxed">{selectedCodeInfo.description}</p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">
-                  Key Details
-                </h3>
-                <ul className="space-y-2">
-                  {selectedCodeInfo.details.map((detail, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm">
-                      <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                      <span className="text-foreground/80">{detail}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="pt-4 border-t border-border flex gap-3">
+                {/* Keep as Draft — Secondary */}
                 <button
                   onClick={() => {
-                    copyCodeToClipboard(selectedCodeInfo.code);
+                    setShowSaveSuccessModal(false);
+                    if (savedNoteId) {
+                      router.push(`/notes/${savedNoteId}`);
+                    } else {
+                      router.push("/notes");
+                    }
                   }}
-                  className={`flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${
-                    selectedCodes.has(selectedCodeInfo.code)
-                      ? "bg-emerald-500 text-white"
-                      : "bg-muted hover:bg-muted/80 text-foreground"
-                  }`}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-card border-2 border-border hover:border-primary/30 text-foreground rounded-2xl text-sm font-bold transition-all hover:bg-muted/50"
                 >
-                  {selectedCodes.has(selectedCodeInfo.code) ? (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      Copied to Clipboard!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" />
-                      Copy Code
-                    </>
-                  )}
+                  <Save className="h-4 w-4" />
+                  Keep as Draft — Review Later
                 </button>
-                <button
-                  onClick={() => setCodeModalOpen(false)}
-                  className="px-6 py-3 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-all"
-                >
-                  Close
-                </button>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  You can always submit later from the note detail page.
+                </p>
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Post-Save Success Modal — Submit to Insurance */}
-      {showSaveSuccessModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card rounded-3xl shadow-2xl border border-border w-full max-w-md mx-4 overflow-hidden animate-in zoom-in-95 duration-300">
-            {/* Success Header */}
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-6 text-center">
-              <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <CheckCircle className="h-9 w-9 text-white" />
-              </div>
-              <h3 className="text-xl font-black text-white tracking-tight">
-                Note Saved Successfully!
-              </h3>
-              <p className="text-sm text-white/80 mt-1">Your clinical note has been saved.</p>
-            </div>
-
-            {/* Action Options */}
-            <div className="p-8 space-y-4">
-              <p className="text-sm text-muted-foreground text-center font-medium">
-                Would you like to sign this note and send it for auditor review?
-              </p>
-
-              {/* Sign & Send for Review — Primary CTA */}
-              <button
-                onClick={() => {
-                  setShowSaveSuccessModal(false);
-                  if (savedNoteId) {
-                    router.push(`/notes/${savedNoteId}?action=submit`);
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white rounded-2xl text-base font-black uppercase tracking-widest shadow-xl shadow-primary/25 hover:scale-[1.02] active:scale-95 transition-all"
-              >
-                <Send className="h-5 w-5" />
-                Sign &amp; Send for Review
-              </button>
-
-              {/* Keep as Draft — Secondary */}
-              <button
-                onClick={() => {
-                  setShowSaveSuccessModal(false);
-                  if (savedNoteId) {
-                    router.push(`/notes/${savedNoteId}`);
-                  } else {
-                    router.push("/notes");
-                  }
-                }}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-card border-2 border-border hover:border-primary/30 text-foreground rounded-2xl text-sm font-bold transition-all hover:bg-muted/50"
-              >
-                <Save className="h-4 w-4" />
-                Keep as Draft — Review Later
-              </button>
-
-              <p className="text-xs text-muted-foreground text-center">
-                You can always submit later from the note detail page.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-    </fieldset>
-    <PatientQuickSelectModal
-      isOpen={isPatientPickerOpen}
-      onClose={() => setIsPatientPickerOpen(false)}
-    />
+        )}
+      </fieldset>
+      <PatientQuickSelectModal
+        isOpen={isPatientPickerOpen}
+        onClose={() => setIsPatientPickerOpen(false)}
+      />
     </>
   );
 }
