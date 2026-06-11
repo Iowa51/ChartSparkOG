@@ -1,8 +1,23 @@
 # SIDECAR-STATE — chartspark-assessments recon
 
-**Date:** 2026-06-02
+**Date:** 2026-06-02 (status update 2026-06-10 below)
 **Mode:** READ-ONLY recon. Nothing changed except this file. No deploys, installs, code edits, or DB writes.
 **Scope:** Establish ground truth to deploy the sidecar and make AssessmentsTab functional.
+
+---
+
+## STATUS UPDATE — 2026-06-10 (supersedes the recon below where they conflict)
+
+- **DEPLOYED:** Railway, https://chartspark-assessments-production.up.railway.app — /health 200. Repo moved out of OneDrive to `C:\dev\chartspark-assessments`.
+- **Contract drift RESOLVED:** all 8 mismatches fixed (incl. §3 items 1–7 and the hamd/hamd17 bug). AssessmentsTab live end-to-end on app.chartspark.io.
+- **JWKS warmup fixed:** correct endpoint `/auth/v1/.well-known/jwks.json`.
+- **Vercel prod env wired:** `ASSESSMENTS_SIDECAR_URL` + `ASSESSMENTS_SIDECAR_SECRET`.
+- **Prod RLS for sidecar reads** on `users`/`patients`: `sidecar_self_user` + `sidecar_org_patients`, applied manually 2026-06-09; recorded as migration `20260610230000_sidecar_rls_patient_access.sql` (record only).
+- **Clinical-safety review PASSED** (895+ sidecar tests green); verified live: PHQ-9 12/moderate + flag, HAM-D 21/severe, C-SSRS high 3 and moderate 2 with action narrative. `ASSESSMENTS_V1` granted to testers.
+- **Open questions §1–7:** all resolved by the deploy; retained below for history.
+- **Known v1 gaps:** trend chart UI, assignment-creation UI (backends complete).
+
+The recon below is retained as the 2026-06-02 ground-truth snapshot.
 
 ---
 
@@ -14,7 +29,7 @@
 - **DB is ALREADY PROVISIONED.** Per the sidecar's own ledger, `20260527130000_create_assessments_tables.sql` was applied to prod on 2026-05-27: the 3 tables (`assessment_administrations/results/assignments`) + RLS + the `sidecar_assessments` role + grants + EXECUTE on `public.write_audit_log`.
 - **Scales:** all **15 implemented in code** (`src/scales/*.ts`) and registered. No DB "scales catalog" to seed — scale_id is a CHECK-constrained string; definitions live in code.
 - **Completeness:** high. Scoring + deterministic narratives for all 15; **suicide-risk flagging implemented** (PHQ-9 Q9→`suicide_risk_item`; C-SSRS `suicide_risk_high/moderate/low` → HIGH audit risk). Full unit tests per scale + integration tests. No TODO/stub blockers in the runtime path.
-- **⚠️ BLOCKER — contract drift:** the restored OG client (`feature/restore-assessments-tab`) and the sidecar were built to **slightly different contract versions**. Several request/response shapes don't line up (delivery_method enum, scale-projection field names, patient-list response key, create-assignment `recurring` shape). **Deploying the sidecar alone will NOT make AssessmentsTab work** until these are reconciled. Details in §Contract.
+- **⚠️ BLOCKER (RESOLVED 2026-06-10) — contract drift:** the restored OG client (`feature/restore-assessments-tab`) and the sidecar were built to **slightly different contract versions**. Several request/response shapes don't line up (delivery_method enum, scale-projection field names, patient-list response key, create-assignment `recurring` shape). **Deploying the sidecar alone will NOT make AssessmentsTab work** until these are reconciled. Details in §Contract.
 
 ---
 
