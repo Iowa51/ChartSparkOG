@@ -221,3 +221,104 @@ baseline (`action`/`entity_type`/`entity_id` columns) + the `write_audit_log`
 helper — a different harness (`supabase start`) than this isolation harness. It
 is **excluded** from `vitest.db.config.ts` (see the exclude comment there) so
 `npm run test:db` runs green here; run it separately against a Supabase stack.
+
+---
+
+## COLLISION-CHECK — Sprint 0 intake migrations vs. draft patient-portal migration (2026-07-07)
+
+**Context.** Sprint 0 / P1 landed four migrations (`20260706120000`–`120003`,
+commit `dc72c46`); commit `d3d275f` separately added the DRAFT
+`20260611120000_patient_portal_foundation.sql` (PRD-02). Both are **unapplied to
+production** and both are gated manual applies. This section records whether the
+two overlap. The verdict was cross-checked by a four-lens adversarial review
+(named-object enumeration; shared-table RLS + cross-grant audit;
+apply-order/dependency; portal-role reachability of locked PHI) — **all four
+independently returned NO-COLLISION.**
+
+### Verdict: **NO-COLLISION**
+
+The two workstreams operate on disjoint namespaces:
+
+| Dimension | Sprint 0 (`20260706120000`–`03`) | Portal (`20260611120000`) | Overlap |
+| --- | --- | --- | :---: |
+| Tables created | `intake_templates` + 8 PHI (`intake_submissions`, `problems`, `medications`, `allergies`, `family_history`, `social_history`, `ros_responses`, `immunizations`) | `patient_portal_users`, `patient_portal_invites` | none |
+| Tables ALTERed (RLS/policies) | `vitals`, `screening_scores`, `smart_triage_results`, `medication_interaction_log` (+ the 8 new PHI tables) | `patients`, `assessment_assignments`, `assessment_administrations`, `assessment_results` (+ its own two) | none |
+| Functions | `enforce_intake_submission_state()`, `block_mutation_when_intake_signed()` | (none) | none |
+| Triggers | on intake_submissions/problems/medications/allergies/ros_responses | (none) | none |
+| Indexes | `idx_intake_*`, `idx_problems_*`, `idx_medications_*`, … | `idx_portal_invites_patient`, `idx_portal_invites_expires` | none |
+| Roles created | (none) | `CREATE ROLE patient_portal` | none |
+| Policy names | `<table>_{select,insert,update,delete}`, `intake_templates_*`, `vitals_*`, `screenings_*`, `triage_*`, `interaction_log_*` | `patient_portal_invites_*`, `patient_portal_users_clinician_select`, `portal_*_self` | none |
+
+- **No shared mutated table.** The only tables both sides reference (`patients`,
+  `users`, `organizations`) are merely **FK-referenced** by Sprint 0 — it adds
+  **no** policy, trigger, or GRANT on any of them. The portal's one policy on
+  `patients` (`portal_patient_self`) and its `GRANT SELECT ON patients TO
+  patient_portal` are additive and land on a table Sprint 0 never touches, so a
+  same-table policy clash is impossible.
+- **No function / trigger / role name collision.** The portal creates zero
+  functions and zero triggers; Sprint 0 creates zero roles. Both sides only
+  *reference* the pre-existing helpers (`get_user_organization_id()`,
+  `get_user_role()`, `update_updated_at_column()`); neither redefines them.
+- **Ordering is immaterial.** Filename order sorts the portal (`20260611`)
+  **before** Sprint 0 (`20260706`), but both are gated manual applies
+  (`supabase db query --linked --file`, never `db push`), and the two sets are
+  DDL-order-independent — every FK / function call / policy subquery / GRANT
+  target in each set resolves against the **pre-existing** production schema, not
+  against the other set. Either apply order succeeds.
+- **The `patient_portal` role gets no access to any Sprint 0-locked table**, at
+  three independent fail-closed layers: (1) it receives **no table-level GRANT**
+  on any intake / vitals / sibling table — and in Postgres the privilege check
+  precedes RLS, so the read stops with `permission denied` before a policy is
+  even evaluated; (2) every Sprint 0 policy is `TO authenticated`, and
+  `patient_portal` is a separate `NOINHERIT LOGIN` role that is **not** a member
+  of `authenticated`, so those policies never apply to it (RLS default-deny);
+  (3) even a hypothetically-applicable policy would fail closed because the
+  org helpers resolve to **NULL** for a portal identity (portal users live in
+  `patient_portal_users`, not `public.users`).
+
+### Portal-access implications for Sprint 1 / P2 design
+
+Portal patients may legitimately need to see their own vitals / problems /
+medications / allergies. Sprint 0's org-scoped `TO authenticated` policies
+**deliberately do not anticipate the portal role** — that is correct
+deny-by-default, not a gap. Surfacing that data later is a **separate, additive,
+separately-reviewed** migration that must:
+
+1. **Add a per-table `GRANT SELECT ON public.<table> TO patient_portal`** for
+   each surfaced table (`vitals`, `problems`, `medications`, `allergies`, …).
+   Without the GRANT the read fails regardless of any policy — the privilege
+   check runs before RLS.
+2. **Add new patient-scoped `CREATE POLICY … FOR SELECT TO patient_portal`**
+   keyed on `patient_id` via the portal identity, mirroring the foundation
+   migration's existing pattern:
+   `USING (patient_id = (SELECT patient_id FROM patient_portal_users WHERE auth_user_id = auth.uid()))`.
+   These **must not** call `get_user_organization_id()` / `get_user_role()` —
+   those return NULL for a portal session and would deny every row (and EXECUTE
+   on them is granted only to `authenticated`). All target tables carry
+   `patient_id` directly, so no join is needed.
+3. **Leave the existing `TO authenticated` org-scoped policies untouched** — they
+   correctly ignore `patient_portal`; portal exposure is purely additive (no
+   `ALTER`/`DROP` of Sprint 0 policies, preserving clinician-side isolation).
+4. **Encode clinical-safety scoping**: restrict portal visibility to finalized
+   data — e.g. `reconciled = TRUE` on problems/medications/allergies and/or gate
+   on the parent `intake_submissions.status = 'signed'` — and keep it
+   SELECT-only. A future patient self-entry phase would need a **distinct**
+   additive INSERT grant + INSERT policy scoped to `status = 'patient_entered'`
+   (the role-agnostic `enforce_intake_submission_state` trigger already blocks
+   any other insert status, so it continues to protect signed records).
+
+Before the portal role goes live, an RLS test should assert `patient_portal`
+still reads **zero** rows from every Sprint 0-locked table.
+
+### Orthogonal caveats (NOT collisions with Sprint 0 — flagged for the portal apply)
+
+- The portal has its **own** external prerequisite: `assessment_assignments` /
+  `assessment_administrations` / `assessment_results` (per its comment, from
+  `20260527130000_create_assessments_tables.sql`), which is **not** present in
+  `supabase/migrations/` or the ledger — confirm those tables exist in
+  production before applying the portal migration.
+- The portal's `CREATE ROLE patient_portal` has no `IF NOT EXISTS` guard (a
+  replay errors on an already-existing role), carries a `<rotated_via_vault>`
+  password placeholder to substitute at apply time, and uses `uuid_generate_v4()`
+  (requires the `uuid-ossp` extension). All intra-portal concerns, independent of
+  Sprint 0.
