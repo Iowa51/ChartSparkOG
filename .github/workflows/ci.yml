@@ -44,8 +44,38 @@ jobs:
 
       - name: Run tests
         # --passWithNoTests lets the job succeed before any tests exist.
-        # Real test failures still fail the job.
+        # Real test failures still fail the job. Scope: the default unit suite
+        # only; the DB-integration suite runs in the dedicated `test-db` job.
         run: npm test -- --passWithNoTests
+
+  test-db:
+    name: DB Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Stand up the throwaway Postgres and apply schema.sql + the vitals
+      # migration + the P1 intake migrations + the P1-FIXES migrations.
+      # GitHub-hosted runners have Docker available.
+      - name: Build local verification DB (Docker)
+        run: bash scripts/db-local-verify.sh
+
+      # NOTE: `test:db` runs `vitest run --config vitest.db.config.ts` WITHOUT
+      # --passWithNoTests, so a zero-tests-collected result fails this job.
+      # This is what prevents the DB suite from being silently green-washed
+      # (CODEX-REVIEW-P1 COV-19 / HYG-1).
+      - name: Run DB integration tests (fails on zero tests collected)
+        run: npm run test:db
 
   security-scan:
     name: Security Audit
@@ -69,7 +99,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint-and-type-check, test, security-scan]
+    needs: [lint-and-type-check, test, test-db, security-scan]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

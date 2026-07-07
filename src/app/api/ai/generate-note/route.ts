@@ -1,7 +1,7 @@
 // AI-powered clinical note generation from clinician input
 
 import { NextResponse } from 'next/server';
-import { withAuth, AuthContext } from '@/lib/auth/api-auth';
+import { withAuth, AuthContext, canAccessPatient } from '@/lib/auth/api-auth';
 import safeAzureOpenAI, { AIProviderUnavailableError } from '@/services/safeAzureOpenAI';
 import { logAuditEvent } from '@/lib/security/audit-log';
 import { getSafeAuditErrorDetails } from '@/lib/security/audit-error-codes';
@@ -116,8 +116,18 @@ async function handler(context: AuthContext) {
         let activeProblemIcd10: Array<{ code: string; description: string; source: 'active_problem' }> = [];
         if (patientId) {
             const orgId = context.user.organizationId || undefined;
+            // SEC (defense in depth): never enrich a note with a patient the
+            // caller cannot access. The org-scoped vitals/context RLS also blocks
+            // cross-org reads at the DB layer; this gate fails closed before any
+            // PHI query runs. canAccessPatient() returns true for SUPER_ADMIN.
+            const canAccess = await canAccessPatient(context.user, patientId);
+            if (!canAccess) {
+                return NextResponse.json({ error: 'Patient not found' }, { status: 403 });
+            }
             const [vitals, patientCtx] = await Promise.all([
-                getPatientLatestVitals(patientId, encounterId),
+                // orgId ?? null: scope to the caller's org; null (org-less
+                // SUPER_ADMIN) is an explicit, RLS-enforced cross-org read.
+                getPatientLatestVitals(patientId, orgId ?? null, encounterId),
                 orgId ? getPatientContextForAI(patientId, orgId) : Promise.resolve(null),
             ]);
             vitalsContext = buildVitalsContext(vitals);

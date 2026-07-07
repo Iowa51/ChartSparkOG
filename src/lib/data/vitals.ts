@@ -23,9 +23,18 @@ export interface LatestVitals {
  * provided, vitals from that encounter are preferred; if none exist,
  * fall back to the patient's most recent vitals from any encounter.
  * Returns null if the patient has no vitals recorded.
+ *
+ * `organizationId` scopes the read to the caller's org (F-033 / SEC-CODEX-2):
+ * the org-scoped `vitals` RLS policy already blocks cross-org reads, and this
+ * explicit filter keeps the query correct independent of RLS. It is REQUIRED
+ * (fail-closed): pass the caller's org id to scope the read, or pass `null`
+ * ONLY for a principal without an org (e.g. SUPER_ADMIN) where cross-org access
+ * is intentional and RLS enforces it. Making it required prevents a future
+ * caller from silently dropping the org filter by omitting the argument.
  */
 export async function getPatientLatestVitals(
     patientId: string,
+    organizationId: string | null,
     encounterId?: string,
 ): Promise<LatestVitals | null> {
     const supabase = await createClient();
@@ -36,21 +45,22 @@ export async function getPatientLatestVitals(
 
     try {
         if (encounterId) {
-            const { data } = await supabase
+            let query = supabase
                 .from('vitals')
                 .select(columns)
                 .eq('patient_id', patientId)
-                .eq('encounter_id', encounterId)
+                .eq('encounter_id', encounterId);
+            if (organizationId) query = query.eq('organization_id', organizationId);
+            const { data } = await query
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
             if (data) return data as unknown as LatestVitals;
         }
 
-        const { data } = await supabase
-            .from('vitals')
-            .select(columns)
-            .eq('patient_id', patientId)
+        let query = supabase.from('vitals').select(columns).eq('patient_id', patientId);
+        if (organizationId) query = query.eq('organization_id', organizationId);
+        const { data } = await query
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
