@@ -25,6 +25,11 @@ vi.mock("@/lib/auth/api-auth", () => ({
       });
     };
   },
+  // The route gates on canAccessPatient() before any PHI read (added as a P0
+  // security fix in 8906ed0). Grant access so these tests exercise the
+  // post-access-check branches; without this the mock module omits the export
+  // and the route throws "canAccessPatient is not a function".
+  canAccessPatient: vi.fn(async () => true),
 }));
 
 vi.mock("@/services/safeAzureOpenAI", () => ({

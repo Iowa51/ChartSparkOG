@@ -152,7 +152,10 @@ async function handler(context: AuthContext) {
     if (validPatientId) {
       const orgId = context.user.organizationId || undefined;
       const [vitals, patientCtx] = await Promise.all([
-        getPatientLatestVitals(validPatientId),
+        // orgId ?? null: scope to the caller's org; null (org-less
+        // SUPER_ADMIN) is an explicit, RLS-enforced cross-org read.
+        // Mirrors the call in /api/ai/generate-note.
+        getPatientLatestVitals(validPatientId, orgId ?? null),
         orgId ? getPatientContextForAI(validPatientId, orgId) : Promise.resolve(null),
       ]);
       vitalsContext = buildVitalsContext(vitals);
