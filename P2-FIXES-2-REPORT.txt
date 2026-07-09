@@ -1,0 +1,144 @@
+P2-FIXES-2 — CODEX-REVIEW-P2-DELTA remediation report
+Date: 2026-07-08
+Gate: STOP after test:db green. Nothing committed. HEAD unchanged (7447ced).
+
+====================================================================
+PROMPT-FILE NOTE (read first)
+====================================================================
+The requested file _cc-prompts/sprint1-p2-fixes2.txt does NOT exist in this
+checkout (only sprint1-p2-fixes.txt [round 1] and sprint1-codex-review-p2.txt).
+The operative source of truth for "the delta findings" is CODEX-REVIEW-P2-DELTA.md
+(repo root, dated 2026-07-08) — the round-2 delta review of the round-1 P2 fixes.
+I proceeded against that file + the inline instructions ("verify each delta finding
+against the SQL first — refute with evidence or fix; stop after test:db green").
+This mirrors round 1, where sprint1-p2-fixes.txt remediated CODEX-REVIEW-P2.md.
+
+Every finding was VERIFIED against the actual migrations/schema BEFORE fixing.
+None were refuted; one (DELTA-API-1) was fixed with a correction to the reviewer's
+literal remedy (see below). All fixes verified under a live Postgres harness.
+
+====================================================================
+VERIFICATION SUMMARY
+====================================================================
+- test:db .......... 141 passed / 0 failed  (was 120; +21 adversarial portal RLS tests)
+- unit suite ....... 367 passed / 0 failed  (was 361; +6: consent test split + new route test)
+- tsc --noEmit ..... clean (exit 0, CI-equivalent with .next absent)
+- Harness .......... scripts/db-local-verify.sh (Docker PG16) applies …120000 → …130000 → …140000
+- Nothing committed. Nothing pushed.
+
+====================================================================
+DELTA-RLS-1  (HIGH)  — CONFIRMED against SQL → FIXED
+====================================================================
+Finding: HIGH-1 (…130000) still exposed CLINICIAN-authored child rows linked to the
+patient's own submission — (a) SELECT scope, and (b) UPDATE USING (old-row) scope.
+
+Verification against the SQL (before fixing):
+- Column facts confirmed in 20260706120000 CREATE TABLEs: ros_responses has
+  created_by but NO source / NO reconciled; problems/medications/allergies have
+  source+reconciled+created_by; family/social/immunizations have source+created_by
+  (no reconciled). Portal-authored rows always carry created_by IS NULL (INSERT
+  policies force it), so created_by is the clinician marker.
+- (a) …130000's portal_ros_responses_select scoped on the own-submission link ONLY
+  (no created_by) → a clinician-authored ROS row linked to the patient's submission
+  was portal-READABLE. The source/reconciled tables' SELECT still admitted a
+  created_by-stamped row that carried source='patient'.
+- (b) The UPDATE policies kept source='patient'/reconciled=false/created_by IS NULL
+  ONLY in WITH CHECK (new-row), not USING (old-row). A clinician row that looked
+  patient-authored (source='patient', reconciled=false) but had a non-null created_by
+  could be UPDATE-targeted and rewritten with created_by=NULL — laundered into a
+  portal-owned row.
+- Proven REAL by negative control: with the policies reverted to their pre-…140000
+  form, the new read-negative and launder tests FAIL for both problems (source
+  table) and ros_responses (no-source table) — "expected 1 to be 0" (row visible /
+  rewritable). With the fix they return 0. (Also surfaced: PostgreSQL applies the
+  SELECT policy to an UPDATE … WHERE that reads the row, so the tightened SELECT and
+  UPDATE USING now reinforce each other; the UPDATE USING is still required to
+  defend an UPDATE with no row-reading WHERE.)
+
+Fix:
+- supabase/migrations/20260707140000_sprint1_p2_portal_intake_fixes2.sql
+  Additive amendment (…120000 + …130000 NOT rewritten; mirrors the P1-FIXES/P2-FIXES
+  pattern). Adds created_by IS NULL (+ source='patient' where present, + reconciled
+  =false on problems/medications/allergies) to BOTH the SELECT USING and the UPDATE
+  USING of all 7 child tables. INSERT/UPDATE WITH CHECK unchanged.
+  intake_submissions intentionally NOT tightened: its row IS the submission, and a
+  provider-INITIATED submission (created_by set, still patient_entered) is a valid
+  row the patient must complete — status+submitted_at is the correct lock there.
+- scripts/db-local-verify.sh — applies …140000 after …130000.
+- supabase/MIGRATION_LEDGER.md — ledger row for …140000 (not applied to prod).
+- supabase/SCHEMA-NOTES.md — "P2-FIXES-2" section.
+- src/__tests__/db/portal-intake-rls.test.ts — see DELTA-COV-1.
+
+====================================================================
+DELTA-API-1  (MEDIUM)  — CONFIRMED (with a correction) → FIXED
+====================================================================
+Finding: server consent enforcement only applied when value===true, so a declined
+consent {value:false} could be submitted with no timestamp/version, yet a declined
+consent is part of the medico-legal record.
+
+Verification against the code:
+- responses-schema.ts:142 skipped enforcement unless value.value===true. CONFIRMED.
+- The reviewer's literal remedy ("require the full {value,at,template_version}")
+  would 400 legitimate declines: src/components/intake/consent.tsx:20 stamps a
+  decline as { value:false, at:null, template_version:<number> } BY DESIGN (no
+  agreement instant). ConsentValue.template_version is number|null, and the affirmed
+  path already requires template_version to be a number.
+
+Fix (respects the client; strengthens the record):
+- src/lib/intake/responses-schema.ts — on submit, require template_version (a number)
+  on EVERY consent-shaped value (affirmed OR declined); require `at` only for an
+  AFFIRMED consent. Product decision documented in the docstring: declines are
+  version-stamped, not time-stamped (submitted_at records when the decline was
+  finalized).
+- src/lib/intake/__tests__/responses-schema.test.ts — declined-consent test now
+  asserts: version-stamped decline passes; decline missing template_version is
+  rejected on submit.
+
+====================================================================
+DELTA-API-2  (LOW)  — CONFIRMED → FIXED (contained)
+====================================================================
+Finding: the 256KB raw body cap depended only on Content-Length; when absent/inaccurate,
+request.json() allocated/parsed the whole body before the structural bounds ran.
+
+Verification against the code:
+- route.ts:62 did `Number(header ?? '0')`, so an absent header → 0 → no early reject
+  → request.json() parsed unbounded. CONFIRMED (the file comment already conceded it).
+
+Fix:
+- src/app/api/portal/intake/route.ts — readCappedBodyText() streams the body with a
+  hard byte ceiling enforced WHILE reading (aborts at >256KB → 413), independent of
+  Content-Length; then JSON.parse on the capped text. IntakeWriteSchema bounds remain
+  the second layer.
+- src/app/api/portal/intake/route.test.ts (new, node env) — well-formed body → 401
+  fail-closed; over-declared Content-Length → 413; oversized STREAMED body with NO
+  Content-Length → 413 (streaming path); malformed JSON → 400; schema-invalid → 400.
+
+====================================================================
+DELTA-COV-1  (LOW)  — CONFIRMED → FIXED
+====================================================================
+Finding: HIGH-1 regression tests covered problems + one family_history case only;
+medications/allergies/social_history/immunizations/ros_responses read scoping and
+the UPDATE USING gap were untested.
+
+Fix:
+- src/__tests__/db/portal-intake-rls.test.ts — test.each(CHILD_TABLES) across all 7
+  child tables: (1) patient-authored linked row IS readable; (2) clinician
+  created_by-stamped linked row is INVISIBLE; (3) launder-via-UPDATE of a clinician
+  created_by-stamped linked row returns 0 rows. All proven non-vacuous by the
+  negative control (reverting policies makes them fail). +21 tests → test:db 141.
+
+====================================================================
+FILES CHANGED (all uncommitted)
+====================================================================
+new:      supabase/migrations/20260707140000_sprint1_p2_portal_intake_fixes2.sql
+new:      src/app/api/portal/intake/route.test.ts
+modified: scripts/db-local-verify.sh
+modified: supabase/MIGRATION_LEDGER.md
+modified: supabase/SCHEMA-NOTES.md
+modified: src/lib/intake/responses-schema.ts          (under untracked src/lib/intake/)
+modified: src/app/api/portal/intake/route.ts          (under untracked src/app/api/portal/)
+modified: src/__tests__/db/portal-intake-rls.test.ts
+modified: CODEX-REVIEW-P2-DELTA.md                     (appended REMEDIATION-2)
+
+No P1/other-sprint files touched. No production migration applied (all P2 migrations
+remain gated-manual-apply; verified in the local isolation harness only).

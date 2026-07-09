@@ -34,6 +34,9 @@ export const RATE_LIMITS = {
   invitationAccept: { limit: 10, window: 60 * 60 * 1000, failClosed: true },
   roleChange: { limit: 20, window: 60 * 60 * 1000, failClosed: false },
   telehealth: { limit: 50, window: 60 * 60 * 1000, failClosed: false },
+  // Public terminology typeahead proxy (RxNorm / ICD-10 / allergens). failClosed
+  // false so a Redis outage never blocks a patient's intake search.
+  terminology: { limit: 60, window: 60 * 1000, failClosed: false },
 } satisfies Record<string, RateLimitConfig>;
 
 export type RateLimitKey = keyof typeof RATE_LIMITS;
@@ -70,9 +73,11 @@ const RATE_LIMIT_EXEMPT_PATHS = new Set([
 ]);
 
 function isRateLimitExemptPath(pathname: string): boolean {
-  return RATE_LIMIT_EXEMPT_PATHS.has(pathname)
-    || pathname.startsWith("/api/auth/mfa")
-    || pathname.startsWith("/settings/security");
+  return (
+    RATE_LIMIT_EXEMPT_PATHS.has(pathname) ||
+    pathname.startsWith("/api/auth/mfa") ||
+    pathname.startsWith("/settings/security")
+  );
 }
 
 function checkCircuitBreaker(): boolean {

@@ -4,7 +4,7 @@
 // on the client, invalid vars only produce a console warning so local work is
 // not blocked.
 
-import { z } from 'zod';
+import { z } from "zod";
 
 const envSchema = z.object({
   // Supabase — app cannot function without these
@@ -16,10 +16,10 @@ const envSchema = z.object({
   AZURE_OPENAI_API_KEY: z.string().min(1),
   AZURE_OPENAI_ENDPOINT: z.string().url(),
   AZURE_OPENAI_DEPLOYMENT_NAME: z.string().min(1),
-  AZURE_OPENAI_API_VERSION: z.string().default('2024-08-01-preview'),
+  AZURE_OPENAI_API_VERSION: z.string().default("2024-08-01-preview"),
   AZURE_WHISPER_ENDPOINT: z.string().url().optional(),
   AZURE_WHISPER_API_KEY: z.string().min(1).optional(),
-  AZURE_OPENAI_WHISPER_DEPLOYMENT: z.string().default('whisper'),
+  AZURE_OPENAI_WHISPER_DEPLOYMENT: z.string().default("whisper"),
 
   // PHI / encryption — required at runtime for encrypt/decrypt
   PHI_ENCRYPTION_KEY: z.string().min(32).optional(),
@@ -67,7 +67,7 @@ const envSchema = z.object({
 
   // Managed billing
   OFFICE_ALLY_ALLOW_MOCK: z.string().optional(),
-  MAX_ERA_PAYMENT_AMOUNT: z.string().default('10000000'),
+  MAX_ERA_PAYMENT_AMOUNT: z.string().default("10000000"),
 
   // Scribe proxy
   SCRIBE_SERVICE_URL: z.string().url().optional(),
@@ -79,19 +79,24 @@ const envSchema = z.object({
   VERCEL_URL: z.string().optional(),
 
   // Agent sidecar
-  SIDECAR_READY: z.string().default('false'),
+  SIDECAR_READY: z.string().default("false"),
   NEXT_PUBLIC_SIDECAR_READY: z.string().optional(),
 
+  // Patient Portal intake (Sprint 1 / P2). Default off; gates the patient
+  // intake page + terminology proxy routes until the phase exits.
+  INTAKE_V1: z.string().default("false"),
+  NEXT_PUBLIC_INTAKE_V1: z.string().optional(),
+
   // Demo mode
-  NEXT_PUBLIC_DEMO_MODE: z.string().default('false'),
+  NEXT_PUBLIC_DEMO_MODE: z.string().default("false"),
   DEMO_LOGIN_CREDENTIALS: z.string().optional(),
 
   // Logging
   LOG_LEVEL: z.string().optional(),
 
   // Runtime-provided
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  NEXT_RUNTIME: z.enum(['nodejs', 'edge']).optional(),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NEXT_RUNTIME: z.enum(["nodejs", "edge"]).optional(),
   CI: z.string().optional(),
 });
 
@@ -101,18 +106,14 @@ function validateEnv(): Env {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
     // Log structured errors without dumping secret values.
-    console.error('Invalid environment variables:');
+    console.error("Invalid environment variables:");
     console.error(result.error.flatten().fieldErrors);
-    const isServer = typeof window === 'undefined';
-    if (process.env.NODE_ENV === 'production' && isServer) {
-      throw new Error(
-        'Missing or invalid required environment variables. Check server logs.'
-      );
+    const isServer = typeof window === "undefined";
+    if (process.env.NODE_ENV === "production" && isServer) {
+      throw new Error("Missing or invalid required environment variables. Check server logs.");
     }
   }
-  return result.success
-    ? result.data
-    : (process.env as unknown as Env);
+  return result.success ? result.data : (process.env as unknown as Env);
 }
 
 export const env = validateEnv();

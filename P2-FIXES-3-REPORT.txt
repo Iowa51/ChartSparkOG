@@ -1,0 +1,98 @@
+P2-FIXES-3 — CODEX-REVIEW-P2-DELTA2 remediation report
+Date: 2026-07-08
+Gate: STOP after suites green. Nothing committed. HEAD unchanged (7447ced).
+Scope: ONLY DELTA2-RLS-1 (the single HIGH in CODEX-REVIEW-P2-DELTA2.md).
+
+====================================================================
+VERIFICATION SUMMARY
+====================================================================
+- test:db .......... 147 passed / 0 failed  (was 141; +6 DELTA2-RLS-1 tests). Exceeds >141 target.
+- unit suite ....... 367 passed / 0 failed  (npx vitest run, 37 files)
+- tsc --noEmit ..... clean (exit 0, no output)
+- Harness .......... scripts/db-local-verify.sh (Docker PG16) applies …120000 → …130000 → …140000 → …150000
+- Non-vacuous ...... reverting to the pre-…150000 trigger+policy fails 5 of the 6 new tests (see below)
+- Nothing committed. Nothing pushed. No production migration applied.
+
+====================================================================
+DELTA2-RLS-1  (HIGH)  — CONFIRMED against SQL → FIXED
+====================================================================
+Finding: portal_intake_submissions_update (…120000:139) leaves provider-authored open
+submissions targetable by the patient AND lets the patient clear provider provenance.
+USING admits any own patient_entered / unsubmitted row; WITH CHECK requires the NEW
+row to have created_by IS NULL. A provider-INITIATED submission carries created_by =
+the provider, so a normal save (created_by preserved) is BLOCKED, but a save that sets
+created_by = NULL SATISFIES the WITH CHECK and succeeds (rowcount 1) — the patient_portal
+role erases provider-set provenance.
+
+Verification against the SQL (before fixing):
+- 20260706120000: intake_submissions.created_by UUID REFERENCES users(id), nullable;
+  set at INSERT (NULL for patient-initiated, provider id for provider-initiated).
+- …120000 portal_intake_submissions_update WITH CHECK contained `AND created_by IS NULL`
+  (line 156); USING was own + patient_entered + submitted_at IS NULL (lines 141-145).
+  CONFIRMED the pin is satisfiable by NULLing created_by → the exploit is real.
+- Verified nothing ELSE on the row is patient-mutable provenance: reviewed_by /
+  reviewed_at / signed_snapshot are WITH-CHECK-forced NULL on a patient write and are
+  transition-derived by the state machine; organization_id / patient_id are
+  WITH-CHECK-pinned to self; status is pinned to patient_entered; submitted_at is the
+  by-design one-way submit lock. created_by is the one provider-provenance field the
+  policy failed to protect.
+
+Fix — new additive migration (…120000 / …120002 NOT rewritten; mirrors the prior
+P1-FIXES/P2-FIXES/P2-FIXES-2 amendment pattern), TWO parts:
+
+1. State-machine trigger — provenance immutability for ALL roles.
+   supabase/migrations/20260707150000_sprint1_p2_portal_intake_fixes3.sql
+   CREATE OR REPLACEs enforce_intake_submission_state(), re-derived VERBATIM from
+   …120002 (SM-1 INSERT governance + SM-2 signed-snapshot rebuild preserved), adding
+   ONE UPDATE-path invariant:
+       IF NEW.created_by IS DISTINCT FROM OLD.created_by THEN RAISE '… is immutable …'
+   Provider provenance is set once at INSERT and never changes afterward, regardless of
+   entry path (portal, clinician, RPC, service role). Trigger events unchanged
+   (BEFORE INSERT OR UPDATE OR DELETE), re-created for a self-contained amendment.
+
+2. Portal UPDATE policy — drop the now-redundant, unsafe pin.
+   Same migration DROP+CREATEs portal_intake_submissions_update WITHOUT the
+   `created_by IS NULL` clause in WITH CHECK. The trigger now guarantees created_by
+   cannot change, so the WITH CHECK must not carry a clause a patient can satisfy by
+   nulling the field. USING unchanged (submit lock); all other WITH CHECK guards kept
+   (own patient/org, status=patient_entered, reviewed_*/signed_snapshot NULL). INSERT
+   policies unchanged (a portal INSERT still forces created_by IS NULL).
+
+Net behavior — proven by tests (all four required behaviors):
+  (a) patient CAN save AND complete (submit) a provider-initiated open submission with
+      created_by preserved intact (rowcount 1; created_by still = the clinician).
+  (b) patient CANNOT null created_by, and CANNOT stamp created_by onto its own
+      patient-initiated submission — the trigger raises "… is immutable …".
+  (c) clinician / state-machine paths are unaffected (a legal transition never touches
+      created_by); created_by is immutable for ALL roles — even an owner/admin UPDATE
+      that nulls it raises.
+  (d) the post-submit lock still holds — after submitted_at is set, further portal
+      UPDATEs are excluded (0 rows, no error).
+
+Non-vacuous proof:
+- Reverted the running harness DB to the pre-…150000 trigger (no created_by guard) +
+  policy (created_by IS NULL back in WITH CHECK) and re-ran the DELTA2 block:
+  5 FAILED / 1 passed.
+    * (a) save + (a/d) submit → FAIL: WITH CHECK rejects the created_by-preserving write.
+    * (b) null created_by → FAIL: rowcount 1, no raise (the exact vulnerability).
+    * (b) stamp created_by → FAIL: raises an RLS "violates" error, not the trigger's
+          "immutable" message the test asserts.
+    * (c) all-roles admin-null → FAIL: rowcount 1, no raise.
+    * (c) transition control → PASS (created_by untouched by a transition either way).
+- Re-applied …150000 → 147 DB tests green again.
+
+====================================================================
+FILES CHANGED (all uncommitted)
+====================================================================
+new:      supabase/migrations/20260707150000_sprint1_p2_portal_intake_fixes3.sql
+modified: scripts/db-local-verify.sh                  (applies …150000 after …140000)
+modified: supabase/MIGRATION_LEDGER.md                (ledger row for …150000, not applied to prod)
+modified: supabase/SCHEMA-NOTES.md                    (state-machine created_by immutability;
+                                                       submit-transition note; corrected judgment
+                                                       call; new "P2-FIXES-3" section; harness counts)
+modified: src/__tests__/db/portal-intake-rls.test.ts  (+6 DELTA2-RLS-1 tests)
+modified: CODEX-REVIEW-P2-DELTA2.md                   (appended REMEDIATION-3)
+
+No P1/other-sprint files touched. No INSERT policy, no GRANT, and no other portal
+policy changed. All P2 migrations remain gated-manual-apply (verified in the local
+isolation harness only; absent from supabase_migrations.schema_migrations).

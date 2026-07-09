@@ -77,6 +77,12 @@ patient_entered -> provider_review -> reconciled -> signed
   may **not** be supplied at insert time (they are set only by later
   transitions). This closes the previous INSERT-to-`signed` bypass.
 - Any other status change (skip, or backward) raises `illegal ... transition`.
+- **`created_by` is IMMUTABLE post-creation (DELTA2-RLS-1, `…150000`).** On UPDATE
+  the trigger enforces `NEW.created_by IS NOT DISTINCT FROM OLD.created_by` for
+  every role — provider provenance (who authored the submission: NULL for a
+  patient-initiated one, the provider's id for a provider-initiated one) is set
+  once at INSERT and never changes. This is what lets the portal UPDATE policy drop
+  its `created_by IS NULL` WITH CHECK pin (see "P2-FIXES-3" below).
 - **On entering `signed`, `signed_snapshot` is ALWAYS rebuilt server-side
   (SM-2).** Decision: the trigger **discards any caller-supplied
   `signed_snapshot`** on the sign transition and overwrites it with a value
@@ -322,3 +328,270 @@ still reads **zero** rows from every Sprint 0-locked table.
   password placeholder to substitute at apply time, and uses `uuid_generate_v4()`
   (requires the `uuid-ossp` extension). All intra-portal concerns, independent of
   Sprint 0.
+
+---
+
+## Sprint 1 / P2 — Patient Portal intake (portal RLS + template-driven renderer)
+
+Migrations:
+- `20260707120000_sprint1_p2_portal_intake_rls.sql` (additive, idempotent, gated
+  manual apply). Depends on the portal foundation (`20260611120000`) + the
+  Sprint 0 intake migrations. Adds the `patient_portal` write+read slice on the 8
+  INTAKE-WRITE tables + `intake_templates` SELECT (active only). No existing
+  `TO authenticated` policy is modified.
+- `20260707130000_sprint1_p2_portal_intake_fixes.sql` — **P2-FIXES** (CODEX-REVIEW-P2
+  HIGH-1/HIGH-2). Additive amendment to `…120000` (that migration is NOT rewritten,
+  mirroring the P1-FIXES `…120002` pattern). See "P2-FIXES" below.
+
+### Submit-transition design decision (chosen)
+
+**Final submit keeps `status='patient_entered'` and sets `submitted_at = NOW()`.
+`submitted_at IS NOT NULL` is the lock.** No new column, no schema change; the
+role-agnostic state-machine trigger is respected because the patient never
+changes `status` (the provider does `patient_entered -> provider_review` in P3).
+
+The lock falls out of the RLS `UPDATE` policy on `intake_submissions`:
+`USING (patient_id = <self> AND status='patient_entered' AND submitted_at IS NULL)`
+admits the submit write itself (OLD row still unsubmitted) but excludes every
+write after it (an RLS `USING` exclusion yields **0 rows, not an error**). The
+`WITH CHECK` pins `status='patient_entered'` and forbids the patient setting
+`reviewed_*` / `signed_snapshot`. **`created_by` is no longer a WITH CHECK clause
+(P2-FIXES-3, `…150000`)** — it is enforced immutable by the state-machine trigger
+instead, so a patient can complete a provider-initiated submission (created_by
+preserved) yet cannot null or alter it; see "P2-FIXES-3" below. Child-row policies
+gate on the linked parent submission being `patient_entered` AND `submitted_at IS
+NULL`, so the lock propagates to `problems`/`medications`/`allergies`/`ros_responses`.
+
+Rejected alternative: transitioning to `provider_review` on submit would require a
+`SECURITY DEFINER` RPC (the portal RLS forbids patients changing `status`), adding
+moving parts + the Supabase default-EXECUTE-grant footgun. The chosen design needs
+neither.
+
+### Persistence model (P2 app vs. the DB capability)
+
+The P2 renderer persists the entire patient payload to
+**`intake_submissions.responses` JSONB**, keyed `responses[sectionKey][fieldKey]`
+(scalars, repeating coded groups as arrays, ROS as a per-system map, consents as
+`{value, at, template_version}`). The coded pickers still capture fully-coded
+values (rxnorm_code / icd10 / allergen) at entry; **normalization of those into the
+`problems`/`medications`/`allergies`/`ros_responses` child tables is a PROVIDER
+action deferred to P3 reconciliation** (where each patient item becomes a reviewed
+row). This keeps the renderer 100% specialty-agnostic (S2) — no field→table
+routing in code, which the seed's table-less groups (`surgeries`,
+`health_maintenance`) would otherwise force — and it is the simplest correct model.
+
+Part A's child-table write RLS is nonetheless built and DB-tested **exactly to
+spec** (patients CAN INSERT/UPDATE `source='patient'`, `reconciled=false`,
+submission-linked rows while unsubmitted; CANNOT after submit, cross-patient, or
+with forbidden fields). It is the latent capability a later phase (or a direct
+structured-write path) uses without another migration.
+
+### Spec-vs-schema tailoring (per-table)
+
+- **`encounter_id must be NULL` is vacuous** — none of the 8 INTAKE-WRITE tables
+  carry an `encounter_id` column (only `vitals` does, which the portal cannot
+  touch). No clause is emitted; the requirement is satisfied by absence.
+- **Forced-field checks are applied only where the column exists**: `source='patient'`
+  on the 6 tables that have `source` (not `ros_responses`/`intake_submissions`);
+  `reconciled=false` only on `problems`/`medications`/`allergies`.
+- **Link-less tables** (`family_history`, `social_history`, `immunizations`)
+  originally had no `intake_submission_id`, so their portal write lock was scoped to
+  "the patient has an open (`patient_entered`, unsubmitted) intake". **P2-FIXES
+  (`…130000`) changed this**: those three tables now carry a nullable
+  `intake_submission_id` FK and their portal writes are gated on THEIR OWN parent
+  submission (same as `problems`/`medications`/`allergies`). See "P2-FIXES" below.
+  In P2 the app still routes these sections to `responses` JSONB, so the direct-write
+  policies remain latent (built + DB-tested, not exercised by the P2 UI).
+- **`intake_templates` portal SELECT** is `active = TRUE AND (organization_id IS NULL
+  OR organization_id = <patient's org>)` — active system + own-org only; the
+  inactive `_smoke_test` and other orgs' templates are not readable.
+
+### Feature flag + write-path seam
+
+The patient page (`src/app/(portal)/intake/[token]`) and the terminology proxies are
+gated behind the server flag **`INTAKE_V1`** (default off, `isIntakeV1Enabled()`;
+`notFound()` / `404` when off). The persistence route (`/api/portal/intake`)
+validates at the boundary and **fails closed (401)** until the portal
+authentication session (Supabase Auth for patients → the `patient_portal` DB role)
+lands with the portal-claim/auth phase — writes never bypass per-patient RLS via
+the service role (S4).
+
+### External terminology dependency (P2 → replaced in P4)
+
+The coded pickers proxy a **sanitized search string only** (no PHI, no patient
+identifiers) through `GET /api/terminology/[system]` (IP-rate-limited, `INTAKE_V1`
+-gated) to free public NLM services (see also the boundary-hardening note in
+P2-FIXES below):
+
+| System | Upstream | Host |
+| ------ | -------- | ---- |
+| `rxnorm` (medications) | RxNav `REST/drugs.json` | `rxnav.nlm.nih.gov` |
+| `icd10` (problems)     | Clinical Tables `icd10cm/v3/search` | `clinicaltables.nlm.nih.gov` |
+| `allergen`             | curated in-app list (no external call) | — |
+
+On upstream failure the proxy returns `200 {results:[], degraded:true}` so the
+picker degrades to free text (patients are never blocked; code-less rows are
+flagged for P3 reconciliation). **P4 replaces these public sources with Weno
+data** (see the project plan); the proxy is the single swap point.
+
+### Local verification harness
+
+`scripts/db-local-verify.sh` now also applies the portal foundation
+(`20260611120000`) + both P2 migrations (`…120000` then the `…130000` fixes).
+Because the foundation references the out-of-repo `assessment_*` tables, the
+harness creates **minimal harness-only stubs** for them before applying the
+foundation (never applied to production), and grants `patient_portal`
+`USAGE ON SCHEMA auth` + `EXECUTE ON auth.uid()` (Supabase provides these in prod).
+It applies all four P2 migrations in order (`…120000` → `…130000` → `…140000` →
+`…150000`). 76 portal RLS tests live in `src/__tests__/db/portal-intake-rls.test.ts`
+(**147 DB tests total** with the 71 Sprint 0 intake data-layer tests).
+
+### P2-FIXES (CODEX-REVIEW-P2 remediation) — migration `…130000`
+
+**HIGH-1 (portal SELECT over-broad).** `…120000` scoped every portal SELECT to
+`patient_id = <self>`, which also exposed same-patient rows written by later
+provider / P1D-import / P3-reconciliation workflows (general chart read is out of
+scope for P2). `…130000` re-scopes each child-table SELECT to rows that belong to
+the patient's OWN intake submissions AND are still patient-entered:
+`source='patient'` (where the column exists), `reconciled=false` (on
+`problems`/`medications`/`allergies`), and an `EXISTS` on an own `intake_submissions`
+row linked via `intake_submission_id`. `intake_submissions` SELECT is left as
+`patient_id = <self>` — the row IS the submission, i.e. already exactly "own
+submissions". `ros_responses` scopes on the own-submission link only (no
+source/reconciled columns).
+
+**HIGH-2 (link-less children reopenable).** `family_history`, `social_history`,
+`immunizations` gained a nullable `intake_submission_id UUID REFERENCES
+intake_submissions(id) ON DELETE SET NULL` (+ `idx_<t>_submission`). Their portal
+INSERT/UPDATE policies now gate on THEIR OWN parent submission being
+`patient_entered` AND `submitted_at IS NULL`, and require `intake_submission_id IS
+NOT NULL` (portal writes must link). This removes the coarse "patient has ANY open
+intake" predicate, so a second open submission can no longer reopen writes to rows
+linked to an already-submitted one.
+
+**P3 / P1D implications of the new column.** The FK is **nullable on purpose**:
+non-portal write paths may leave it NULL. P1D incumbent-EHR **imports** insert
+`source='external_import'` rows with `intake_submission_id = NULL` (they are not
+tied to a patient intake submission); a provider may likewise author
+`source='provider'` rows with a NULL link. Both remain **invisible to the portal**
+(the tightened SELECT requires an own-submission link + `source='patient'`), and
+are forced through P3 reconciliation. P3 reconciliation may set the link when a
+patient-entered row is reconciled into a signing submission — but the signed
+snapshot itself is still built only from `problems`/`medications`/`allergies`/
+`ros_responses` (these three link-less tables are **not** part of the snapshot, so
+no signed-row immutability trigger was added to them).
+
+**P2-API-1 (write boundary hardening).** `/api/portal/intake` replaced its
+shape-only `responses` validator with `IntakeWriteSchema`
+(`src/lib/intake/responses-schema.ts`): strict/bounded section+field key format,
+caps on section/field counts, string length, array length, nesting depth, and total
+node count, plus a raw body-size guard — all TEMPLATE-INDEPENDENT so the boundary is
+safe before any write. On final `submit`, every affirmatively-given consent must
+carry `{ value, at, template_version }`. TEMPLATE-AWARE validation (allowlisting
+response keys against the SELECTED template + per-field-type coercion) runs at the
+write path once the portal session loads the template from the DB — that path is
+still the fail-closed 401/501 stub, so no service-role read was introduced here.
+
+### P2-FIXES-2 (CODEX-REVIEW-P2-DELTA remediation) — migration `…140000`
+
+**DELTA-RLS-1 (clinician-authored linked child rows).** HIGH-1 (`…130000`) still
+left two gaps for CLINICIAN-authored rows. Portal-authored child rows ALWAYS carry
+`created_by IS NULL` (the INSERT policies force it); a clinician / P1D-import row
+carries a non-null `created_by`. `…140000` adds the OLD-row ownership predicate
+`created_by IS NULL` (plus `source='patient'` / `reconciled=false` where those
+columns exist) to BOTH the child-table SELECT USING and the UPDATE USING of all
+seven child tables:
+
+- **`ros_responses` was the sharp edge** — it has NO `source`/`reconciled` column,
+  so `…130000`'s own-submission SELECT admitted a clinician-authored ROS row linked
+  to the patient's submission, and the UPDATE USING (patient + open-parent only)
+  let the portal target it. `created_by IS NULL` is the ONLY discriminator here.
+- **UPDATE hijack (all child tables).** The ownership predicates lived only in
+  `WITH CHECK` (new-row), not `USING` (old-row), so a clinician row that looked
+  patient-authored (`source='patient'`, `reconciled=false`) but carried a
+  `created_by` could be UPDATE-targeted and rewritten with `created_by=NULL` —
+  laundering it into a portal-owned row. Adding the predicates to `USING` closes
+  this. (Note: PostgreSQL applies the SELECT policy to an `UPDATE … WHERE` that
+  reads the row, so the tightened SELECT and UPDATE USING now reinforce each other;
+  the UPDATE USING is still required to defend an `UPDATE` with no row-reading
+  `WHERE`.) `INSERT`/`UPDATE` WITH CHECK were already correct and are unchanged.
+- **`intake_submissions` provenance (corrected by P2-FIXES-3).** Its row IS the
+  submission (`patient_id = <self>` already means "own"), and a provider-INITIATED
+  submission (`created_by` set, still `patient_entered`) is a legitimate row the
+  patient must be able to complete. P2-FIXES-2 argued the `status` + `submitted_at`
+  gate was the correct lock and left the base policy untouched — **but CODEX-REVIEW-P2-DELTA2
+  (DELTA2-RLS-1) refuted that**: the base UPDATE `WITH CHECK` still pinned
+  `created_by IS NULL`, which a patient could satisfy by NULLing the provider's
+  `created_by`, erasing provenance. The corrected form (`…150000`): make `created_by`
+  immutable in the trigger and drop the WITH CHECK pin. See "P2-FIXES-3" below.
+
+Adversarial DB coverage (`src/__tests__/db/portal-intake-rls.test.ts`) extends the
+matrix across EVERY child table: patient-authored linked rows readable; clinician
+`created_by`-stamped linked rows invisible; and the launder-via-UPDATE attempt
+returns 0 rows. Verified non-vacuous by reverting the policies to their pre-`…140000`
+form (the read + launder tests then fail: the clinician row is visible / rewritable).
+
+**DELTA-API-1 (consent record on submit).** `IntakeWriteSchema` now requires
+`template_version` (a number) on EVERY consent-shaped value on final submit —
+affirmed OR declined — so a declined consent is version-stamped, not silently
+accepted (it is part of the medico-legal record). `at` (the agreement timestamp) is
+required only for an AFFIRMED consent; a decline has no agreement instant (the
+client stamps `at:null` by design, and `intake_submissions.submitted_at` records
+when the decline was finalized). **Product decision: declines are version-stamped,
+not time-stamped.**
+
+**DELTA-API-2 (raw body cap).** `/api/portal/intake` no longer trusts
+`Content-Length` alone for the 256 KB cap. It reads the body through a streaming
+reader that aborts once the byte ceiling is crossed (413), so a `Content-Length`-less
+or `Content-Length`-lying body cannot force a large allocation before the structural
+`IntakeWriteSchema` bounds run. The schema bounds remain the second layer.
+
+### P2-FIXES-3 (CODEX-REVIEW-P2-DELTA2 remediation) — migration `…150000`
+
+**DELTA2-RLS-1 (provider provenance on `intake_submissions`).** A provider-INITIATED
+submission (`created_by` = the provider, still `patient_entered` + unsubmitted) is a
+legitimate row the patient must be able to complete. The base portal UPDATE policy
+(`…120000`) tried to protect that provenance by pinning `created_by IS NULL` in
+`WITH CHECK` — but that pin is **satisfiable by NULLing `created_by`**: a normal save
+that preserved the provider's `created_by` was rejected, yet a save that CLEARED it
+succeeded (rowcount 1), letting the `patient_portal` role erase provider-set
+provenance. (This is the judgment call P2-FIXES-2 recorded as "safe under status +
+`submitted_at`" and DELTA2 refuted.)
+
+The fix splits the invariant to its correct home, in two parts:
+
+- **Trigger (immutability, all roles).** `enforce_intake_submission_state()` is
+  `CREATE OR REPLACE`d (re-derived verbatim from `…120002`, preserving SM-1 INSERT
+  governance and the SM-2 snapshot rebuild) with ONE added UPDATE-path invariant:
+  `NEW.created_by IS NOT DISTINCT FROM OLD.created_by`. Provider provenance is set
+  once at INSERT and can never change afterward, regardless of entry path (portal,
+  clinician, RPC, service role). The trigger events are unchanged (BEFORE INSERT OR
+  UPDATE OR DELETE).
+- **Portal policy (drop the redundant pin).** `portal_intake_submissions_update`
+  drops `created_by IS NULL` from `WITH CHECK`. The trigger now guarantees
+  immutability, so the WITH CHECK no longer needs — and must not have — a clause a
+  patient can satisfy by nulling the field. `USING` is unchanged (the submit lock:
+  own + `patient_entered` + `submitted_at IS NULL`); the other WITH CHECK guards
+  (own patient/org, `status='patient_entered'`, `reviewed_*`/`signed_snapshot` NULL)
+  are kept; INSERT policies are unchanged (a portal INSERT still forces
+  `created_by IS NULL`).
+
+Net behavior: a patient CAN save-and-complete a provider-initiated open submission
+with `created_by` preserved intact; a patient CANNOT null or alter `created_by` (the
+trigger raises `… created_by is immutable …`); clinician/state-machine paths are
+unaffected (a transition never touches `created_by`); and the post-submit lock still
+holds (0 rows after `submitted_at` is set).
+
+**Other columns verified.** `reviewed_by`/`reviewed_at`/`signed_snapshot` stay
+forbidden on a patient write by WITH CHECK (must be NULL) and are transition-derived
+by the trigger, so they need no created_by-style clause; `organization_id`/`patient_id`
+are pinned to self in WITH CHECK; `status` is pinned to `patient_entered`;
+`submitted_at` is the patient's own one-way submit lock by design. No other
+`intake_submissions` column is provider provenance the patient can tamper with.
+
+Adversarial DB coverage (`src/__tests__/db/portal-intake-rls.test.ts`, "provider-initiated
+submission provenance (DELTA2-RLS-1)") proves all four behaviors. **Verified
+non-vacuous:** reverting to the pre-`…150000` trigger + policy fails 5 of the 6 new
+tests (the save/submit is blocked, the null/stamp attempts are no longer caught, and
+the all-roles null succeeds with rowcount 1 — the exact vulnerability). 147 DB tests
+total; unit suite 367 green; `tsc --noEmit` clean.

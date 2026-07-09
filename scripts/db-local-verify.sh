@@ -78,5 +78,44 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_
 GRANT SELECT ON auth.users TO authenticated, service_role;
 SQL
 
+echo "==> applying patient portal foundation + Sprint 1 / P2 portal intake RLS"
+# The portal foundation migration (20260611120000) references assessment_*
+# tables that live outside supabase/migrations/ (applied out-of-band in prod;
+# see MIGRATION_LEDGER.md + SCHEMA-NOTES COLLISION-CHECK). Stub them so the
+# foundation migration's GRANT/CREATE POLICY statements resolve in isolation.
+# These stubs are harness-only; they are never applied to production.
+"${PSQL[@]}" <<'SQL'
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE TABLE IF NOT EXISTS public.assessment_assignments     (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), patient_id uuid, organization_id uuid);
+CREATE TABLE IF NOT EXISTS public.assessment_administrations (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), patient_id uuid, organization_id uuid);
+CREATE TABLE IF NOT EXISTS public.assessment_results         (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), patient_id uuid, organization_id uuid);
+SQL
+
+"${PSQL[@]}" < "$HERE/supabase/migrations/20260611120000_patient_portal_foundation.sql"
+"${PSQL[@]}" < "$HERE/supabase/migrations/20260707120000_sprint1_p2_portal_intake_rls.sql"
+# P2-FIXES (CODEX-REVIEW-P2 HIGH-1/HIGH-2): tighten portal SELECT scope + link
+# family_history/social_history/immunizations to a submission. Applied AFTER the
+# base P2 migration it amends.
+"${PSQL[@]}" < "$HERE/supabase/migrations/20260707130000_sprint1_p2_portal_intake_fixes.sql"
+# P2-FIXES-2 (CODEX-REVIEW-P2-DELTA DELTA-RLS-1): add OLD-row ownership predicates
+# (created_by IS NULL, source='patient', reconciled=false) to child-table SELECT +
+# UPDATE USING so clinician-authored linked rows stay invisible and cannot be
+# hijacked. Applied AFTER the base P2 migration + P2-FIXES it amends.
+"${PSQL[@]}" < "$HERE/supabase/migrations/20260707140000_sprint1_p2_portal_intake_fixes2.sql"
+# P2-FIXES-3 (CODEX-REVIEW-P2-DELTA2 DELTA2-RLS-1): make intake_submissions.created_by
+# immutable post-creation in the role-agnostic state-machine trigger, and drop the
+# now-redundant `created_by IS NULL` pin from the portal UPDATE WITH CHECK so a
+# patient can complete a provider-initiated submission WITHOUT being able to erase
+# provider provenance. Applied AFTER the state machine + base P2 migrations it amends.
+"${PSQL[@]}" < "$HERE/supabase/migrations/20260707150000_sprint1_p2_portal_intake_fixes3.sql"
+
+# Supabase exposes auth.uid() + the auth schema to every role in prod; the
+# isolation harness must grant it explicitly so patient_portal policies (which
+# call auth.uid()) can evaluate.
+"${PSQL[@]}" <<'SQL'
+GRANT USAGE ON SCHEMA auth TO patient_portal;
+GRANT EXECUTE ON FUNCTION auth.uid() TO patient_portal;
+SQL
+
 echo "==> ready. DB: postgresql://postgres:postgres@127.0.0.1:$PORT/postgres"
 echo "    run: npm run test:db"
