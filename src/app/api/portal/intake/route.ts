@@ -29,6 +29,17 @@ import { validateRequest } from "@/lib/validation/schemas";
 import { logError, sanitizeError } from "@/lib/logging/safe-logger";
 import { isIntakeV1Enabled } from "@/lib/config/environment";
 import { IntakeWriteSchema } from "@/lib/intake/responses-schema";
+import { safeParseTemplate } from "@/lib/intake/template";
+import { validateResponsesAgainstTemplate } from "@/lib/intake/template-validation";
+import { resolvePortalPatient } from "@/lib/portal/portal-session";
+import {
+  getTemplateDefinition,
+  getOwnedSubmission,
+  insertSubmission,
+  updateSubmissionResponses,
+  submitIntake,
+} from "@/lib/portal/portal-db";
+import type { IntakeResponses } from "@/lib/intake/types";
 
 // Hard cap on the raw request body: cheap DoS defense enforced BEFORE the body is
 // fully materialized/parsed. The structural bounds in IntakeWriteSchema are the
@@ -78,18 +89,6 @@ async function readCappedBodyText(
   return { ok: true, text: new TextDecoder().decode(buf) };
 }
 
-interface PortalPatient {
-  patientId: string;
-  organizationId: string;
-}
-
-// Placeholder for the portal session resolver delivered by the portal-auth phase
-// (it will read the portal session off `request`). Fail-closed by design: no
-// portal session in this repo yet => null => 401.
-async function resolvePortalPatient(): Promise<PortalPatient | null> {
-  return null;
-}
-
 export async function POST(request: NextRequest) {
   if (!isIntakeV1Enabled()) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -122,15 +121,97 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const body = validation.data;
+
   try {
+    // Layer: authenticated, patient-scoped portal session (never service role).
     const portal = await resolvePortalPatient();
     if (!portal) {
-      // Fail closed: never persist intake PHI without an authenticated,
-      // patient-scoped portal session.
       return NextResponse.json({ error: "Portal sign-in required" }, { status: 401 });
     }
-    // Write path lands with the portal-auth phase (see file header).
-    return NextResponse.json({ error: "Portal intake is not yet enabled" }, { status: 501 });
+
+    // Resolve the target submission FIRST: an update must be validated against the
+    // template the stored submission is ALREADY bound to (P3-HIGH-3), so we load
+    // it before choosing which template governs validation.
+    let owned: Awaited<ReturnType<typeof getOwnedSubmission>> = null;
+    if (body.submission_id) {
+      owned = await getOwnedSubmission(portal.authUserId, body.submission_id);
+      if (!owned) {
+        // Not the caller's submission (or absent). Forbidden -- do not write.
+        return NextResponse.json({ error: "This intake is not available" }, { status: 403 });
+      }
+      if (owned.submittedAt) {
+        return NextResponse.json({ error: "This intake was already submitted" }, { status: 409 });
+      }
+    }
+
+    // EFFECTIVE TEMPLATE (P3-HIGH-3): a bound submission is governed by its OWN
+    // stored template even when the request omits/nulls template_id -- otherwise a
+    // client could send template_id:null to skip the allowlist while the DB keeps
+    // the old template (COALESCE). Changing a bound template is rejected.
+    if (owned?.templateId && body.template_id && body.template_id !== owned.templateId) {
+      return NextResponse.json(
+        { error: "This intake is bound to a different template and cannot be changed" },
+        { status: 409 },
+      );
+    }
+    const effectiveTemplateId = body.template_id ?? owned?.templateId ?? null;
+
+    // TEMPLATE-AWARE VALIDATION (deferred from P2): load the EFFECTIVE template
+    // through the patient_portal role (active system/own-org catalog read), then
+    // allowlist response keys + coerce per field type on top of the boundary
+    // schema. What we persist is the coerced, allowlisted responses.
+    let responsesToStore: IntakeResponses = body.responses;
+    if (effectiveTemplateId) {
+      const definition = await getTemplateDefinition(portal.authUserId, effectiveTemplateId);
+      if (!definition) {
+        return NextResponse.json({ error: "Unknown or unavailable template" }, { status: 400 });
+      }
+      const parsed = safeParseTemplate(definition);
+      if (!parsed.success) {
+        // The stored template is malformed -- fail closed rather than write
+        // unvalidated PHI.
+        logError({ action: "PORTAL_INTAKE_TEMPLATE_PARSE_ERROR" });
+        return NextResponse.json({ error: "Template is unavailable" }, { status: 500 });
+      }
+      const tv = validateResponsesAgainstTemplate(parsed.template, body.responses);
+      if (!tv.valid) {
+        return NextResponse.json(
+          { error: "Validation failed", details: tv.errors },
+          { status: 400 },
+        );
+      }
+      responsesToStore = tv.coerced;
+    }
+
+    // Update an owned, still-open submission, or create a new patient_entered one.
+    // RLS is the enforcement layer throughout.
+    let submissionId = body.submission_id;
+    if (submissionId) {
+      const updated = await updateSubmissionResponses(portal.authUserId, submissionId, {
+        templateId: effectiveTemplateId,
+        responses: responsesToStore,
+      });
+      if (updated === 0) {
+        // Raced into a submitted/locked state between the check and the write.
+        return NextResponse.json({ error: "This intake is locked" }, { status: 409 });
+      }
+    } else {
+      submissionId = await insertSubmission(portal.authUserId, {
+        organizationId: portal.organizationId,
+        patientId: portal.patientId,
+        templateId: effectiveTemplateId,
+        responses: responsesToStore,
+      });
+    }
+
+    if (body.submit) {
+      // Final submit: the SECURITY DEFINER RPC materializes child rows + sets the
+      // submit lock, atomically and idempotently.
+      const materialized = await submitIntake(portal.authUserId, submissionId);
+      return NextResponse.json({ submission_id: submissionId, submitted: true, materialized });
+    }
+    return NextResponse.json({ submission_id: submissionId, submitted: false });
   } catch (error) {
     logError({ action: "PORTAL_INTAKE_WRITE_ERROR", error: sanitizeError(error) });
     return NextResponse.json({ error: "Failed to save intake" }, { status: 500 });

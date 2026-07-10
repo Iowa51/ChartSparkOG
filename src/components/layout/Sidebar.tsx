@@ -46,6 +46,12 @@ const navSections = [
     title: "Clinical Notes",
     items: [
       { label: "Notes", href: "/notes", icon: FileText },
+      // Provider intake reconciliation (Sprint 2 / P3). Shown only when the
+      // RECONCILE_V1 rollout flag is on; the page itself 404s when off.
+      ...(process.env.NEXT_PUBLIC_RECONCILE_V1 === "true" ||
+      process.env.NEXT_PUBLIC_RECONCILE_V1 === "1"
+        ? [{ label: "Reconcile Intake", href: "/reconcile", icon: ClipboardList }]
+        : []),
       { label: "AI Scribe", href: "/scribe", icon: Mic, tier: "complete" as const },
       {
         label: "AI Assistant",

@@ -87,6 +87,11 @@ const envSchema = z.object({
   INTAKE_V1: z.string().default("false"),
   NEXT_PUBLIC_INTAKE_V1: z.string().optional(),
 
+  // Provider reconciliation (Sprint 2 / P3). Default off; gates the reconcile
+  // queue + detail pages until the phase exits.
+  RECONCILE_V1: z.string().default("false"),
+  NEXT_PUBLIC_RECONCILE_V1: z.string().optional(),
+
   // Demo mode
   NEXT_PUBLIC_DEMO_MODE: z.string().default("false"),
   DEMO_LOGIN_CREDENTIALS: z.string().optional(),

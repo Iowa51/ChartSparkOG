@@ -1,0 +1,169 @@
+================================================================================
+P3-FIXES REPORT — CODEX-REVIEW-P3 remediation
+Date: 2026-07-09   Branch: main   HEAD: 2299eed   (nothing committed or pushed)
+================================================================================
+
+SCOPE
+  Remediated all six findings in CODEX-REVIEW-P3.md per _cc-prompts/sprint2-p3-fixes.txt.
+  Strategy: ONE new additive migration + app-layer + test changes. No committed
+  migration file was rewritten (the established additive-FIXES pattern).
+
+--------------------------------------------------------------------------------
+VERIFICATION (all green)
+--------------------------------------------------------------------------------
+  bash scripts/db-local-verify.sh   -> exit 0 (fresh PG16; full chain + P3-FIXES applied last)
+  npm run test:db                   -> 177 passed (4 files)     [was 163; +14]
+  npm run test:run                  -> 428 passed (44 files)    [was 408; +20]
+  npx tsc --noEmit                  -> clean
+
+  Counts reproduced against a from-scratch harness rebuild.
+
+--------------------------------------------------------------------------------
+FINDINGS & FIXES
+--------------------------------------------------------------------------------
+
+P3-CRIT-1  portal_submit_intake concurrency-safe                        [FIXED]
+  Migration: CREATE OR REPLACE portal_submit_intake (re-derived verbatim) adds:
+    1. SELECT ... FOR UPDATE on the parent submission BEFORE the idempotency
+       check -> serializes concurrent patient_portal submits (the loser blocks,
+       re-reads the claimed sentinel, returns already_submitted:true).
+    2. Conditional atomic claim: UPDATE ... SET materialized_at=NOW()
+       WHERE materialized_at IS NULL (row-count checked) BEFORE any child insert
+       -> structural single-materialization backstop. Whole call is one txn: a
+       later RAISE rolls back the claim too.
+  Test (reconciliation.test.ts): "two concurrent patient_portal submits
+    materialize exactly once (CRIT-1)" — two REAL patient_portal connections;
+    exactly one already_submitted:false, one :true; 2 problems (not 4).
+
+P3-CRIT-2  sign-readiness gate + full-disposition snapshot              [FIXED]
+  Migration: CREATE OR REPLACE enforce_intake_submission_state (re-derived
+    verbatim from ...150000 — SM-1/SM-2/created_by-immutability preserved) adds:
+    a. provider_review requires submitted_at IS NOT NULL.
+    b. reconciled/signed rejected while any first-class row is unresolved
+       (unresolved = rejected=false AND (reconciled=false OR needs_coding=true)).
+       OPERATOR POLICY: sign blocked until every problem/medication/allergy is
+       rejected OR (reconciled AND NOT needs_coding).
+    c. signed_snapshot captures ALL first-class rows via to_jsonb(row) — accepted
+       AND rejected, each carrying its disposition flags (disposition, not omission).
+  App: status route mirrors (a)/(b) for precise 409s (assertReconcileReady in
+    src/lib/reconcile/data.ts). buildIntakeNoteDraft excludes rejected rows so the
+    drafted clinical note shows only the accepted picture.
+  Tests (both layers):
+    - DB: provider_review-requires-submitted_at; unresolved -> reconciled RAISEs;
+      snapshot records all first-class rows with disposition (accepted + rejected).
+    - Route (status/route.test.ts): unresolved reconciled/signed -> 409;
+      provider_review unsubmitted -> 409; fully-resolved sign -> 200 + note draft.
+
+P3-HIGH-3  effective-template validation                                [FIXED]
+  App (/api/portal/intake): resolves an effective template — on update, loads the
+    owned submission's stored template_id and validates against it when the request
+    omits/nulls template_id; rejects changing a bound template (409). getOwnedSubmission
+    now returns templateId.
+  Tests (portal/intake/route.test.ts): update-with-null-template validates (junk
+    key -> 400); valid update -> 200; template change -> 409.
+
+P3-HIGH-4  service role removed from portal paths                       [FIXED]
+  App:
+    - (portal)/intake/[token]/page.tsx reads the active template via the patient's
+      own patient_portal connection (getActivePortalTemplate; RLS
+      portal_intake_templates_select) — no service role.
+    - portal-invites.ts uses SECURITY DEFINER validate_portal_invite /
+      claim_portal_invite (via portal-db.ts over the patient_portal role).
+    - Supabase Auth admin createUser/deleteUser isolated in NEW
+      src/lib/auth/portal-auth-admin.ts (Auth API only, no DB write), outside
+      src/lib/portal/**.
+  Migration: both definer functions owned by postgres, search_path pinned,
+    REVOKE ALL FROM PUBLIC + REVOKE EXECUTE FROM anon/authenticated/service_role,
+    GRANT EXECUTE ... TO patient_portal.
+  Tests:
+    - Static (no-service-role.test.ts): no createServiceRoleClient under
+      src/app/(portal)/** or src/lib/portal/** (non-vacuous: asserts files scanned).
+    - DB privilege probes (portal-claim.test.ts): patient_portal CAN execute;
+      authenticated/anon -> permission denied.
+
+P3-MED-5   row reconcile phase guard                                    [FIXED]
+  App (/api/reconcile/[submissionId]/row): loads the parent submission; requires
+    status='provider_review' AND submitted_at IS NOT NULL before accept/reject.
+  Tests (row/route.test.ts): patient_entered / reconciled / signed / unsubmitted
+    all -> 409; provider_review -> 200; missing parent -> 404.
+
+P3-MED-6   atomic single-use invite claim + compensation               [FIXED]
+  Migration: claim_portal_invite locks the invite (FOR UPDATE), inserts the
+    portal-account link, then a single-use conditional UPDATE ... WHERE claimed_at
+    IS NULL with a checked row-count — one transactional unit (failure rolls back
+    the link). Concurrent claims serialize; the loser sees 'claimed'.
+  App (portal-invites.ts): if the Auth account was created but the DB claim fails,
+    the Auth user is compensated (deleted); if that delete also fails, a
+    compensable state is recorded (PORTAL_CLAIM_ORPHAN_AUTH_USER) and success is
+    NOT reported. Recovery path documented in SCHEMA-NOTES ("Claim recovery path").
+  Tests (portal-claim.test.ts): claim links + single-use; second claim -> 'claimed';
+    account_exists / expired guards; two concurrent claims -> exactly one succeeds,
+    one portal user.
+
+--------------------------------------------------------------------------------
+FILES CHANGED
+--------------------------------------------------------------------------------
+New:
+  supabase/migrations/20260709120000_sprint2_p3_fixes.sql
+  src/lib/auth/portal-auth-admin.ts
+  src/__tests__/db/portal-claim.test.ts
+  src/app/api/reconcile/[submissionId]/status/route.test.ts
+  src/app/api/reconcile/[submissionId]/row/route.test.ts
+  src/lib/portal/__tests__/no-service-role.test.ts
+  P3-FIXES-REPORT.txt
+
+Modified (source):
+  scripts/db-local-verify.sh                              (apply new migration last)
+  src/lib/portal/portal-db.ts                             (withPortalRole; getActivePortalTemplate;
+                                                           getOwnedSubmission.templateId; validate/claim callers)
+  src/lib/portal/portal-invites.ts                        (no service role; definer + auth-admin + compensation)
+  src/app/(portal)/intake/[token]/page.tsx               (template via patient_portal RLS)
+  src/app/api/portal/intake/route.ts                     (effective-template resolution)
+  src/app/api/reconcile/[submissionId]/status/route.ts   (readiness mirror)
+  src/app/api/reconcile/[submissionId]/row/route.ts      (phase guard)
+  src/lib/reconcile/data.ts                              (assertReconcileReady)
+  src/lib/notes/intake-note-sections.ts                  (exclude rejected rows from note draft)
+
+Modified (tests):
+  src/app/api/portal/intake/route.test.ts                (effective-template tests + templateId mock)
+  src/lib/notes/__tests__/intake-note-sections.test.ts   (rejected-row exclusion test)
+  src/__tests__/db/reconciliation.test.ts                (concurrency; readiness gate; disposition snapshot)
+  src/__tests__/db/intake-data-layer.test.ts             (setup: stamp submitted_at — assertions unchanged)
+  src/__tests__/db/portal-intake-rls.test.ts             (setup: stamp submitted_at; split status-advance
+                                                          test in two — see ASSERTION CHANGE note below)
+
+Docs:
+  CODEX-REVIEW-P3.md      (appended REMEDIATION section)
+  supabase/SCHEMA-NOTES.md (P3-FIXES: readiness policy, claim function, effective-template rule, recovery path)
+  supabase/MIGRATION_LEDGER.md (new row for 20260709120000)
+
+--------------------------------------------------------------------------------
+NOTE ON COMMITTED TEST SETUP
+--------------------------------------------------------------------------------
+  The required CRIT-2 gate (provider_review requires submitted_at; reconciled/signed
+  require row resolution) invalidated the SETUP of several committed state-machine
+  tests that advanced through the flow without submitting/resolving. Their setup was
+  corrected minimally (stamp submitted_at; resolve rows). No committed migration file
+  was rewritten.
+
+  ASSERTION CHANGE (disclosed, per CODEX-REVIEW-P3-DELTA LOW-2): in
+  portal-intake-rls.test.ts the single test "portal cannot advance status out of
+  patient_entered" previously asserted ONE broadened regex
+  (row-level security|violates|policy|transition|submitted). Because the state-machine
+  BEFORE trigger runs ahead of the RLS WITH CHECK, that regex conflated two distinct
+  guards, so it is now SPLIT into two tests, each with a narrowed assertion:
+    - unsubmitted UPDATE            -> the DB submitted gate raises   (/before it is submitted/)
+    - submitted in the same UPDATE  -> the portal WITH CHECK raises   (/row-level security/)
+  This nets +1 DB test. intake-data-layer.test.ts remains setup-only (no expect changed).
+
+--------------------------------------------------------------------------------
+RESIDUAL / NOT DONE (out of scope for this pass)
+--------------------------------------------------------------------------------
+  - Migration is verified in the local isolation harness ONLY; NOT applied to
+    production (gated manual apply — see MIGRATION_LEDGER row).
+  - claimPortalInvite is exercised against the DB claim function directly (DB tests)
+    and via mocks (route tests); it is not integration-tested against a live Supabase
+    Auth (GoTrue) instance.
+  - The orphan-Auth-user reconciliation job (recovery path) is documented, not built.
+  - No browser/rendered-screen verification of the portal auth form or reconcile UI.
+================================================================================

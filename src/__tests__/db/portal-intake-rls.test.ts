@@ -419,10 +419,14 @@ describe("Portal intake: submit lock", () => {
     ).rejects.toThrow(/row-level security|violates|policy/i);
   });
 
-  test("portal cannot advance status out of patient_entered (WITH CHECK)", async () => {
+  // The portal is blocked from advancing status out of patient_entered by TWO
+  // independent guards. LOW-2 splits them so each assertion pins exactly one: the
+  // state-machine BEFORE trigger runs ahead of the RLS WITH CHECK, so which guard
+  // raises depends on whether the submitted gate is already satisfied.
+  test("portal cannot advance status to provider_review while unsubmitted (DB submitted gate, P3-CRIT-2)", async () => {
     const sub = await freshOpenSubmission();
-    // UPDATE ... status='provider_review': WITH CHECK requires status stays
-    // patient_entered -> raises (before the state-machine trigger even runs).
+    // submitted_at is NULL, so the state-machine trigger rejects the transition
+    // first: an intake cannot enter provider_review before the patient submits it.
     await expect(
       asPortal(PORTAL_UID, async (c) => {
         await c.query(
@@ -430,7 +434,24 @@ describe("Portal intake: submit lock", () => {
           [sub],
         );
       }),
-    ).rejects.toThrow(/row-level security|violates|policy|transition/i);
+    ).rejects.toThrow(/before it is submitted|submitted_at is NULL/i);
+  });
+
+  test("portal cannot advance status to provider_review even when submitted (portal WITH CHECK pins status)", async () => {
+    const sub = await freshOpenSubmission();
+    // Stamp submitted_at in the SAME update so the trigger's submitted gate passes
+    // (NEW.submitted_at is not NULL) and the transition is otherwise legal. USING is
+    // evaluated against the pre-update row (submitted_at IS NULL), so the row is still
+    // selected; what rejects now is the portal WITH CHECK, which pins status to
+    // patient_entered -- the policy forbids the advance independently of the gate.
+    await expect(
+      asPortal(PORTAL_UID, async (c) => {
+        await c.query(
+          `UPDATE public.intake_submissions SET status = 'provider_review', submitted_at = NOW() WHERE id = $1`,
+          [sub],
+        );
+      }),
+    ).rejects.toThrow(/row-level security|violates|policy/i);
   });
 
   test("after parent is submitted, INSERTing a child is rejected (parent no longer open)", async () => {
@@ -953,8 +974,9 @@ describe("Portal intake: provider-initiated submission provenance (DELTA2-RLS-1)
     const sub = await providerInitiatedSubmission();
     // The clinician (role-agnostic path here via admin) advances the state machine;
     // a transition never touches created_by, so the new immutability guard is transparent.
+    // P3-CRIT-2: provider_review requires submitted_at, so stamp it in the same UPDATE.
     await admin.query(
-      `UPDATE public.intake_submissions SET status = 'provider_review' WHERE id = $1`,
+      `UPDATE public.intake_submissions SET status = 'provider_review', submitted_at = NOW() WHERE id = $1`,
       [sub],
     );
     const { rows } = await admin.query(

@@ -1,0 +1,233 @@
+================================================================================
+SPRINT 2 / P3 — Provider reconciliation + patient portal auth
+Report — implementation of _cc-prompts/sprint2-p3-reconcile-auth.txt
+================================================================================
+STATUS: All suites green locally. Nothing committed or pushed.
+  * DB suite (test:db):        163 passed  (147 prior + 16 new; expected >147 ✓)
+  * Unit+route suite (test:run): 408 passed (41 files; 367 prior + 41 new)
+  * tsc --noEmit:              0 errors
+  * eslint (new/changed files): clean (2 pre-existing issues untouched — see MISMATCHES)
+
+Pre-reads completed: SCHEMA-NOTES.md (all sections, incl. P2-FIXES + submit-lock),
+MIGRATION_LEDGER.md, portal P0 foundation (…120000 foundation + invite routes),
+the P2 intake write seam (route.ts 401/501 stub), responses-schema.ts, the SM
+trigger in …150000, the P1 data-layer + all P2 RLS migrations, the FM seed
+template, the template engine + pickers, note/vitals/provider-app map, and the
+DB/route/unit test harness.
+
+
+================================================================================
+DESIGN SUMMARY 1 — PORTAL AUTH SESSION MODEL (Part A)
+================================================================================
+IDENTITY vs DB-ROLE SPLIT. Patient identity = Supabase Auth (GoTrue), httpOnly
+sb-* cookies via @supabase/ssr (repo convention). A patient auth user has NO
+public.users row and NO org, so get_user_organization_id()/get_user_role() return
+NULL and the clinician `TO authenticated` policies fail closed for patients by
+construction.
+
+DB ACCESS RUNS AS THE patient_portal POSTGRES ROLE (not a Supabase client —
+those only bind anon/authenticated/service_role). src/lib/portal/portal-db.ts
+opens a pg connection as patient_portal (PORTAL_DATABASE_URL — PRD-02's "portal
+uses the patient_portal role's connection string"), injects the patient's
+auth_user_id as request.jwt.claims.sub (+ SET LOCAL ROLE patient_portal), and the
+already-proven `TO patient_portal` RLS scopes every row. This is the identical
+mechanism the DB tests exercise. The GoTrue cookie only authenticates identity
+(resolvePortalPatient -> getPortalPatientMapping); the write executes over the
+portal connection. NEVER the service role for patient writes (S4).
+
+REJECTED ALTERNATIVE: a GoTrue custom access-token hook stamping
+role: patient_portal (so a normal Supabase client would role-switch). It needs
+GRANT patient_portal TO authenticator + a prod-only auth hook (untestable in the
+isolation harness) and couples identity to DB-role at the token layer. The
+connection-string design keeps the concerns separate, is PRD-mandated, and is the
+proven test path. (Documented in SCHEMA-NOTES.)
+
+FLOWS: POST /api/portal/claim (validate SHA-256 token -> admin.createUser
+{email_confirm:true} -> link patient_portal_users -> mark invite claimed ->
+signInWithPassword + applyCookies); POST /api/portal/login; the [token] page
+authenticates (session+patient -> intake; no session+valid token -> account form;
+used token -> sign-in; expired/invalid -> clear error). CSRF (validateOrigin),
+fail-closed rate limits (invitationAccept/login), INTAKE_V1-gated (404).
+
+TEMPLATE-AWARE VALIDATION (deferred from P2, now live): at write time the route
+loads the SELECTED template through the patient_portal role (active system/own-org
+catalog read — no service role), then validateResponsesAgainstTemplate allowlists
+response keys against the template's sections/fields and coerces per field type,
+layered on the template-independent IntakeWriteSchema. The coerced, allowlisted
+responses are what get persisted.
+
+
+================================================================================
+DESIGN SUMMARY 2 — CHILD-ROW MATERIALIZATION (Part B)
+================================================================================
+CHOICE: a SECURITY DEFINER RPC public.portal_submit_intake(uuid) owned by the
+system, NOT patient-role INSERTs.
+
+JUSTIFICATION against the RLS design:
+ * The whole materialize-then-submit is ONE server-enforced, atomic, idempotent
+   unit — immune to app-layer partial failure and to the submit-lock timing
+   (submitted_at IS NOT NULL closes patient child writes). Patient-role INSERTs
+   would need multi-statement app orchestration racing its own submit lock.
+ * It mirrors the existing SM-2 pattern (signed_snapshot is already built in SQL);
+   materialization is the same responses-JSONB -> normalized-rows transformation
+   and belongs beside it, enforced once regardless of caller.
+ * SAFETY (B0 lesson): REVOKE ALL FROM PUBLIC + explicit REVOKE EXECUTE FROM
+   anon/authenticated/service_role; EXECUTE granted ONLY to patient_portal;
+   search_path pinned to public; and — because DEFINER bypasses RLS — an explicit
+   auth.uid() OWNERSHIP guard in the body (a caller can only materialize its own
+   submission). Role-escape DB tests confirm authenticated/anon get
+   "permission denied".
+
+MAPPING (from the real family_medicine template): pmh.problems->problems,
+medications.medications->medications, allergies.{nkda,allergies}->allergies
+(NKDA => one nkda=true row, allergen rows suppressed), family_history->
+family_history, social_history.*->social_history (1 row), ros.<system>->
+ros_responses (per answered system), immunizations->immunizations. All rows:
+source='patient', reconciled=false, intake_submission_id set, created_by=NULL.
+Code-less rows flagged needs_coding (problems/medications/allergies) or NULL code
+(family/immunizations). psh.surgeries, vitals, demographics, consents have no
+target table and stay in responses JSONB.
+
+ * IDEMPOTENT: guarded by materialized_at — a re-submit returns existing counts,
+   inserts nothing (proven).
+ * ROLLBACK: a malformed clinical value (out-of-range ROS finding) RAISEs and the
+   whole call rolls back — no partial rows, submitted_at stays NULL (proven).
+
+
+================================================================================
+DELIVERABLES BUILT
+================================================================================
+MIGRATION (+LEDGER):
+  supabase/migrations/20260708120000_sprint2_p3_reconciliation.sql
+    - attribution cols (reconciled_by/at), reject soft-flag, needs_coding flag on
+      problems/medications/allergies; intake_submissions.materialized_at;
+      portal_submit_intake SECURITY DEFINER RPC (grants locked down).
+  scripts/db-local-verify.sh — applies the migration last in the harness chain.
+  supabase/MIGRATION_LEDGER.md — new "not applied" row (harness-only; prod steps).
+  supabase/SCHEMA-NOTES.md — new "Sprint 2 / P3" section (all four design decisions).
+
+PART A — PORTAL AUTH + LIVE WRITE PATH:
+  src/lib/portal/portal-db.ts       — patient_portal pg connection + write ops.
+  src/lib/portal/portal-session.ts  — resolvePortalPatient (cookie -> patient).
+  src/lib/portal/portal-invites.ts  — token validation + claimPortalInvite.
+  src/app/api/portal/claim/route.ts — invite claim + session establishment.
+  src/app/api/portal/login/route.ts — returning-patient login.
+  src/app/api/portal/intake/route.ts (MODIFIED) — LIVE write path (401-stub
+      replaced): resolve session -> template-aware validation -> patient_portal
+      RLS write / materializing submit. Four states: feature-off 404, no-session
+      401, wrong-patient 403, happy 200 (+ 409 already-submitted).
+  src/lib/intake/template-validation.ts — template-aware allowlist + coercion.
+  src/app/(portal)/intake/[token]/page.tsx (MODIFIED) — authenticated: session ->
+      intake; no session -> accept/login form; expired/used -> clear error state.
+  src/components/portal/PortalAuthForm.tsx — claim/login client form.
+
+PART B — MATERIALIZATION: the RPC above (+ DB tests).
+
+PART C — PROVIDER RECONCILIATION (behind RECONCILE_V1):
+  src/lib/env.ts / src/lib/config/environment.ts (MODIFIED) — RECONCILE_V1 flag +
+      isReconcileV1Enabled().
+  src/lib/reconcile/reconcile.ts — pure logic (transitions, summaries, resolve).
+  src/lib/reconcile/data.ts — queue + detail server data (RLS-scoped).
+  src/app/(app)/reconcile/page.tsx — queue (submitted intakes, unreconciled +
+      code-less counts, org-scoped).
+  src/app/(app)/reconcile/[submissionId]/page.tsx — detail.
+  src/components/reconcile/ReconcileView.tsx — per-row accept/edit/reject (reuses
+      the terminology coded-search path for code-less rows), listable domains, the
+      state-machine sign flow.
+  src/app/api/reconcile/[submissionId]/status/route.ts — transition (+ note
+      auto-population on sign).
+  src/app/api/reconcile/[submissionId]/row/route.ts — accept/reject + attribution.
+  NOTE AUTO-POPULATION: src/lib/notes/intake-note-sections.ts (buildIntakeNoteDraft)
+      -> DRAFT clinical_notes (content markdown + subjective/assessment pre-filled;
+      never auto-finalized).
+  ENCOUNTER-TIME VITALS: src/app/api/vitals/route.ts (MODIFIED) — resolves the
+      patient's open (in_progress) encounter when encounter_id is omitted, so
+      encounter-time vitals populate encounter_id from any entry point (Guardrail 4).
+  src/components/layout/Sidebar.tsx (MODIFIED) — flag-gated "Reconcile Intake" nav.
+
+PART D — TESTS:
+  src/__tests__/db/reconciliation.test.ts (16) — materialization (all-domain
+      provenance, code-less flag, NKDA, idempotency, transactional rollback,
+      ownership + state guards), RPC role-escape probes (patient_portal EXECUTE ok;
+      authenticated/anon denied), reconciliation transitions + attribution + reject
+      + signed-snapshot (reconciled-only) + post-sign lock + cross-org isolation.
+  src/app/api/portal/intake/route.test.ts (13, rewritten) — 4 write states +
+      template-aware validation (junk keys rejected, coercion, unknown template) +
+      body-size guards.
+  src/app/api/portal/claim/route.test.ts (7) — invite accept, session, expired /
+      used / invalid token, auto-sign-in failure.
+  src/lib/intake/__tests__/template-validation.test.ts (11) — allowlist + per-type
+      coercion + edge/error paths.
+  src/lib/notes/__tests__/intake-note-sections.test.ts (5) — section mapping, NKDA,
+      empty/garbage snapshots.
+  src/lib/reconcile/__tests__/reconcile.test.ts (13) — transitions, summaries,
+      resolve/sign-readiness.
+
+
+================================================================================
+EXACT COUNTS
+================================================================================
+  npm run test:db     -> Test Files 3 passed;  Tests 163 passed  (147 -> 163, +16)
+  npm run test:run    -> Test Files 41 passed; Tests 408 passed  (367 -> 408, +41)
+  npx tsc --noEmit    -> 0 errors
+  eslint (new files)  -> clean
+  db-local-verify.sh  -> full migration chain (incl. the new migration) applies
+                         clean end-to-end from a fresh Postgres 16 container.
+
+
+================================================================================
+MISMATCHES / NOTES (reported, not guessed)
+================================================================================
+1. NOTE MODEL RESISTS DISCRETE STRUCTURED SECTIONS. clinical_notes is SOAP-only
+   (subjective/objective/assessment/plan + one `content` blob) — NO discrete
+   PMH/PSH/meds/... columns and NO JSONB sections. Per the prompt ("report if the
+   note model resists rather than forcing it"), I did NOT add a dead column;
+   the structured sections render as markdown into `content` with subjective
+   (history) + assessment (reconciled problem list) pre-filled, DRAFT status. If
+   first-class structured note sections are wanted later, that is a separate note-
+   model change (additive JSONB column + editor support).
+
+2. FM SEED CONSENTS ARE BARE BOOLEANS (type:"boolean"), not the `consent`-type
+   ConsentValue object. Template-aware validation accepts BOTH forms; the boundary
+   schema's consent enforcement (isConsentShaped) only fires for the object form,
+   as before. No change forced.
+
+3. snomed / cvx CODE BINDINGS HAVE NO TERMINOLOGY SOURCE. The FM template binds
+   psh->snomed, family_history->snomed, immunizations->cvx, but the terminology
+   proxy serves only rxnorm/icd10/allergen. Those groups arrive code-less
+   (code:null) and are materialized with needs_coding / NULL code, flagged for
+   provider resolution — consistent with P2's documented degrade-to-free-text.
+
+4. THE RPC IS THE APP'S SUBMIT PATH; the RLS submitted_at capability is unchanged.
+   Draft saves still use the patient_portal RLS UPDATE; only final submit calls the
+   RPC. The direct RLS submit path remains as the tested latent capability (147
+   prior DB tests unchanged) — no regression.
+
+5. PRE-EXISTING LINT ISSUES (NOT introduced this sprint; left untouched per og-edit
+   "do not fix while you're there"):
+     - src/components/layout/Sidebar.tsx: react-hooks/set-state-in-effect ERROR at
+       the pre-existing setHasMounted(true) effect (confirmed present in HEAD).
+     - src/app/api/vitals/route.ts: unused NextRequest import WARNING (present in
+       HEAD). Both are in files I edited but on lines I did not touch.
+
+6. PRODUCTION PREREQUISITES (this migration is HARNESS-ONLY, per convention — NOT
+   applied to prod). Before prod rollout:
+     - Apply 20260708120000 via the gated path (supabase db query --linked --file)
+       AFTER …150000; then update MIGRATION_LEDGER.md.
+     - Provision PORTAL_DATABASE_URL (patient_portal role creds) + rotate the
+       patient_portal role password from vault (the foundation migration ships a
+       placeholder).
+     - Verify RPC EXECUTE privileges: information_schema.routine_privileges for
+       portal_submit_intake should show ONLY postgres + patient_portal.
+     - Set env flags: INTAKE_V1, RECONCILE_V1 (+ NEXT_PUBLIC_RECONCILE_V1 for the
+       nav) when rolling each phase live.
+     - The Supabase project is eepwbtdqtdnqxeznykbh (PROJECT-STATE); the INTAKE-ERX
+       plan header's locfqctrmbfwsfmcmhbc is stale/deprecated.
+
+7. NOT DONE (out of the four-part scope / deferred by the plan): P4 eRx; P1D import;
+   Weno terminology swap. Portal MFA enrollment is not wired here (PRD-02 lists it;
+   the prompt's Part A scope is invite->account->session + the write path, which is
+   delivered).
+
+STOP: after all suites green locally. Nothing committed or pushed.
+================================================================================

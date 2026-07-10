@@ -184,12 +184,31 @@ async function handlePost(context: AuthContext) {
       });
     }
 
+    // Encounter-time linkage (Sprint 2 / P3, Guardrail 4): when the caller does
+    // not supply an encounter_id, link to the patient's currently-open
+    // (in_progress) encounter if one exists -- so vitals recorded during an
+    // encounter populate encounter_id regardless of the entry point. Explicit
+    // encounter_id (e.g. from the encounter page) is respected unchanged.
+    let resolvedEncounterId: string | null = encounter_id ?? null;
+    if (!resolvedEncounterId) {
+      const { data: openEncounter } = await supabase
+        .from("encounters")
+        .select("id")
+        .eq("patient_id", patient_id)
+        .eq("organization_id", context.user.organizationId)
+        .eq("status", "in_progress")
+        .order("encounter_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      resolvedEncounterId = openEncounter?.id ?? null;
+    }
+
     const { data: vital, error } = await supabase
       .from("vitals")
       .insert({
         organization_id: context.user.organizationId,
         patient_id,
-        encounter_id: encounter_id ?? null,
+        encounter_id: resolvedEncounterId,
         recorded_by: context.user.id,
         bp_systolic: bp_systolic ?? null,
         bp_diastolic: bp_diastolic ?? null,

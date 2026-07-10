@@ -595,3 +595,244 @@ non-vacuous:** reverting to the pre-`…150000` trigger + policy fails 5 of the 
 tests (the save/submit is blocked, the null/stamp attempts are no longer caught, and
 the all-roles null succeeds with rowcount 1 — the exact vulnerability). 147 DB tests
 total; unit suite 367 green; `tsc --noEmit` clean.
+
+---
+
+## Sprint 2 / P3 — Provider reconciliation + child-row materialization + portal auth
+
+Migration: `20260708120000_sprint2_p3_reconciliation.sql` (additive, idempotent,
+gated manual apply). Depends on the full Sprint 0/1 chain (`…120000`–`…150000`).
+**Applied & verified in the local isolation harness ONLY** (`scripts/db-local-verify.sh`
+now applies it last; 16 new DB tests in `src/__tests__/db/reconciliation.test.ts`,
+**163 DB tests total**); **NOT applied to production.**
+
+### Portal auth session model (Part A) — decision
+
+Patient identity is a **Supabase Auth (GoTrue) session** (httpOnly `sb-*` cookies via
+`@supabase/ssr`, the repo convention). A patient's auth user has **no `public.users`
+row and no org**, so `get_user_organization_id()`/`get_user_role()` resolve to NULL and
+the clinician `TO authenticated` policies fail closed for them by construction.
+
+**DB writes run as the `patient_portal` Postgres role, not a Supabase client.** Supabase
+JS clients only bind `anon`/`authenticated`/`service_role`, so the write path
+(`src/lib/portal/portal-db.ts`) opens a `pg` connection as `patient_portal`
+(`PORTAL_DATABASE_URL`, per PRD-02 "the portal uses the patient_portal role's connection
+string"), injects the authenticated patient's `auth_user_id` as
+`request.jwt.claims.sub` (+ `SET LOCAL ROLE patient_portal`), and lets the proven
+`TO patient_portal` RLS scope every row. This is the exact mechanism the DB tests
+exercise (`SET LOCAL ROLE patient_portal` + `set_config('request.jwt.claims', {sub})`).
+The GoTrue cookie only authenticates **identity** (`resolvePortalPatient` →
+`getPortalPatientMapping`); the write executes over the portal connection. **Never the
+service role for patient writes (S4).**
+
+*Rejected alternative:* a GoTrue **custom access-token hook** stamping
+`role: patient_portal` (so a normal Supabase client would role-switch). It requires
+`GRANT patient_portal TO authenticator` + a prod-only auth hook (untestable in the
+isolation harness) and couples identity to DB-role at the token layer. The
+connection-string design keeps the concerns separate, is PRD-mandated, and is the
+already-proven test path.
+
+Flows: `POST /api/portal/claim` (validate SHA-256 token → `admin.createUser`
+(`email_confirm:true`) → link `patient_portal_users` → mark invite claimed →
+`signInWithPassword` + `applyCookies`); `POST /api/portal/login`; the `[token]` page
+authenticates (session+patient → intake; no session + valid token → accept form; used →
+sign-in; expired/invalid → clear error). CSRF (`validateOrigin`), fail-closed rate
+limits (`invitationAccept`/`login`), `INTAKE_V1`-gated (404).
+
+**Template-aware validation (deferred from P2, now live):** at write time the route loads
+the SELECTED template through the `patient_portal` role (active system/own-org catalog
+read — no service role), then `validateResponsesAgainstTemplate` allowlists response keys
+against the template's sections/fields and coerces per field type, layered on the
+template-independent `IntakeWriteSchema`. What is persisted is the coerced, allowlisted
+`responses`.
+
+### Child-row materialization (Part B) — decision: SECURITY DEFINER RPC
+
+`public.portal_submit_intake(p_submission_id uuid)` — SECURITY DEFINER, owned by the
+system (postgres). Chosen over patient-role INSERTs because the whole
+materialize-then-submit is **one server-enforced, atomic, idempotent unit**: it is immune
+to app-layer partial failure and to the submit-lock timing (`submitted_at IS NOT NULL`
+closes patient child writes), and it mirrors the existing SM-2 pattern where
+`signed_snapshot` is already built in SQL. It materializes 7 domains from
+`responses` JSONB (problems, medications, allergies, family_history, social_history,
+ros_responses, immunizations) with `source='patient'`, `reconciled=false`,
+`intake_submission_id` set, `created_by=NULL`; **NKDA** materializes one `nkda=true`
+allergy row and suppresses allergen rows; **code-less rows** are flagged `needs_coding`
+(problems/medications/allergies) or carry a NULL code (family/immunizations); then it sets
+`submitted_at` + `materialized_at`. `psh.surgeries`, `vitals`, `demographics`, `consents`
+have no target table and stay in `responses`.
+
+- **Idempotency:** guarded by `materialized_at` — a re-submit returns existing counts and
+  inserts nothing (proven).
+- **Rollback:** a malformed clinical value (e.g. an out-of-range ROS finding) RAISEs and
+  the whole call rolls back — no partial child rows, `submitted_at` stays NULL (proven).
+- **Safety (B0 lesson):** `REVOKE ALL … FROM PUBLIC` + explicit
+  `REVOKE EXECUTE … FROM anon, authenticated, service_role`; `EXECUTE` granted **only** to
+  `patient_portal`; `search_path` pinned to `public`; and — because DEFINER bypasses RLS —
+  an explicit `auth.uid()` **ownership guard** in the body (a caller can only materialize
+  their own submission). Role-escape DB tests confirm `authenticated`/`anon` get
+  `permission denied`.
+
+### Reconciliation attribution / reject design (Part C) — decision
+
+Additive columns on the three first-class coded tables (`problems`, `medications`,
+`allergies`): `reconciled_by UUID REFERENCES users(id)`, `reconciled_at TIMESTAMPTZ`,
+`rejected BOOLEAN NOT NULL DEFAULT FALSE`, `needs_coding BOOLEAN NOT NULL DEFAULT FALSE`.
+
+- **Accept/edit** flips `reconciled=true`, records `reconciled_by`/`reconciled_at`, and
+  keeps `source='patient'` (Guardrail 5 — reconciliation verifies, it does not re-author).
+  A `needs_coding` row must be coded (via the reuse of the coded-search terminology path)
+  before it can be accepted.
+- **Reject** is a **boolean soft-flag** (`rejected=true`), NOT a status column: the row is
+  retained for audit. Since P3-CRIT-2 the signed snapshot records ALL first-class rows via
+  `to_jsonb(row)` — accepted AND rejected — each carrying its `reconciled`/`rejected`
+  disposition flags, so the frozen record shows disposition, not omission; a rejected row is
+  excluded only from the drafted clinical note (`buildIntakeNoteDraft`). See "Signed snapshot
+  records ALL first-class rows WITH disposition" below.
+  (Chosen over a status column: a boolean is the minimal change and preserves the row's
+  provenance/audit trail.)
+- The other domains (family_history, social_history, immunizations, ros_responses) are
+  **listable** — materialized and shown, advanced with the submission; no per-row
+  attribution columns in v1.
+
+Transitions (`patient_entered → provider_review → reconciled → signed`) go through the
+authenticated org-scoped RLS + the role-agnostic state-machine trigger; the RECONCILE_V1
+API (`/api/reconcile/[submissionId]/{status,row}`) is the write surface.
+
+### Note auto-population (Part C) — note-model finding (reported, not forced)
+
+`clinical_notes` is **SOAP-only** (`subjective`/`objective`/`assessment`/`plan` + a single
+`content` TEXT blob) — it has **no discrete structured-section columns and no JSONB
+sections**. Rather than add a column nothing renders, on sign the structured sections
+(PMH/PSH/meds/allergies/FH/SH/ROS, built from the signed snapshot by
+`buildIntakeNoteDraft`) render as markdown into `content`, with `subjective` (history) and
+`assessment` (reconciled problem list) pre-filled. The note is created as a **DRAFT**
+(`status='draft'`) and is **never auto-finalized**. Best-effort: a note-insert failure does
+not fail the (already-committed) sign.
+
+### Encounter-time vitals (Part C) — Guardrail 4 closure
+
+`vitals.encounter_id` is nullable (intake precedes an encounter). The single vitals INSERT
+site (`/api/vitals`) already accepted an explicit `encounter_id` (the encounter page passes
+it), but the patient-chart entry omitted it. Fix: when `encounter_id` is absent, the route
+resolves the patient's currently-open (`status='in_progress'`) encounter (org-scoped) and
+links it — so **encounter-time vitals populate `encounter_id` from any entry point**.
+Explicit `encounter_id` is respected unchanged.
+
+163 DB tests total; unit+route suite 408 green; `tsc --noEmit` clean.
+
+---
+
+## Sprint 2 / P3-FIXES — CODEX-REVIEW-P3 remediation
+
+Migration: `20260709120000_sprint2_p3_fixes.sql` (additive, idempotent, gated
+manual apply). Depends on the full Sprint 0/1/2 chain (`…120000`–`20260708120000`)
++ the portal foundation (`20260611120000`). `CREATE OR REPLACE`s two functions and
+adds two SECURITY DEFINER functions; NO committed migration file is rewritten.
+**Applied & verified in the local isolation harness ONLY** (`scripts/db-local-verify.sh`
+applies it last; **176 DB tests total**, unit+route **428** green, `tsc` clean);
+**NOT applied to production.**
+
+### Sign-readiness gate (P3-CRIT-2) — DB is the enforcement point
+
+`enforce_intake_submission_state` is `CREATE OR REPLACE`d — re-derived VERBATIM
+from `…150000` (SM-1 INSERT governance, SM-2 snapshot rebuild, `created_by`
+immutability all preserved) — with three UPDATE-path additions:
+
+- **provider_review requires `submitted_at IS NOT NULL`.** A submission cannot
+  enter provider review before the patient has submitted it. (The portal never
+  changes `status`; a provider does — so this is a provider-transition guard.)
+- **reconciled/signed require every first-class row RESOLVED.** A row on
+  `problems`/`medications`/`allergies` linked to the submission is *unresolved*
+  when `rejected = false AND (reconciled = false OR needs_coding = true)`. Any
+  unresolved row blocks the transition (`RAISE`), so patient-entered clinical data
+  can never be silently dropped from a signed record. **Operator policy:** signing
+  is blocked until every problem/medication/allergy is either **rejected** or
+  **accepted-and-coded** (`reconciled = true AND needs_coding = false`).
+- **Signed snapshot records ALL first-class rows WITH disposition.** The SM-2
+  snapshot now aggregates every linked `problems`/`medications`/`allergies` row
+  (not just `reconciled` ones) via `to_jsonb(row)`; each row carries its
+  `reconciled`/`rejected` booleans. The legal record shows **disposition, not
+  omission** — a rejected row appears, marked rejected. The readiness gate
+  guarantees no *unresolved* row reaches the snapshot. `ros_responses` is captured
+  in full as before; `family_history`/`social_history`/`immunizations` remain
+  outside the snapshot (unchanged).
+
+**Route mirror + note draft.** `/api/reconcile/[submissionId]/status` mirrors the
+gate (`assertReconcileReady` in `src/lib/reconcile/data.ts`) for precise 409s; the
+DB trigger is the true gate. `buildIntakeNoteDraft` **excludes rejected rows** from
+the drafted note so the clinical note reflects only the accepted picture, while the
+snapshot retains the full disposition record.
+
+### portal_submit_intake concurrency (P3-CRIT-1)
+
+`portal_submit_intake` is `CREATE OR REPLACE`d — re-derived VERBATIM from
+`20260708120000` — with two additions: (1) `SELECT ... FOR UPDATE` locks the parent
+`intake_submissions` row **before** the idempotency check, serializing concurrent
+`patient_portal` submits (the loser blocks, then re-reads the claimed sentinel and
+returns `already_submitted:true`); (2) a conditional `UPDATE ... SET
+materialized_at = NOW() WHERE materialized_at IS NULL` (row-count checked) claims
+the row **before** any child insert — the structural single-materialization
+backstop, so a double-submit is structurally impossible even absent the lock. The
+whole call remains one transaction: a later `RAISE` rolls back the claim too.
+
+### Portal invite validate/claim off the service role (P3-HIGH-4 / P3-MED-6)
+
+Two SECURITY DEFINER functions (owner postgres, `search_path=public`, `REVOKE ALL
+FROM PUBLIC` + `REVOKE EXECUTE FROM anon/authenticated/service_role`, `GRANT
+EXECUTE ... TO patient_portal` — the Supabase default-EXECUTE-grant footgun, see
+MIGRATION_LEDGER "Supabase default function privileges"):
+
+- `validate_portal_invite(token_hash TEXT)` → `{status, invite?}` (valid / invalid
+  / expired / claimed). Read-only; powers the accept page for unauthenticated
+  visitors and the pre-claim check.
+- `claim_portal_invite(token_hash TEXT, auth_user_id UUID, email TEXT)` → single-use
+  atomic claim: `SELECT ... FOR UPDATE` on the invite (serializes concurrent
+  claims), `INSERT patient_portal_users` (unique_violation → `account_exists`),
+  then `UPDATE ... SET claimed_at = NOW(), claimed_by = <ppu> WHERE id = <invite>
+  AND claimed_at IS NULL` with a **checked row-count** (0 rows → `RAISE`, rolling
+  back the link). One transactional unit: there is never a linked account with an
+  unclaimed invite.
+
+Portal DB access for these runs over the `patient_portal` role (a role-only
+connection with no `auth.uid()` — the definer functions take explicit args and
+never read it). **No portal path uses the service role**; the intake page reads the
+active template via the patient's own `patient_portal` connection
+(`getActivePortalTemplate`, RLS `portal_intake_templates_select`). The only
+remaining service-role use in the claim flow is the Supabase **Auth Admin** API
+(`createUser`/`deleteUser`), isolated in `src/lib/auth/portal-auth-admin.ts` — an
+Auth-API necessity, not a DB write, and deliberately outside `src/lib/portal/**`
+(asserted service-role-free by `src/lib/portal/__tests__/no-service-role.test.ts`).
+
+**Claim recovery path (P3-MED-6).** `claimPortalInvite` creates the Auth account
+before calling `claim_portal_invite`. If the DB claim returns non-ok or throws
+(after the Auth account was created), the Auth user is compensated (deleted). If
+that delete ALSO fails, a compensable state is logged
+(`PORTAL_CLAIM_ORPHAN_AUTH_USER`) and success is **not** reported. Recovery: an
+orphan is a Supabase Auth user with **no `patient_portal_users` row**; a
+reconciliation job enumerates Auth users lacking a `patient_portal_users` link and
+deletes them (the invite stays unclaimed and re-usable, since the claim was rolled
+back at the DB boundary).
+
+### Effective-template rule (P3-HIGH-3)
+
+`/api/portal/intake` resolves an **effective template** before template-aware
+validation: on an update it loads the owned submission's stored `template_id` and
+validates against it whenever the request omits/nulls `template_id`
+(`effectiveTemplateId = body.template_id ?? owned.templateId ?? null`); an attempt
+to CHANGE a bound template (`body.template_id` differs from a non-null stored one)
+is rejected (409). This closes the `template_id:null` bypass where a client could
+skip the allowlist while the DB's `COALESCE($3, template_id)` retained the old
+template.
+
+### Local verification harness
+
+`scripts/db-local-verify.sh` now applies `20260709120000_sprint2_p3_fixes.sql`
+last. New DB tests: `src/__tests__/db/portal-claim.test.ts` (validate/claim states,
+privilege probes, single-use concurrency) + additions to
+`src/__tests__/db/reconciliation.test.ts` (submit concurrency, readiness gate,
+full-disposition snapshot). **176 DB tests total; unit+route 428 green; `tsc
+--noEmit` clean.** The required CRIT-2 gate invalidated the *setup* of a few
+committed state-machine tests (they advanced without submitting/resolving); their
+setup was corrected minimally (stamp `submitted_at`; resolve rows) — assertions
+unchanged, no committed migration rewritten.

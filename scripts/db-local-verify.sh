@@ -117,5 +117,19 @@ GRANT USAGE ON SCHEMA auth TO patient_portal;
 GRANT EXECUTE ON FUNCTION auth.uid() TO patient_portal;
 SQL
 
+echo "==> applying Sprint 2 / P3 reconciliation (attribution cols + materialization RPC)"
+# Sprint 2 / P3: reconciliation attribution/reject/needs_coding columns,
+# intake_submissions.materialized_at, and the SECURITY DEFINER materialization
+# RPC public.portal_submit_intake (EXECUTE granted to patient_portal only).
+# Applied AFTER the full portal chain it builds on.
+"${PSQL[@]}" < "$HERE/supabase/migrations/20260708120000_sprint2_p3_reconciliation.sql"
+
+echo "==> applying Sprint 2 / P3-FIXES (CODEX-REVIEW-P3 remediation)"
+# P3-FIXES: concurrency-safe portal_submit_intake (CRIT-1), sign-readiness gate in
+# the state-machine trigger + full-disposition signed snapshot (CRIT-2), and the
+# SECURITY DEFINER validate_portal_invite / claim_portal_invite functions that move
+# the portal invite read + claim off the service role (HIGH-4/MED-6). Applied last.
+"${PSQL[@]}" < "$HERE/supabase/migrations/20260709120000_sprint2_p3_fixes.sql"
+
 echo "==> ready. DB: postgresql://postgres:postgres@127.0.0.1:$PORT/postgres"
 echo "    run: npm run test:db"

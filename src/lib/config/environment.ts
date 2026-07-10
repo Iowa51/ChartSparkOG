@@ -59,6 +59,17 @@ export function isIntakeV1Enabled(): boolean {
 }
 
 /**
+ * Feature flag: Provider reconciliation UI (Sprint 2 / P3). Server-side, default
+ * OFF, fail-closed. Gates the reconcile queue + per-submission reconcile pages
+ * (app.chartspark.io) until the phase exits. Honored in production (legitimate
+ * rollout flag).
+ */
+export function isReconcileV1Enabled(): boolean {
+  const flag = process.env.RECONCILE_V1;
+  return flag === "true" || flag === "1";
+}
+
+/**
  * Get the current application environment
  */
 export function getAppEnvironment(): AppEnvironment {
